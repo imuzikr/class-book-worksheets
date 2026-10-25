@@ -75,8 +75,8 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
    `FIREBASE_PROJECT_ID`, `.firebaserc`의 `default`. 관리용 스크립트(`functions/scripts/*.mjs`)의
    `PROJECT_ID`도 함께.
 3. **App Check(reCAPTCHA Enterprise) 키를 꼭 넣으세요** — `RECAPTCHA_ENTERPRISE_SITE_KEY`.
-   서버 함수(`joinClassWithCode` · `setUserRole` · `deleteClass` · `sendClassNotice` 등)가
-   `enforceAppCheck: true`라 App Check 없이는 **학생의 반 입장** · 선생님 승인 · 반 삭제 ·
+   서버 함수(`setUserRole` · `deleteClass` · `sendClassNotice` 등)가
+   `enforceAppCheck: true`라 App Check 없이는 선생님 승인 · 반 삭제 ·
    반 공지가 거부됩니다. 자리표시자인 동안은
    앱이 App Check를 켜지 않습니다.
 4. 배포 차례는 **색인 → 규칙 → 함수 → 앱**입니다.
@@ -106,24 +106,20 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
 - **선생님은 가입 때 '선생님'을 고르면 신청 표시(`requestedRole`)가 붙고, 관리자가 상단바
   프로필 메뉴의 역할 관리 창(`RoleManagerModal`)에서 승인**합니다(`setUserRole`). 승인 전에는
   학생 화면입니다. 승인된 선생님이 반을 만들면 참여 코드가 함께 생깁니다(`ClassManagerModal`).
-- **학생은 가입 뒤 참여 코드로 반에 들어갑니다**(`ClassEntry` → `joinClassWithCode`).
-  - 확인은 **서버 함수 `joinClassWithCode` 하나**가 합니다 — 코드 대조 · 소속(`memberships`)
-    기록 · `users.classIds` 이어 붙이기 · 틀린 횟수 세기를 한 트랜잭션에서.
-  - **연달아 3번 틀리면 5분 잠금**. 셈은 `lib/joinLockout.js`(앱 · 데모)와 그 CommonJS 사본
-    `functions/joinLockout.js`(서버) — **둘을 함께 고치세요**, `tests/unit/joinLockout.test.mjs`가
-    같은 표로 둘을 시험합니다. 맞히면 기록을 지우고, 만료된 코드 · 보관된 반은 '틀림'으로
-    세지 않습니다(코드는 맞게 안 것).
-  - 기록은 `joinAttempts/{uid}`(`{ fails, lockedUntil }`) — 규칙에 match가 없어 **클라이언트는
-    읽지도 쓰지도 못합니다**(admin SDK만).
-  - **잠금이 뜻을 가지려면 다른 길이 닫혀 있어야 합니다** — 그래서 규칙이 학생의
-    `memberships` 생성과 `joinCodes` 읽기를 막습니다. 교사는 자기 코드와 **아직 없는 코드**만
-    읽습니다(새 코드가 겹치는지 볼 때 — 남의 코드는 거부되고 앱은 '이미 쓰임'으로 봅니다).
-    **이 둘을 다시 열지 마세요.** 시험 `tests/rules/signup.test.mjs` · `memberships.test.mjs`.
-  - 잠금은 **계정마다**입니다. 구글 계정을 새로 만들어 가며 두드리는 것까지는 못 막지만,
-    코드가 6자리(32글자, 10억 가지)라 그 길로 맞히기는 사실상 어렵습니다.
-  - 화면은 서버가 돌려준 남은 기회 · 풀리는 시각을 적기만 합니다(남은 시간을 초 단위로 셈).
-  - 데모 모드에서는 학생 입장 화면이 원래 안 뜹니다(소속을 안 읽음). 데모용 셈
-    (`mockJoinWithCode`)은 같은 `lib/joinLockout.js`를 씁니다.
+- **학생은 가입 뒤 참여 코드로 반에 들어갑니다**(`ClassEntry` → `lib/data/classes.js`의
+  `joinClassWithCode` — 이름만 남은 **앱 안 함수**이고 서버 함수가 아닙니다).
+  - 앱이 `joinCodes/{코드}`를 한 건 읽어 반을 찾고, `memberships/{uid}_{classId}`를 **코드와
+    함께** 씁니다. 규칙이 `joinCodes`를 `get()`해 **그 반의 코드인지 · 만료 전인지** 서버에서
+    다시 확인하므로, 화면을 거치지 않고 써도 맞는 코드 없이는 못 들어옵니다. 이어서
+    `ensureClassIdSynced`가 `users.classIds`를 채웁니다.
+  - `joinCodes`는 로그인한 사람이면 **정확한 코드로 1건 get**만 됩니다(목록은 개설 교사 ·
+    관리자만). 코드를 모르면 반을 찾을 수 없습니다.
+  - **틀린 횟수 잠금은 없습니다.** 한때 서버 함수(`joinClassWithCode`)가 '3번 틀리면 5분'을
+    셌는데, 그러려면 Cloud Functions(Blaze) · App Check 배포가 필요해 비전공 선생님이 이
+    앱을 따로 배포하기 어려워 걷었습니다(선생님 요청). 코드가 6자리(32글자, 10억 가지)이고
+    14일이면 만료되어, 맞혀 들어오기는 사실상 어렵습니다. 되살리려면 학생의 소속 생성 ·
+    `joinCodes` 읽기를 규칙에서 다시 닫고 서버 함수로 옮겨야 합니다 — 선생님께 먼저 여쭙니다.
+  - 시험 `tests/rules/memberships.test.mjs`('학생이 참여 코드로 들어가기') · `signup.test.mjs`.
 - 화면 글자는 '입장 코드'가 아니라 **'참여 코드'**입니다(코드 · 주석의 `joinCode` 이름은 그대로).
 - 바닥글 · 개인정보처리방침의 **문의 이메일**(`SiteFooter.jsx` · `PrivacyContent.jsx`)은 접근
   권한과 무관한 연락처라 남겨 두었습니다 — 운영자가 바뀌면 그 두 곳만 고치면 됩니다.

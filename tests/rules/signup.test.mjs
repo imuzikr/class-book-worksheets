@@ -2,15 +2,14 @@
 // 가입 · 참여 코드 — 공개 운영
 // -------------------------------------------------------------
 // 학교 도메인 제한과 등록 코드는 걷었습니다. 가입은 **구글 계정이면 누구나**,
-// 반에 들어가는 관문은 교사가 만든 **참여 코드**이고 그 확인은 서버 함수
-// (joinClassWithCode)가 틀린 횟수를 세며 합니다. 그래서 규칙은
+// 반에 들어가는 관문은 교사가 만든 **참여 코드**입니다. 그래서 규칙은
 //  · users 생성을 구글 로그인 · 학생 역할로만 받고
-//  · 학생이 joinCodes를 읽거나 memberships를 스스로 만드는 길을 닫습니다
-//    (열려 있으면 횟수를 세지 않고 코드를 대 볼 수 있음).
+//  · joinCodes는 '정확한 코드로 1건'만 읽게 하고 목록은 막습니다
+//    (소속 생성의 코드 대조는 memberships.test.mjs).
 // =============================================================
 import { describe, it, before, after, beforeEach } from "node:test";
 import { assertSucceeds, assertFails } from "@firebase/rules-unit-testing";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, setDoc } from "firebase/firestore";
 import { makeEnv, asStudent, asTeacher, asAdmin, seed } from "./helpers.mjs";
 
 function profile(extra = {}) {
@@ -83,19 +82,14 @@ describe("참여 코드(joinCodes) 읽기", () => {
     );
   });
 
-  it("학생은 코드를 읽어 맞혀 볼 수 없다(있는 코드)", async () => {
+  it("로그인한 학생은 정확한 코드로 1건 읽는다", async () => {
     const db = asStudent(env, "stu1").firestore();
-    await assertFails(getDoc(doc(db, "joinCodes", "ABC234")));
-  });
-
-  it("학생은 없는 코드도 읽어 볼 수 없다", async () => {
-    const db = asStudent(env, "stu1").firestore();
-    await assertFails(getDoc(doc(db, "joinCodes", "ZZZ999")));
-  });
-
-  it("교사는 자기 코드를 읽는다", async () => {
-    const db = asTeacher(env, "teacherA").firestore();
     await assertSucceeds(getDoc(doc(db, "joinCodes", "ABC234")));
+  });
+
+  it("학생은 코드 목록을 훑을 수 없다", async () => {
+    const db = asStudent(env, "stu1").firestore();
+    await assertFails(getDocs(collection(db, "joinCodes")));
   });
 
   it("교사는 아직 없는 코드를 읽어 겹치지 않는지 본다", async () => {
@@ -103,20 +97,8 @@ describe("참여 코드(joinCodes) 읽기", () => {
     await assertSucceeds(getDoc(doc(db, "joinCodes", "ZZZ999")));
   });
 
-  it("교사는 남의 코드를 읽을 수 없다", async () => {
-    const db = asTeacher(env, "teacherB").firestore();
-    await assertFails(getDoc(doc(db, "joinCodes", "ABC234")));
-  });
-
   it("관리자는 읽는다", async () => {
     const db = asAdmin(env, "root").firestore();
     await assertSucceeds(getDoc(doc(db, "joinCodes", "ABC234")));
-  });
-
-  it("틀린 횟수 기록(joinAttempts)은 학생이 읽지도 지우지도 못한다", async () => {
-    await seed(env, (db) => setDoc(doc(db, "joinAttempts", "stu1"), { fails: 2, lockedUntil: 0 }));
-    const db = asStudent(env, "stu1").firestore();
-    await assertFails(getDoc(doc(db, "joinAttempts", "stu1")));
-    await assertFails(setDoc(doc(db, "joinAttempts", "stu1"), { fails: 0, lockedUntil: 0 }));
   });
 });

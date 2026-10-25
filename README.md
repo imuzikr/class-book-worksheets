@@ -60,13 +60,12 @@ firebase deploy --only firestore,storage,functions
 
 ## 가입 · 관리자
 
-- 가입·로그인은 **구글 계정만**, 도메인 제한 없음. 학생은 가입 뒤 교사가 만든 **참여 코드**로 반에 들어갑니다.
+- 가입·로그인은 **구글 계정만**, 도메인 제한 없음. 학생은 가입 뒤 교사가 만든 **참여 코드**로 반에 들어갑니다(서버 함수 없이 — 보안 규칙이 코드와 만료를 확인).
 - 선생님은 가입 때 '선생님'을 고르고, 관리자가 앱 안 역할 관리 창에서 승인합니다.
 - 첫 관리자: 앱에 가입한 뒤 `npm run admin:grant -- <이메일> --apply` (gcloud 로그인 필요).
 
 ## Cloud Functions (`functions/index.js`)
 
-- `joinClassWithCode` — 학생이 참여 코드로 반에 들어가기 (3번 틀리면 5분 잠금, `joinAttempts/{uid}`)
 - `setUserRole` — 역할(커스텀 클레임) 부여 (관리자만 호출)
 - `deleteAuthUser` — 탈퇴 시 로그인 계정 삭제 (관리자/교사)
 - `deleteStudentAccount` · `deleteClass` — 학생 탈퇴 정리 · 반 삭제(하위 기록까지)

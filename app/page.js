@@ -268,8 +268,7 @@ export default function LandingPage() {
                   ) : (
                     <p className="signup-role-note">
                       구글 계정으로 가입한 뒤, 선생님이 알려 준 <strong>참여 코드</strong>를
-                      입력하면 우리 반에 들어갑니다. 코드를 <strong>3번 틀리면 5분</strong> 동안
-                      입력할 수 없어요.
+                      입력하면 우리 반에 들어갑니다.
                     </p>
                   )}
                 </>

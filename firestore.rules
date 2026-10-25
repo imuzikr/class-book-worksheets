@@ -320,8 +320,8 @@ service cloud.firestore {
       // 본인만 생성, 가입 시 role은 'student' 고정 (스스로 승격 불가).
       // 가입은 **구글 계정으로만** 받습니다(sign_in_provider — 토큰의 값이라
       // 위조 불가). 학교 도메인 제한·등록 코드는 없습니다(공개 운영) — 대신
-      // 반에 들어가는 관문이 교사가 만든 참여 코드이고, 그 확인은 서버 함수
-      // (joinClassWithCode)가 틀린 횟수를 세며 합니다. 반에 들지 못한 계정은
+      // 반에 들어가는 관문이 교사가 만든 참여 코드이고, 그 확인은 아래
+      // memberships 규칙이 joinCodes를 get()으로 대조해 합니다. 반에 들지 못한 계정은
       // 소속이 없어 어느 반의 자료도 읽지 못합니다.
       // '선생님으로 가입 신청'(requestedRole=='teacher')은 표시일 뿐 권한이
       // 아닙니다 — 관리자가 setUserRole로 승인해야 교사가 됩니다.
@@ -1098,8 +1098,10 @@ service cloud.firestore {
     //  · 생성: 최고 관리자 또는 개설 교사(보관된 반은 발급 불가)
     //  · 수정/삭제: 최고 관리자 또는 개설 교사(보관 시 코드를 지우는 데 필요)
     match /joinCodes/{code} {
-      allow get: if isAdmin()
-                 || (isTeacher() && (resource == null || resource.data.createdBy == uid()));
+      // 로그인한 사람은 누구나 '정확한 코드로 1건' 읽을 수 있습니다 — 학생이
+      // 반을 찾는 길이고, 교사가 새 코드가 겹치는지 볼 때도 씁니다.
+      // 목록(list)은 막혀 있어 코드를 모르면 찾을 수 없습니다.
+      allow get: if signedIn();
       allow list: if isAdmin() || resource.data.createdBy == uid();
       // 자기가 개설한 반의 코드만 만들 수 있습니다. createdBy만 검사하면
       // 다른 교사의 반(classId는 로그인만 하면 조회 가능)으로 유효한 코드를
@@ -1122,19 +1124,26 @@ service cloud.firestore {
         || isClassMember(resource.data.classId)
       );
       // 소속을 얻는 길은 둘입니다.
-      //  · 학생: 서버 함수(joinClassWithCode)가 참여 코드를 확인하고 admin
-      //    SDK로 만듭니다 — 여기 규칙을 거치지 않습니다. 학생이 직접 쓰는 길은
-      //    **닫아 두었습니다**: 열려 있으면 틀린 횟수를 셀 자리 없이 코드를
-      //    하나씩 대 볼 수 있어 '3번 틀리면 5분 잠금'이 무의미해집니다.
+      //  · 학생 본인: 참여 코드(code)를 함께 적어 직접 만듭니다. 규칙이
+      //    joinCodes/{code}를 get()해 **그 코드가 이 반의 것이고 만료 전인지**
+      //    확인합니다 — 화면을 거치지 않고 써도 맞는 코드 없이는 못 들어옵니다.
+      //    (틀린 횟수 잠금은 없습니다 — Cloud Functions 없이 배포하려고 걷음.)
       //  · **담당 교사**: 학생 프로필의 '반 편성'에서 자기 반에 직접 넣습니다
       //    (코드를 잘못 눌러 옆 반에 들어간 학생을 바로잡는 길). **자기가 개설한
       //    반에만**(ownsClassEditable) 넣을 수 있고, 보관된 반은 막힙니다.
-      //  · 운영 공지: 학생이 이 앱의 '반 나가기' 없이 다른 반에 또 들어가려면
-      //    서버 함수가 그대로 받아 줍니다(한 학생이 여러 반에 속할 수 있음).
+      //  · 한 학생이 여러 반에 속할 수 있습니다(다른 반 코드로 또 들어오면 됨).
       allow create: if signedIn()
                     && request.resource.data.uid is string
                     && mId == (request.resource.data.uid + '_' + request.resource.data.classId)
-                    && (isAdmin() || ownsClassEditable(request.resource.data.classId));
+                    && (
+                      isAdmin() || ownsClassEditable(request.resource.data.classId)
+                      || (request.resource.data.uid == uid()
+                          && request.resource.data.get('code', '') is string
+                          && request.resource.data.get('code', '') != ''
+                          && exists(/databases/$(database)/documents/joinCodes/$(request.resource.data.code))
+                          && get(/databases/$(database)/documents/joinCodes/$(request.resource.data.code)).data.classId == request.resource.data.classId
+                          && get(/databases/$(database)/documents/joinCodes/$(request.resource.data.code)).data.expiresAt > request.time)
+                    );
       // 학생 본인의 직접 '반 나가기'는 허용하지 않습니다. 소속 변경은
       // 담당 교사/관리자가 관리합니다.
       allow delete: if signedIn() && (

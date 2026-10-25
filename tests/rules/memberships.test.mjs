@@ -139,20 +139,57 @@ describe("반 편성 고치기(교사)", () => {
     );
   });
 
-  // 학생의 입장은 서버 함수(joinClassWithCode)만 합니다 — 직접 쓰는 길이
-  // 열려 있으면 틀린 횟수를 세지 않고 참여 코드를 대 볼 수 있습니다.
-  it("학생은 맞는 참여 코드를 들고도 스스로 소속을 만들 수 없다", async () => {
-    await seed(env, (db) =>
-      setDoc(doc(db, "joinCodes", "ABC234"), {
-        classId: "classA", createdBy: "teacherA", expiresAt: new Date(Date.now() + 86400000),
-      })
-    );
-    const db = asStudent(env, "stu2").firestore();
-    await assertFails(
-      setDoc(doc(db, "memberships", "stu2_classA"), {
-        uid: "stu2", classId: "classA", code: "ABC234", joinedAt: serverTimestamp(),
-      })
-    );
+  // 학생은 참여 코드를 함께 적어 스스로 들어갑니다 — 규칙이 joinCodes를
+  // get()해 그 반의 코드인지 · 만료 전인지 확인합니다(서버 함수 없음).
+  describe("학생이 참여 코드로 들어가기", () => {
+    const later = () => new Date(Date.now() + 86400000);
+    const join = (code, classId = "classA") => ({
+      uid: "stu2", classId, code, joinedAt: serverTimestamp(),
+    });
+    beforeEach(async () => {
+      await seed(env, async (db) => {
+        await setDoc(doc(db, "joinCodes", "ABC234"), {
+          classId: "classA", createdBy: "teacherA", expiresAt: later(),
+        });
+        await setDoc(doc(db, "joinCodes", "OLD234"), {
+          classId: "classA", createdBy: "teacherA", expiresAt: new Date(Date.now() - 1000),
+        });
+      });
+    });
+
+    it("맞는 코드면 들어간다", async () => {
+      const db = asStudent(env, "stu2").firestore();
+      await assertSucceeds(setDoc(doc(db, "memberships", "stu2_classA"), join("ABC234")));
+    });
+
+    it("없는 코드는 거부된다", async () => {
+      const db = asStudent(env, "stu2").firestore();
+      await assertFails(setDoc(doc(db, "memberships", "stu2_classA"), join("ZZZ999")));
+    });
+
+    it("만료된 코드는 거부된다", async () => {
+      const db = asStudent(env, "stu2").firestore();
+      await assertFails(setDoc(doc(db, "memberships", "stu2_classA"), join("OLD234")));
+    });
+
+    it("다른 반의 코드로는 이 반에 못 들어간다", async () => {
+      const db = asStudent(env, "stu2").firestore();
+      await assertFails(
+        setDoc(doc(db, "memberships", "stu2_classB"), join("ABC234", "classB"))
+      );
+    });
+
+    it("코드 없이는 못 들어간다", async () => {
+      const db = asStudent(env, "stu2").firestore();
+      await assertFails(
+        setDoc(doc(db, "memberships", "stu2_classA"), membership("stu2", "classA"))
+      );
+    });
+
+    it("맞는 코드로도 남을 넣을 수는 없다", async () => {
+      const db = asStudent(env, "stu1").firestore();
+      await assertFails(setDoc(doc(db, "memberships", "stu2_classA"), join("ABC234")));
+    });
   });
 
   it("학생은 여전히 남을 반에 넣을 수 없다", async () => {
