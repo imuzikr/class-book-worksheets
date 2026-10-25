@@ -16,13 +16,13 @@
 //
 // [쓰는 법]
 //   # ① 그때 어떤 활동이 있었는지 보기 (지운 활동의 id를 찾습니다)
-//   node functions/scripts/rescue-activity.mjs --at=2026-09-01T06:47:00Z --list
+//   node scripts/admin/rescue-activity.mjs --at=2026-09-01T06:47:00Z --list
 //
 //   # ② 그 활동을 통째로 파일에 담기 (모둠·낱말·학생 기록까지)
-//   node functions/scripts/rescue-activity.mjs --at=2026-09-01T06:47:00Z --dump=<활동id>
+//   node scripts/admin/rescue-activity.mjs --at=2026-09-01T06:47:00Z --dump=<활동id>
 //
 //   # ③ 확인한 뒤 되돌리기 (이때만 실제로 씁니다)
-//   node functions/scripts/rescue-activity.mjs --restore=rescue-<활동id>.json --apply
+//   node scripts/admin/rescue-activity.mjs --restore=rescue-<활동id>.json --apply
 //
 // [담는 방식] Firestore REST가 주는 그대로(wire format) 담고 그대로 되돌립니다.
 //   중간에 JS 값으로 바꾸지 않으므로 시각(timestamp)·숫자 종류까지 원본

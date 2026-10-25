@@ -8,8 +8,11 @@ rules_version = '2';
 //  · 질문 게시판(questions·answers·notices·keywords)은 전체 공유
 //  · 공부방(반)의 모든 자산(보드·카드·과일·누가기록·KWL·입장코드)은
 //    그 반을 개설한 교사(classes.createdBy)에게 귀속.
-//    최고 관리자(role=admin 또는 부트스트랩 이메일)만 전체 접근.
-//  · 역할(role)은 클라이언트가 스스로 못 바꿈 — functions/setUserRole로만
+//    최고 관리자(users 문서의 role == 'admin')만 전체 접근.
+//  · 역할(role)은 users/{uid}.role 한 칸 — 스스로 바꿀 수 있는 길은 하나뿐:
+//    배포한 사람이 콘솔에 적어 둔 **교사 가입 코드**(config/teacherSignup)를
+//    맞게 넣어 학생 → 선생님. 그 밖의 역할 변경은 관리자만.
+//    (서버 함수 · 커스텀 클레임 없이 돕니다 — 비전공자도 배포하게)
 //  · 반이 '보관(archived)' 상태면: 소유 교사도 그 반의 데이터는 읽기만
 //    가능(쓰기 전면 차단, 보관 해제해야 편집 가능) / 학생은 읽기도 불가.
 //    classes 문서 자체(이름 수정·보관 토글)는 예외 — 항상 소유 교사가 수정 가능.
@@ -20,10 +23,33 @@ service cloud.firestore {
 
     function signedIn() { return request.auth != null; }
     function uid() { return request.auth.uid; }
-    function userRole() { return request.auth.token.get('role', ''); }
+    // 역할 — users/{uid}.role. 서버 함수가 없어 커스텀 클레임을 줄 길이 없으므로
+    // 프로필 문서를 읽어 판정합니다(같은 요청 안에서는 한 번만 읽힘).
+    // 토큰에 role 클레임이 있으면 그것을 먼저 봅니다 — 예전 배포 · 시험용이고,
+    // 클레임은 admin SDK만 줄 수 있어 위조할 수 없습니다.
+    function userRole() {
+      return request.auth.token.get('role', '') != ''
+        ? request.auth.token.role
+        : (exists(/databases/$(database)/documents/users/$(request.auth.uid))
+            ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'student')
+            : 'student');
+    }
 
-    // 최고 관리자 — role 클레임이 'admin'. 이메일을 규칙에 박아 두지 않습니다
-    // (공개 운영). 첫 관리자는 functions/scripts/grant-admin.mjs로 지정합니다.
+    // 교사 가입 코드 — 배포한 사람이 Firebase 콘솔에서 config/teacherSignup
+    // 문서의 code 칸에 적어 둡니다. 이 컬렉션에는 match가 없어 **앱에서는
+    // 아무도 읽지 못하고**, 규칙의 get()만 대조합니다. 문서가 없거나 너무
+    // 짧으면 아무도 선생님이 될 수 없습니다(안전한 쪽).
+    function teacherCodeOk(code) {
+      return code is string && code.size() >= 4
+        && exists(/databases/$(database)/documents/config/teacherSignup)
+        && get(/databases/$(database)/documents/config/teacherSignup).data.get('code', '') is string
+        && get(/databases/$(database)/documents/config/teacherSignup).data.get('code', '').size() >= 4
+        && get(/databases/$(database)/documents/config/teacherSignup).data.get('code', '') == code;
+    }
+
+    // 최고 관리자 — users 문서의 role이 'admin'. 이메일을 규칙에 박아 두지
+    // 않습니다(공개 운영). 첫 관리자는 배포한 사람이 콘솔에서 제 users 문서의
+    // role을 'admin'으로 고쳐 지정합니다(앱에서는 스스로 못 올림).
     // 모든 반의 데이터·기능에 접근(반 소유 제한의 예외).
     function isAdmin() {
       return signedIn() && userRole() == 'admin';
@@ -323,19 +349,19 @@ service cloud.firestore {
       // 반에 들어가는 관문이 교사가 만든 참여 코드이고, 그 확인은 아래
       // memberships 규칙이 joinCodes를 get()으로 대조해 합니다. 반에 들지 못한 계정은
       // 소속이 없어 어느 반의 자료도 읽지 못합니다.
-      // '선생님으로 가입 신청'(requestedRole=='teacher')은 표시일 뿐 권한이
-      // 아닙니다 — 관리자가 setUserRole로 승인해야 교사가 됩니다.
+      // 선생님은 학생으로 만든 뒤 교사 가입 코드로 바꿉니다(아래 update의
+      // '교사 가입 코드' 갈래). requestedRole=='teacher'는 옛 '승인 신청'
+      // 표시라 받아 두기만 합니다(관리자가 역할 관리 창에서 바꿔 줄 수 있음).
       allow create: if signedIn() && userId == uid()
                     && request.auth.token.firebase.sign_in_provider == 'google.com'
                     && request.resource.data.role == 'student'
                     && request.resource.data.get('requestedRole', null) in [null, 'teacher'];
       // 쓰기 범위 — '누가' 뿐 아니라 '어떤 필드를' 쓰는지까지 제한합니다.
-      //  · 최고 관리자: 전체. 역할 부여와 부트스트랩 자가 치유(lib/auth.js가
-      //      초기 관리자 문서에 role='admin'을 맞추는 것)가 여기에 해당합니다.
+      //  · 최고 관리자: 전체. 역할 부여(역할 관리 창)가 여기에 해당합니다.
       //  · 본인: 이메일·아바타·알림토큰·신청 표시만. 닉네임·실명·학번·역할 불가.
       //  · 교사: 학생 관리에 실제로 쓰는 필드만(StudentEditModal의 프로필 수정,
       //      탈퇴 신청 거절). role은 목록에 없어 교사가 역할을 건드릴 수 없습니다 —
-      //      역할 부여는 서버 함수(setUserRole)가 admin 권한으로만 합니다.
+      //      역할 부여는 관리자만(또는 본인이 교사 가입 코드로 학생 → 선생님).
       //      대상도 학생(또는 본인)으로 좁혀, 다른 교사의 프로필은 못 고칩니다.
       //      선생님 신청 승인·거절(requestedRole)은 최고 관리자 전용 화면이라
       //      교사 목록에서 뺐습니다.
@@ -348,6 +374,14 @@ service cloud.firestore {
         // 자기 수정만 허용(lib/store.js의 joinClass 참고). 다른 필드와
         // 한 요청에 같이 못 바꾸게 changedOnly를 classIds 하나로 좁힙니다.
         || (userId == uid() && changedOnly(['classIds']) && isValidClassIdsAppend())
+        // 교사 가입 코드 — 학생인 본인이 코드를 맞게 넣으면 선생님이 됩니다.
+        // 학생 → 선생님 한 방향만(관리자로는 못 올림). 표시 이름·아바타를
+        // '선생님'으로 함께 바꾸고, 넣은 코드(teacherCode)가 문서에 남습니다.
+        || (userId == uid()
+            && resource.data.get('role', 'student') == 'student'
+            && request.resource.data.role == 'teacher'
+            && changedOnly(['role','teacherCode','teacherAt','displayName','emoji','requestedRole'])
+            && teacherCodeOk(request.resource.data.get('teacherCode', '')))
         || (isTeacher()
             && (userId == uid() || resource.data.get('role', 'student') == 'student')
             && changedOnly(['displayName','emoji','realName','email','studentId',
@@ -369,10 +403,8 @@ service cloud.firestore {
             && request.resource.data.get('classIds', []).toSet()
                  .difference(resource.data.get('classIds', []).toSet()).size() == 0)
       );
-      // 탈퇴(계정 삭제)는 서버 함수(deleteStudentAccount)로만 합니다.
-      // 그 함수는 admin SDK라 규칙을 우회하며, "담당하는 반의 학생인지"를
-      // 검사합니다. 여기서 교사에게 직접 삭제를 열어 두면 아무 반 학생이나
-      // 프로필을 지울 수 있어(되돌릴 수 없음) 관리자만 남겨 둡니다.
+      // 프로필 삭제는 관리자만. 교사에게 열어 두면 아무 반 학생이나 지울 수
+      // 있어(되돌릴 수 없음) 막습니다 — 학생을 내보낼 때는 '반에서 빼기'.
       allow delete: if isAdmin();
 
       match /notifications/{nId} {
@@ -787,7 +819,7 @@ service cloud.firestore {
       //  · 읽기는 본인·담당 교사·관리자. 학생이 자기 리포트에서 자기 것만
       //    조회합니다(uid로 거른 쿼리).
       //  · 이력은 고치거나 지울 수 없습니다 — 고칠 수 있으면 이력이 아닙니다.
-      //    반을 지울 때는 서버 함수(purgeClass)가 규칙을 우회해 정리합니다.
+      //    (반은 지우지 않고 보관만 합니다 — 학기 정리는 콘솔에서.)
       match /rewardEvents/{eId} {
         allow read: if signedIn() && (
           isAdmin()
@@ -814,8 +846,7 @@ service cloud.firestore {
       //  · 교사가 '확인'을 눌러 받아 준 손만 적습니다. '닫기'로 내린 손은
       //    잘못 눌린 것이라 세지 않습니다(그래서 create만 있고 종류가 없음).
       //  · 읽기는 본인·담당 교사·관리자 — rewardEvents와 같은 기준입니다.
-      //  · 이력은 고치거나 지울 수 없습니다. 반을 지울 때는 서버 함수
-      //    (purgeClass)가 규칙을 우회해 정리합니다.
+      //  · 이력은 고치거나 지울 수 없습니다.
       match /signalEvents/{eId} {
         allow read: if signedIn() && (
           isAdmin()
@@ -834,18 +865,26 @@ service cloud.firestore {
       //  · 경로 = classes/{classId}/classNotices/{auto}
       //  · 공지는 학생 알림으로만 갔고 보낸 쪽에는 아무것도 안 남았습니다.
       //    무엇을 언제 보냈는지 교사가 확인할 수 있게 여기에 남깁니다.
-      //  · 읽기는 담당 교사·관리자만 — 학생은 자기 알림으로 이미 받았고,
-      //    이 목록은 '반 전체에 무엇을 보냈나'라 교사용 화면입니다.
-      //  · 쓰기는 서버 함수(sendClassNotice)만. 그 함수가 학생 알림을 실제로
-      //    보낸 뒤에 적으므로, 클라이언트가 직접 적으면 '보냈다고 적혀 있는데
-      //    실제로는 안 간' 기록을 만들 수 있습니다. 그래서 전부 막습니다
-      //    (admin SDK는 규칙을 우회합니다).
-      // 반 공지 발송 기록 — 반 학생도 읽습니다(간편 메신저의 '공지' 탭이 최근
-      // 3건을 보여 줌). 학생은 같은 글을 이미 제 알림으로 받았으므로 새로
-      // 드러나는 것이 없습니다. 쓰기는 그대로 서버 함수만.
+      //  · **이 문서가 곧 공지입니다**(서버 함수 없이). 교사가 여기에 한 장
+      //    쓰면 그 반 학생의 알림 벨과 간편 메신저 '공지' 탭이 이것을 읽습니다.
+      //  · 읽기는 담당 교사 · 관리자 · 그 반 학생.
+      //  · 쓰기는 담당 교사(보관된 반 불가) — 칸을 못 박고 글은 500자.
+      //    보낸 공지는 고치거나 지울 수 없습니다(학생이 이미 읽었을 수 있음).
       match /classNotices/{nId} {
         allow read: if signedIn() && (isAdmin() || ownsClass(cId) || isClassMember(cId));
-        allow create, update, delete: if false;
+        allow create: if signedIn() && (isAdmin() || ownsClassEditable(cId))
+                      && request.resource.data.keys().hasOnly(
+                           ['classId','text','sentCount','senderUid','senderName','sentAt'])
+                      && request.resource.data.classId == cId
+                      && request.resource.data.senderUid == uid()
+                      && request.resource.data.text is string
+                      && request.resource.data.text.size() > 0
+                      && request.resource.data.text.size() <= 500
+                      && request.resource.data.sentCount is int
+                      && request.resource.data.senderName is string
+                      && request.resource.data.senderName.size() <= 40
+                      && request.resource.data.sentAt == request.time;
+        allow update, delete: if false;
       }
 
       // ── 수업 메모 ───────────────────────────────────────────

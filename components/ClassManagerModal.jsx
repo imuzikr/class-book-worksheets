@@ -1,13 +1,14 @@
 "use client";
 
 // =============================================================
-// 반 관리하기 — 새 반 만들기 · 이름 수정 · 보관 · (보관된 반) 복원·삭제
+// 반 관리하기 — 새 반 만들기 · 이름 수정 · 보관 · (보관된 반) 복원
 // -------------------------------------------------------------
 // 보관한 반은 반 선택 목록(상단 드롭다운)에서 사라지고, 이 모달의
-// '보관된 반' 목록에서만 확인·복원·삭제할 수 있습니다. 보관 중엔
+// '보관된 반' 목록에서만 확인·복원할 수 있습니다. 보관 중엔
 // 학생 접근이 완전히 막히고(참여 코드 폐기), 교사도 데이터를 보기만
-// 할 수 있습니다(편집하려면 먼저 복원). 삭제는 되돌릴 수 없어
-// 보관을 거친 반만 가능합니다.
+// 할 수 있습니다(편집하려면 먼저 복원).
+// '완전 삭제'는 없습니다 — 하위 기록까지 지우려면 서버 함수가 필요해
+// 걷었습니다(비전공자도 배포하게). 학기 정리는 Firebase 콘솔에서 합니다.
 // =============================================================
 import { useEffect, useMemo, useState } from "react";
 import { backdropClose } from "@/lib/modal";
@@ -16,13 +17,11 @@ import {
   renameClass,
   archiveClass,
   unarchiveClass,
-  deleteClass,
   reorderClasses,
   regenerateJoinCode,
 } from "@/lib/store";
-import ConfirmModal from "./ConfirmModal";
 import ClassJoinCode from "./ClassJoinCode";
-import { IconPen, IconTrash, IconArchive, IconChair } from "./StatusIcons";
+import { IconPen, IconArchive, IconChair } from "./StatusIcons";
 
 export default function ClassManagerModal({
   classes,
@@ -41,7 +40,6 @@ export default function ClassManagerModal({
   const [renameDraft, setRenameDraft] = useState("");
   const [busyId, setBusyId] = useState(null);
   const [regeneratingCodeIds, setRegeneratingCodeIds] = useState([]);
-  const [confirmDelete, setConfirmDelete] = useState(null); // { id, name } | null
   const [error, setError] = useState("");
 
   const active = classes.filter((c) => !c.archived);
@@ -155,22 +153,6 @@ export default function ClassManagerModal({
       onToast?.(`'${c.name}' 반을 복원했어요. 새 참여 코드가 발급됐어요.`);
     } catch {
       setError("반을 복원하지 못했어요.");
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function handleDelete() {
-    if (!confirmDelete) return;
-    const { id, name } = confirmDelete;
-    setConfirmDelete(null);
-    setBusyId(id);
-    setError("");
-    try {
-      await deleteClass(id);
-      onToast?.(`'${name}' 반을 완전히 삭제했어요.`);
-    } catch {
-      setError("반을 삭제하지 못했어요.");
     } finally {
       setBusyId(null);
     }
@@ -324,15 +306,6 @@ export default function ClassManagerModal({
                     >
                       ♻️ 복원
                     </button>
-                    <button
-                      type="button"
-                      className="btn-ghost class-mgr-delete"
-                      onClick={() => setConfirmDelete({ id: c.id, name: c.name })}
-                      disabled={busyId === c.id}
-                      title="완전히 삭제(되돌릴 수 없음)"
-                    >
-                      <IconTrash size={15} />
-                    </button>
                   </div>
                 </li>
               ))}
@@ -341,16 +314,6 @@ export default function ClassManagerModal({
         </div>
       </div>
 
-      {confirmDelete && (
-        <ConfirmModal
-          title={`'${confirmDelete.name}' 반을 완전히 삭제할까요?`}
-          description="프로젝트·카드·과일 등 이 반의 모든 데이터가 영구히 사라지고 되돌릴 수 없어요."
-          confirmLabel="삭제"
-          danger
-          onConfirm={handleDelete}
-          onClose={() => setConfirmDelete(null)}
-        />
-      )}
     </div>
   );
 }

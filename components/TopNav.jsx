@@ -391,7 +391,9 @@ export default function TopNav({ active, onStudyExport = null }) {
             🍊 {fruitTotal}
           </button>
         )}
-        {user && isFirebaseConfigured && <NotificationBell uid={user.uid} />}
+        {user && isFirebaseConfigured && (
+          <NotificationBell uid={user.uid} classId={activeClassId} isStudent={!admin} />
+        )}
         {/* 로그아웃은 이 메뉴 안으로 들어갔습니다 — 상단바에 전광판을 두려고
             자리를 비웠고, 하루에 한 번 누를까 말까 한 것이 늘 폭을 차지할
             이유도 없습니다(UserProfile 주석 참고). */}

@@ -3,14 +3,15 @@
 //
 // 실명·이메일·학번이 여기에만 있는 단일 출처라, '누가' 쓰는지뿐 아니라
 // '어떤 필드를' 쓰는지까지 좁혀야 합니다. 특히 role은 클라이언트가 절대
-// 쓸 수 없어야 합니다 — 역할 부여는 서버 함수(setUserRole)만 합니다.
+// 쓸 수 없어야 합니다 — 역할 부여는 관리자만(또는 교사 가입 코드로 학생 →
+// 선생님 한 방향 — docRoles.test.mjs).
 // =============================================================
 import { describe, it, before, after, beforeEach } from "node:test";
 import { assertSucceeds, assertFails } from "@firebase/rules-unit-testing";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { makeEnv, asStudent, asTeacher, asAdmin, seed } from "./helpers.mjs";
 
-// 최고 관리자 — role 클레임으로만 정해집니다(이메일을 규칙에 박아 두지 않음).
+// 최고 관리자 — 이 파일은 role 클레임으로 둡니다(users 문서 role은 docRoles.test.mjs).
 const asInitialAdmin = (env) => asAdmin(env, "rootAdmin");
 
 describe("사용자 프로필 규칙", () => {

@@ -19,6 +19,7 @@ import { isFirebaseConfigured } from "@/lib/firebase";
 import { useAuth } from "@/lib/authContext";
 import { backdropClose } from "@/lib/modal";
 import { signInWithGoogle } from "@/lib/auth";
+import { becomeTeacherWithCode } from "@/lib/store";
 import { isInAppBrowser } from "@/lib/browser";
 import SiteFooter from "@/components/SiteFooter";
 import { IconLogo } from "@/components/StatusIcons";
@@ -67,6 +68,11 @@ export default function LandingPage() {
   const [signupRole, setSignupRole] = useState(null); // 회원가입 시 선택: 'student' | 'teacher'
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  // 선생님으로 가입할 때 넣는 교사 가입 코드(배포한 사람이 알려 줌)
+  const [teacherCode, setTeacherCode] = useState("");
+  // 선생님으로 바꾸는 동안은 '로그인됨 → /books' 자동 이동을 잠시 멈춥니다 —
+  // 먼저 넘어가 버리면 학생으로 읽힌 화면이 남고 코드 결과도 못 알립니다.
+  const holdRedirect = useRef(false);
   // 카카오톡 등 인앱 브라우저 — 구글이 이 안에서의 OAuth 로그인 자체를
   // 막습니다. 가입·로그인이 구글 하나뿐이라 여기서 미리 알려야 합니다. 서버에는 navigator가 없어 마운트
   // 후에만 판별합니다.
@@ -117,7 +123,7 @@ export default function LandingPage() {
       document.documentElement.removeAttribute("data-auth-pending");
       return;
     }
-    if (authStatus === "in") router.replace("/books");
+    if (authStatus === "in" && !holdRedirect.current) router.replace("/books");
     else if (authStatus === "out") {
       document.documentElement.removeAttribute("data-auth-pending");
     }
@@ -129,13 +135,29 @@ export default function LandingPage() {
       router.push("/books");
       return;
     }
+    const wantTeacher = authMode === "signup" && signupRole === "teacher";
+    if (wantTeacher && teacherCode.trim().length < 4) {
+      setError("교사 가입 코드를 입력해 주세요.");
+      return;
+    }
     setError("");
     setBusy(true);
+    holdRedirect.current = wantTeacher;
     try {
-      // 역할은 새로 가입할 때만 반영됩니다(이미 가입한 계정은 그대로 로그인).
-      await signInWithGoogle(authMode === "signup" ? signupRole : null);
+      // 모두 학생으로 가입하고, 선생님이면 이어서 교사 가입 코드로 바꿉니다.
+      // 대조는 보안 규칙이 합니다(앱은 그 코드를 읽지 못함).
+      const user = await signInWithGoogle();
+      if (wantTeacher && user?.role === "student") {
+        const res = await becomeTeacherWithCode(user.uid, teacherCode);
+        // 역할이 바뀐 사용자로 화면을 다시 그리려고 새로 불러옵니다. 코드가
+        // 틀렸으면 학생으로 가입된 채 반 입장 화면에서 다시 넣게 안내합니다.
+        window.location.assign(res.ok ? "/books" : `/books?teacherCode=${res.reason === "wrong" ? "wrong" : "error"}`);
+        return;
+      }
+      holdRedirect.current = false;
       router.push("/books");
     } catch (err) {
+      holdRedirect.current = false;
       setError(authErrorMessage(err?.code));
     } finally {
       setBusy(false);
@@ -239,7 +261,7 @@ export default function LandingPage() {
                   <span className="signup-role-emoji">🧑‍🏫</span>
                   <span className="signup-role-text">
                     <strong>선생님</strong>
-                    <small>반과 참여 코드를 만들고 독서 활동을 운영해요. (관리자 승인 후 활성화)</small>
+                    <small>반과 참여 코드를 만들고 독서 활동을 운영해요. (교사 가입 코드 필요)</small>
                   </span>
                 </button>
               </div>
@@ -260,11 +282,23 @@ export default function LandingPage() {
                     </button>
                   </div>
                   {signupRole === "teacher" ? (
-                    <p className="signup-role-note">
-                      구글 계정으로 가입하면 <strong>선생님 신청</strong>이 관리자에게 전달되고,
-                      권한은 <strong>관리자 승인 후</strong> 부여됩니다. 승인되면 반과 참여 코드를
-                      만들 수 있어요.
-                    </p>
+                    <>
+                      <p className="signup-role-note">
+                        이 사이트를 운영하는 분께 받은 <strong>교사 가입 코드</strong>를 넣고
+                        구글 계정으로 가입하면 곧바로 선생님이 됩니다. 반과 참여 코드를
+                        만들 수 있어요.
+                      </p>
+                      <input
+                        type="text"
+                        className="signup-teacher-code"
+                        value={teacherCode}
+                        onChange={(e) => { setTeacherCode(e.target.value); setError(""); }}
+                        placeholder="교사 가입 코드"
+                        aria-label="교사 가입 코드"
+                        autoComplete="off"
+                        maxLength={40}
+                      />
+                    </>
                   ) : (
                     <p className="signup-role-note">
                       구글 계정으로 가입한 뒤, 선생님이 알려 준 <strong>참여 코드</strong>를

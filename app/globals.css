@@ -33014,3 +33014,27 @@ button.msgr-receipt:hover { color: var(--text-sub); }
 .xwg-hintpop-legend b { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--text-sub); font-variant-numeric: tabular-nums; }
 .xwg-hintpop-foot { margin: 0; font-size: 12px; color: var(--text-faint); }
 .xwg-hintpop-board .xw-cell.key .xw-ch { color: var(--text-sub); }
+
+/* 회원가입 — 교사 가입 코드 칸(선생님으로 가입할 때) */
+.signup-teacher-code {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 15px;
+}
+
+/* 반 입장 화면 — '선생님이세요?' 교사 가입 코드 칸 */
+.class-entry-teacher {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border);
+}
+.class-entry-teacher-toggle {
+  background: none;
+  border: none;
+  color: var(--text-sub);
+  font-size: 13px;
+  text-decoration: underline;
+  cursor: pointer;
+}

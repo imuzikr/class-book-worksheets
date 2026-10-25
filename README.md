@@ -23,55 +23,54 @@ npm run build # 프로덕션 빌드
 
 - **실서비스 모드** (Firebase 설정됨): Firebase Authentication으로
   실제 로그인/회원가입하고, 데이터는 Firestore에 저장됩니다. 권한은
-  Firestore 보안 규칙과 Cloud Functions가 서버에서 강제합니다.
+  Firestore · Storage 보안 규칙이 서버에서 강제합니다(서버 함수는 없습니다).
 - **데모 모드** (Firebase 미설정 · 현재 상태): 브라우저 메모리에 임시 저장(새로고침 시
   초기화)되고, 테스트 유저로 자동 입장합니다. 화면·기능을 빠르게 확인할 때만
   쓰입니다. (`lib/user.js`의 `TEST_USER`)
 
 ## 인증과 권한
 
-- **로그인**: 이메일/비밀번호 + Google 로그인 (`lib/auth.js`). 로그인 시
+- **로그인**: 구글 계정만 (`lib/auth.js`의 `signInWithGoogle`). 로그인 시
   `users/{uid}` 프로필을 보장하고, 학생은 접속 세션마다 새 익명 닉네임을 받습니다.
-- **역할 구조**: 최고 관리자(1명) → 선생님(중간 관리자) → 학생.
-  - **최고 관리자**: 부트스트랩 이메일로 지정(코드에 하드코딩). 역할 부여·
-    선생님 승인/탈퇴 등 최상위 권한.
-  - **선생님**: 회원가입 시 "선생님"으로 신청 → 최고 관리자 승인 시 부여.
-    대시보드·공지·학생 관리 등 대부분의 관리 권한.
-  - **학생**: 기본 역할. 반에 입장해 독서 활동 · KWLS · 수업 노트 작성.
-- **권한 부여**: 클라이언트가 스스로 못 바꾸며, Cloud Functions `setUserRole`이
-  커스텀 클레임으로만 부여합니다. 보안 규칙은 `request.auth.token.role`을
-  검사합니다. 화면의 `isAdmin(user)`는 UI 노출용일 뿐, 실제 강제는 규칙입니다.
+- **역할 구조**: 관리자 → 선생님 → 학생. 역할은 **`users/{uid}.role` 한 칸**이고,
+  보안 규칙이 그 문서를 읽어 판정합니다(서버 함수 · 커스텀 클레임 없음).
+  - **학생**: 기본 역할. 참여 코드로 반에 들어갑니다.
+  - **선생님**: 가입 때(또는 반 입장 화면의 '선생님이세요?') **교사 가입 코드**를
+    넣으면 스스로 선생님이 됩니다. 코드는 Firestore의 `config/teacherSignup` 문서
+    `code` 칸에 운영자가 콘솔에서 적어 두고, 앱에서는 아무도 그 문서를 읽을 수
+    없습니다 — 규칙만 견주어 봅니다. 코드를 바꾸면 그때부터 새 코드만 통합니다.
+  - **관리자**: 콘솔에서 그 사람의 `users/{uid}.role`을 `admin`으로 고칩니다.
+    관리자는 앱 안 역할 관리 창에서 남의 역할을 바꿀 수 있습니다.
+- 학생은 스스로 역할을 못 올립니다(코드 없이는). 화면의 `isAdmin(user)`는 노출용일
+  뿐이고 실제 강제는 규칙입니다.
 
-## 배포
+## 배포 — 서버 함수 · App Check 없음
 
 - **프론트엔드**: Vercel — `main`에 push하면 자동 배포됩니다.
-- **Firebase(규칙·색인·함수·Storage 규칙)**: 저장소 파일을 원본으로 삼아
-  CLI로 배포합니다(콘솔에서 직접 수정하지 마세요).
+- **Firebase**: 보안 규칙 · 색인 · Storage 규칙만 올립니다(무료 Spark 요금제로 충분 —
+  다만 2024년 10월 이후 새로 만든 프로젝트는 Storage를 쓰려면 Blaze가 필요할 수
+  있습니다. 그림 첨부를 안 쓰면 Storage 없이도 돕니다).
 
 ```bash
-firebase deploy --only firestore,storage,functions
-# 또는 개별: firestore:rules / firestore:indexes / storage / functions
+npx firebase-tools login   # 최초 1회
+npm run deploy             # 규칙 시험 → firestore(rules·indexes) + storage
 ```
 
-- `firestore.rules` / `storage.rules` — 보안 규칙
-- `firestore.indexes.json` — 복합 색인 + collectionGroup 필드 오버라이드
-- `functions/index.js` — Cloud Functions (아래)
-- Cloud Functions 배포에는 **Blaze(종량제)** 요금제가 필요합니다(대부분 무료 한도 내).
+- Storage 규칙은 역할을 Firestore에서 읽습니다. 처음 올릴 때 서비스 간 권한을
+  허용할지 물으면 'Y'로 답하세요.
+- 콘솔에서 할 일 두 가지: `config/teacherSignup` 문서에 `code`(4자 이상) 적기 ·
+  첫 관리자의 `users/{uid}.role`을 `admin`으로 고치기.
 
-## 가입 · 관리자
+## 지우기 — 앱 안에서는 보관까지
 
-- 가입·로그인은 **구글 계정만**, 도메인 제한 없음. 학생은 가입 뒤 교사가 만든 **참여 코드**로 반에 들어갑니다(서버 함수 없이 — 보안 규칙이 코드와 만료를 확인).
-- 선생님은 가입 때 '선생님'을 고르고, 관리자가 앱 안 역할 관리 창에서 승인합니다.
-- 첫 관리자: 앱에 가입한 뒤 `npm run admin:grant -- <이메일> --apply` (gcloud 로그인 필요).
-
-## Cloud Functions (`functions/index.js`)
-
-- `setUserRole` — 역할(커스텀 클레임) 부여 (관리자만 호출)
-- `deleteAuthUser` — 탈퇴 시 로그인 계정 삭제 (관리자/교사)
-- `deleteStudentAccount` · `deleteClass` — 학생 탈퇴 정리 · 반 삭제(하위 기록까지)
-- `sendClassNotice` — 반 공지(학생 알림함에 보냄)
-- `onAnswerCreated` / `onAnswerUnderstood` / `onAnswerDeleted` — 배움나눔 질문방용(책 나눔에서는 깨어나지 않음)
-- 모든 callable은 `enforceAppCheck: true` — App Check 키를 넣어야 동작합니다.
+- **반**은 앱에서 지우지 않고 **보관**합니다. 학생은 '반에서 빼기'로 명단에서만 뺍니다.
+- 완전히 지우려면 Firebase 콘솔을 씁니다 — Firestore에서 `classes/{반}` 문서를
+  지우면 하위 컬렉션까지 함께 지울지 묻습니다(그 반의 노트 · 과일 · 메신저 등).
+  반 바깥에 있는 것(`bookActivities` · `memberships` · `attendanceRecords` ·
+  `kwl` · `joinCodes`)은 `classId`로 따로 지웁니다. 로그인 계정은
+  Authentication 탭에서 지우고, 그 사람의 `users/{uid}` 문서도 함께 지웁니다.
+- 학년도가 바뀌어 통째로 비우려면 `npx firebase-tools firestore:delete --all-collections`
+  (되돌릴 수 없음)로 비운 뒤 `config/teacherSignup`과 관리자 role만 다시 적으면 됩니다.
 
 ## Firestore 데이터 구조 (책 나눔이 쓰는 것)
 
@@ -98,7 +97,7 @@ kwl                         KWLS 기록 (책방 KWLS 활동이 함께 적음)
 broadcasts/{cId}            학급 화면 방송
 ```
 
-배움나눔에서 가져온 규칙 · 함수에는 질문(`questions`) · 공부방(`studyBoards`) 같은
+배움나눔에서 가져온 규칙에는 질문(`questions`) · 공부방(`studyBoards`) 같은
 컬렉션도 남아 있지만 책 나눔 화면은 쓰지 않습니다.
 
 ## 폴더 구조
@@ -107,10 +106,10 @@ broadcasts/{cId}            학급 화면 방송
 app/page.js          랜딩 + 로그인/회원가입(역할 선택)
 app/books/page.js    책방 (활동 목록 → 활동 · 반 관리 · 출석 · 과일 바구니)
 lib/firebase.js      Firebase 초기화 (config — 지금은 자리표시자)
-lib/auth.js          인증 (이메일/구글) + 프로필/역할
+lib/auth.js          인증 (구글) + 프로필/역할
 lib/user.js          현재 사용자 캐시 + 역할 헬퍼
 lib/store.js         데이터 레이어 입구 (Firestore ↔ 데모 모드 자동 전환)
-functions/index.js   Cloud Functions (서버 코드)
+scripts/admin/       관리용 스크립트 (gcloud 로그인 · REST)
 ```
 
 자세한 아키텍처·규칙 세부는 `CLAUDE.md`를 참고하세요.

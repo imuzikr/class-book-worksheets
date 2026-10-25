@@ -26,10 +26,11 @@
 - **'오늘' 패널의 '카드' 칸은 안 섭니다** — 공부방 프로젝트가 없어서입니다
   (`StudyTodayFeed`가 프로젝트가 없으면 출석 · 성찰 · 과일 셋만 그림).
 - 알림 벨은 반 공지만 받습니다(질문 답변 · 모둠 메모로 옮겨 갈 화면이 없음).
-- **자료층(`lib/data/*`) · 규칙(`firestore.rules`) · 함수(`functions/`)는 통째로
-  가져왔습니다.** 질문 · 공부방 프로젝트 · 수업 자료 같은 컬렉션의 함수와 규칙이
-  남아 있지만 화면이 부르지 않습니다. 영역끼리 서로 가져다 쓰는 곳이 있어(반 삭제가
-  공부방 보드를 함께 지우는 등) 덜어 내려면 그 고리를 먼저 풀어야 합니다.
+- **자료층(`lib/data/*`) · 규칙(`firestore.rules`)은 통째로 가져왔습니다.** 질문 ·
+  공부방 프로젝트 · 수업 자료 같은 컬렉션의 함수와 규칙이 남아 있지만 화면이 부르지
+  않습니다. 영역끼리 서로 가져다 쓰는 곳이 있어 덜어 내려면 그 고리를 먼저 풀어야 합니다.
+- **서버 함수(Cloud Functions)와 App Check가 없습니다** — 비전공 선생님도 무료 요금제로
+  배포하게(선생님 요청). 아래 '서버 함수 없이 돌리기' 절.
 - 아래 '첫 화면'부터의 절은 **원본 앱의 기록을 그대로 옮긴 것**입니다. 공부방 ·
   질문방 · 파이썬 실행기 · 리포트 · 관리자 화면 · 수업 모드를 다루는 대목은 이
   저장소에 없는 화면 이야기이고, 책방 · 반 · 자리표 · 과일 · 출석 · 수업 노트 ·
@@ -69,28 +70,27 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
 ## 새 Firebase 프로젝트 연결
 
 1. [Firebase 콘솔](https://console.firebase.google.com)에서 프로젝트를 만들고 웹 앱을 등록합니다.
-   Authentication(**Google만**) · Firestore · Storage · Functions(Blaze 요금제)를 켭니다.
+   Authentication(**Google만**) · Firestore · Storage를 켭니다. Functions · App Check는 안 씁니다.
+   (2024년 10월 이후 만든 프로젝트는 Storage에 Blaze가 필요할 수 있습니다 — 그림 첨부만 막힙니다.)
 2. 프로젝트 id를 **세 곳에 같은 값으로** 적습니다 — `lib/firebase.js`의 `FIREBASE_PROJECT_ID`
    (+ `firebaseConfig`의 apiKey · messagingSenderId · appId), `next.config.mjs`의
-   `FIREBASE_PROJECT_ID`, `.firebaserc`의 `default`. 관리용 스크립트(`functions/scripts/*.mjs`)의
+   `FIREBASE_PROJECT_ID`, `.firebaserc`의 `default`. 관리용 스크립트(`scripts/admin/*.mjs`)의
    `PROJECT_ID`도 함께.
-3. **App Check(reCAPTCHA Enterprise) 키를 꼭 넣으세요** — `RECAPTCHA_ENTERPRISE_SITE_KEY`.
-   서버 함수(`setUserRole` · `deleteClass` · `sendClassNotice` 등)가
-   `enforceAppCheck: true`라 App Check 없이는 선생님 승인 · 반 삭제 ·
-   반 공지가 거부됩니다. 자리표시자인 동안은
-   앱이 App Check를 켜지 않습니다.
-4. 배포 차례는 **색인 → 규칙 → 함수 → 앱**입니다.
+3. 배포 차례는 **색인 · 규칙 → 앱**입니다.
 
    ```bash
    npx firebase-tools login
-   npm run deploy     # 규칙 시험 → firestore(rules·indexes) + functions 배포
+   npm run deploy     # 규칙 시험 → firestore(rules·indexes) + storage 규칙
    ```
 
-   `npm run deploy -- --rules-only` / `--functions-only` / `--skip-tests`로 좁힐 수 있습니다
-   (`scripts/deploy.sh`). Storage 규칙은 `npx firebase-tools deploy --only storage`.
-5. **첫 관리자를 지정합니다** — 그 사람이 먼저 앱에 구글로 가입한 뒤
-   `npm run admin:grant -- <이메일> --apply`(`functions/scripts/grant-admin.mjs`, gcloud 로그인
-   필요 · `--apply` 없이는 미리보기 · `--revoke`로 해제). 지정된 사람은 다시 로그인해야 합니다.
+   `npm run deploy -- --rules-only` / `--indexes-only` / `--skip-tests`로 좁힐 수 있습니다
+   (`scripts/deploy.sh`). Storage 규칙이 역할을 Firestore에서 읽으므로(서비스 간 규칙) 처음
+   올릴 때 권한을 물으면 'Y'.
+4. **콘솔에서 두 가지를 손으로 적습니다.**
+   - `config/teacherSignup` 문서에 `code`(4자 이상 글자) — 선생님 가입 코드. 바꾸면 그때부터 새
+     코드만 통합니다. 이 문서가 없거나 코드가 짧으면 아무도 선생님이 될 수 없습니다.
+   - 첫 관리자 — 그 사람이 앱에 구글로 가입한 뒤 `users/{uid}`의 `role`을 `admin`으로.
+     새로고침하면 반영됩니다.
 
 ## 가입 · 반 입장 — 공개 운영 (배움나눔과 다른 점)
 
@@ -101,11 +101,15 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
 - **가입은 구글 계정만**입니다(`lib/auth.js`의 `signInWithGoogle` — 가입과 로그인이 한 길,
   프로필이 없으면 만듦). 규칙이 `request.auth.token.firebase.sign_in_provider == 'google.com'`을
   봅니다. 이메일·비밀번호 가입은 없습니다.
-- **관리자 = `role` 클레임 하나**(`isAdmin` — `lib/user.js` · `firestore.rules` · `storage.rules` ·
-  `functions/index.js`). 관리자 계정은 탈퇴 함수로 지울 수 없습니다(먼저 역할을 내림).
-- **선생님은 가입 때 '선생님'을 고르면 신청 표시(`requestedRole`)가 붙고, 관리자가 상단바
-  프로필 메뉴의 역할 관리 창(`RoleManagerModal`)에서 승인**합니다(`setUserRole`). 승인 전에는
-  학생 화면입니다. 승인된 선생님이 반을 만들면 참여 코드가 함께 생깁니다(`ClassManagerModal`).
+- **역할 = `users/{uid}.role` 한 칸**(`isAdmin` — `lib/user.js` · 규칙의 `userRole()`).
+  규칙이 그 문서를 `get()`해 판정하고, 토큰에 `role` 클레임이 있으면 그것을 먼저 봅니다
+  (옛 계정 대비). 프로필이 없으면 학생입니다. Storage 규칙도 `firestore.get`으로 같은 칸을 읽습니다.
+- **선생님은 교사 가입 코드로 스스로 됩니다**(`becomeTeacherWithCode` — 랜딩의 '선생님'
+  가입 · 반 입장 화면의 '선생님이세요?'). 규칙의 `teacherCodeOk`가 `config/teacherSignup.code`와
+  견주고, 그 문서는 앱에서 아무도 못 읽고 못 씁니다(`match`가 없음). 학생→선생님 한 번뿐이고
+  관리자는 코드로 못 됩니다 · 다른 칸(실명 등)을 끼워 바꿀 수 없습니다. 시험
+  `tests/rules/docRoles.test.mjs`. 관리자는 역할 관리 창(`RoleManagerModal`)에서 문서 role을
+  곧바로 고칩니다(`assignUserRole`). 선생님이 반을 만들면 참여 코드가 함께 생깁니다.
 - **학생은 가입 뒤 참여 코드로 반에 들어갑니다**(`ClassEntry` → `lib/data/classes.js`의
   `joinClassWithCode` — 이름만 남은 **앱 안 함수**이고 서버 함수가 아닙니다).
   - 앱이 `joinCodes/{코드}`를 한 건 읽어 반을 찾고, `memberships/{uid}_{classId}`를 **코드와
@@ -140,11 +144,19 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
 - **`/__/` 아래에는 보안 헤더를 안 붙입니다**(`headers`의 `source`) — 로그인 iframe이 막힙니다.
 - 데모 모드인 동안은 CSP `frame-src`에 firebaseapp.com을 넣지 않습니다(`FIREBASE_FRAME`).
 
-### 함수 요금
+### 서버 함수 없이 돌리기 — 무엇이 바뀌었나
 
-`functions/index.js`의 `setGlobalOptions`에 `maxInstances: 10`(천장), `minInstances`는
-일부러 비워 둡니다(아무도 안 쓰는 시간에도 요금이 붙습니다). 요금은 함수보다 Firestore
-읽기가 먼저 문제가 됩니다 — Google Cloud 콘솔의 **예산 알림**으로 지켜보세요.
+- **반은 보관까지**입니다(반 관리하기에 '완전 삭제' 없음). 하위 기록까지 지우는 일은
+  서버 함수가 아니면 못 해서, 학기 정리는 Firebase 콘솔에서 합니다(반 문서를 지우면
+  하위 컬렉션째 지울지 묻습니다 — 반 바깥의 `bookActivities` · `memberships` ·
+  `attendanceRecords` · `kwl` · `joinCodes`는 `classId`로 따로).
+- **학생 탈퇴 대신 '반에서 빼기'** — 명단에서만 빠지고 글은 남습니다. 로그인 계정은
+  Authentication 탭에서, 프로필은 `users/{uid}` 문서를 콘솔에서 지웁니다.
+- **반 공지는 교사가 곧바로 씁니다** — `classes/{cId}/classNotices`에 한 장(`sendClassNotice`,
+  500자 · 고치기 · 지우기 없음). 학생 알림함(`users/{uid}/notifications`)에 나눠 쓰지 않고, 알림
+  벨이 그 반의 최근 5장을 구독해 안 읽은 것을 셉니다 — 읽음 표시는 `chatReads.rooms.notice`
+  (서버 시각 ms). 시험 `tests/rules/classNotices.test.mjs`.
+- 관리용 스크립트는 `scripts/admin/`(gcloud 로그인 + REST — 설치 없음).
 
 ## 주요 페이지
 
@@ -768,7 +780,7 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
     활동이 통째로 날아간 일이 있었습니다. 앱 안에 되돌릴 길이 없어 Firestore
     시점 복구까지 갔지만 PITR이 꺼져 있어 보존 창이 1시간뿐이었고, 그 사이에
     지난 뒤라 못 살렸습니다. (그 뒤 PITR을 켜 두어 지금은 7일입니다.
-    급할 때 쓰는 도구: `npm run books:rescue` — `functions/scripts/rescue-activity.mjs`)
+    급할 때 쓰는 도구: `npm run books:rescue` — `scripts/admin/rescue-activity.mjs`)
   - **mock은 활동 문서를 갈아 끼웁니다**(제자리에서 고치지 않고 —
     `updateBookActivity`·`deleteBookActivity`·`restoreBookActivity`).
     Firestore는 읽을 때마다 새 객체를 주는데 mock이 같은 객체를 고쳐 두면,

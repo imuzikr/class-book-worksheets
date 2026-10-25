@@ -10,11 +10,8 @@
     "test:rules": "npm --prefix tests/rules test",
     "lint": "npm --prefix tools/lint run lint",
     "deploy": "bash scripts/deploy.sh",
-    "admin:grant": "node functions/scripts/grant-admin.mjs",
-    "books:to-solo": "node functions/scripts/consonant-to-solo.mjs",
-    "books:rescue": "node functions/scripts/rescue-activity.mjs",
-    "books:purge-orphans": "node functions/scripts/purge-orphan-notifications.mjs",
-    "notes:purge-orphans": "node functions/scripts/purge-orphan-cornell-notes.mjs"
+    "books:rescue": "node scripts/admin/rescue-activity.mjs",
+    "notes:purge-orphans": "node scripts/admin/purge-orphan-cornell-notes.mjs"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.18.0",

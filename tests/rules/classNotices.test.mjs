@@ -9,10 +9,9 @@
 //    '공지' 탭에서 최근 3건을 봅니다(같은 글을 이미 제 알림으로 받았으므로
 //    새로 드러나는 것이 없습니다). 다른 반 학생은 못 읽습니다.
 //  · 남의 반 교사가 남의 반 이력을 읽지 못할 것
-//  · 아무도 직접 쓰지 못할 것 — 이 기록은 서버 함수(sendClassNotice)가
-//    학생 알림을 실제로 보낸 뒤에 적습니다. 클라이언트가 직접 적을 수 있으면
-//    '보냈다고 적혀 있는데 실제로는 안 간' 기록을 만들 수 있습니다.
-//    (admin SDK는 규칙을 우회하므로 서버 함수는 영향받지 않습니다)
+//  · **이 문서가 곧 공지입니다**(서버 함수 없음) — 담당 교사만 직접 쓰고,
+//    칸을 못 박고 글은 500자. 학생 · 남의 반 교사 · 보관된 반은 거부.
+//    보낸 공지는 아무도 고치거나 지우지 못합니다.
 // =============================================================
 import { describe, it, before, after, beforeEach } from "node:test";
 import { assertSucceeds, assertFails } from "@firebase/rules-unit-testing";
@@ -28,6 +27,7 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  serverTimestamp,
 } from "firebase/firestore";
 import { makeEnv, asStudent, asTeacher, asAdmin, seed } from "./helpers.mjs";
 
@@ -40,6 +40,12 @@ const payload = (cId, byUid = "teacherA") => ({
   senderUid: byUid,
   senderName: "강현수",
   sentAt: new Date(),
+});
+// 앱이 실제로 보내는 모양 — 시각은 서버 시각이어야 합니다.
+const live = (cId, byUid = "teacherA", extra = {}) => ({
+  ...payload(cId, byUid),
+  sentAt: serverTimestamp(),
+  ...extra,
 });
 
 describe("반 공지 발송 이력 규칙", () => {
@@ -105,20 +111,42 @@ describe("반 공지 발송 이력 규칙", () => {
     await assertFails(getDoc(doc(db, "classes", "cA", "classNotices", id)));
   });
 
-  // ── 쓰기 (전부 막힘) ──
-  it("담당 교사도 직접 만들 수 없다 (서버 함수만)", async () => {
+  // ── 쓰기 ──
+  it("담당 교사는 자기 반에 공지를 남긴다", async () => {
     const db = asTeacher(env, "teacherA").firestore();
-    await assertFails(addDoc(noticeCol(db, "cA"), payload("cA")));
+    await assertSucceeds(addDoc(noticeCol(db, "cA"), live("cA")));
   });
 
-  it("최고 관리자도 직접 만들 수 없다", async () => {
+  it("관리자도 남긴다", async () => {
     const db = asAdmin(env, "root").firestore();
+    await assertSucceeds(addDoc(noticeCol(db, "cA"), live("cA", "root")));
+  });
+
+  it("남의 반 교사는 남길 수 없다", async () => {
+    const db = asTeacher(env, "teacherB").firestore();
+    await assertFails(addDoc(noticeCol(db, "cA"), live("cA", "teacherB")));
+  });
+
+  it("보관된 반에는 남길 수 없다", async () => {
+    await seed(env, (db) =>
+      setDoc(doc(db, "classes", "cA"), { createdBy: "teacherA", archived: true, name: "A반" })
+    );
+    const db = asTeacher(env, "teacherA").firestore();
+    await assertFails(addDoc(noticeCol(db, "cA"), live("cA")));
+  });
+
+  it("보낸 사람을 남으로 적거나 · 시각을 지어내거나 · 낯선 칸 · 500자 넘음은 거부", async () => {
+    const db = asTeacher(env, "teacherA").firestore();
+    await assertFails(addDoc(noticeCol(db, "cA"), live("cA", "teacherB")));
     await assertFails(addDoc(noticeCol(db, "cA"), payload("cA")));
+    await assertFails(addDoc(noticeCol(db, "cA"), live("cA", "teacherA", { extra: 1 })));
+    await assertFails(addDoc(noticeCol(db, "cA"), live("cA", "teacherA", { text: "가".repeat(501) })));
+    await assertFails(addDoc(noticeCol(db, "cA"), live("cA", "teacherA", { text: "" })));
   });
 
   it("학생은 만들 수 없다", async () => {
     const db = asStudent(env, "stu1").firestore();
-    await assertFails(addDoc(noticeCol(db, "cA"), payload("cA", "stu1")));
+    await assertFails(addDoc(noticeCol(db, "cA"), live("cA", "stu1")));
   });
 
   it("이력은 담당 교사도 고칠 수 없다", async () => {

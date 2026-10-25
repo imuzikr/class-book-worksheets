@@ -3,9 +3,14 @@
 // =============================================================
 // 상단바 알림 벨 — 새 답변 / 답변 채택(이해됐어요) / 반 공지 / 모둠 메모
 // -------------------------------------------------------------
-// **두 곳을 함께 구독해 한 목록으로 보여 줍니다.**
-//  · users/{uid}/notifications — Cloud Functions가 씁니다(답변·공지)
+// **세 곳을 함께 구독해 한 목록으로 보여 줍니다.**
+//  · users/{uid}/notifications — 배움나눔 시절 서버 함수가 쓰던 알림함
+//    (책 나눔에는 쓰는 곳이 없어 대개 비어 있음)
 //  · groupMemos 중 내가 받은 안 읽은 것 — 모둠 친구가 직접 씁니다
+//  · **반 공지**(학생만) — classes/{cId}/classNotices의 최근 것. 교사가
+//    서버 함수 없이 곧바로 쓰는 문서라 학생 알림함에는 들어오지 않습니다.
+//    어디까지 읽었나는 간편 메신저와 같은 문서(chatReads)의 'notice' 칸에
+//    '여기까지 봤다'(그 공지의 서버 시각)로 적습니다 — 기기를 바꿔도 같음.
 //
 // 왜 나뉘어 있나: 알림함은 **본인만** 읽고 쓸 수 있게 잠가 둔 자리라
 // (교사도 못 읽습니다) 학생끼리 서로의 알림함에 쓰게 열 수 없습니다.
@@ -24,6 +29,9 @@ import {
   markNotificationRead,
   markAllNotificationsRead,
   pruneOldNotifications,
+  subscribeClassNotices,
+  subscribeChatReads,
+  markChatRoomSeen,
   formatTime,
   toDate,
 } from "@/lib/store";
@@ -36,9 +44,16 @@ const LABELS = {
   group_memo: { icon: "✉️", text: "모둠 친구의 메모" },
 };
 
-export default function NotificationBell({ uid }) {
+// 알림 벨에 올리는 반 공지 — 최근 몇 건까지. 새로 들어온 학생에게 지난
+// 공지가 한꺼번에 쌓이지 않게 좁게 둡니다(메신저 '공지' 탭에서 다시 봄).
+const NOTICE_WINDOW = 5;
+const NOTICE_SEEN_KEY = "notice"; // chatReads.rooms의 칸 이름(방 열쇠 dm_ · grp_와 안 겹침)
+
+export default function NotificationBell({ uid, classId = null, isStudent = false }) {
   const [notifs, setNotifs] = useState([]);
   const [memos, setMemos] = useState([]);
+  const [notices, setNotices] = useState([]);
+  const [seen, setSeen] = useState({});
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
 
@@ -52,7 +67,34 @@ export default function NotificationBell({ uid }) {
     return subscribeMyUnreadMemos(uid, setMemos);
   }, [uid]);
 
-  // 두 갈래를 한 목록으로 — 최신순. 메모는 알림함 문서가 아니므로 여기서
+  // 반 공지(학생만) — 그 반의 최근 공지와 '여기까지 봤다' 표시
+  const noticeOn = !!(uid && classId && isStudent);
+  useEffect(() => {
+    if (!noticeOn) { setNotices([]); return; }
+    return subscribeClassNotices(classId, setNotices, NOTICE_WINDOW);
+  }, [noticeOn, classId]);
+  useEffect(() => {
+    if (!noticeOn) { setSeen({}); return; }
+    return subscribeChatReads(classId, uid, setSeen);
+  }, [noticeOn, classId, uid]);
+  const seenNotice = Number(seen?.[NOTICE_SEEN_KEY]) || 0;
+  const unreadNotices = useMemo(
+    () =>
+      notices
+        .filter((n) => n.sentAt && (toDate(n.sentAt)?.getTime() ?? 0) > seenNotice)
+        .map((n) => ({
+          id: n.id,
+          _src: "notice",
+          type: "class_notice",
+          createdAt: n.sentAt,
+          text: n.text,
+          senderName: n.senderName,
+          _ms: toDate(n.sentAt)?.getTime() ?? 0,
+        })),
+    [notices, seenNotice]
+  );
+
+  // 갈래를 한 목록으로 — 최신순. 메모는 알림함 문서가 아니므로 여기서
   // 알림처럼 보이도록 모양을 맞춰 둡니다(_src로 갈라 읽음 처리를 나눔).
   const items = useMemo(() => {
     const a = notifs.map((n) => ({ ...n, _src: "notif" }));
@@ -66,10 +108,17 @@ export default function NotificationBell({ uid }) {
       text: stripHtml(m.html || "").slice(0, 80),
       senderName: m.fromName,
     }));
-    return [...a, ...b].sort(
+    return [...a, ...b, ...unreadNotices].sort(
       (x, y) => (toDate(y.createdAt)?.getTime() ?? 0) - (toDate(x.createdAt)?.getTime() ?? 0)
     );
-  }, [notifs, memos]);
+  }, [notifs, memos, unreadNotices]);
+
+  // 반 공지 읽음 — '여기까지 봤다'를 앞으로만 옮깁니다(더 옛 공지를 읽어도
+  // 이미 본 새 공지가 되살아나지 않게).
+  function markNoticeSeen(ms) {
+    if (!noticeOn || !ms || ms <= seenNotice) return Promise.resolve();
+    return markChatRoomSeen(classId, uid, NOTICE_SEEN_KEY, ms);
+  }
 
   // 읽은 지 오래된 알림 정리 — 접속할 때 한 번, 자기 것만. 화면에는 최근
   // 20개만 보여서 눈에 안 띌 뿐 문서는 계속 쌓입니다(반 공지가 생기면서
@@ -108,6 +157,7 @@ export default function NotificationBell({ uid }) {
   function handleRead(e, n) {
     e.stopPropagation();
     if (n._src === "memo") markGroupMemoRead(n.id).catch(() => {});
+    else if (n._src === "notice") markNoticeSeen(n._ms).catch(() => {});
     else markNotificationRead(uid, n.id).catch(() => {});
   }
 
@@ -118,6 +168,7 @@ export default function NotificationBell({ uid }) {
       await Promise.all([
         markAllNotificationsRead(uid),
         ...memos.map((m) => markGroupMemoRead(m.id)),
+        markNoticeSeen(Math.max(0, ...unreadNotices.map((n) => n._ms))),
       ]);
     } catch {
       /* 실패하면 목록이 그대로 남습니다 — 다시 누르면 됩니다 */

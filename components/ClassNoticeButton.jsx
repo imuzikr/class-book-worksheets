@@ -3,21 +3,20 @@
 // =============================================================
 // 반 공지 보내기 (교사 전용) — 상단바 확성기 버튼
 // -------------------------------------------------------------
-// 지금 보고 있는 반의 학생들에게만 인앱 알림을 보냅니다. 받는 사람은 서버가
-// memberships로 정하므로(functions의 sendClassNotice), 화면에서 반을 잘못
-// 고르지 않는 한 다른 반 학생에게 갈 일이 없습니다.
+// 지금 보고 있는 반에 공지 한 장을 남깁니다(classes/{cId}/classNotices).
+// 그 반 학생의 알림 벨과 간편 메신저 '공지' 탭이 그것을 읽습니다 — 서버
+// 함수 없이 돕니다. 다른 반 학생은 규칙상 읽을 수 없습니다.
 //
 // 공지사항 게시판(notices)과 다른 자리입니다. 그쪽은 질문방에 남아 있는
 // 글이고 전체 공유라 누구나 봅니다. 여기는 "지금 이 반에 알려야 하는 것"을
 // 알림으로 밀어 주는 것이라, 남기지 않고 알림으로만 갑니다.
 //
-// 되돌릴 수 없는 동작이라(보낸 알림은 학생 문서에 이미 들어감) 보내기 전에
-// 몇 명에게 가는지 보여 주고 한 번 더 확인합니다.
+// 보낸 공지는 고치거나 지울 수 없습니다(학생이 이미 읽었을 수 있음).
 // =============================================================
 import { useEffect, useRef, useState } from "react";
 import { sendClassNotice, subscribeClassNotices, formatTime } from "@/lib/store";
 
-const MAX_LEN = 500; // 서버(NOTICE_MAX_LEN)와 같은 값
+const MAX_LEN = 500; // 보안 규칙(classNotices)과 같은 값
 
 export default function ClassNoticeButton({ classId, className = "", memberCount = 0 }) {
   const [open, setOpen] = useState(false);
@@ -63,11 +62,11 @@ export default function ClassNoticeButton({ classId, className = "", memberCount
     setBusy(true);
     setResult(null);
     try {
-      const res = await sendClassNotice(classId, body);
+      const res = await sendClassNotice(classId, body, memberCount);
       setText("");
       setResult({ ok: true, message: `${res?.sent ?? 0}명에게 보냈어요.` });
     } catch (err) {
-      // 서버가 이유를 문구로 돌려줍니다(권한·보관된 반·글자 수 등)
+      // 이유를 문구로 돌려받습니다(권한·보관된 반·글자 수 등)
       setResult({ ok: false, message: err?.message || "보내지 못했어요. 잠시 후 다시 시도해 주세요." });
     } finally {
       setBusy(false);

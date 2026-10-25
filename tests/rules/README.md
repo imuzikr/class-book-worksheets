@@ -20,7 +20,7 @@ cd tests/rules && npm install
 ```
 
 루트 `package.json`과 분리해 둔 이유는, `firebase-tools`가 700개 넘는 패키지를
-끌고 와서 Vercel 운영 빌드가 매번 느려지기 때문입니다. `functions/`와 같은 방식입니다.
+끌고 와서 Vercel 운영 빌드가 매번 느려지기 때문입니다.
 
 ## 실행
 

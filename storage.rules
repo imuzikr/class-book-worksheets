@@ -16,10 +16,15 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    function userRole() { return request.auth.token.get('role', ''); }
+    function claimRole() { return request.auth.token.get('role', ''); }
+    function docRole() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.get('role', 'student');
+    }
     function isTeacher() {
-      return request.auth != null &&
-        (userRole() == 'teacher' || userRole() == 'admin');
+      return request.auth != null && (
+        claimRole() == 'teacher' || claimRole() == 'admin'
+        || docRole() == 'teacher' || docRole() == 'admin'
+      );
     }
 
     match /uploads/{userId}/{fileName} {

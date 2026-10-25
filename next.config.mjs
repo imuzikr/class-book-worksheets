@@ -8,20 +8,19 @@ const FIREBASE_FRAME = FIREBASE_PROJECT_ID.startsWith("YOUR_") ? "" : ` ${FIREBA
 
 // Content-Security-Policy — 앱이 실제로 쓰는 출처만 허용.
 //  · script/eval: Next 하이드레이션(inline) + Pyodide(wasm-eval) + jsDelivr CDN
-//    + reCAPTCHA Enterprise(App Check, www.google.com)
+//    + 구글 로그인 스크립트
 //  · connect: Firebase(Firestore/Auth/Storage/Installations = *.googleapis.com)
-//    + Cloud Functions(callable, *.cloudfunctions.net) + Pyodide CDN
-//    + reCAPTCHA Enterprise 검증 요청(www.google.com)
+//    + Pyodide CDN (서버 함수 · App Check는 쓰지 않음)
 //  · img: Storage 등 https 이미지 + data/blob(미리보기·그리기)
 //  · worker/blob: 파이썬 실행 Web Worker
-//  · frame: 구글/Firebase 인증 팝업 + reCAPTCHA Enterprise 위젯 iframe
+//  · frame: 구글/Firebase 인증 팝업
 const csp = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://apis.google.com https://www.google.com https://*.gstatic.com blob:",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self' https://*.googleapis.com https://*.gstatic.com https://cdn.jsdelivr.net https://apis.google.com https://www.google.com https://*.cloudfunctions.net wss://*.firebaseio.com data: blob:",
+  "connect-src 'self' https://*.googleapis.com https://*.gstatic.com https://cdn.jsdelivr.net https://apis.google.com https://www.google.com wss://*.firebaseio.com data: blob:",
   "worker-src 'self' blob:",
   `frame-src 'self'${FIREBASE_FRAME} https://apis.google.com https://accounts.google.com https://www.google.com`,
   "object-src 'none'",

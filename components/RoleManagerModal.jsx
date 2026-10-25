@@ -4,10 +4,11 @@
 // 역할 관리 (최고 관리자 전용)
 // -------------------------------------------------------------
 // 권한 구조: 최고 관리자(1명) → 중간 관리자(선생님) → 학생
-//  · 선생님 승인/강등/탈퇴·역할 부여는 최고 관리자만 가능 (이 모달 자체가
-//    role==='admin'에게만 열립니다. 서버의 setUserRole도 관리자만 허용)
-// 실제 권한 변경은 Cloud Functions(setUserRole)가 커스텀 클레임으로 부여합니다.
-// (대상 계정은 재로그인해야 반영)
+//  · 선생님 승인/강등·역할 부여는 최고 관리자만 가능 (이 모달 자체가
+//    role==='admin'에게만 열리고, 보안 규칙도 role 변경을 관리자에게만 엽니다)
+// 역할은 users/{uid}.role을 곧바로 고칩니다(서버 함수 없음). 선생님은 대개
+// 교사 가입 코드로 스스로 되므로, 이 창은 바로잡을 때 씁니다.
+// (대상 계정은 새로고침하면 반영)
 // =============================================================
 import { backdropClose } from "@/lib/modal";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -15,20 +16,15 @@ import {
   assignUserRole,
   approveTeacherRequest,
   dismissTeacherRequest,
-  dismissWithdrawalRequest,
-  deleteStudent,
 } from "@/lib/store";
-import ConfirmModal from "./ConfirmModal";
 
 const ROLE_LABELS = { student: "학생", teacher: "선생님", admin: "관리자" };
 
 function errorText(err) {
   const code = err?.code ?? "";
-  if (code === "functions/permission-denied")
+  if (code === "permission-denied")
     return "권한이 없습니다. (최고 관리자 계정으로 로그인했는지 확인해 주세요)";
-  if (code === "functions/not-found")
-    return "setUserRole 함수를 찾을 수 없어요. Cloud Functions가 배포되지 않은 것 같습니다.";
-  if (code === "functions/unauthenticated")
+  if (code === "unauthenticated")
     return "로그인 상태가 아닙니다. 다시 로그인한 뒤 시도해 주세요.";
   return `처리에 실패했어요. (${code || err?.message || "알 수 없는 오류"})`;
 }
@@ -44,7 +40,6 @@ export default function RoleManagerModal({ directory, onClose }) {
   const [role, setRole] = useState("teacher");
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState(null); // { type, text }
-  const [confirmDelete, setConfirmDelete] = useState(null); // 탈퇴 확인 대상(teacher)
   const comboRef = useRef(null);
 
   // 콤보박스 바깥 클릭 시 목록 닫기 (닫히면 아래 버튼이 다시 보입니다)
@@ -69,12 +64,6 @@ export default function RoleManagerModal({ directory, onClose }) {
   // 현재 선생님(중간 관리자) — 최고 관리자(admin)는 제외(자기 자신 관리 불가)
   const teachers = useMemo(
     () => directory.filter((u) => u.role === "teacher"),
-    [directory]
-  );
-
-  // 선생님 탈퇴 신청 대기 — 본인이 프로필 메뉴에서 신청한 선생님
-  const withdrawPending = useMemo(
-    () => directory.filter((u) => u.role === "teacher" && u.withdrawRequested),
     [directory]
   );
 
@@ -119,13 +108,13 @@ export default function RoleManagerModal({ directory, onClose }) {
     selected &&
     run(
       () => assignUserRole(selected.uid, role),
-      `${userLabel(selected)} 님을 '${ROLE_LABELS[role]}'(으)로 지정했어요. (본인이 재로그인해야 반영됩니다)`
+      `${userLabel(selected)} 님을 '${ROLE_LABELS[role]}'(으)로 지정했어요. (본인이 새로고침하면 반영됩니다)`
     );
 
   const handleApprove = (u) =>
     run(
       () => approveTeacherRequest(u.uid),
-      `${userLabel(u)} 님을 선생님으로 승인했어요. (본인이 재로그인해야 반영됩니다)`
+      `${userLabel(u)} 님을 선생님으로 승인했어요. (본인이 새로고침하면 반영됩니다)`
     );
 
   const handleReject = (u) =>
@@ -134,17 +123,7 @@ export default function RoleManagerModal({ directory, onClose }) {
   const handleDemote = (u) =>
     run(
       () => assignUserRole(u.uid, "student"),
-      `${userLabel(u)} 님을 학생으로 강등했어요. (본인이 재로그인해야 반영됩니다)`
-    );
-
-  function handleWithdraw(u) {
-    setConfirmDelete(u);
-  }
-
-  const handleRejectWithdraw = (u) =>
-    run(
-      () => dismissWithdrawalRequest(u.uid),
-      `${userLabel(u)} 님의 탈퇴 신청을 거절했어요.`
+      `${userLabel(u)} 님을 학생으로 강등했어요. (본인이 새로고침하면 반영됩니다)`
     );
 
   return (
@@ -181,32 +160,7 @@ export default function RoleManagerModal({ directory, onClose }) {
           </div>
         )}
 
-        {/* 선생님 탈퇴 신청 대기 */}
-        {withdrawPending.length > 0 && (
-          <div className="role-pending">
-            <p className="role-pending-title">🚪 선생님 탈퇴 신청 대기 ({withdrawPending.length})</p>
-            <ul className="role-pending-list">
-              {withdrawPending.map((u) => (
-                <li key={u.uid} className="role-pending-item">
-                  <span className="role-pending-user">
-                    🧑‍🏫 <strong>{userLabel(u)}</strong>
-                    {u.email && <small>{u.email}</small>}
-                  </span>
-                  <span className="role-pending-actions">
-                    <button type="button" className="btn-ghost" onClick={() => handleRejectWithdraw(u)} disabled={submitting}>
-                      거절
-                    </button>
-                    <button type="button" className="btn-ghost role-danger-btn" onClick={() => handleWithdraw(u)} disabled={submitting}>
-                      탈퇴 처리
-                    </button>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* 현재 선생님(중간 관리자) 관리 — 강등/탈퇴 */}
+        {/* 현재 선생님(중간 관리자) 관리 — 강등 */}
         {teachers.length > 0 && (
           <div className="role-teachers">
             <p className="role-teachers-title">현재 선생님 ({teachers.length})</p>
@@ -220,9 +174,6 @@ export default function RoleManagerModal({ directory, onClose }) {
                   <span className="role-pending-actions">
                     <button type="button" className="btn-ghost" onClick={() => handleDemote(u)} disabled={submitting}>
                       학생으로
-                    </button>
-                    <button type="button" className="btn-ghost role-danger-btn" onClick={() => handleWithdraw(u)} disabled={submitting}>
-                      탈퇴
                     </button>
                   </span>
                 </li>
@@ -307,21 +258,6 @@ export default function RoleManagerModal({ directory, onClose }) {
         </div>
       </div>
 
-      {confirmDelete && (
-        <ConfirmModal
-          title="선생님 탈퇴 처리"
-          preview={`🧑‍🏫 ${userLabel(confirmDelete)}`}
-          description={"이 선생님 계정의 모든 게시물·활동·프로필이\n영구 삭제됩니다. 복구할 수 없습니다."}
-          confirmLabel="탈퇴 처리"
-          danger
-          onConfirm={async () => {
-            const u = confirmDelete;
-            setConfirmDelete(null);
-            await run(() => deleteStudent(u.uid), `${userLabel(u)} 님을 탈퇴 처리했어요.`);
-          }}
-          onClose={() => setConfirmDelete(null)}
-        />
-      )}
     </div>
   );
 }

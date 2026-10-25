@@ -19,7 +19,7 @@
 //
 // [무엇을 '주인 없음'으로 보는가] 노트의 `uid`로 `users/{uid}`를 찾아보고
 // **그 프로필이 없으면** 주인 없는 노트입니다. 탈퇴 정리는 프로필을 맨
-// 마지막에 지우므로(functions/index.js의 순서), 프로필이 없다는 것은 이미
+// 마지막에 지우므로(예전 서버 함수의 순서), 프로필이 없다는 것은 이미
 // 탈퇴 처리가 끝난 계정이라는 뜻입니다.
 //   · 반에서만 빠진 학생(프로필은 살아 있음)은 **건드리지 않습니다.**
 //     그 학생의 노트는 다시 넣으면 그대로 돌아와야 합니다.
@@ -27,9 +27,9 @@
 //     질의를 안 쓰고 반을 하나씩 훑기 때문입니다.
 //
 // [쓰는 법]
-//   node functions/scripts/purge-orphan-cornell-notes.mjs            ← 찾아만 보기
-//   node functions/scripts/purge-orphan-cornell-notes.mjs --apply    ← 실제 삭제
-//   node functions/scripts/purge-orphan-cornell-notes.mjs --uid=xxx  ← 그 학생만
+//   node scripts/admin/purge-orphan-cornell-notes.mjs            ← 찾아만 보기
+//   node scripts/admin/purge-orphan-cornell-notes.mjs --apply    ← 실제 삭제
+//   node scripts/admin/purge-orphan-cornell-notes.mjs --uid=xxx  ← 그 학생만
 // --apply 없이는 한 건도 지우지 않습니다(다른 스크립트와 같은 약속).
 //
 // [자격 증명] gcloud 로그인만 있으면 됩니다(Cloud Shell은 이미 되어 있습니다).
