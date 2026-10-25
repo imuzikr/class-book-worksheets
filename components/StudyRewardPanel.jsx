@@ -1,0 +1,725 @@
+"use client";
+
+// =============================================================
+// 공부방 오른쪽 "멋진 순간" 패널 — 교사 전용
+// -------------------------------------------------------------
+// 참여 전광판·손들기 자리 확인과 같은 자리표(SeatPickGrid)를 패널 폭에
+// 맞게 축소해 보여줍니다. 이름을 알파벳/학번 순으로 훑어 찾던 예전 목록은
+// 학생 수가 많아지면 특정 학생을 찾기 어려웠는데, 자리표는 교실에서 보이는
+// 위치 그대로라 눈으로 바로 찾을 수 있습니다. 자리를 누르면 참여
+// 전광판과 똑같이 과일 주기·누가기록 창이 그 자리 옆에 뜹니다.
+//
+// 참여 전광판의 '자리표 보기'처럼 드래그로 자리를 바꿀 수도 있습니다 —
+// 다만 여기서 옮기면 그 자리가 기본 자리표(seatLayouts/default)로 곧장
+// 저장됩니다(참여 전광판의 드래그는 그날 하루만 유지되는 daily 자리표를
+// 바꾸는 것과 다릅니다 — 이 패널은 수업 중 상시로 열려 있으므로 '오늘만'이
+// 아니라 계속 쓸 자리로 바로 반영하는 편이 맞습니다).
+//
+// 자리표 아래 빈 공간에는 모둠 현황을 보여줍니다. 학생을 카드(칩)로 만들어
+// 드래그하거나(데스크톱) 학생을 짚은 뒤 모둠을 눌러서(탭 기반 — 터치 기기
+// 배려) 그 자리에서 바로 기본 모둠 배치를 바꿀 수 있습니다. 모둠을 새로
+// 만들거나 이름·색을 바꾸는 건 여전히 '반 관리하기 → 자리 배정하기'에서
+// 합니다(그건 자주 하는 일이 아니라 이 패널에 옮겨오지 않았습니다).
+//
+// 헤더의 « 버튼으로 접기 — 접으면 세로 슬림 바(개인 설정, localStorage).
+// =============================================================
+import { useEffect, useRef, useState } from "react";
+import { subscribeQuestionSignals, subscribeFruitBasket, REWARD_MAX } from "@/lib/store";
+import { eventChoiceOf, isEventPending } from "@/lib/fruitBasket";
+import { backdropClose } from "@/lib/modal";
+import { normalizeSeats } from "@/lib/seats";
+import { useTodayRewardCounts } from "@/lib/useTodayRewards";
+import { SeatPickGrid } from "./SeatPickGrid";
+import RewardTally from "./RewardTally";
+import StudentToolsPopover from "./StudentToolsPopover";
+import StudentNotesModal from "./StudentNotesModal";
+import AwardAllResultModal from "./AwardAllResultModal";
+import SeatViewToggle from "./SeatViewToggle";
+import { useSeatView } from "@/lib/seatView";
+import { IconChair, IconSort } from "./StatusIcons";
+
+const COLLAPSE_KEY = "reward_panel_collapsed";
+// 한 번에 몇 명씩 보낼까 — 학생마다 다른 문서라 트랜잭션끼리 부딪히지는
+// 않지만, 스물몇 건을 한 순간에 던지지는 않습니다(책방 휴지통 비우기가
+// '한 건씩 차례로' 가는 것과 같은 결). 여섯이면 한 반이 네 번에 끝나
+// 학생들 화면의 폭죽이 거의 동시에 터집니다.
+const AWARD_ALL_LANES = 6;
+const GROUP_COLORS = ["#2563eb", "#16a34a", "#f97316", "#9333ea", "#dc2626", "#0891b2"];
+// '자리 배정하기' 모달의 모둠 수 선택([2,3,4,5,6]개)과 같은 범위로 맞춥니다.
+const MIN_GROUPS = 2;
+const MAX_GROUPS = 6;
+
+export default function StudyRewardPanel({
+  roster = [],
+  onAward,
+  classId = null,
+  seatLayout = null,
+  groupAssignment = null,
+  // 오늘 출석한 학생 uid 집합. null이면 아직 출석 확인 전(자리 모두 회색).
+  presentUids = null,
+  // 지금 출석을 받는 중인가. 머리줄의 '출석 n/N'은 **끝난 뒤에만** 띄웁니다 —
+  // 받는 중에는 아직 오는 중인 학생이 있어 그 숫자가 결석 수처럼 읽힙니다.
+  attendanceOpen = false,
+  onSaveSeats,
+  onSaveGroups,
+}) {
+  const [notesFor, setNotesFor] = useState(null); // 누가기록 모달 대상 학생(교사만)
+  // 자리 클릭 → 과일/누가기록 팝오버. `toolsAt`은 누른 자리 칸으로, 창이 그
+  // 옆에 붙습니다(자리표를 덮는 모달이 아닙니다).
+  const [toolsFor, setToolsFor] = useState(null);
+  const [toolsAt, setToolsAt] = useState(null);
+  const [collapsed, setCollapsed] = useState(false);
+  const [raisedUids, setRaisedUids] = useState(() => new Set());
+  const [dragIndex, setDragIndex] = useState(null);
+  const [seats, setSeats] = useState(() => normalizeSeats(seatLayout?.seats ?? [], roster));
+  const [groups, setGroups] = useState(() => groupAssignment?.groups ?? []);
+  const [dragUid, setDragUid] = useState(null); // 드래그로 옮기는 중인 학생
+  const [pickedUid, setPickedUid] = useState(null); // 짚어 둔 학생(탭으로 옮기기)
+  const [zoom, setZoom] = useState(false); // 자리표 확대 보기
+  const [awardingAll, setAwardingAll] = useState(0); // 다 함께 주는 중 — 남은 인원
+  // 다 함께가 끝난 뒤 여는 결과 창({ given, failed, maxed }). 되묻는 창이
+  // 없어져 **무슨 일이 있었는지 말해 주는 자리가 여기 하나뿐**입니다.
+  const [awardResult, setAwardResult] = useState(null);
+  const [awardingGroup, setAwardingGroup] = useState(null); // 과일을 주는 중인 모둠 key
+  const [groupDone, setGroupDone] = useState(null); // { key, n } — 방금 다 준 모둠(잠깐)
+  // 되묻는 창을 걷어 내 한 번의 실수가 곧 스물몇 건의 쓰기입니다. 상태만으로는
+  // 같은 프레임의 두 번째 클릭을 못 막아(아직 옛 값을 봅니다) ref로 잠급니다.
+  const awardBusyRef = useRef(false);
+  // 자리표를 어느 쪽에서 보는가 — 자리표가 나오는 네 화면이 같은 값을
+  // 함께 씁니다(lib/seatView.js). 한 화면에서 뒤집으면 나머지도 따라옵니다.
+  const [teacherView, toggleSeatView] = useSeatView();
+  // 자리 칸의 🍊 뱃지는 오늘 받은 개수입니다(누적 총계는 과일 주기 창에).
+  const todayCountByUid = useTodayRewardCounts(classId);
+
+  // 접힘 상태 복원 — 개인 화면 설정이라 localStorage에 저장
+  // 모둠 단추의 '✓ n명'은 2초 뒤 걷습니다
+  useEffect(() => {
+    if (!groupDone) return undefined;
+    const t = setTimeout(() => setGroupDone(null), 2000);
+    return () => clearTimeout(t);
+  }, [groupDone]);
+
+  useEffect(() => {
+    try { setCollapsed(localStorage.getItem(COLLAPSE_KEY) === "1"); } catch { /* 무시 */ }
+  }, []);
+  function toggleCollapsed() {
+    setCollapsed((v) => {
+      try { localStorage.setItem(COLLAPSE_KEY, v ? "0" : "1"); } catch { /* 무시 */ }
+      return !v;
+    });
+  }
+
+  // 손든 학생 — 참여 전광판·손들기 자리 확인과 같은 신호를 봅니다.
+  useEffect(() => {
+    if (!classId) { setRaisedUids(new Set()); return; }
+    return subscribeQuestionSignals(classId, (list) =>
+      setRaisedUids(new Set(list.map((s) => s.uid).filter(Boolean)))
+    );
+  }, [classId]);
+
+  // 과일 바구니 이벤트 — 응모 여부를 골랐는데 아직 접수 안 한 학생에게
+  // 자리 칸 오른쪽 위 초록 점. 읽는 것은 그 반의 바구니 문서(학생 수만큼)뿐.
+  const [eventChoiceByUid, setEventChoiceByUid] = useState(() => new Map());
+  useEffect(() => {
+    if (!classId) { setEventChoiceByUid(new Map()); return; }
+    return subscribeFruitBasket(classId, (list) =>
+      setEventChoiceByUid(new Map(
+        (list ?? []).filter(isEventPending).map((e) => [e.uid, eventChoiceOf(e)])
+      ))
+    );
+  }, [classId]);
+
+  // 저장된 자리표(또는 반 명단)가 바뀌면 화면도 맞춰 갱신 — 단, 드래그로
+  // 옮긴 직후 저장 완료를 기다리는 동안에는 내가 만든 모양을 덮어쓰지
+  // 않도록 seatLayout의 식별값이 바뀔 때만 다시 계산합니다.
+  useEffect(() => {
+    setSeats(normalizeSeats(seatLayout?.seats ?? [], roster));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seatLayout?.updatedAt, roster]);
+
+  // 저장된 모둠이 바뀌면(다른 반으로 전환 포함) 화면도 맞춥니다 — 자리표와
+  // 같은 이유로 updatedAt이 바뀔 때만 다시 계산합니다.
+  useEffect(() => {
+    setGroups(groupAssignment?.groups ?? []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [classId, groupAssignment?.updatedAt]);
+
+  async function moveSeat(from, to) {
+    setDragIndex(null);
+    if (from == null || to == null || from === to) return;
+    const next = [...seats];
+    [next[from], next[to]] = [next[to], next[from]];
+    setSeats(next);
+    await onSaveSeats?.(next);
+  }
+
+  // 학생 한 명을 다른 모둠으로(targetIndex) 또는 미배정으로(null) 옮깁니다.
+  // 드래그로 놓거나, 학생을 짚은 뒤 모둠을 눌러도 같은 함수를 탑니다.
+  async function moveToGroup(uid, targetIndex) {
+    setDragUid(null);
+    setPickedUid(null);
+    const student = roster.find((s) => s.uid === uid);
+    // **모둠에서 빼는 것은 명단에 없는 학생도 됩니다.** 모둠에 저장된 명단은
+    // 배정하던 때의 스냅샷이라, 반에서 빠졌거나 지운 계정(샘플 계정 등)이
+    // 그대로 남습니다. 예전에는 여기서 그냥 돌아가, 그 칩을 눌러도 아무 일이
+    // 없어 화면에서 지울 길이 아예 없었습니다(실제로 겪은 일 — '학생강현수').
+    // 모둠에 **넣는** 것은 이름·학번을 명단에서 가져와야 하므로 그대로 막습니다.
+    if (!student && targetIndex != null) return;
+    const next = groups.map((g) => {
+      const cleaned = { ...g, members: (g.members ?? []).filter((m) => m.uid !== uid) };
+      if (targetIndex == null || g.index !== targetIndex) return cleaned;
+      return {
+        ...cleaned,
+        members: [...cleaned.members, {
+          uid: student.uid,
+          name: student.name,
+          studentId: student.studentId ?? null,
+          emoji: student.emoji ?? "🙂",
+        }],
+      };
+    });
+    setGroups(next);
+    await onSaveGroups?.(next);
+  }
+
+  // 모둠 수 조절 — 맨 뒤에 하나 추가하거나 맨 뒤 하나를 없앱니다. 없앤
+  // 모둠의 학생은 groupedUids에서 자연히 빠져 '미배정'에 다시 나타납니다
+  // (별도로 옮겨 줄 필요가 없습니다).
+  async function addGroup() {
+    if (groups.length >= MAX_GROUPS) return;
+    const index = groups.length + 1;
+    const next = [...groups, {
+      id: `group_${index}`,
+      index,
+      name: `${index}모둠`,
+      color: GROUP_COLORS[(index - 1) % GROUP_COLORS.length],
+      members: [],
+    }];
+    setGroups(next);
+    await onSaveGroups?.(next);
+  }
+  async function removeGroup() {
+    if (groups.length <= MIN_GROUPS) return;
+    const next = groups.slice(0, -1);
+    setGroups(next);
+    await onSaveGroups?.(next);
+  }
+
+  // 모둠마다 그 안의 학생을 학번순으로 재배열합니다. 카드에는 학번을
+  // 표시하지 않지만, 각 학생 객체(members[].studentId)엔 저장돼 있어
+  // 정렬 기준으로 쓸 수 있습니다. 학번이 없는 학생은 뒤로 보냅니다.
+  async function sortGroupsByStudentId() {
+    const next = groups.map((g) => ({
+      ...g,
+      members: [...(g.members ?? [])].sort((a, b) => {
+        if (!a.studentId) return b.studentId ? 1 : 0;
+        if (!b.studentId) return -1;
+        return String(a.studentId).localeCompare(String(b.studentId), "ko", { numeric: true });
+      }),
+    }));
+    setGroups(next);
+    await onSaveGroups?.(next);
+  }
+
+  // 접힌 상태 — 세로 슬림 바. 클릭하면 다시 펼침.
+  if (collapsed) {
+    return (
+      <aside
+        className="reward-panel reward-panel--collapsed"
+        role="button"
+        tabIndex={0}
+        onClick={toggleCollapsed}
+        onKeyDown={(e) => e.key === "Enter" && toggleCollapsed()}
+        title="'멋진 순간' 펼치기"
+        aria-label="멋진 순간 펼치기"
+      >
+        <span className="reward-collapsed-expand" aria-hidden="true">«</span>
+        <span className="reward-collapsed-icon" aria-hidden="true">🍊</span>
+        <span className="reward-collapsed-title">멋진 순간</span>
+      </aside>
+    );
+  }
+
+  const byUid = new Map(roster.map((s) => [s.uid, s]));
+  const raisedCount = roster.filter((s) => raisedUids.has(s.uid)).length;
+  // 출석을 끝냈고 오늘 기록이 있을 때만 '출석 n/N'을 답니다. presentUids가
+  // null이면 오늘 출석을 아예 안 한 날이고, attendanceOpen이면 아직 받는
+  // 중입니다. 세는 대상은 **지금 명단에 있는 학생**뿐입니다 — 반에서 빠진
+  // 학생의 옛 출석 기록이 섞이면 분자가 분모를 넘습니다.
+  const attendanceDone = !!presentUids && !attendanceOpen;
+  const presentCount = attendanceDone
+    ? roster.filter((s) => presentUids.has(s.uid)).length
+    : 0;
+
+  // '다 함께'가 줄 대상 — **오늘 출석을 찍은 학생.** 한 명이라도 있으면
+  // 그 사람들 모두에게 하나씩 가고, 한 명도 없으면 단추가 꺼집니다.
+  //
+  // **출석을 시작했나·끝냈나는 안 봅니다.** 보는 것은 '오늘 찍힌 기록이
+  // 있는가' 하나뿐이라, 받는 중에도 이미 온 학생들에게 줄 수 있습니다
+  // (머리줄의 '출석 n/N' 라벨은 끝난 뒤에만 뜨는데 그것과 기준이 다릅니다 —
+  // 한때 둘을 같은 배열에서 뽑아 단추가 라벨을 따라 죽었습니다).
+  //
+  // **반 전체로 넘어가지 않습니다.** 출석 기록이 없는 날 명단 전원에게 주는
+  // 길을 한 번 뒀다가 걷었습니다 — 결석한 학생까지 받게 되고, 같은 단추가
+  // 날에 따라 다른 사람들에게 가서 '누구에게 주는 단추인가'가 흐려집니다.
+  const awardTargets = presentUids
+    ? roster.filter((s) => presentUids.has(s.uid))
+    : [];
+  const groupedUids = new Set(groups.flatMap((g) => (g.members ?? []).map((m) => m.uid)));
+  const ungrouped = roster.filter((s) => !groupedUids.has(s.uid));
+
+  // 오늘 과일을 가장 많이 받은 학생(들) — 보드의 반응 1등 카드와 같은 방식으로
+  // 자리표에서 테두리를 강조합니다. 오늘 아직 아무도 못 받았으면(0개) 강조하지
+  // 않고, 동점이면 모두 강조합니다.
+  //
+  // 뱃지와 같은 기준(오늘)이어야 합니다. 뱃지는 오늘 것인데 강조가 누적
+  // 1등이면, 뱃지에 큰 숫자가 붙은 학생을 두고 엉뚱한 자리에 테두리가 가
+  // 화면이 서로 어긋나 보입니다.
+  const todayOf = (uid) => todayCountByUid.get(uid) ?? 0;
+  const maxRewardCount = roster.reduce((max, s) => Math.max(max, todayOf(s.uid)), 0);
+  const topRewardUids = new Set(
+    maxRewardCount > 0 ? roster.filter((s) => todayOf(s.uid) === maxRewardCount).map((s) => s.uid) : []
+  );
+
+  // 누르기 전에 **누구에게 몇 개가 가는지** 한 줄로 — 툴팁과 되묻는 창이
+  // 같은 말을 씁니다(두 곳이 다르면 눌러 보고서야 대상을 알게 됩니다).
+  const awardWho = `오늘 출석한 ${awardTargets.length}명`;
+  // 못 누를 때는 **무엇을 하면 켜지는지**까지 적습니다. 회색 알약만 놓아
+  // 두면 고장으로 보입니다 — 실제로 '출석을 종료했는데 왜 꺼져 있냐'는
+  // 신고를 받았고, 그때 까닭은 그날 아무도 출석을 안 찍은 것이었습니다
+  // ('출석 종료'와 '출석 기록 있음'은 다릅니다).
+  const awardAllBlocked =
+    awardTargets.length === 0
+      ? "오늘 출석한 학생이 아직 없어요 — 학생이 '출석하기'를 누르면 켜집니다."
+      : null;
+
+  // 출석한 학생 모두에게 과일 하나씩.
+  //
+  // **낱개 주기와 같은 길로 보냅니다**(`onAward(uid, 개수, +1)` — 델타).
+  // 화면에 보이는 개수로 절대값을 만들어 보내면, 구독으로 돌아오기 전의
+  // 옛 값이라 방금 다른 데서 받은 과일이 묻힙니다(CLAUDE.md의 '＋1·−1 단추는
+  // 반드시 addStudentReward(델타)로' 참고). 여기는 한꺼번에 스물몇 명이라
+  // 그 위험이 더 큽니다.
+  // 다 함께 · 모둠 줄의 과일 단추가 함께 쓰는 지급 — 한 길이라야 델타 ·
+  // 천장 거르기 · 결과 창이 두 단추에서 갈리지 않습니다.
+  // `quiet`(모둠 단추)는 모두 갔으면 결과 창 대신 단추에 잠깐 '✓ n명'만 띄웁니다 —
+  // 수업 중에 모둠마다 누르는 단추라 매번 창이 뜨면 손이 바빠집니다.
+  // 못 준 학생이 있으면 그때는 창을 엽니다(그 이름을 눌러 다시 줘야 하므로).
+  async function sendAwards(targets, { title, quiet = null } = {}) {
+    if (awardBusyRef.current) return;
+    if (targets.length === 0) return;
+    const maxed = targets.filter((s) => (s.count ?? 0) >= REWARD_MAX);
+    const sendable = targets.filter((s) => (s.count ?? 0) < REWARD_MAX);
+    awardBusyRef.current = true;
+    setAwardingAll(sendable.length);
+    if (quiet) setAwardingGroup(quiet);
+    const queue = [...sendable];
+    const failed = [];
+    let given = 0;
+    async function lane() {
+      while (queue.length > 0) {
+        const s = queue.shift();
+        try {
+          await onAward?.(s.uid, s.count ?? 0, 1);
+          given += 1;
+        } catch {
+          failed.push(s);
+        }
+        setAwardingAll((n) => Math.max(0, n - 1));
+      }
+    }
+    await Promise.all(
+      Array.from({ length: Math.min(AWARD_ALL_LANES, sendable.length) }, lane)
+    );
+    setAwardingAll(0);
+    setAwardingGroup(null);
+    awardBusyRef.current = false;
+    if (quiet && failed.length === 0 && maxed.length === 0) {
+      setGroupDone({ key: quiet, n: given });
+      return;
+    }
+    setAwardResult({ given, failed, maxed, title });
+  }
+
+  async function awardAll() {
+    // **`sendAwards`가 ref로 막습니다.** 되묻는 창이 없어져 한 번의 실수가 곧 스물몇 건의
+    // 쓰기라, 빠른 더블클릭을 걸러야 합니다. `awardingAll`은 상태라 같은
+    // 프레임의 두 번째 클릭이 아직 옛 값(0)을 보고 지나갑니다.
+    // **이미 가득 찬 학생은 빼고 셉니다**(`sendAwards`) — `addStudentReward`는
+    // 천장(`REWARD_MAX`)에 닿으면 값도 안 올리고 이력도 안 남기는데 오류를
+    // 던지지도 않아, 그냥 보내면 '줬다'로 세어집니다. 결과는 창으로 엽니다 —
+    // 아무 일 없이 끝났을 때도(폭죽은 학생 화면에서만 터지므로 교사는 눌린
+    // 것인지 알 수 없습니다). 못 준 학생은 그 창에서 이름을 눌러 다시 줍니다.
+    await sendAwards(awardTargets, { title: "다 함께 주기" });
+  }
+
+  function openTools(student, el = null) {
+    setToolsFor(student);
+    setToolsAt(el);
+  }
+
+  function openNotes(student) {
+    setToolsFor(null);
+    setNotesFor({ uid: student.uid, name: student.name, emoji: student.emoji ?? "🙂" });
+  }
+
+  // 과일을 주면 roster가 갱신돼 내려오므로, 열려 있는 창의 숫자도
+  // 최신 값으로 따라가게 합니다(창이 처음 열릴 때 찍힌 값에 머무르지 않게).
+  const toolsStudent = toolsFor
+    ? { ...toolsFor, count: byUid.get(toolsFor.uid)?.count ?? toolsFor.count ?? 0 }
+    : null;
+
+  return (
+    <aside className="reward-panel" aria-label="멋진 순간">
+      {/* 폭은 이 안쪽 상자가 정합니다 — 패널에 직접 걸면 세로 스크롤바가
+          생길 때 그만큼 내용이 눌립니다(자리표 칸과 모둠 이름표가 한꺼번에
+          좁아지고 줄이 다시 접혔습니다). 겹쳐 뜨는 것들(확대 보기·과일
+          주기·누가기록)은 position: fixed라 이 폭에 매이지 않습니다. */}
+      <div className="reward-panel-inner">
+      <div className="reward-head">
+        <div className="reward-head-row">
+          <span className="reward-title">🍊 멋진 순간</span>
+          <button
+            type="button"
+            className="reward-collapse-btn"
+            onClick={toggleCollapsed}
+            title="패널 접기"
+            aria-label="멋진 순간 패널 접기"
+          >
+            »
+          </button>
+        </div>
+        {/* 설명 줄은 **한 줄에 드는 것만** — '과일 20개마다 ⭐ · 출석 20/22 ·
+            🖐️ 0'. 한때 '자리를 눌러 과일 주기·누가기록 · …'을 앞에 달고
+            '출석 n/N'까지 붙였더니 두 줄로 접혔고, 아래 단추 줄도 손바닥
+            뱃지와 '선생님 보기'가 함께 서면 넘쳐 두 줄이 됐습니다(실제 신고).
+            자리를 누르는 법은 한 번 알면 그만이라 툴팁으로 내리고, 손바닥
+            인원은 단추 줄에서 여기로 옮겼습니다(`showHands={false}`). */}
+        <span className="reward-sub" title="자리를 눌러 과일 주기·누가기록">
+          과일 20개마다 ⭐
+          {/* 출석을 끝낸 뒤에만 — 오늘 몇 명이 왔나(받는 중에 띄우면 오는
+              중인 학생이 결석 수처럼 읽힙니다). */}
+          {attendanceDone && roster.length > 0 && (
+            <span
+              className="reward-seat-att"
+              title={`오늘 출석 ${presentCount}명 / 전체 ${roster.length}명`}
+            >
+              {" · "}출석 <b>{presentCount}</b>/{roster.length}
+            </span>
+          )}
+          {roster.length > 0 && (
+            <>
+              {" · "}
+              <span
+                className={`reward-sub-hands${raisedCount > 0 ? " on" : ""}`}
+                title={raisedCount > 0 ? `손든 학생 ${raisedCount}명` : "손든 학생 없음"}
+              >
+                🖐️ {raisedCount}
+              </span>
+            </>
+          )}
+        </span>
+      </div>
+
+      {roster.length === 0 ? (
+        <p className="reward-empty">
+          아직 이 반에 입장한 학생이 없어요. 입장 코드를 알려 주세요.
+        </p>
+      ) : (
+        <SeatPickGrid
+          compact
+          headLead={
+            <span className="reward-seat-head-btns">
+              {/* 다 함께 — 반이 통째로 잘한 순간에 누릅니다. 옆의 둘은
+                  '보는 방법'을 바꿀 뿐이지만 이것은 **스물몇 명의 기록을
+                  건드립니다.** 그래서 같은 알약이되 혼자 색이 있습니다
+                  (`.reward-seat-all`). 되묻지 않고 바로 나가고, 무슨 일이
+                  있었는지는 끝난 뒤 결과 창이 말합니다.
+                  이름은 패널 제목('멋진 순간')과 갈라 둡니다 — 한 패널 안에
+                  같은 말이 두 번 서면 무엇을 누르는 자리인지 흐려집니다. */}
+              <button
+                type="button"
+                className="reward-seat-flip reward-seat-all"
+                onClick={awardAll}
+                disabled={!!awardAllBlocked || awardingAll > 0}
+                title={awardAllBlocked ?? `${awardWho}에게 과일을 하나씩 줍니다`}
+              >
+                {awardingAll > 0 ? `주는 중… ${awardingAll}` : "🍊 다 함께"}
+              </button>
+              {/* 지금 어느 쪽에서 본 배치인지 — 누르면 반대쪽으로 돌아갑니다 */}
+              <SeatViewToggle teacherView={teacherView} onToggle={toggleSeatView} />
+              <button
+                type="button"
+                className="reward-seat-zoom"
+                onClick={() => setZoom(true)}
+                title="자리표를 크게 보기"
+              >
+                ⤢ 확대
+              </button>
+            </span>
+          }
+          showHands={false}
+          flipped={teacherView}
+          seats={seats}
+          byUid={byUid}
+          raisedUids={raisedUids}
+          raisedCount={raisedCount}
+          onPick={openTools}
+          onDragStart={setDragIndex}
+          onDragEnd={() => setDragIndex(null)}
+          onDropTo={(toIndex) => moveSeat(dragIndex, toIndex)}
+          topUids={topRewardUids}
+          todayCountByUid={todayCountByUid}
+          eventChoiceByUid={eventChoiceByUid}
+          presentUids={presentUids}
+        />
+      )}
+
+      {/* 확대 보기 — 좁은 패널에서는 이름이 8.5px까지 줄어 멀리서 안 보입니다.
+          같은 SeatPickGrid를 큰 폭으로 한 번 더 그릴 뿐이라, 자리를 눌러
+          과일·누가기록을 열고 끌어서 옮기는 동작이 그대로 살아 있습니다
+          (seats·moveSeat 같은 상태를 공유하므로 두 화면이 어긋나지 않습니다). */}
+      {zoom && (
+        <div className="modal-backdrop" {...backdropClose(() => setZoom(false))}>
+          <div
+            className="modal reward-zoom-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="자리표 크게 보기"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-head">
+              <h3 className="head-icon"><IconChair size={20} /> 자리표</h3>
+              <button className="btn-close" onClick={() => setZoom(false)} aria-label="닫기">
+                ×
+              </button>
+            </div>
+            <SeatPickGrid
+              /* 크게 보기에서도 방향을 바꿉니다. 예전에는 이 자리가 뱃지를
+                 오른쪽으로 밀어내는 빈 칸이라, 방향을 돌리려면 창을 닫고
+                 패널 머리줄까지 갔다가 다시 열어야 했습니다 — 교실에 띄워
+                 놓고 보는 화면이라 방향을 바로잡고 싶은 순간이 여기입니다.
+                 패널과 같은 값을 쓰므로(`teacherView` 하나) 여기서 돌리면
+                 뒤의 패널도 함께 돌아갑니다 — 한 자리표가 두 얼굴이면
+                 안 됩니다. */
+              headLead={
+                <span className="reward-zoom-lead">
+                  <SeatViewToggle teacherView={teacherView} onToggle={toggleSeatView} />
+                </span>
+              }
+              flipped={teacherView}
+              seats={seats}
+              byUid={byUid}
+              raisedUids={raisedUids}
+              raisedCount={raisedCount}
+              onPick={openTools}
+              onDragStart={setDragIndex}
+              onDragEnd={() => setDragIndex(null)}
+              onDropTo={(toIndex) => moveSeat(dragIndex, toIndex)}
+              topUids={topRewardUids}
+              todayCountByUid={todayCountByUid}
+              eventChoiceByUid={eventChoiceByUid}
+              presentUids={presentUids}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* 궁금한 순간 — 반 전체 과일 집계. 자리표(오늘)와 모둠 현황(구성)
+          사이에 둡니다. 셋 다 '이 반을 어떻게 보고 있나'의 다른 면이고,
+          이것만 누적을 다루므로 평소엔 접어 둡니다. */}
+      <RewardTally classId={classId} roster={roster} />
+
+      {/* 모둠 현황 — 학생을 카드(칩)로 드래그하거나, 짚은 뒤 모둠을 눌러서
+          바로 옮길 수 있습니다. 모둠을 새로 만들거나 이름·색 수정은 여전히
+          '반 관리하기 → 자리 배정하기'에서 합니다. */}
+      {groups.length > 0 && (
+        <div className="reward-groups">
+          <div className="reward-groups-head">
+            <strong className="reward-groups-title">모둠 현황</strong>
+            <div className="reward-groups-count-btns">
+              <button
+                type="button"
+                className="reward-groups-count-btn"
+                onClick={removeGroup}
+                disabled={groups.length <= MIN_GROUPS}
+                title="모둠 하나 줄이기"
+                aria-label="모둠 하나 줄이기"
+              >
+                −
+              </button>
+              <button
+                type="button"
+                className="reward-groups-count-btn"
+                onClick={addGroup}
+                disabled={groups.length >= MAX_GROUPS}
+                title="모둠 하나 늘리기"
+                aria-label="모둠 하나 늘리기"
+              >
+                ＋
+              </button>
+              <button
+                type="button"
+                className="reward-groups-sort-btn"
+                onClick={sortGroupsByStudentId}
+                title="모둠마다 학생을 학번순으로 정렬"
+                aria-label="모둠마다 학생을 학번순으로 정렬"
+              >
+                <IconSort size={14} /> 정렬
+              </button>
+            </div>
+          </div>
+          {groups.map((g, i) => (
+            <div
+              key={g.id ?? g.index ?? i}
+              className="reward-group-row"
+              style={{ "--group-color": g.color || GROUP_COLORS[i % GROUP_COLORS.length] }}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => { e.preventDefault(); if (dragUid) moveToGroup(dragUid, g.index); }}
+              onClick={() => { if (pickedUid) moveToGroup(pickedUid, g.index); }}
+            >
+              {(() => {
+                const gName = g.name || `${g.index ?? i + 1}모둠`;
+                const gKey = String(g.id ?? g.index ?? i);
+                // 지금 명단에 있는 모둠원만 — 반에서 빠진 이름(stale)에게는 안 줍니다
+                const targets = (g.members ?? []).map((m) => byUid.get(m.uid)).filter(Boolean);
+                const busy = awardingGroup === gKey;
+                const done = groupDone?.key === gKey;
+                return (
+                  <span className="reward-group-lead">
+                    <span className="reward-group-name">{gName}</span>
+                    <button
+                      type="button"
+                      className={`reward-group-award${done ? " done" : ""}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        sendAwards(targets, { title: `${gName}에게 주기`, quiet: gKey });
+                      }}
+                      disabled={targets.length === 0 || awardingAll > 0}
+                      title={
+                        targets.length === 0
+                          ? "이 모둠에 과일을 받을 학생이 없어요"
+                          : `${gName} ${targets.length}명에게 과일을 하나씩 줍니다`
+                      }
+                      aria-label={`${gName}에게 과일 하나씩 주기`}
+                    >
+                      {busy ? "주는 중…" : done ? `✓ ${groupDone.n}명` : "🍊 +1"}
+                    </button>
+                  </span>
+                );
+              })()}
+              <span className="reward-group-members">
+                {(g.members ?? []).length === 0 ? (
+                  <em className="reward-group-empty">여기로 끌어 놓기</em>
+                ) : (
+                  g.members.map((m) => {
+                    // 지금 반 명단에 없는 사람 — 배정하던 때의 스냅샷에만 남은
+                    // 자취입니다(반에서 빠졌거나 지운 계정). 옅게 표시해 두어야
+                    // 여러 모둠 중 어느 이름을 눌러 빼야 하는지 눈에 띕니다.
+                    // 명단을 아직 받는 중일 수 있어 roster가 빌 때는 안 봅니다.
+                    const stale = roster.length > 0 && !byUid.has(m.uid);
+                    return (
+                      <button
+                        key={m.uid}
+                        type="button"
+                        className={`reward-chip${stale ? " stale" : ""}`}
+                        draggable
+                        onDragStart={(e) => { setDragUid(m.uid); e.dataTransfer.effectAllowed = "move"; }}
+                        onDragEnd={() => setDragUid(null)}
+                        onClick={(e) => { e.stopPropagation(); moveToGroup(m.uid, null); }}
+                        title={
+                          stale
+                            ? `${m.name} — 지금 반 명단에 없어요. 눌러서 모둠에서 빼기`
+                            : `${m.name} — 눌러서 모둠에서 빼기`
+                        }
+                      >
+                        {m.name}
+                      </button>
+                    );
+                  })
+                )}
+              </span>
+            </div>
+          ))}
+
+          {/* 미배정 — 아직 어느 모둠에도 없는 학생.
+              모두 배정되면 '모두 배정됨'만 적힌 빈 칸이 남아 자리만 차지하므로
+              감춥니다. 다만 이 칸은 **끌어다 놓아 모둠에서 빼는 자리**이기도
+              해서, 학생을 끌고 있는 동안에는 비어 있어도 내놓습니다 —
+              아예 없애면 끌던 손이 놓을 곳을 잃습니다.
+              (모둠 안의 이름을 눌러서 빼는 길은 그대로입니다) */}
+          {(ungrouped.length > 0 || dragUid) && (
+          <div
+            className="reward-group-row reward-group-row--unassigned"
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => { e.preventDefault(); if (dragUid) moveToGroup(dragUid, null); }}
+          >
+            <span className="reward-group-name">미배정</span>
+            <span className="reward-group-members">
+              {ungrouped.length === 0 ? (
+                <em className="reward-group-empty">여기로 끌어 놓으면 모둠에서 빠져요</em>
+              ) : (
+                ungrouped.map((s) => (
+                  <button
+                    key={s.uid}
+                    type="button"
+                    className={`reward-chip${pickedUid === s.uid ? " picked" : ""}`}
+                    draggable
+                    onDragStart={(e) => { setDragUid(s.uid); e.dataTransfer.effectAllowed = "move"; }}
+                    onDragEnd={() => setDragUid(null)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPickedUid((v) => (v === s.uid ? null : s.uid));
+                    }}
+                    title={`${s.name} — 끌어서 모둠으로, 또는 짚은 뒤 모둠을 눌러 배정`}
+                  >
+                    {s.name}
+                  </button>
+                ))
+              )}
+            </span>
+          </div>
+          )}
+        </div>
+      )}
+
+      {toolsStudent && (
+        <StudentToolsPopover
+          student={toolsStudent}
+          classId={classId}
+          anchor={toolsAt}
+          onAward={onAward}
+          onOpenNotes={openNotes}
+          onClose={() => setToolsFor(null)}
+        />
+      )}
+
+      {awardResult && (
+        <AwardAllResultModal
+          given={awardResult.given}
+          failed={awardResult.failed}
+          maxed={awardResult.maxed}
+          title={awardResult.title}
+          rewardMax={REWARD_MAX}
+          // 다시 주기도 **델타**입니다(낱개 주기와 같은 길). 누적은 그 사이
+          // 구독으로 갱신됐을 수 있어 `byUid`에서 지금 값을 집습니다 — 델타
+          // 경로에서는 쓰이지 않지만, 옛 값을 넘겨 두면 나중에 절대값 경로로
+          // 바뀔 때 조용히 틀립니다.
+          onRetry={(s) => onAward?.(s.uid, byUid.get(s.uid)?.count ?? s.count ?? 0, 1)}
+          onClose={() => setAwardResult(null)}
+        />
+      )}
+
+      {notesFor && (
+        <StudentNotesModal
+          student={notesFor}
+          onBack={() => { setNotesFor(null); setToolsFor(notesFor); }}
+          classId={classId}
+          onClose={() => setNotesFor(null)}
+        />
+      )}
+
+      </div>
+    </aside>
+  );
+}

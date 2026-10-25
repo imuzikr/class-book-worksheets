@@ -1,0 +1,762 @@
+"use client";
+
+// =============================================================
+// 공부방 왼쪽 사이드 패널 — 프로젝트 활동 추가·관리 (교사 전용)
+// -------------------------------------------------------------
+// KWL 패널을 대신해 이 자리에 놓입니다(KWL 패널은 components/KwlPanel.jsx에
+// 코드 그대로 보관 중 — app/study/page.js의 KWL_PANEL_ENABLED를 true로
+// 돌리면 다시 켤 수 있습니다).
+//
+// 프로젝트 상세 화면(StudyProjectView)에 있던 '⚙ 설정 → 활동 설정' 모달을
+// 대체합니다 — 활동 이름 추가·수정·삭제와 열기/잠금을 이 패널 하나로
+// 모읍니다(전에는 잠금 칩과 이름 편집 모달이 따로 있었습니다).
+//
+// 학생이 이미 낸 카드가 있으면(텍스트든 이미지든) 활동 구성을 바꿀 수
+// 없습니다 — 활동 칸이 학생 카드의 실제 입력 칸이라, 바꾸면 이미 쓴
+// 내용이 어느 칸에 속하는지 어긋나기 때문입니다(StudyProjectView가 전에
+// 하던 검사를 그대로 옮겼습니다).
+// =============================================================
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  subscribeStudyCards,
+  updateStudyBoard,
+  syncTemplateActivities,
+  updateStudyCard,
+} from "@/lib/store";
+import { stripHtml, htmlHasImage } from "@/lib/html";
+import {
+  buildActivityTemplate,
+  nextActivityLocks,
+  isActivityLocked,
+  isTeacherAuthoredCard,
+  boardMaterials,
+  MATERIAL_ACCEPT,
+  isMaterialImage,
+  materialSizeLimit,
+} from "@/lib/activities";
+import { uploadImage, uploadFile } from "@/lib/storageUpload";
+import { formatFileSize } from "@/lib/image";
+import { backdropClose } from "@/lib/modal";
+import { cardProgress } from "./StudyProgressBoard";
+import UploadProgress from "./UploadProgress";
+import { IconLockState, IconPen } from "./StatusIcons";
+import StudyTodayFeed from "./StudyTodayFeed";
+import ConfirmModal from "./ConfirmModal";
+
+// 접힘 상태는 화면마다 다른 개인 취향이라 localStorage에 둡니다
+// (오른쪽 "멋진 순간" 패널과 같은 방식·같은 이유).
+const COLLAPSE_KEY = "activity_panel_collapsed";
+
+function blankMaterial() {
+  return { id: `m${Date.now()}`, actIndex: null, text: "", image: null, file: null };
+}
+
+// 받아 줄 파일 종류·용량은 lib/activities.js에 모아 뒀습니다 — 수업 준비
+// 화면의 '학습 자료'와 같은 기준을 써야 한쪽에서 올라간 파일이 다른 쪽에서
+// 막히지 않습니다. 실제 통과 여부는 Storage 규칙이 contentType으로 다시
+// 판정합니다(확장자만 바꿔 올리는 것을 막으려면 서버 쪽 판정이 필요).
+
+// 자료 목록을 저장할 모양으로 다듬습니다 — 글도 이미지도 없는 줄은 버립니다.
+// 저장할 때와 '바뀌었는가'를 볼 때 같은 함수를 써야, 화면에만 있는 빈 줄이
+// 편집으로 잡히지 않습니다.
+function cleanMaterials(list) {
+  return (list ?? [])
+    .map((m) => ({
+      id: m.id,
+      actIndex: typeof m.actIndex === "number" ? m.actIndex : null,
+      text: (m.text ?? "").trim(),
+      image: m.image ?? null,
+      file: m.file ?? null,
+    }))
+    .filter((m) => m.text || m.image || m.file);
+}
+
+export default function StudyActivityPanel({
+  board,
+  isTeacher,
+  classRoster = [],
+  // 프로젝트를 열기 전 '오늘의 움직임'에 쓰는 반 단위 자료
+  classId = null,
+  boards = [],
+  attendanceRecords = [],
+  // '오늘' 패널 첫 줄 안내 — 책방에서는 이 자리가 바뀌지 않으므로 문구가 다릅니다
+  todayNote,
+  mobileOpen,
+  onMobileClose,
+}) {
+  const boardId = board?.id ?? null;
+  const isNotice = board?.type === "notice";
+  const isGroup = board?.activityType === "group";
+  const activities = useMemo(() => board?.activities ?? [], [board]);
+  const activitiesKey = activities.join(" ");
+
+  const [cards, setCards] = useState([]);
+  const [draft, setDraft] = useState(activities.length ? [...activities] : [""]);
+  const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [collapsed, setCollapsed] = useState(false);
+  // 순서 바꾸기(끌어 놓기) — 집어 든 줄과 지금 올려 둔 줄
+  const [dragIdx, setDragIdx] = useState(null);
+  const [overIdx, setOverIdx] = useState(null);
+
+  // 접힘 상태 복원 — 훅이므로 아래 isTeacher 조기 반환보다 반드시 앞에 둡니다
+  useEffect(() => {
+    try { setCollapsed(localStorage.getItem(COLLAPSE_KEY) === "1"); } catch { /* 무시 */ }
+  }, []);
+
+  // 학생 카드 내용 검사(활동 변경 가능 여부)용 — 교사가 볼 때만 필요
+  useEffect(() => {
+    if (!isTeacher || !boardId || isNotice) {
+      setCards([]);
+      return;
+    }
+    return subscribeStudyCards(boardId, setCards);
+  }, [isTeacher, boardId, isNotice]);
+
+  // 프로젝트가 바뀌면(패널은 프로젝트를 넘나들며 계속 떠 있는 채이므로)
+  // 이전 프로젝트에 남아 있던 미저장 초안이 새 프로젝트로 새지 않도록
+  // 무조건 다시 맞춥니다. 같은 프로젝트 안에서 활동이 바뀐 경우(다른 곳에서
+  // 잠금만 바뀐 경우 등)에는 편집 중인 이름을 덮어쓰지 않습니다.
+  const prevBoardIdRef = useRef(boardId);
+  useEffect(() => {
+    const boardChanged = prevBoardIdRef.current !== boardId;
+    prevBoardIdRef.current = boardId;
+    if (!boardChanged && dirty) return;
+    setDraft(activities.length ? [...activities] : [""]);
+    setDirty(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boardId, activitiesKey]);
+
+  // 활동마다 몇 명이 제출했는지 (공부중 전광판과 같은 기준) — isTeacher가
+  // 아닐 때도 이 훅은 항상 호출해야 합니다. 아래 '교사만 렌더링' 분기보다
+  // 먼저 선언해 두지 않으면, 개발용 역할 전환(RoleSwitcher)으로 같은
+  // 컴포넌트 인스턴스에서 isTeacher만 바뀔 때 렌더마다 훅 호출 개수가
+  // 달라져 React가 훅 순서 오류를 던집니다.
+  const doneCounts = useMemo(() => {
+    if (classRoster.length === 0) return [];
+    const rows = classRoster.map((s) => {
+      const card = cards.find((c) =>
+        isGroup ? c.memberUids?.includes(s.uid) : c.authorId === s.uid
+      );
+      return cardProgress(card, activities);
+    });
+    return activities.map((_, i) => rows.filter((d) => d[i]).length);
+  }, [classRoster, cards, activities, isGroup]);
+
+  if (!isTeacher) return null;
+
+  function toggleCollapsed() {
+    setCollapsed((v) => {
+      try { localStorage.setItem(COLLAPSE_KEY, v ? "0" : "1"); } catch { /* 무시 */ }
+      return !v;
+    });
+  }
+
+  // 접힌 상태 — 세로 슬림 바. 모바일에서는 FAB로 여는 오버레이라 접을 일이
+  // 없으므로(열려 있으면 mobileOpen), 그때는 접힘을 무시하고 펼쳐 보여 줍니다.
+  if (collapsed && !mobileOpen) {
+    return (
+      <aside
+        className="study-activity-panel study-activity-panel--collapsed"
+        role="button"
+        tabIndex={0}
+        onClick={toggleCollapsed}
+        onKeyDown={(e) => e.key === "Enter" && toggleCollapsed()}
+        title="패널 펼치기"
+        aria-label="패널 펼치기"
+      >
+        <span className="activity-collapsed-expand" aria-hidden="true">»</span>
+        <span className="activity-collapsed-icon" aria-hidden="true">{board ? "🧩" : "📌"}</span>
+        <span className="activity-collapsed-title">{board ? "프로젝트 활동" : "오늘"}</span>
+      </aside>
+    );
+  }
+
+  function setDraftAt(i, value) {
+    setDraft((prev) => prev.map((a, j) => (j === i ? value : a)));
+    setDirty(true);
+  }
+  function removeDraftAt(i) {
+    setDraft((prev) => (prev.length === 1 ? [""] : prev.filter((_, j) => j !== i)));
+    setDirty(true);
+  }
+  function addDraft() {
+    setDraft((prev) => [...prev, ""]);
+    setDirty(true);
+  }
+  function cancelDraft() {
+    setDraft(activities.length ? [...activities] : [""]);
+    setDirty(false);
+    setDragIdx(null);
+    setOverIdx(null);
+  }
+
+  // 순서 바꾸기 — from번째를 뽑아 to번째 자리에 끼워 넣습니다(자리를 맞바꾸지
+  // 않는 이유: 끌어 놓는 몸짓은 '여기로 옮긴다'이지 '이 둘을 맞바꾼다'가
+  // 아니라, 맞바꾸면 사이에 있던 활동들이 엉뚱하게 튑니다).
+  //
+  // 이름 편집과 마찬가지로 초안만 바꾸고, '저장'을 눌러야 반영됩니다 —
+  // 이 패널은 저장/취소가 있는 편집 화면이라 끌자마자 저장하면 되돌릴 수가
+  // 없습니다. 잠금은 저장할 때 nextActivityLocks가 이름으로 짝을 찾아
+  // 그대로 따라옵니다(열어 둔 활동이 자리를 옮겼다고 다시 잠기지 않음).
+  function moveDraft(from, to) {
+    setDragIdx(null);
+    setOverIdx(null);
+    if (from == null || to == null || from === to) return;
+    if (to < 0 || to >= draft.length) return;
+    setDraft((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+    setDirty(true);
+  }
+
+  // 활동 하나의 잠금을 켜고 끕니다 — 이름 편집(저장 필요)과 달리 즉시 반영됩니다.
+  async function toggleLock(i, lockedNext) {
+    const next = activities.map((_, j) =>
+      j === i ? lockedNext : board.activityLocks?.[j] === true
+    );
+    await updateStudyBoard(boardId, { activityLocks: next });
+  }
+
+  async function handleSave() {
+    const newActivities = draft.map((a) => a.trim()).filter(Boolean);
+    const studentCards = cards.filter((c) => !isTeacherAuthoredCard(c));
+    // 텍스트 없이 붙여넣은 이미지만 있는 카드도 '이미 쓴 내용'입니다.
+    const hasContent = studentCards.some((c) => {
+      const html = c.content ?? "";
+      return stripHtml(html).trim().length > 0 || htmlHasImage(html);
+    });
+    if (hasContent) {
+      setSaveError(
+        "학생이 입력한 내용이 있어서 활동을 변경할 수 없어요. 모든 학생 카드의 내용을 비운 뒤 다시 시도해 주세요."
+      );
+      return;
+    }
+    setSaveError("");
+    setSaving(true);
+    try {
+      // 수업 도중 새로 추가한 활동은 잠긴 채로 시작합니다 — 교사가 열어 줘야
+      // 학생이 입력할 수 있습니다(이름이 그대로인 활동은 지금 상태 유지).
+      await updateStudyBoard(boardId, {
+        activities: newActivities,
+        activityLocks: nextActivityLocks(activities, board.activityLocks ?? [], newActivities),
+      });
+      // 원본에서 불러온 프로젝트면 원본의 활동 목록도 맞춥니다(다른 반 복사본은 그대로).
+      await syncTemplateActivities(board, newActivities);
+      if (newActivities.length > 0) {
+        const templateHtml = buildActivityTemplate(newActivities);
+        await Promise.all(
+          studentCards.map((c) =>
+            updateStudyCard(boardId, c.id, {
+              title: c.title ?? "",
+              content: templateHtml,
+              imageUrl: c.imageUrl ?? null,
+              attachments: c.attachments ?? [],
+            })
+          )
+        );
+      }
+      setDirty(false);
+    } catch (e) {
+      setSaveError(`활동을 저장하지 못했어요: ${e?.message ?? "알 수 없는 오류"}`);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <aside className={`study-activity-panel${mobileOpen ? " study-activity-panel--open" : ""}`}>
+      {onMobileClose && (
+        <button className="study-activity-mobile-close" onClick={onMobileClose} aria-label="닫기">
+          ×
+        </button>
+      )}
+
+      {/* 제목도 지금 무엇을 다루는지에 맞춥니다 — 프로젝트를 안 열었는데
+          '프로젝트 활동'이라고 붙어 있으면 아래 내용과 말이 어긋납니다. */}
+      <div className="study-activity-panel-head">
+        {/* 머리줄은 세로 방향이라, 제목과 접기 버튼만 따로 한 줄로 묶습니다 */}
+        <div className="activity-head-row">
+          <span className="study-activity-panel-title">
+            {board ? "🧩 프로젝트 활동" : "📌 오늘"}
+          </span>
+          <button
+            type="button"
+            className="activity-collapse-btn"
+            onClick={toggleCollapsed}
+            title="패널 접기"
+            aria-label="패널 접기"
+          >
+            «
+          </button>
+        </div>
+        {board && (
+          <span className="study-activity-panel-project" title={board.title}>
+            {board.title}
+          </span>
+        )}
+      </div>
+
+      {!board ? (
+        // 프로젝트를 열기 전 — 이 자리는 '열려 있는 프로젝트의 활동'을 다루는
+        // 곳이라 대상이 없습니다. 대신 교사가 공부방을 여는 순간 가장 알고
+        // 싶은 것(오늘 이 반이 어떻게 움직였나)을 보여 줍니다.
+        <StudyTodayFeed
+          classId={classId}
+          boards={boards}
+          roster={classRoster}
+          attendanceRecords={attendanceRecords}
+          {...(todayNote ? { note: todayNote } : {})}
+        />
+      ) : isNotice ? (
+        <p className="study-activity-panel-empty">
+          수업 자료 프로젝트에는 활동이 없어요.
+        </p>
+      ) : (
+        <>
+          <p className="study-activity-panel-hint">
+            학생 개인 카드에 이 순서대로 입력 칸이 만들어져요. 자물쇠를 눌러
+            열고 잠글 수 있어요.
+          </p>
+          <div className="study-activity-panel-list">
+            {draft.map((act, i) => {
+              const savedActLocked = isActivityLocked(board, i);
+              const isSaved = i < activities.length;
+              return (
+                <div
+                  className={
+                    "study-activity-row" +
+                    (dragIdx === i ? " is-dragging" : "") +
+                    (overIdx === i && dragIdx !== i
+                      // 놓으면 그 줄의 번호를 가져갑니다 — 위로 끌면 그 줄 앞,
+                      // 아래로 끌면 그 줄 뒤에 들어가므로 선도 그쪽에 긋습니다.
+                      ? dragIdx > i
+                        ? " is-over is-over--up"
+                        : " is-over is-over--down"
+                      : "")
+                  }
+                  key={i}
+                  onDragOver={
+                    dragIdx == null
+                      ? undefined
+                      : (e) => { e.preventDefault(); setOverIdx(i); }
+                  }
+                  onDrop={
+                    dragIdx == null
+                      ? undefined
+                      : (e) => { e.preventDefault(); moveDraft(dragIdx, i); }
+                  }
+                >
+                  {/* 끌기 손잡이 — 이름 칸은 글자를 고르고 고치는 자리라,
+                      끌기까지 겹치면 글자를 선택하려던 손이 줄을 옮겨
+                      버립니다. 마우스가 없어도 옮기도록 ↑↓ 키도 받습니다. */}
+                  <button
+                    type="button"
+                    className="study-activity-drag"
+                    draggable
+                    onDragStart={(e) => {
+                      setDragIdx(i);
+                      e.dataTransfer.effectAllowed = "move";
+                      // 파이어폭스는 데이터가 없으면 끌기를 시작하지 않습니다
+                      e.dataTransfer.setData("text/plain", String(i));
+                    }}
+                    onDragEnd={() => { setDragIdx(null); setOverIdx(null); }}
+                    onKeyDown={(e) => {
+                      if (e.key === "ArrowUp") { e.preventDefault(); moveDraft(i, i - 1); }
+                      if (e.key === "ArrowDown") { e.preventDefault(); moveDraft(i, i + 1); }
+                    }}
+                    aria-label={`활동 ${i + 1} 순서 바꾸기`}
+                    title="끌어서 순서 바꾸기 (↑↓ 키로도 옮길 수 있어요)"
+                  >
+                    ⠿
+                  </button>
+                  {isSaved && (
+                    <button
+                      type="button"
+                      className={`study-activity-lock${savedActLocked ? " locked" : ""}`}
+                      onClick={() => toggleLock(i, !savedActLocked)}
+                      title={savedActLocked ? "눌러서 열기" : "눌러서 잠그기"}
+                      aria-pressed={!savedActLocked}
+                      aria-label={`활동 ${i + 1} ${savedActLocked ? "열기" : "잠그기"}`}
+                    >
+                      {/* 그림이 지금 상태를 말합니다 — 예전에는 열려 있어도
+                          닫힌 자물쇠를 그리고 바탕색만 옅게 두어, 잠근 활동과
+                          연 활동이 스치듯 보면 같아 보였습니다. */}
+                      <IconLockState locked={savedActLocked} size={14} mono />
+                    </button>
+                  )}
+                  <input
+                    className="study-activity-row-input"
+                    value={act}
+                    onChange={(e) => setDraftAt(i, e.target.value)}
+                    placeholder={`활동 ${i + 1} 내용을 입력하세요`}
+                  />
+                  {isSaved && classRoster.length > 0 && (
+                    <span className="study-activity-row-count">
+                      {doneCounts[i] ?? 0}/{classRoster.length}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    className="study-activity-row-del"
+                    onClick={() => removeDraftAt(i)}
+                    aria-label={`활동 ${i + 1} 삭제`}
+                  >
+                    ✕
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          <button type="button" className="study-activity-panel-add" onClick={addDraft}>
+            + 활동 추가
+          </button>
+          {dirty && (
+            <div className="study-activity-panel-actions">
+              <button type="button" className="study-activity-panel-cancel" onClick={cancelDraft}>
+                취소
+              </button>
+              <button
+                type="button"
+                className="study-activity-panel-save"
+                onClick={handleSave}
+                disabled={saving}
+              >
+                {saving ? "저장 중..." : "저장"}
+              </button>
+            </div>
+          )}
+
+          {saveError && (
+            <p className="form-error study-activity-panel-error" role="alert">{saveError}</p>
+          )}
+
+          {/* 자료 제공 — 늘 맨 아래(margin-top: auto). 버튼만 있고, 누르면
+              화면 가운데 모달이 열립니다. */}
+          <MaterialSection board={board} activities={activities} />
+        </>
+      )}
+    </aside>
+  );
+}
+
+// 프로젝트에 붙이는 참고 자료 — 학생 활동 화면 맨 위에 펼쳐 볼 수 있는
+// 상자로 나타납니다(StudyMyActivityCard). 보드 문서에 바로 저장합니다.
+//
+// 자료마다 '어느 활동의 것인지'를 골라 둡니다 — 활동이 여러 개인 프로젝트에서
+// 자료를 여러 장 올리면, 학생 쪽에서 어느 활동을 보라고 준 자료인지 알 수
+// 없었습니다. '전체'는 활동을 가리지 않는 공통 자료입니다.
+//
+// 버튼은 패널 맨 아래에 두되, 실제 작성은 화면 가운데 모달에서 합니다 —
+// 사이드 패널 폭(약 260px)에서 펼치면 설명 글 입력칸이 손바닥만 해서 몇 줄만
+// 써도 답답했고, 활동 목록까지 밀려 내려가 자료를 쓰는 동안 활동이 안
+// 보였습니다.
+function MaterialSection({ board, activities }) {
+  const boardId = board?.id ?? null;
+  const saved = boardMaterials(board);
+  const savedKey = JSON.stringify(saved);
+
+  const [open, setOpen] = useState(false);
+  const [items, setItems] = useState(saved);
+  const [pct, setPct] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [closeAsk, setCloseAsk] = useState(false);
+
+  // 다른 프로젝트로 옮겨 가거나 저장이 반영되면 그 프로젝트의 자료로 맞춥니다
+  useEffect(() => {
+    setItems(boardMaterials(board));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boardId, savedKey]);
+
+  // '바뀌었는가'는 다듬은 결과끼리 비교합니다 — 모달을 열 때 미리 깔아 두는
+  // 빈 줄이 편집으로 잡혀 저장 버튼이 켜지거나 닫을 때 확인창이 뜨면 안 됩니다.
+  const cleaned = cleanMaterials(items);
+  const dirty = JSON.stringify(cleaned) !== JSON.stringify(cleanMaterials(saved));
+  const hasMaterial = saved.length > 0;
+
+  function patch(id, changes) {
+    setItems((prev) => prev.map((m) => (m.id === id ? { ...m, ...changes } : m)));
+  }
+  function addItem() {
+    setItems((prev) => [...prev, blankMaterial()]);
+  }
+  function removeItem(id) {
+    setItems((prev) => prev.filter((m) => m.id !== id));
+  }
+
+  // 첨부 하나 올리기 — 사진이면 줄여서 이미지로, 그 밖에는 파일 그대로.
+  // 사진은 화면에 펼쳐 보여 주려고 압축하지만, PDF·PPTX는 원본이 그대로
+  // 가야 열립니다(uploadFile). 그래서 여기서 갈라 둡니다.
+  async function handleAttach(e, id) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const isImage = isMaterialImage(file);
+    const limit = materialSizeLimit(file);
+    if (file.size > limit) {
+      setError(
+        `${isImage ? "이미지" : "파일"}는 ${formatFileSize(limit)} 이하여야 해요. ` +
+          `(지금 파일: ${formatFileSize(file.size)})`
+      );
+      return;
+    }
+    setError("");
+    setPct(0);
+    try {
+      if (isImage) {
+        patch(id, { image: await uploadImage(file, { onProgress: setPct }), file: null });
+      } else {
+        const url = await uploadFile(file, { onProgress: setPct });
+        patch(id, {
+          file: { url, name: file.name, type: file.type || "", size: file.size },
+          image: null,
+        });
+      }
+    } catch (err) {
+      // 규칙이 막은 경우(허용하지 않는 종류·용량)와 통신 문제를 구분해 줍니다 —
+      // "다시 시도"만 안내하면 몇 번을 눌러도 되지 않습니다.
+      setError(
+        err?.code === "storage/unauthorized"
+          ? "이 종류의 파일은 올릴 수 없어요. 사진·PDF·PPT·워드·엑셀·CSV·텍스트만 됩니다."
+          : "파일을 올리지 못했어요. 잠시 후 다시 시도해 주세요."
+      );
+    } finally {
+      setPct(null);
+    }
+  }
+
+  // 저장하면 그대로 닫습니다 — 자료를 넣는 일은 저장으로 끝나는데, 저장 뒤에도
+  // 모달이 남아 있으면 '닫기'를 한 번 더 눌러야 했습니다. 저장에 실패하면
+  // 열어 둔 채 이유를 보여 줍니다(내용을 잃지 않게).
+  //
+  // 바뀐 게 없을 때도 이 버튼은 닫기로 동작합니다. 예전에는 그 상태에서
+  // 버튼이 '저장됨'으로 잠겨 있어, 눌러도 아무 일이 없었습니다.
+  async function handleSaveAndClose() {
+    if (!dirty) {
+      discardAndClose();
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      // 예전 단일 자료 필드는 목록으로 옮겨졌으니 비웁니다(중복 표시 방지)
+      await updateStudyBoard(boardId, {
+        materials: cleaned,
+        materialText: "",
+        materialImage: null,
+      });
+      setOpen(false);
+      setCloseAsk(false);
+    } catch (e) {
+      setError(`자료를 저장하지 못했어요: ${e?.message ?? "알 수 없는 오류"}`);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // 열자마자 바로 쓸 수 있게 빈 자료 줄을 하나 깔아 둡니다 — '자료 추가'를
+  // 한 번 더 눌러야 입력칸이 나오던 단계를 없앴습니다. 이미 올린 자료가
+  // 있으면 그것들을 그대로 보여 줍니다.
+  function openModal() {
+    const base = boardMaterials(board);
+    setItems(base.length ? base : [blankMaterial()]);
+    setError("");
+    setOpen(true);
+  }
+
+  // 모달을 닫을 때 저장하지 않은 편집분이 있으면 한 번 물어봅니다 — 넓은
+  // 입력칸에서 길게 쓰다 배경을 잘못 눌러 통째로 날리는 일을 막습니다.
+  function requestClose() {
+    if (dirty) {
+      setCloseAsk(true);
+      return;
+    }
+    discardAndClose();
+  }
+  function discardAndClose() {
+    setCloseAsk(false);
+    setItems(boardMaterials(board));
+    setError("");
+    setOpen(false);
+  }
+
+  return (
+    <div className="study-material">
+      <button
+        type="button"
+        className="study-material-toggle"
+        onClick={openModal}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+      >
+        <span className="study-material-label">
+          📎 자료 제공
+          {hasMaterial && (
+            <span className="study-material-count">{saved.length}</span>
+          )}
+        </span>
+        <span className="study-material-caret" aria-hidden="true">＋</span>
+      </button>
+
+      {open && (
+        <div className="modal-backdrop" {...backdropClose(requestClose)}>
+          <div
+            className="modal study-material-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="study-material-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-head">
+              <h3 id="study-material-title">
+                📎 자료 제공
+                {board?.title && (
+                  <span className="study-material-modal-project">{board.title}</span>
+                )}
+              </h3>
+              <button className="btn-close" onClick={requestClose} aria-label="닫기">
+                ×
+              </button>
+            </div>
+
+            <div className="study-material-body">
+              <p className="study-material-hint">
+                학생 활동 화면 맨 위에 접힌 상자로 보여 줍니다. 자료마다 어느
+                활동의 것인지 골라 주세요.
+              </p>
+
+              {items.length === 0 && (
+                <p className="study-material-hint">아직 올린 자료가 없어요.</p>
+              )}
+
+              {items.map((m, n) => (
+                <div className="study-material-item" key={m.id}>
+                  <div className="study-material-item-head">
+                    <select
+                      className="study-material-select"
+                      value={typeof m.actIndex === "number" ? m.actIndex : ""}
+                      onChange={(e) =>
+                        patch(m.id, {
+                          actIndex: e.target.value === "" ? null : Number(e.target.value),
+                        })
+                      }
+                      aria-label={`자료 ${n + 1}의 활동`}
+                    >
+                      <option value="">전체 활동</option>
+                      {activities.map((act, i) => (
+                        <option key={i} value={i}>
+                          활동 {i + 1}. {act}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      className="study-activity-row-del"
+                      onClick={() => removeItem(m.id)}
+                      aria-label={`자료 ${n + 1} 삭제`}
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <textarea
+                    className="study-material-text"
+                    value={m.text ?? ""}
+                    onChange={(e) => patch(m.id, { text: e.target.value })}
+                    placeholder="설명·참고 글을 적어 주세요."
+                    maxLength={2000}
+                  />
+
+                  {m.image ? (
+                    <div className="study-material-image">
+                      <img src={m.image} alt="제공 자료" />
+                      <button
+                        type="button"
+                        className="attach-image-grid-del"
+                        onClick={() => patch(m.id, { image: null })}
+                        aria-label="이미지 삭제"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : m.file ? (
+                    <div className="study-material-file">
+                      <span className="study-material-file-name">
+                        📎 {m.file.name}
+                      </span>
+                      <span className="study-material-file-size">
+                        {formatFileSize(m.file.size)}
+                      </span>
+                      <button
+                        type="button"
+                        className="attach-image-grid-del"
+                        onClick={() => patch(m.id, { file: null })}
+                        aria-label="첨부 삭제"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="study-material-image-add">
+                      + 파일 첨부
+                      <small>사진 · PDF · PPT · 워드 · 엑셀 · CSV · 텍스트</small>
+                      <input
+                        type="file"
+                        accept={MATERIAL_ACCEPT}
+                        onChange={(e) => handleAttach(e, m.id)}
+                        hidden
+                      />
+                    </label>
+                  )}
+                </div>
+              ))}
+
+              <UploadProgress pct={pct} />
+
+              <button type="button" className="study-material-add" onClick={addItem}>
+                + 자료 추가
+              </button>
+
+              {error && (
+                <p className="form-error" role="alert">{error}</p>
+              )}
+            </div>
+
+            <div className="study-material-modal-foot">
+              <button type="button" className="study-material-cancel" onClick={requestClose}>
+                닫기
+              </button>
+              <button
+                type="button"
+                className="study-material-save"
+                onClick={handleSaveAndClose}
+                disabled={saving}
+              >
+                {saving ? "저장 중..." : dirty ? "자료 저장" : "저장됨"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 저장하지 않고 닫으려 할 때 — 브라우저 confirm 대신 앱 안의 모달 */}
+      {closeAsk && (
+        <ConfirmModal
+          icon={<IconPen size={40} />}
+          title="저장하지 않고 닫을까요?"
+          description="아직 저장하지 않은 자료 편집 내용이 있어요. 닫으면 사라집니다."
+          confirmLabel="닫기"
+          cancelLabel="계속 쓰기"
+          danger
+          onConfirm={discardAndClose}
+          onClose={() => setCloseAsk(false)}
+        />
+      )}
+    </div>
+  );
+}

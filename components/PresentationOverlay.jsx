@@ -1,0 +1,470 @@
+"use client";
+
+// =============================================================
+// 발표 강제 전환 오버레이 — 교사가 보드 발표 모드·카드 크게 보기를 켜면
+// 그 반 학생 전원의 화면이 이 화면으로 강제 전환됩니다(교사 화면은
+// 그대로). 학생 쪽에는 닫기 버튼이 없고, 교사가 방송을 끝내면(또는
+// 모달을 닫으면) 자동으로 사라집니다.
+// =============================================================
+import { sanitizeHtml } from "@/lib/html";
+import { CONSONANT_LABELS, GRID_SLOTS, CELL_COUNT, cellKey, groupColorOf } from "@/lib/consonants";
+import { normalizeMindmap } from "@/lib/mindmap";
+import MindmapCanvas from "./MindmapCanvas";
+import WordCloud from "./WordCloud";
+import HashtagSlide from "./HashtagSlide";
+import { IconGroup } from "./StatusIcons";
+
+// 이 화면이 그릴 줄 아는 방송 종류. 새 종류를 추가하면 여기에도 넣어야 합니다.
+const KNOWN_MODES = ["consonant", "entry", "wall", "mindmap", "lesson", "carousel", "single", "hashtag"];
+
+// noteOpen — 학생이 수업 노트 서랍을 열어 두었는지. 열려 있으면 발표 화면을
+// 그만큼 좁힙니다(덮는 게 아니라 밀어냅니다). 서랍은 이 컴포넌트 밖에서
+// TopNav이 형제로 그립니다 — 안에 두면 슬라이드가 넘어갈 때마다 다시
+// 그려져 입력이 끊깁니다.
+// noteWide — 서랍이 **날개를 편** 상태(노트 + 오늘의 활동 두 칸). 그만큼 더
+// 좁아집니다. 가려지는 것은 감수하는 손실입니다 — 필기하면서 답하려고 편
+// 것이라, 그 순간 학생이 보는 주인공은 슬라이드가 아니라 제 칸입니다.
+export default function PresentationOverlay({ broadcast, noteOpen = false, noteWide = false }) {
+  const shrink = noteOpen
+    ? noteWide
+      ? " broadcast-overlay--noted broadcast-overlay--noted2"
+      : " broadcast-overlay--noted"
+    : "";
+  // [버전이 어긋났을 때]
+  // 학생 브라우저에 이전 배포의 화면이 열린 채로 남아 있으면, 새로 생긴
+  // 방송 종류를 못 알아봅니다. 그때 그냥 아래로 흘려보내면 빈 발표 카드가
+  // 떠서 '선생님이 빈 화면을 띄웠다'고 오해하게 됩니다. 그래서 모르는
+  // 종류는 무엇을 해야 하는지(새로고침) 분명히 알려 줍니다.
+  if (!KNOWN_MODES.includes(broadcast.mode ?? "")) {
+    return (
+      <div
+        className={`broadcast-overlay broadcast-overlay--stale${shrink}`}
+        role="alertdialog"
+        aria-modal="true"
+        aria-label="화면을 불러오지 못했어요"
+      >
+        <div className="broadcast-bar">
+          <span className="broadcast-live-dot" aria-hidden="true" />
+          선생님이 화면을 보여주고 있어요
+        </div>
+        <div className="broadcast-body">
+          <div className="broadcast-stale-note">
+            <strong>화면을 불러오려면 새로고침이 필요해요.</strong>
+            <p>
+              앱이 새 버전으로 바뀌었어요. 브라우저를 새로고침하면
+              선생님 화면이 바로 보입니다.
+            </p>
+            <button type="button" className="btn-primary" onClick={() => location.reload()}>
+              새로고침
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 책방 전체 집계 중계 — 교사가 보고 있는 집계판을 그대로 띄웁니다.
+  // 학생은 다른 모둠 낱말을 읽을 권한이 없으므로, 집계 결과는 방송 문서에
+  // 담겨 옵니다(broadcast.cells). 교사가 칸을 크게 열면 zoomSlot도 따라옵니다.
+  if (broadcast.mode === "consonant") {
+    const cells = broadcast.cells ?? {};
+    const zoomSlot = broadcast.zoomSlot;
+    const zoomList = zoomSlot != null ? cells[cellKey(zoomSlot)] ?? [] : null;
+    return (
+      <div
+        className={`broadcast-overlay broadcast-overlay--consonant${shrink}`}
+        role="alertdialog"
+        aria-modal="true"
+        aria-label="선생님 집계 화면"
+      >
+        <div className="broadcast-bar">
+          <span className="broadcast-live-dot" aria-hidden="true" />
+          선생님이 전체 집계를 보여주고 있어요
+          {broadcast.topic && <span className="broadcast-board"># {broadcast.topic}</span>}
+          <span className="broadcast-progress">
+            {broadcast.totalFilled ?? 0} / {CELL_COUNT}칸 · 낱말 {broadcast.totalWords ?? 0}개
+          </span>
+        </div>
+
+        <div className="broadcast-body">
+          {/* 낱말 구름 — 교사 화면과 같은 것을 그립니다. 고르는 일은 교사
+              쪽에서 이미 끝나 방송 문서에 담겨 오므로(broadcast.cloud),
+              여기서는 자리만 잡습니다. 학생은 누를 수 없습니다. */}
+          {broadcast.view === "cloud" ? (
+            <WordCloud
+              words={broadcast.cloud ?? []}
+              rest={broadcast.cloudRest ?? 0}
+              hint="많이 나온 낱말일수록 크게, 가장 많이 나온 다섯은 색으로."
+            />
+          ) : (
+          <div className="consonant-grid dash-grid cast-grid">
+            {GRID_SLOTS.map((slot, pos) => {
+              if (slot === null) {
+                return (
+                  <div key={pos} className="consonant-cell consonant-center">
+                    <span className="consonant-center-label">학습주제 · 도서명</span>
+                    <strong className="consonant-center-topic">{broadcast.topic}</strong>
+                  </div>
+                );
+              }
+              const list = cells[cellKey(slot)] ?? [];
+              return (
+                <div
+                  key={pos}
+                  className={`consonant-cell dash-cell${list.length ? " has-words" : ""}`}
+                >
+                  <span className="consonant-cell-head">
+                    <span className="consonant-label">{CONSONANT_LABELS[slot]}</span>
+                    {list.length > 0 && (
+                      <span className="dash-cell-count">{list.length}개</span>
+                    )}
+                  </span>
+                  <CastTopWords list={list} />
+                </div>
+              );
+            })}
+          </div>
+          )}
+        </div>
+
+        {/* 교사가 칸을 크게 열면 학생 화면에도 같은 모달이 뜹니다.
+            (교사 화면과 같은 클래스를 써서 생김새가 똑같습니다.
+             학생은 닫을 수 없습니다 — 교사가 닫아야 사라집니다) */}
+        {zoomList && (
+          <div className="modal-backdrop dash-zoom-backdrop">
+            <div className="modal dash-zoom-modal" role="dialog" aria-modal="true">
+              <div className="modal-head">
+                <h3>
+                  <span className="dash-zoom-label">{CONSONANT_LABELS[zoomSlot]}</span>
+                  <span className="dash-zoom-topic">{broadcast.topic}</span>
+                </h3>
+              </div>
+              <div className="dash-zoom-body">
+                {zoomList.length === 0 ? (
+                  <p className="dash-side-empty">아직 이 칸에 나온 단어가 없어요.</p>
+                ) : (
+                  <CastRows list={zoomList} big />
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // 마인드맵 중계 — 친구가 만든 마인드맵을 학급 전체 화면에 띄웁니다.
+  // 학생 쪽은 보기 전용이라 편집 막대 없이 그림과 확대/축소만 나옵니다.
+  if (broadcast.mode === "mindmap") {
+    const map = normalizeMindmap(
+      { layout: broadcast.layout, nodes: broadcast.nodes },
+      broadcast.topic
+    );
+    const mapSignature = map.nodes
+      .map((n) => `${n.id}:${n.parentId ?? ""}:${n.text}:${n.edgeLabel ?? ""}:${n.x ?? ""}:${n.y ?? ""}:${n.image ? n.image.length : 0}`)
+      .join("|");
+    const hasVisibleNode = map.nodes.some((n) => n.text?.trim() || n.image);
+    return (
+      <div
+        className={`broadcast-overlay broadcast-overlay--mindmap${shrink}`}
+        role="alertdialog"
+        aria-modal="true"
+        aria-label="선생님이 보여주는 마인드맵"
+      >
+        <div className="broadcast-bar">
+          <span className="broadcast-live-dot" aria-hidden="true" />
+          선생님이 친구의 마인드맵을 보여주고 있어요
+          {broadcast.topic && <span className="broadcast-board"># {broadcast.topic}</span>}
+          {broadcast.writerName && (
+            <span className="broadcast-progress">{broadcast.writerName}</span>
+          )}
+        </div>
+        <div className="broadcast-body">
+          {hasVisibleNode ? (
+            <MindmapCanvas
+              map={map}
+              fitKey={`${broadcast.writerName ?? ""}-${map.layout}-${mapSignature}`}
+              className="broadcast-mindmap-stage"
+            />
+          ) : (
+            <div className="broadcast-stale-note">
+              <strong>아직 보여줄 마인드맵 내용이 없어요.</strong>
+              <p>선생님이 다른 학생의 마인드맵을 선택하면 이 화면에 바로 표시됩니다.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // 개인 활동(곁텍스트 읽기·RAFT 글쓰기) 영역 중계 — 학생은 남의 기록을
+  // 직접 읽을 권한이 없어, 내용이 방송 문서에 실려 옵니다.
+  // 교사가 고른 '한 영역'만 크게 띄웁니다. 교사가 다른 영역 버튼을 누르면
+  // 이 문서가 새 내용으로 덮여, 화면이 끊김 없이 그 영역으로 바뀝니다.
+  // 활동 모아보기 — 반 전체의 답을 한 화면에 타일로. 교사가 '이 화면
+  // 학급에 띄우기'를 누르면 학생 화면도 같은 배치로 바뀝니다.
+  if (broadcast.mode === "wall") {
+    const items = broadcast.items ?? [];
+    return (
+      <div
+        className={`broadcast-overlay broadcast-overlay--wall${shrink}`}
+        role="alertdialog"
+        aria-modal="true"
+        aria-label="선생님이 보여주는 친구들의 답"
+      >
+        <div className="broadcast-bar">
+          <span className="broadcast-live-dot" aria-hidden="true" />
+          선생님이 친구들의 답을 함께 보여주고 있어요
+          {broadcast.topic && <span className="broadcast-board"># {broadcast.topic}</span>}
+          <span className="broadcast-progress">{items.length}명</span>
+        </div>
+
+        <div className="broadcast-body">
+          {items.length === 0 ? (
+            <p className="broadcast-wall-empty">아직 올라온 답이 없어요.</p>
+          ) : (
+            <div className="broadcast-wall">
+              {items.map((it, i) => (
+                <article key={i} className="broadcast-wall-card">
+                  <strong className="broadcast-wall-who">{it.name}</strong>
+                  <p className="broadcast-wall-text">{it.text}</p>
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // 여섯 개의 해시태그 — 학생 한 명의 것을 슬라이드 한 장으로. 교사 화면의
+  // 수업 화면 창(CastStageModal)이 **같은 컴포넌트**로 같은 꾸러미를 그립니다.
+  // 누구의 것인지는 슬라이드 머리가 크게 말하므로 막대에는 안 적습니다.
+  if (broadcast.mode === "hashtag") {
+    return (
+      <div
+        className={`broadcast-overlay broadcast-overlay--hashtag${shrink}`}
+        role="alertdialog"
+        aria-modal="true"
+        aria-label="선생님이 보여주는 친구의 해시태그"
+      >
+        <div className="broadcast-bar">
+          <span className="broadcast-live-dot" aria-hidden="true" />
+          선생님이 친구의 해시태그를 보여주고 있어요
+          {broadcast.activityTitle && (
+            <span className="broadcast-board">{broadcast.activityTitle}</span>
+          )}
+        </div>
+        <div className="broadcast-body">
+          <HashtagSlide slide={broadcast} variant="cast" />
+        </div>
+      </div>
+    );
+  }
+
+  if (broadcast.mode === "entry") {
+    const fields = broadcast.fields ?? [];
+    // 글이 짧을수록 크게 — 칠판에 띄우는 화면이라 뒷자리에서 읽혀야 합니다.
+    // KWLS 한 칸은 흔히 열댓 자라, 한 크기로 맞춰 두면 넓은 화면에 작은
+    // 글씨 한 줄만 덩그러니 놓입니다. 길이에 따라 네 단계로 나눕니다.
+    const chars = fields.reduce((n, f) => n + String(f.text ?? "").length, 0);
+    // 두 칸으로 나란히 세우는 꾸러미(물음표로 책 읽기)는 'md'가 천장입니다.
+    // 칸 하나가 화면 폭의 절반이고 칸 수도 많아(물음표 다섯 쌍 = 열 칸),
+    // 짧은 답이라고 xl(120px)로 키우면 한 화면에 한 칸밖에 안 들어와
+    // 무엇에 대한 글인지 알 수 없었습니다(실제 신고).
+    // 한 줄뿐이면(나의 생각: 고른 물음 | 나의 생각) md, 여러 줄이면(물음표 다섯
+    // 쌍) sm — 두 칸 sm은 한 화면에 다섯 줄이 다 들도록 CSS가 따로 잡습니다.
+    const cols = broadcast.columns === 2;
+    const size = cols
+      ? (fields.length <= 2 && chars <= 240 ? "md" : "sm")
+      : chars <= 40 ? "xl" : chars <= 160 ? "lg" : chars <= 450 ? "md" : "sm";
+    return (
+      <div
+        className={`broadcast-overlay broadcast-overlay--entry${shrink}`}
+        role="alertdialog"
+        aria-modal="true"
+        aria-label="선생님이 보여주는 글"
+      >
+        <div className="broadcast-bar">
+          <span className="broadcast-live-dot" aria-hidden="true" />
+          선생님이 친구의 글을 보여주고 있어요
+          {broadcast.topic && <span className="broadcast-board"># {broadcast.topic}</span>}
+          {broadcast.writerName && (
+            <span className="broadcast-progress">{broadcast.writerName}</span>
+          )}
+        </div>
+
+        <div className="broadcast-body">
+          <div className="entry-cast" data-size={size} data-cols={cols ? "2" : undefined}>
+            <header className="entry-cast-head">
+              {broadcast.letter && (
+                <span className="paratext-letter" aria-hidden="true">{broadcast.letter}</span>
+              )}
+              <span className="paratext-card-title">
+                <strong>{broadcast.label}</strong>
+                {broadcast.labelEn && <em>{broadcast.labelEn}</em>}
+              </span>
+              {typeof broadcast.index === "number" && (
+                <span className="paratext-step">
+                  {broadcast.index + 1} / {broadcast.total}
+                </span>
+              )}
+            </header>
+
+            {broadcast.prompt && <p className="entry-cast-prompt">{broadcast.prompt}</p>}
+            {/* RAFT는 낱말 하나만 뜨면 무슨 말인지 몰라 문장을 함께 보여 줍니다 */}
+            {broadcast.note && <p className="raft-sentence done">{broadcast.note}</p>}
+
+            <div className={`entry-cast-body${cols ? " entry-cast-body--cols" : ""}`}>
+              {fields.map((f, i) => (
+                <div key={i} className="paratext-read-field">
+                  {f.label && <span className="paratext-read-label">{f.label}</span>}
+                  <p className={`paratext-read-text${f.text ? "" : " empty"}`}>
+                    {f.text || "아직 쓰지 않았어요"}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return <PresentationOverlayBody broadcast={broadcast} shrink={shrink} />;
+}
+
+// 격자 칸 — 교사 화면(TopWords)과 같은 모습. 많이 나온 낱말 다섯 개만 크게.
+// 방송 꾸러미의 낱말은 이미 '많이 나온 순 → 먼저 채운 순'으로 정렬돼 옵니다.
+const CAST_TOP_N = 5;
+
+function CastTopWords({ list }) {
+  if (!list?.length) return null;
+  const shown = list.slice(0, CAST_TOP_N);
+  const rest = list.length - shown.length;
+  // 막대 길이는 그 칸에서 가장 많이 나온 수에 견줍니다(0에서 시작).
+  // 칸끼리가 아니라 '그 칸 안에서'의 비율이라, 낱말이 35개인 칸과 10개인
+  // 칸이 같은 리듬으로 읽힙니다.
+  const peak = Math.max(...shown.map((w) => w.count));
+  return (
+    <div className="dash-top">
+      {shown.map((w) => (
+        <span
+          key={w.text}
+          className="dash-top-word"
+          style={{ "--t": w.count / peak }}
+          title={`${w.text} — ${w.count}번`}
+        >
+          <span className="dash-top-label">
+            <span className="dash-top-text">{w.text}</span>
+            <em>{w.count}</em>
+          </span>
+          <span className="dash-top-bar" aria-hidden="true"><i /></span>
+        </span>
+      ))}
+      {rest > 0 && <span className="dash-top-more">+{rest}개</span>}
+    </div>
+  );
+}
+
+// 크게 보기 모달 안의 낱말 줄 — 교사 화면(WordRows)과 같은 클래스입니다.
+function CastRows({ list, big = false }) {
+  if (!list?.length) return null;
+  return (
+    <div className={`dash-rows${big ? " big" : ""}`}>
+      {list.map((w) => (
+        <div key={w.text} className="dash-word-row">
+          {(w.from ?? []).map((groupIndex, i) => (
+            <span
+              key={i}
+              className="consonant-chip dash-chip"
+              style={{ borderColor: groupColorOf(groupIndex), color: groupColorOf(groupIndex) }}
+            >
+              {w.text}
+            </span>
+          ))}
+          {w.count > 1 && <em className="dash-row-count">{w.count}</em>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PresentationOverlayBody({ broadcast, shrink = "" }) {
+  // 수업하기 — 선생님 화면 전체가 아니라 '슬라이드만' 화면 가득 띄웁니다.
+  // (오른쪽 수업 메모는 교사 전용이라 방송에 담기지 않습니다)
+  if (broadcast.mode === "lesson") {
+    return (
+      <div
+        className={`broadcast-overlay broadcast-overlay--lesson${shrink}`}
+        role="alertdialog"
+        aria-modal="true"
+        aria-label="선생님 수업 화면"
+      >
+        {broadcast.imageUrl ? (
+          <img
+            className="broadcast-slide-img"
+            src={broadcast.imageUrl}
+            alt={`슬라이드 ${(broadcast.slideIndex ?? 0) + 1}`}
+          />
+        ) : (
+          <p className="broadcast-lesson-wait">선생님이 수업을 준비하고 있어요.</p>
+        )}
+
+        {/* 선생님이 해설을 띄운 동안만 — 슬라이드 위에 덮입니다.
+            내리는 것은 선생님 몫이라 학생 쪽에 닫기 버튼을 두지 않습니다
+            (닫아 버리면 함께 보라고 띄운 뜻이 사라집니다). */}
+        {(broadcast.noteTitle?.trim() || broadcast.noteText?.trim()) && (
+          <div className="broadcast-note" role="note">
+            {broadcast.noteTitle?.trim() && (
+              <h3 className="broadcast-note-title">{broadcast.noteTitle}</h3>
+            )}
+            {broadcast.noteText?.trim() && (
+              <p className="broadcast-note-text">{broadcast.noteText}</p>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  const isGroup = !!broadcast.isGroupCard;
+  const html = sanitizeHtml(broadcast.content || "");
+  const hasText = html.replace(/<[^>]*>/g, "").trim().length > 0;
+
+  return (
+    <div className={`broadcast-overlay${shrink}`} role="alertdialog" aria-modal="true" aria-label="선생님 발표 화면">
+      <div className="broadcast-bar">
+        <span className="broadcast-live-dot" aria-hidden="true" />
+        선생님이 화면을 보여주고 있어요
+        {broadcast.boardTitle && <span className="broadcast-board"># {broadcast.boardTitle}</span>}
+        {broadcast.mode === "carousel" && typeof broadcast.idx === "number" && (
+          <span className="broadcast-progress">{broadcast.idx + 1} / {broadcast.total}</span>
+        )}
+      </div>
+
+      <div className="broadcast-body">
+        <div className="present-slide broadcast-slide">
+          <div className="broadcast-who">
+            <span aria-hidden="true">{isGroup ? <IconGroup size={24} /> : "🙂"}</span>
+            <strong>{broadcast.displayName}</strong>
+            {isGroup && broadcast.members?.length > 0 && (
+              <span className="present-group-members">
+                {broadcast.members.map((m) => m.name).join(" · ")}
+              </span>
+            )}
+          </div>
+          {broadcast.title && <h2 className="present-slide-title">{broadcast.title}</h2>}
+          {hasText ? (
+            <div
+              className="present-slide-content study-card-body"
+              dangerouslySetInnerHTML={{ __html: html }}
+            />
+          ) : (
+            <p className="present-empty">아직 작성한 내용이 없어요.</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

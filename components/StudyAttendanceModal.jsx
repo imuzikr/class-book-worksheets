@@ -1,0 +1,612 @@
+"use client";
+
+// =============================================================
+// 출석 관리 모달 — 지금 보고 있는 '이 반'의 출석만 다룹니다.
+// -------------------------------------------------------------
+// 예전 캘린더형은 교사가 가진 반 전체를 한 화면에 늘어놓고 그중 하나를
+// 다시 고르게 했는데, 모달을 연 맥락(지금 이 반)과 어긋나 어느 반을 보고
+// 있는지 헷갈렸습니다. 지금은 목록형·캘린더형 모두 이 반의 기록만 씁니다.
+// =============================================================
+import { useMemo, useState } from "react";
+import { backdropClose } from "@/lib/modal";
+import { todayDateKey, formatClockMs, formatStampMs } from "@/lib/store";
+import AttendanceSeatView from "./AttendanceSeatView";
+import {
+  downloadAttendanceWorkbook,
+  filterRecordsByRange,
+} from "@/lib/exportAttendance";
+import { dateKeyFromParts, dateKeyDots } from "@/lib/dates";
+
+const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+
+function shiftMonth(cursor, delta) {
+  const m = cursor.month + delta;
+  if (m < 0) return { year: cursor.year - 1, month: 11 };
+  if (m > 11) return { year: cursor.year + 1, month: 0 };
+  return { year: cursor.year, month: m };
+}
+
+// 출석 기록을 달력으로 보여 줍니다.
+//  · total이 있으면(교사) 그날 출석 인원을 "n/total"로, 없으면(학생) 출석한
+//    날에만 작은 점으로 표시합니다.
+//  · interactive면(교사) 날짜를 눌러 아래 목록의 기준 날짜를 바꿀 수 있습니다.
+//  · roster를 주면 왼쪽 위 '상세 보기'가 켜지고, 기록이 있는 날짜 아래에
+//    그날 결석한 학생 이름이 작게 펼쳐집니다(달력을 벗어나지 않고 결석자를
+//    바로 확인하려던 것 — 날짜를 하나씩 눌러 표를 보던 수고를 덜어 줍니다).
+function AttendanceCalendar({
+  records,
+  total = 0,
+  roster = [],
+  selectedDate = "",
+  onSelectDate,
+  interactive = false,
+}) {
+  const recordsByDate = useMemo(() => {
+    const map = new Map();
+    records.forEach((r) => {
+      if (!r.date) return;
+      if (!map.has(r.date)) map.set(r.date, []);
+      map.get(r.date).push(r);
+    });
+    return map;
+  }, [records]);
+
+  const [cursor, setCursor] = useState(() => {
+    const anchor = selectedDate || [...recordsByDate.keys()].sort().at(-1) || todayDateKey();
+    const [y, m] = anchor.split("-").map(Number);
+    return { year: y, month: m - 1 };
+  });
+  const [showDetail, setShowDetail] = useState(false);
+  const canDetail = roster.length > 0;
+
+  const today = todayDateKey();
+  const first = new Date(cursor.year, cursor.month, 1);
+  const daysInMonth = new Date(cursor.year, cursor.month + 1, 0).getDate();
+  const startWeekday = first.getDay();
+  const cells = Array.from({ length: startWeekday }, () => null).concat(
+    Array.from({ length: daysInMonth }, (_, i) => i + 1)
+  );
+
+  // 그날 기록에 없는 명단 인원 = 결석
+  function absenteesOf(dayRecords) {
+    const present = new Set(dayRecords.map((r) => r.uid));
+    return roster.filter((s) => !present.has(s.uid));
+  }
+
+  return (
+    <div className="study-attendance-calendar">
+      <div className="study-cal-head">
+        {canDetail && (
+          <button
+            type="button"
+            className={`study-cal-detail-btn${showDetail ? " on" : ""}`}
+            onClick={() => setShowDetail((v) => !v)}
+            aria-pressed={showDetail}
+            title={
+              showDetail
+                ? "날짜 아래의 결석생 명단을 접습니다"
+                : "기록이 있는 날짜 아래에 결석생 명단을 펼칩니다"
+            }
+          >
+            {showDetail ? "간단히" : "상세 보기"}
+          </button>
+        )}
+        <button type="button" onClick={() => setCursor((c) => shiftMonth(c, -1))} aria-label="이전 달">
+          ‹
+        </button>
+        <span>{cursor.year}년 {cursor.month + 1}월</span>
+        <button type="button" onClick={() => setCursor((c) => shiftMonth(c, 1))} aria-label="다음 달">
+          ›
+        </button>
+      </div>
+      <div className="study-cal-weekdays" aria-hidden="true">
+        {WEEKDAYS.map((w) => (
+          <span key={w}>{w}</span>
+        ))}
+      </div>
+      <div className={`study-cal-grid${showDetail && canDetail ? " detail" : ""}`}>
+        {cells.map((d, i) => {
+          if (d === null) return <span key={`blank${i}`} className="study-cal-cell study-cal-cell--blank" />;
+          const key = dateKeyFromParts(cursor.year, cursor.month, d);
+          const dayRecords = recordsByDate.get(key) ?? [];
+          const has = dayRecords.length > 0;
+          const absentees = showDetail && canDetail && has ? absenteesOf(dayRecords) : null;
+          const cls = [
+            "study-cal-cell",
+            has && "has-record",
+            key === selectedDate && "selected",
+            key === today && "today",
+          ].filter(Boolean).join(" ");
+          return (
+            <button
+              key={key}
+              type="button"
+              className={cls}
+              onClick={interactive ? () => onSelectDate?.(key) : undefined}
+              disabled={!interactive}
+              title={has ? (total > 0 ? `${dayRecords.length}/${total}명 출석` : "출석함") : undefined}
+            >
+              <span className="study-cal-day">{d}</span>
+              {has && (
+                total > 0 ? (
+                  <span className="study-cal-count">{dayRecords.length}/{total}</span>
+                ) : (
+                  <span className="study-cal-dot" aria-hidden="true" />
+                )
+              )}
+              {absentees && (
+                <span className="study-cal-absents">
+                  {absentees.length === 0 ? (
+                    <span className="study-cal-absent-none">모두 출석</span>
+                  ) : (
+                    absentees.map((s) => (
+                      <span key={s.uid} className="study-cal-absent-name">
+                        {s.name || "이름 미설정"}
+                      </span>
+                    ))
+                  )}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// 출석부 내려받기 — 어느 날짜를 담을지 먼저 고릅니다.
+// -------------------------------------------------------------
+// 예전에는 누르면 곧바로 학기 전체가 받아졌습니다. 실제로는 '오늘 하루'나
+// '이번 달'처럼 좁혀 뽑는 일이 더 잦아, 받아 놓고 엑셀에서 열을 지우는
+// 수고가 따랐습니다.
+//
+// 날짜는 **자유 입력이 아니라 수업한 날 중에서** 고릅니다. 달력에서 아무 날이나
+// 집으면 수업이 없던 날을 고르고도 '왜 비었지' 하게 됩니다.
+function AttendanceExportModal({ dates, roster, records, className, onClose }) {
+  // dates는 최근이 앞(내림차순) — 고르는 목록도 그 차례가 익숙합니다.
+  const oldest = dates[dates.length - 1] ?? "";
+  const newest = dates[0] ?? "";
+  const [mode, setMode] = useState("all"); // all | day | range
+  const [day, setDay] = useState(newest);
+  const [from, setFrom] = useState(oldest);
+  const [to, setTo] = useState(newest);
+
+  // 고른 갈래를 실제 범위로. 기간은 두 값이 뒤집혀 있어도 받아 줍니다
+  // (누르는 차례까지 강요하면 고르다 막힙니다).
+  const range =
+    mode === "day"
+      ? { from: day, to: day }
+      : mode === "range"
+        ? { from: from <= to ? from : to, to: from <= to ? to : from }
+        : { from: "", to: "" };
+
+  const picked = filterRecordsByRange(records, range.from, range.to);
+  const pickedDays = new Set(picked.map((r) => r.date)).size;
+
+  function submit() {
+    downloadAttendanceWorkbook({ className, roster, records, ...range });
+    onClose();
+  }
+
+  return (
+    <div className="modal-backdrop attend-export-backdrop" {...backdropClose(onClose)}>
+      <div
+        className="modal attend-export-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label="출석부 내려받기"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="modal-head">
+          <h3>⬇ 출석부 내려받기</h3>
+          <button className="btn-close" onClick={onClose} aria-label="닫기">×</button>
+        </div>
+
+        <div className="book-field">
+          <span>범위</span>
+          <div className="book-seg">
+            {[
+              ["all", `전체 기간 (${dates.length}일)`],
+              ["day", "하루"],
+              ["range", "기간"],
+            ].map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                className={`book-seg-btn${mode === key ? " active" : ""}`}
+                onClick={() => setMode(key)}
+                aria-pressed={mode === key}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 고른 갈래에 따라 자리가 오르내리지 않게 날짜 칸은 늘 자리를
+            잡아 둡니다(전체 기간일 때는 안내 한 줄). */}
+        <div className="attend-export-when">
+          {mode === "day" ? (
+            <label className="book-field">
+              <span>날짜</span>
+              <select value={day} onChange={(e) => setDay(e.target.value)}>
+                {dates.map((d) => (
+                  <option key={d} value={d}>{dateKeyDots(d)}</option>
+                ))}
+              </select>
+            </label>
+          ) : mode === "range" ? (
+            <div className="book-field-row">
+              <label className="book-field">
+                <span>시작</span>
+                <select value={from} onChange={(e) => setFrom(e.target.value)}>
+                  {dates.map((d) => (
+                    <option key={d} value={d}>{dateKeyDots(d)}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="book-field">
+                <span>끝</span>
+                <select value={to} onChange={(e) => setTo(e.target.value)}>
+                  {dates.map((d) => (
+                    <option key={d} value={d}>{dateKeyDots(d)}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          ) : (
+            <p className="book-help book-solo-note">
+              수업한 날 <strong>{dates.length}일</strong>을 모두 담습니다
+              {oldest && newest && oldest !== newest
+                ? ` (${dateKeyDots(oldest)} ~ ${dateKeyDots(newest)})`
+                : ""}
+              .
+            </p>
+          )}
+        </div>
+
+        {/* 무엇이 담기는지 숫자로 한 번 더 — 누르기 전에 확인합니다 */}
+        <p className="attend-export-sum">
+          담기는 수업일 <b>{pickedDays}일</b> · 학생 <b>{roster.length}명</b>
+        </p>
+
+        <div className="modal-actions">
+          <button type="button" className="btn-ghost" onClick={onClose}>취소</button>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={submit}
+            disabled={pickedDays === 0}
+          >
+            엑셀로 내려받기
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 출석 상세 표 — 목록형(현재 반)과 캘린더형(반별 목록에서 고른 반)이
+// 같은 모양({uid, name, studentId, emoji, record})을 쓰므로 공유합니다.
+function AttendanceTable({ rows }) {
+  return (
+    <div className="study-attendance-table-wrap">
+      <table className="study-attendance-table">
+        <thead>
+          <tr>
+            <th>학생</th>
+            <th>출석 상황</th>
+            <th>출석 기록</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((student) => (
+            <tr key={student.uid}>
+              <td>
+                <span className="study-attendance-student">
+                  <span aria-hidden="true">{student.emoji || "🙂"}</span>
+                  <span>
+                    <strong>{student.name || "이름 미설정"}</strong>
+                    {student.studentId && <small>{student.studentId}</small>}
+                  </span>
+                </span>
+              </td>
+              <td>
+                <span className={`study-attendance-status${student.record ? " on" : ""}`}>
+                  {student.record ? "출석" : "기록 없음"}
+                </span>
+              </td>
+              {/* 밀리초까지 — 같은 분에 여러 명이 찍혔을 때 순서가 여기서
+                  드러납니다. 서버가 답하기 전(빈 값)이면 지어낸 숫자를
+                  찍지 않고 '-'입니다. */}
+              <td>
+                <span className="study-attendance-at">
+                  {/* 선생님이 출결 수정으로 남긴 기록 */}
+                  {student.record?.manualBy && <span className="attendance-seat-manual">수정 </span>}
+                  {formatStampMs(
+                    student.record?.attendedAt || student.record?.createdAt
+                  ) || "-"}
+                </span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export default function StudyAttendanceModal({
+  isTeacher = false,
+  records = [],
+  roster = [],
+  className = "",
+  seatLayout = null,
+  attendanceOpenToday = false,
+  attendanceBusy = false,
+  onStartAttendance = null,
+  onStopAttendance = null,
+  onSetAttendance = null,
+  onClose,
+}) {
+  const [viewMode, setViewMode] = useState("list"); // "list" | "calendar" | "seat"
+  // 출결 수정 — 좌석형에서만 켜집니다. 켜 둔 동안 자리를 누르면 출석 ↔ 결석.
+  // 다른 보기로 옮기면 꺼집니다(목록·달력에서는 누를 자리가 없으므로).
+  const [editing, setEditing] = useState(false);
+  const [busyUids, setBusyUids] = useState(() => new Set());
+  const [editError, setEditError] = useState("");
+  function changeView(mode) {
+    setViewMode(mode);
+    if (mode !== "seat") setEditing(false);
+  }
+  const [exportOpen, setExportOpen] = useState(false); // 출석부 내려받기 — 범위 고르기 창
+  const dates = useMemo(
+    () => [...new Set(records.map((r) => r.date).filter(Boolean))].sort((a, b) => b.localeCompare(a)),
+    [records]
+  );
+  const [selectedDate, setSelectedDate] = useState("");
+  const activeDate = selectedDate || (attendanceOpenToday ? todayDateKey() : dates[0]) || todayDateKey();
+  const dateOptions = dates.includes(activeDate) ? dates : [activeDate, ...dates].sort((a, b) => b.localeCompare(a));
+
+  const byStudent = useMemo(() => {
+    const map = new Map();
+    records
+      .filter((r) => r.date === activeDate)
+      .forEach((r) => map.set(r.uid, r));
+    return map;
+  }, [records, activeDate]);
+
+  const studentRows = useMemo(
+    () =>
+      roster.map((student) => ({
+        ...student,
+        record: byStudent.get(student.uid) ?? null,
+      })),
+    [roster, byStudent]
+  );
+
+  // 같은 자리를 빨리 두 번 누르면 만들기와 지우기가 엇갈리므로, 저장이 끝날
+  // 때까지 그 자리만 잠급니다(다른 학생은 이어서 누를 수 있음).
+  async function toggleAttendance(student, present) {
+    if (!onSetAttendance || busyUids.has(student.uid)) return;
+    setEditError("");
+    setBusyUids((prev) => new Set(prev).add(student.uid));
+    try {
+      await onSetAttendance(student, activeDate, present);
+    } catch (err) {
+      console.error("[출결 수정 실패]", err?.code, err?.message);
+      setEditError(`${student.name || "학생"}의 출결을 바꾸지 못했어요. 잠시 후 다시 눌러 주세요.`);
+    } finally {
+      setBusyUids((prev) => {
+        const next = new Set(prev);
+        next.delete(student.uid);
+        return next;
+      });
+    }
+  }
+
+  return (
+    <div className="modal-backdrop" {...backdropClose(onClose)}>
+      <div
+        className="modal study-attendance-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="study-attendance-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="modal-head">
+          <h3 id="study-attendance-title">
+            {isTeacher ? "출석 관리" : "내 출석부"}
+            {/* 어느 반의 출석을 보고 있는지 제목에 못 박아 둡니다 */}
+            {className && <span className="study-attendance-class">{className}</span>}
+          </h3>
+          <button className="btn-close" onClick={onClose} aria-label="닫기">
+            ×
+          </button>
+        </div>
+
+        {isTeacher && (
+          <div className="study-attendance-toolbar">
+            <div className="study-attendance-controls">
+              <button
+                type="button"
+                className="btn-primary study-attendance-start"
+                onClick={onStartAttendance}
+                disabled={attendanceBusy || attendanceOpenToday}
+              >
+                ▶ 출석 시작
+              </button>
+              <button
+                type="button"
+                className="btn-ghost study-attendance-stop"
+                onClick={onStopAttendance}
+                disabled={attendanceBusy || !attendanceOpenToday}
+              >
+                ⏹ 출석 종료
+              </button>
+              <span className={`study-attendance-live${attendanceOpenToday ? " on" : ""}`}>
+                {attendanceOpenToday ? "출석 진행 중" : "출석 종료됨"}
+              </span>
+            </div>
+            {/* 출석부 내려받기 — 명단 × 수업한 날짜의 표 한 장(엑셀).
+                학기말에 옮겨 적거나 보관하려면 화면이 아니라 파일이 필요합니다.
+                기록이 하루도 없으면 받을 것이 없어 막아 둡니다. */}
+            <button
+              type="button"
+              className="btn-ghost study-attendance-export"
+              onClick={() => setExportOpen(true)}
+              disabled={dates.length === 0 || roster.length === 0}
+              title={
+                dates.length === 0
+                  ? "아직 출석 기록이 없어요"
+                  : `수업한 ${dates.length}일 가운데 담을 날짜를 골라 엑셀 파일로 내려받습니다`
+              }
+            >
+              ⬇ 출석부 내려받기
+            </button>
+            {/* 출결 수정 — 학생 기기가 막혀 '출석하기'를 못 누른 날 등을 선생님이
+                손으로 바로잡습니다. 자리를 눌러야 하므로 좌석형에서만 켜집니다. */}
+            {onSetAttendance && (
+              <button
+                type="button"
+                className={`btn-ghost study-attendance-edit${editing ? " on" : ""}`}
+                onClick={() => setEditing((v) => !v)}
+                disabled={viewMode !== "seat" || roster.length === 0}
+                aria-pressed={editing}
+                title={
+                  viewMode !== "seat"
+                    ? "좌석형에서 쓸 수 있어요"
+                    : editing
+                      ? "출결 수정을 끝냅니다"
+                      : "자리를 눌러 출석 ↔ 결석을 바꿉니다"
+                }
+              >
+                {editing ? "✓ 수정 끝내기" : "✎ 출결 수정"}
+              </button>
+            )}
+            <span className="study-attendance-count">
+              출석 {studentRows.filter((s) => s.record).length} / {studentRows.length}
+            </span>
+          </div>
+        )}
+
+        <div className="study-attendance-view-tabs" role="tablist" aria-label="출석부 보기 방식">
+          <button type="button" className={viewMode === "list" ? "active" : ""} onClick={() => changeView("list")}>
+            목록형
+          </button>
+          <button
+            type="button"
+            className={viewMode === "calendar" ? "active" : ""}
+            onClick={() => changeView("calendar")}
+          >
+            캘린더형
+          </button>
+          {isTeacher && (
+            <button type="button" className={viewMode === "seat" ? "active" : ""} onClick={() => changeView("seat")}>
+              좌석형
+            </button>
+          )}
+        </div>
+
+        <div className="study-attendance-body">
+          {isTeacher ? (
+            <>
+              {viewMode === "seat" ? (
+                <label className="study-attendance-date-picker">
+                  날짜
+                  <input type="date" value={activeDate} onChange={(e) => { if (e.target.value) setSelectedDate(e.target.value); }} />
+                </label>
+              ) : viewMode === "list" ? (
+                dateOptions.length > 0 && (
+                  <label className="study-attendance-date-picker">
+                    날짜
+                    <select value={activeDate} onChange={(e) => setSelectedDate(e.target.value)}>
+                      {dateOptions.map((date) => (
+                        <option key={date} value={date}>
+                          {dateKeyDots(date)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )
+              ) : (
+                <AttendanceCalendar
+                  records={records}
+                  total={studentRows.length}
+                  roster={roster}
+                  selectedDate={activeDate}
+                  onSelectDate={setSelectedDate}
+                  interactive
+                />
+              )}
+
+              {/* 목록형·캘린더형 모두 이 반의 상세 표를 그대로 씁니다 —
+                  캘린더형은 달력에서 고른 날짜가 기준이 됩니다. */}
+              {roster.length === 0 ? (
+                <p className="lesson-note-empty">이 반에 입장한 학생이 없어요.</p>
+              ) : viewMode === "seat" ? (
+                <>
+                  {editError && <p className="form-error">{editError}</p>}
+                  <AttendanceSeatView
+                    rows={studentRows}
+                    seatLayout={seatLayout}
+                    editing={editing}
+                    busyUids={busyUids}
+                    onToggle={toggleAttendance}
+                  />
+                </>
+              ) : dates.length === 0 ? (
+                <p className="lesson-note-empty">아직 출석 기록이 없어요.</p>
+              ) : viewMode === "calendar" && !activeDate ? (
+                <p className="lesson-note-empty">달력에서 날짜를 골라 보세요.</p>
+              ) : (
+                <>
+                  {viewMode === "calendar" && activeDate && (
+                    <p className="study-attendance-active-date">
+                      {dateKeyDots(activeDate)} 기준
+                    </p>
+                  )}
+                  <AttendanceTable rows={studentRows} />
+                </>
+              )}
+            </>
+          ) : records.length === 0 ? (
+            <p className="lesson-note-empty">아직 출석한 기록이 없어요.</p>
+          ) : viewMode === "list" ? (
+            <ul className="study-attendance-list">
+              {records.map((record) => (
+                <li key={record.id}>
+                  <strong>{dateKeyDots(record.date)}</strong>
+                  <span>
+                    출석
+                    {/* 내 기록에도 찍힌 시각을 적습니다 — 날짜만 있으면
+                        '언제 눌렀더라'를 학생이 확인할 길이 없습니다. */}
+                    {formatClockMs(record.attendedAt || record.createdAt) && (
+                      <span className="study-attendance-at">
+                        {formatClockMs(record.attendedAt || record.createdAt)}
+                      </span>
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <AttendanceCalendar records={records} />
+          )}
+        </div>
+      </div>
+
+      {/* 범위 고르기 창 — 이 모달 위에 뜹니다(z-index는 CSS에서). */}
+      {exportOpen && (
+        <AttendanceExportModal
+          dates={dates}
+          roster={roster}
+          records={records}
+          className={className}
+          onClose={() => setExportOpen(false)}
+        />
+      )}
+    </div>
+  );
+}

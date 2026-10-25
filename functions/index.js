@@ -1,0 +1,634 @@
+// =============================================================
+// Cloud Functions — 서버에서 동작하는 코드
+// -------------------------------------------------------------
+// 클라이언트(브라우저)는 조작될 수 있으므로, 아래 세 종류의 작업은
+// Firebase 서버에서 실행됩니다.
+//
+//   [1] 데이터 무결성  : 답변 생성/삭제 시 answerCount를 서버가 집계
+//   [2] 역할 부여      : 관리자/교사/학생 역할을 커스텀 클레임으로 지정
+//   [3] 알림          : 새 답변 알림 발송
+//
+// 배포: 프로젝트 루트에서
+//   npm install -g firebase-tools
+//   firebase login
+//   cd functions && npm install && cd ..
+//   firebase deploy --only functions
+// ※ Cloud Functions는 Blaze(종량제) 요금제에서만 배포됩니다.
+//   학급 규모 사용량은 대부분 무료 한도 안에서 처리됩니다.
+// (런타임 nodejs22 — firebase.json 참고)
+// =============================================================
+const {
+  onDocumentCreated,
+  onDocumentUpdated,
+  onDocumentDeleted,
+} = require("firebase-functions/v2/firestore");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { purgeClassData } = require("./purgeClass");
+const { setGlobalOptions } = require("firebase-functions/v2");
+const admin = require("firebase-admin");
+
+admin.initializeApp();
+const db = admin.firestore();
+
+// 서울 리전에서 실행. `maxInstances`는 **요금 안전장치**입니다.
+//
+// 인스턴스는 함수를 돌리는 일꾼 한 명입니다. 요청이 몰리면 구글이 일꾼을
+// 더 깨우는데, 천장을 안 두면 사고(코드 실수·폭주)가 났을 때 위로 열려
+// 있어 요금이 끝없이 올라갑니다. 10은 **평소 쓰는 양을 재는 값이 아니라
+// 사고를 막는 값**입니다 — 한 반 스물여섯 명이 일제히 눌러도 요청은 1~2초에
+// 걸쳐 줄지어 들어오고 함수 하나가 Firestore에 두어 번 쓰고 끝나므로, 같은
+// 순간에 필요한 일꾼은 두세 명입니다.
+// 천장에 닿아도 요청이 **거부되지 않고 줄을 서서** 처리됩니다. 여기 함수는
+// 답변 수 집계와 알림이라 학생이 결과를 기다리는 종류가 아니어서, 조금
+// 늦어도 화면에서 느껴지지 않습니다.
+//
+// **`minInstances`는 일부러 두지 않습니다**(기본 0). 그것은 요청이 없어도
+// 일꾼을 켜 두는 설정이라 아무도 안 쓰는 시간에도 요금이 붙습니다. 하루에
+// 몇 번 도는 이 앱에서는 콜드 스타트 몇 초를 없애자고 낼 값이 아닙니다.
+setGlobalOptions({ region: "asia-northeast3", maxInstances: 10 });
+
+// 역할 종류와 최초 관리자 이메일
+// (첫 관리자는 아직 admin 클레임이 없으므로, 이 이메일로 로그인한
+//  계정에 한해 스스로 역할을 부여할 수 있게 허용합니다.)
+const ROLES = ["admin", "teacher", "student"];
+const INITIAL_ADMIN_EMAIL = "iseoul72@gmail.com";
+
+// =============================================================
+// [1] 데이터 무결성 — answerCount 서버 집계
+// -------------------------------------------------------------
+// 클라이언트가 직접 카운트를 올리면 조작·동시성 문제가 생기므로,
+// answers 하위 컬렉션에 문서가 생기고/지워질 때 서버가 집계합니다.
+// (이 함수를 배포한 뒤에는 lib/store.js의 addAnswer 안에 있는
+//  updateDoc(... increment(1)) 부분을 삭제하세요. 중복 집계 방지)
+// =============================================================
+exports.onAnswerCreated = onDocumentCreated(
+  "questions/{questionId}/answers/{answerId}",
+  async (event) => {
+    const { questionId } = event.params;
+    const answer = event.data.data();
+    const questionRef = db.doc(`questions/${questionId}`);
+
+    // 1) 답변 수 +1 (서버에서만 수행 → 조작 불가, 동시 답변에도 안전)
+    await questionRef.update({
+      answerCount: admin.firestore.FieldValue.increment(1),
+    });
+
+    // 2) [3-알림] 질문 작성자에게 인앱 알림 (자기 질문에 단 답변은 제외)
+    //    클라이언트가 users/{uid}/notifications를 구독하면 상단바 알림
+    //    벨(NotificationBell)에 표시됩니다.
+    const questionSnap = await questionRef.get();
+    if (!questionSnap.exists) return;
+    const question = questionSnap.data();
+    if (question.authorId === answer.authorId) return;
+
+    await db.collection(`users/${question.authorId}/notifications`).add({
+      type: "new_answer",
+      questionId,
+      questionTitle: question.title,
+      answerAuthorName: answer.authorName,
+      read: false,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  }
+);
+
+// 질문자가 "이해됐어요"로 답변을 채택하면, 그 답변을 쓴 학생에게 인앱 알림
+exports.onAnswerUnderstood = onDocumentUpdated(
+  "questions/{questionId}",
+  async (event) => {
+    const before = event.data.before.data();
+    const after = event.data.after.data();
+    const answerId = after.understoodAnswerId;
+    // 새로 채택된 경우에만(이미 채택돼 있던 것과 같으면 스킵)
+    if (!answerId || answerId === before.understoodAnswerId) return;
+
+    const { questionId } = event.params;
+    const answerSnap = await db.doc(`questions/${questionId}/answers/${answerId}`).get();
+    if (!answerSnap.exists) return;
+    const answer = answerSnap.data();
+    // 자기 질문에 자기가 단 답변을 채택한 경우는 알림 불필요
+    if (!answer.authorId || answer.authorId === after.authorId) return;
+
+    await db.collection(`users/${answer.authorId}/notifications`).add({
+      type: "answer_understood",
+      questionId,
+      questionTitle: after.title,
+      read: false,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  }
+);
+
+// 답변이 삭제되면 카운트 -1
+exports.onAnswerDeleted = onDocumentDeleted(
+  "questions/{questionId}/answers/{answerId}",
+  async (event) => {
+    await db
+      .doc(`questions/${event.params.questionId}`)
+      .update({ answerCount: admin.firestore.FieldValue.increment(-1) })
+      .catch(() => {}); // 질문이 함께 삭제된 경우는 무시
+  }
+);
+
+// =============================================================
+// [2] 역할 부여 — 커스텀 클레임 (admin / teacher / student)
+// -------------------------------------------------------------
+// 역할은 클라이언트가 스스로 정할 수 없고, 이 함수를 통해서만
+// 부여됩니다. 부여된 클레임은 Firestore 보안 규칙에서
+// request.auth.token.role 로 검사할 수 있습니다.
+//   예) notices 쓰기: request.auth.token.role in ['admin', 'teacher']
+//
+// 클라이언트 호출 예시:
+//   import { getFunctions, httpsCallable } from "firebase/functions";
+//   const fn = httpsCallable(getFunctions(undefined, "asia-northeast3"), "setUserRole");
+//   await fn({ uid: "대상_유저_uid", role: "teacher" });
+// =============================================================
+exports.setUserRole = onCall({ enforceAppCheck: true }, async (request) => {
+  // 로그인 필수
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+  }
+
+  // 호출 권한: 이미 admin이거나, 최초 관리자 이메일 본인
+  const callerIsAdmin = request.auth.token.role === "admin";
+  const callerIsInitialAdmin =
+    request.auth.token.email === INITIAL_ADMIN_EMAIL &&
+    request.auth.token.email_verified === true;
+  if (!callerIsAdmin && !callerIsInitialAdmin) {
+    throw new HttpsError("permission-denied", "역할을 부여할 권한이 없습니다.");
+  }
+
+  // 입력 검증
+  const { uid, role } = request.data || {};
+  if (typeof uid !== "string" || !ROLES.includes(role)) {
+    throw new HttpsError(
+      "invalid-argument",
+      `uid와 role(${ROLES.join("/")})을 올바르게 전달해 주세요.`
+    );
+  }
+
+  // 1) 인증 토큰에 역할 기록 (보안 규칙에서 사용)
+  await admin.auth().setCustomUserClaims(uid, { role });
+
+  // 2) 화면 표시용으로 사용자 문서에도 기록
+  await db.doc(`users/${uid}`).set({ role }, { merge: true });
+
+  return { ok: true, uid, role };
+});
+
+// =============================================================
+// 탈퇴 공통 헬퍼 — 권한 판정과 데이터 파기
+// =============================================================
+
+// 호출한 교사가 "그 학생을 맡고 있는지" — 학생이 속한 반 중 하나라도
+// 호출자가 개설한 반이면 담당 교사로 봅니다.
+async function callerOwnsStudent(callerUid, targetUid) {
+  const mems = await db.collection("memberships").where("uid", "==", targetUid).get();
+  if (mems.empty) return false;
+  const classIds = [...new Set(mems.docs.map((d) => d.data().classId).filter(Boolean))];
+  const classes = await Promise.all(
+    classIds.map((id) => db.doc(`classes/${id}`).get().catch(() => null))
+  );
+  return classes.some((c) => c && c.exists && c.data().createdBy === callerUid);
+}
+
+// 쿼리에 걸린 문서를 모두 삭제 (배치 상한 500 고려)
+async function deleteByQuery(query, warnings, label) {
+  try {
+    const snap = await query.get();
+    for (let i = 0; i < snap.docs.length; i += 400) {
+      const batch = db.batch();
+      snap.docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+    }
+    return snap.size;
+  } catch (e) {
+    // 색인 미생성 등으로 실패해도 나머지 파기는 계속 — 대신 반드시 보고합니다.
+    warnings.push(`${label}: ${e && e.message}`);
+    return 0;
+  }
+}
+
+// 학생이 남긴 모든 흔적을 지웁니다. 여러 번 실행해도 안전(멱등)합니다.
+// 실패한 항목은 warnings에 모아 호출자에게 그대로 돌려줍니다 — 일부만
+// 지워졌는데 성공으로 보고하는 일이 없도록.
+async function purgeStudentData(uid, warnings) {
+  // 1) 본인이 올린 질문 + 그 질문에 달린 답변(남이 단 것 포함)
+  try {
+    const qs = await db.collection("questions").where("authorId", "==", uid).get();
+    for (const d of qs.docs) {
+      const subs = await d.ref.collection("answers").get();
+      await Promise.all(subs.docs.map((s) => s.ref.delete()));
+      await d.ref.delete();
+    }
+  } catch (e) {
+    warnings.push(`질문: ${e && e.message}`);
+  }
+
+  // 2) 남의 글에 단 답변 · 공부방 카드 · KWL
+  await deleteByQuery(db.collectionGroup("answers").where("authorId", "==", uid), warnings, "답변");
+  await deleteByQuery(db.collectionGroup("cards").where("authorId", "==", uid), warnings, "공부방 카드");
+  await deleteByQuery(db.collection("kwl").where("userId", "==", uid), warnings, "KWL");
+
+  // 3) 보상(과일) · 누가기록 · 수업 노트
+  await deleteByQuery(db.collection("rewards").where("uid", "==", uid), warnings, "과일 기록");
+  await deleteByQuery(db.collection("studentNotes").where("studentUid", "==", uid), warnings, "누가기록");
+  // 수업 노트(코넬) — classes/{cId}/cornellNotes 아래에 반별로 흩어져 있어
+  // collectionGroup으로 한 번에 훑습니다. 학생이 여러 반에 속했으면 그 반들
+  // 것이 모두 걸립니다.
+  await deleteByQuery(
+    db.collectionGroup("cornellNotes").where("uid", "==", uid),
+    warnings,
+    "수업 노트"
+  );
+
+  // 4) 책방 — 낱말에는 실명(authorName)이 들어 있어 반드시 지웁니다.
+  await deleteByQuery(db.collectionGroup("words").where("authorId", "==", uid), warnings, "책방 낱말");
+  // '내 생각은요...' 메모 — 반 전체가 읽는 판이라 학번·실명을 메모마다 들고
+  // 있습니다. 색인(firestore.indexes.json의 opinionNotes.authorId)을 이 코드보다
+  // **먼저** 배포하세요 — 없으면 이 항목만 FAILED_PRECONDITION으로 실패합니다.
+  await deleteByQuery(
+    db.collectionGroup("opinionNotes").where("authorId", "==", uid),
+    warnings,
+    "책방 메모"
+  );
+  // '여섯 개의 해시태그' — 보고서와 댓글에 학번·실명이 있어 반드시 지웁니다.
+  // 보고서를 지울 때 **그 보고서에 달린 남의 댓글**도 함께 지웁니다(가리킬
+  // 보고서가 없어진 댓글). 그 셈은 활동 안의 컬렉션 질의라 따로 색인이
+  // 필요 없습니다. 색인(hashtagPosts·hashtagComments.authorId)을 이 코드보다
+  // **먼저** 배포하세요.
+  try {
+    const posts = await db.collectionGroup("hashtagPosts").where("authorId", "==", uid).get();
+    for (const p of posts.docs) {
+      const actRef = p.ref.parent.parent;
+      if (actRef) {
+        const onMine = await actRef.collection("hashtagComments").where("postUid", "==", uid).get();
+        await Promise.all(onMine.docs.map((c) => c.ref.delete()));
+      }
+      await p.ref.delete();
+    }
+  } catch (e) {
+    warnings.push(`해시태그 보고서: ${e && e.message}`);
+  }
+  await deleteByQuery(
+    db.collectionGroup("hashtagComments").where("authorId", "==", uid),
+    warnings,
+    "해시태그 댓글"
+  );
+  // 모둠 명단에서도 빼냅니다(members에 실명 보관).
+  try {
+    const groups = await db
+      .collectionGroup("groups")
+      .where("memberUids", "array-contains", uid)
+      .get();
+    await Promise.all(
+      groups.docs.map((g) => {
+        const d = g.data();
+        const patch = {
+          memberUids: admin.firestore.FieldValue.arrayRemove(uid),
+          members: (d.members || []).filter((m) => m && m.uid !== uid),
+        };
+        if (d.leaderUid === uid) patch.leaderUid = null;
+        return g.ref.update(patch);
+      })
+    );
+  } catch (e) {
+    warnings.push(`책방 모둠 명단: ${e && e.message}`);
+  }
+
+  // 5) 업로드한 파일 전부 (uploads/{uid}/ 아래)
+  try {
+    await admin.storage().bucket().deleteFiles({ prefix: `uploads/${uid}/` });
+  } catch (e) {
+    warnings.push(`첨부 파일: ${e && e.message}`);
+  }
+
+  // 6) 알림함 (users/{uid}/notifications)
+  //    프로필 문서를 지우기 전에 먼저 비웁니다. Firestore는 문서를 지워도
+  //    하위 컬렉션을 함께 지우지 않아서, 순서를 바꾸면 '존재하지 않는 문서'
+  //    아래 알림만 남습니다(콘솔에 기울임꼴로 뜨는 그것). 실제로 그렇게 남은
+  //    계정이 있었고, 반 공지 알림에는 교사 실명과 공지 본문이 들어 있습니다.
+  //
+  //    여기서만 지울 수 있습니다 — 규칙은 알림을 본인에게만 열어 두어
+  //    (users/{userId}/notifications: userId == uid()) 교사가 브라우저에서
+  //    남의 알림을 지우지 못합니다. 규칙을 넓히면 교사가 학생 알림을 읽을 수
+  //    있게 되므로, 규칙은 그대로 두고 admin SDK인 이 함수가 맡습니다.
+  try {
+    await db.recursiveDelete(db.collection(`users/${uid}/notifications`));
+  } catch (e) {
+    warnings.push(`알림함: ${e && e.message}`);
+  }
+
+  // 7) 소속 → 프로필 순서로 마지막에. 소속을 먼저 지우면 재시도할 때
+  //    담당 교사 판정이 불가능해지므로 이 순서를 지킵니다.
+  await deleteByQuery(db.collection("memberships").where("uid", "==", uid), warnings, "반 소속");
+  try {
+    await db.doc(`users/${uid}`).delete();
+  } catch (e) {
+    warnings.push(`프로필: ${e && e.message}`);
+  }
+}
+
+// =============================================================
+// [2-b] 탈퇴 — 로그인 계정(Authentication) 삭제
+// -------------------------------------------------------------
+// 클라이언트는 "남의 계정"을 지울 수 없으므로(구글 정책), 계정 삭제는
+// 서버에서만 수행합니다. Firestore 데이터 삭제는 앱(deleteStudent)이
+// 규칙 아래에서 처리하고, 이 함수는 로그인 계정 자체를 제거해
+// 재가입(같은 이메일)이 가능하도록 하고 남아 있는 역할 클레임도 없앱니다.
+//
+// 권한 계층:
+//  · 최고 관리자: 누구나 삭제(단, 최고 관리자 계정 자신은 보호)
+//  · 선생님(중간 관리자): 학생 계정만 삭제 (다른 선생님/관리자 삭제 불가)
+// =============================================================
+exports.deleteAuthUser = onCall({ enforceAppCheck: true }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+  }
+  const callerRole = request.auth.token.role;
+  const callerIsAdmin =
+    callerRole === "admin" ||
+    (request.auth.token.email === INITIAL_ADMIN_EMAIL &&
+      request.auth.token.email_verified === true);
+  const callerIsTeacher = callerRole === "teacher" || callerIsAdmin;
+  if (!callerIsTeacher) {
+    throw new HttpsError("permission-denied", "탈퇴 처리 권한이 없습니다.");
+  }
+
+  const { uid } = request.data || {};
+  if (typeof uid !== "string" || !uid) {
+    throw new HttpsError("invalid-argument", "uid를 올바르게 전달해 주세요.");
+  }
+
+  // 대상 계정 확인 (이미 없으면 성공으로 간주)
+  const target = await admin.auth().getUser(uid).catch(() => null);
+  if (!target) return { ok: true, alreadyGone: true };
+
+  // 최고 관리자 계정은 삭제 불가
+  if (target.email === INITIAL_ADMIN_EMAIL) {
+    throw new HttpsError("permission-denied", "최고 관리자 계정은 삭제할 수 없습니다.");
+  }
+  // 선생님/관리자 계정 삭제는 최고 관리자만
+  const targetRole = target.customClaims && target.customClaims.role;
+  const targetIsStaff = targetRole === "teacher" || targetRole === "admin";
+  if (targetIsStaff && !callerIsAdmin) {
+    throw new HttpsError("permission-denied", "선생님 계정은 최고 관리자만 탈퇴 처리할 수 있습니다.");
+  }
+  // 담당 교사만 — 예전에는 교사이기만 하면 아무 반 학생이나 지울 수 있었습니다.
+  if (!callerIsAdmin && !(await canDeleteStudent(request.auth.uid, uid))) {
+    throw new HttpsError("permission-denied", "담당하는 반의 학생만 탈퇴 처리할 수 있습니다.");
+  }
+
+  await admin.auth().deleteUser(uid);
+  return { ok: true, uid };
+});
+
+// 교사가 이 학생을 탈퇴 처리해도 되는가.
+//  · 담당 교사(같은 반)면 언제나 가능
+//  · 그 외 교사는 학생 본인이 탈퇴를 신청한 경우에만 가능
+//    (당직 교사가 신청 건을 처리하는 기존 운영 방식을 유지하기 위함)
+async function canDeleteStudent(callerUid, targetUid) {
+  if (await callerOwnsStudent(callerUid, targetUid)) return true;
+  const prof = await db.doc(`users/${targetUid}`).get().catch(() => null);
+  return !!(prof && prof.exists && prof.data().withdrawRequested === true);
+}
+
+// =============================================================
+// [2-c] 탈퇴 — 계정과 데이터를 한 번에 파기 (권장 경로)
+// -------------------------------------------------------------
+// 예전에는 앱이 Firestore를 지운 뒤 계정 삭제를 따로 호출하고, 그 실패를
+// 조용히 넘겼습니다. 그러면 계정과 교사 클레임이 살아남아 다음 로그인에
+// 프로필이 되살아납니다. 이제 서버에서 한 번에 처리합니다.
+//
+// 순서: 로그인 계정 먼저 → 데이터. 중간에 실패해도 최소한 다시 로그인해
+// 되살아나는 일은 없고, 같은 요청을 다시 보내면 남은 것만 마저 지웁니다.
+exports.deleteStudentAccount = onCall({ enforceAppCheck: true }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+
+  const callerRole = request.auth.token.role;
+  const callerIsAdmin =
+    callerRole === "admin" ||
+    (request.auth.token.email === INITIAL_ADMIN_EMAIL &&
+      request.auth.token.email_verified === true);
+  if (!(callerRole === "teacher" || callerIsAdmin)) {
+    throw new HttpsError("permission-denied", "탈퇴 처리 권한이 없습니다.");
+  }
+
+  const { uid } = request.data || {};
+  if (typeof uid !== "string" || !uid) {
+    throw new HttpsError("invalid-argument", "uid를 올바르게 전달해 주세요.");
+  }
+  if (uid === request.auth.uid) {
+    throw new HttpsError("invalid-argument", "본인 계정은 이 경로로 처리할 수 없습니다.");
+  }
+
+  const target = await admin.auth().getUser(uid).catch(() => null);
+  if (target && target.email === INITIAL_ADMIN_EMAIL) {
+    throw new HttpsError("permission-denied", "최고 관리자 계정은 삭제할 수 없습니다.");
+  }
+  const targetRole = target && target.customClaims && target.customClaims.role;
+  if ((targetRole === "teacher" || targetRole === "admin") && !callerIsAdmin) {
+    throw new HttpsError("permission-denied", "선생님 계정은 최고 관리자만 탈퇴 처리할 수 있습니다.");
+  }
+  if (!callerIsAdmin && !(await canDeleteStudent(request.auth.uid, uid))) {
+    throw new HttpsError("permission-denied", "담당하는 반의 학생만 탈퇴 처리할 수 있습니다.");
+  }
+
+  const warnings = [];
+  if (target) {
+    // 계정을 먼저 없애 되살아날 여지를 차단합니다(클레임도 함께 사라짐).
+    await admin.auth().deleteUser(uid);
+  }
+  await purgeStudentData(uid, warnings);
+
+  return { ok: warnings.length === 0, uid, warnings };
+});
+
+// Firebase Storage 다운로드 URL(https://firebasestorage.googleapis.com/...)에서
+// 버킷 내부 경로를 뽑아냅니다. 클라이언트(deleteUploadedFile)는 SDK의 ref(storage,
+// url)이 이 변환을 대신해 주지만, Admin SDK는 경로를 직접 받아야 합니다.
+function storagePathFromUrl(url) {
+  if (typeof url !== "string") return null;
+  const m = url.match(/\/o\/([^?]+)/);
+  if (!m) return null;
+  try {
+    return decodeURIComponent(m[1]);
+  } catch {
+    return null;
+  }
+}
+async function deleteAttachedFilesAdmin(cardData) {
+  const urls = [
+    cardData.imageUrl,
+    ...(cardData.images || []),
+    ...(cardData.attachments || []).map((a) => a && a.dataUrl),
+  ].filter(Boolean);
+  const bucket = admin.storage().bucket();
+  await Promise.all(
+    urls.map(async (url) => {
+      const path = storagePathFromUrl(url);
+      if (!path) return;
+      await bucket.file(path).delete().catch(() => {
+        /* 이미 삭제됨·권한 없음 등 — 무시 (best-effort) */
+      });
+    })
+  );
+}
+
+// =============================================================
+// [2-d] 반 삭제 — 보관된 반만, 완전히 삭제(되돌릴 수 없음)
+// -------------------------------------------------------------
+// 보안 규칙상 반이 보관(archived) 상태면 그 반의 자식 문서(보드·카드·
+// 소속 등)는 소유 교사도 쓰기(삭제 포함)가 막힙니다 — "삭제는 보관을
+// 거친 뒤에만" 이라는 요구와, "그 삭제 작업 자체가 자식 문서 삭제를
+// 필요로 한다"는 사실이 클라이언트 순차 삭제로는 동시에 성립할 수
+// 없어, Admin 권한으로 규칙을 우회해 서버에서 한 번에 처리합니다.
+// =============================================================
+exports.deleteClass = onCall({ enforceAppCheck: true }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+  const callerRole = request.auth.token.role;
+  const callerIsAdmin =
+    callerRole === "admin" ||
+    (request.auth.token.email === INITIAL_ADMIN_EMAIL &&
+      request.auth.token.email_verified === true);
+  const callerIsTeacher = callerRole === "teacher" || callerIsAdmin;
+  if (!callerIsTeacher) {
+    throw new HttpsError("permission-denied", "반 삭제 권한이 없습니다.");
+  }
+
+  const { classId } = request.data || {};
+  if (typeof classId !== "string" || !classId) {
+    throw new HttpsError("invalid-argument", "classId를 올바르게 전달해 주세요.");
+  }
+
+  const classRef = db.doc(`classes/${classId}`);
+  const classSnap = await classRef.get();
+  if (!classSnap.exists) return { ok: true, alreadyGone: true };
+  const cls = classSnap.data();
+
+  if (!callerIsAdmin && cls.createdBy !== request.auth.uid) {
+    throw new HttpsError("permission-denied", "본인이 개설한 반만 삭제할 수 있습니다.");
+  }
+  if (cls.archived !== true) {
+    throw new HttpsError("failed-precondition", "먼저 반을 보관한 뒤에 삭제할 수 있습니다.");
+  }
+
+  // 반에 딸린 데이터는 purgeClass.js가 한곳에서 관리합니다.
+  // 무엇을 지우는지·빠뜨린 게 없는지는 tests/rules/deleteClass.test.mjs가
+  // 에뮬레이터에서 실제로 심어 보고 확인합니다.
+  const warnings = await purgeClassData(db, classId, deleteAttachedFilesAdmin);
+
+  return { ok: warnings.length === 0, classId, warnings };
+});
+
+
+// =============================================================
+// 반 공지 보내기 — 그 반 학생들에게만 인앱 알림
+// -------------------------------------------------------------
+// 왜 서버 함수인가: 교사가 학생의 users/{uid}/notifications에 직접 쓰려면
+// 규칙을 열어야 하는데, '이 학생이 내 반 학생인지'를 문서마다 확인하려면
+// 규칙 안에서 get()을 여러 번 해야 합니다. 여기서 한 번에 확인하고
+// admin 권한으로 쓰는 편이 규칙도 단순하게 남고 검증도 확실합니다.
+//
+// 받는 사람은 memberships로 정합니다 — 그 반에 실제로 들어와 있는 학생만.
+// 보낸 교사 자신은 제외합니다(자기 공지가 자기 알림에 뜨면 성가십니다).
+//
+// 한 번에 최대 몇 명인가: 배치 쓰기는 500건 상한이라 400명씩 나눠 씁니다.
+// 한 반이 400명을 넘을 일은 없지만, 상한에 걸려 조용히 일부만 가는 것보다
+// 나눠 쓰는 편이 안전합니다.
+const NOTICE_MAX_LEN = 500;
+const NOTICE_BATCH = 400;
+
+exports.sendClassNotice = onCall({ enforceAppCheck: true }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+  const callerRole = request.auth.token.role;
+  const callerIsAdmin =
+    callerRole === "admin" ||
+    (request.auth.token.email === INITIAL_ADMIN_EMAIL &&
+      request.auth.token.email_verified === true);
+  const callerIsTeacher = callerRole === "teacher" || callerIsAdmin;
+  if (!callerIsTeacher) {
+    throw new HttpsError("permission-denied", "공지를 보낼 권한이 없습니다.");
+  }
+
+  const { classId, text } = request.data || {};
+  if (typeof classId !== "string" || !classId) {
+    throw new HttpsError("invalid-argument", "반을 선택해 주세요.");
+  }
+  const body = typeof text === "string" ? text.trim() : "";
+  if (!body) throw new HttpsError("invalid-argument", "공지 내용을 입력해 주세요.");
+  if (body.length > NOTICE_MAX_LEN) {
+    throw new HttpsError("invalid-argument", `공지는 ${NOTICE_MAX_LEN}자까지 보낼 수 있습니다.`);
+  }
+
+  const classSnap = await db.doc(`classes/${classId}`).get();
+  if (!classSnap.exists) throw new HttpsError("not-found", "반을 찾을 수 없습니다.");
+  const cls = classSnap.data();
+  if (!callerIsAdmin && cls.createdBy !== request.auth.uid) {
+    throw new HttpsError("permission-denied", "본인이 개설한 반에만 공지를 보낼 수 있습니다.");
+  }
+  // 보관된 반은 수업이 끝난 반입니다 — 다른 쓰기와 같은 기준으로 막습니다.
+  if (cls.archived === true) {
+    throw new HttpsError("failed-precondition", "보관된 반에는 공지를 보낼 수 없습니다.");
+  }
+
+  const memberSnap = await db
+    .collection("memberships")
+    .where("classId", "==", classId)
+    .get();
+  const uids = [
+    ...new Set(
+      memberSnap.docs
+        .map((d) => d.data()?.uid)
+        .filter((uid) => typeof uid === "string" && uid && uid !== request.auth.uid)
+    ),
+  ];
+  if (uids.length === 0) return { ok: true, sent: 0 };
+
+  // 보낸 사람 이름은 교사 프로필에서 — 학생 화면에 '누가 보냈는지'를 띄웁니다.
+  const teacherSnap = await db.doc(`users/${request.auth.uid}`).get();
+  const senderName =
+    (teacherSnap.exists && (teacherSnap.data().realName || teacherSnap.data().displayName)) ||
+    "선생님";
+
+  for (let i = 0; i < uids.length; i += NOTICE_BATCH) {
+    const batch = db.batch();
+    uids.slice(i, i + NOTICE_BATCH).forEach((uid) => {
+      batch.set(db.collection(`users/${uid}/notifications`).doc(), {
+        type: "class_notice",
+        classId,
+        className: cls.name ?? "",
+        text: body,
+        senderName,
+        senderUid: request.auth.uid,
+        read: false,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    });
+    await batch.commit();
+  }
+
+  // 보낸 쪽에도 한 건 남깁니다.
+  // -------------------------------------------------------------
+  // 지금까지는 공지가 학생 알림으로만 갔습니다. 학생은 '읽음'으로 치우면
+  // 그만이지만, 교사에게는 "무엇을 언제 보냈는지"가 어디에도 안 남았습니다.
+  // 같은 내용을 두 번 보내거나, 보냈는지 아닌지 헷갈리는 일이 생깁니다.
+  //
+  // 반에 딸린 이력이므로 반 하위 컬렉션에 둡니다(rewardEvents와 같은 자리·
+  // 같은 이유). 이름을 classNotices로 둔 것은 질문방의 전체 공지(최상위
+  // notices)와 헷갈리지 않게 하기 위해서입니다 — 그쪽은 게시글이고
+  // 이쪽은 발송 기록입니다.
+  //
+  // 학생 알림을 다 보낸 뒤에 씁니다. 순서가 반대면 '보냈다고 적혀 있는데
+  // 실제로는 안 간' 기록이 남을 수 있습니다.
+  await db.collection(`classes/${classId}/classNotices`).add({
+    classId,
+    text: body,
+    sentCount: uids.length,
+    senderUid: request.auth.uid,
+    senderName,
+    sentAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  return { ok: true, sent: uids.length };
+});

@@ -1,0 +1,152 @@
+// 내 생각은요...(lib/opinion.js) — 영역 손질 · 자리 셈 · 이름표.
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import {
+  OPINION_COLORS,
+  canAddOpinionNote,
+  opinionNoteMode,
+  opinionZoneRows,
+  nextNoteSpot,
+  noteAuthorLabel,
+  noteRealLabel,
+  noteStackTime,
+  noteTilt,
+  normalizeZones,
+  opinionColor,
+  opinionStats,
+  pixelsFromPlace,
+  placeFromPixels,
+  renameZones,
+  zoneOfNote,
+  zonesFromNames,
+} from "@/lib/opinion";
+
+test("영역은 늘 2~4개 — 모자라면 채우고 넘치면 자릅니다", () => {
+  assert.deepEqual(normalizeZones([]).map((z) => z.name), ["A 영역", "B 영역"]);
+  assert.equal(normalizeZones(zonesFromNames(["가", "나", "다", "라", "마"])).length, 5);
+  assert.equal(normalizeZones(zonesFromNames(["가", "나", "다", "라", "마", "바", "사"])).length, 6);
+  assert.deepEqual(normalizeZones([{ key: "z6", name: "" }]).map((z) => z.name), ["A 영역", "B 영역"]);
+  assert.deepEqual(zonesFromNames(["찬성", " ", "잘 모르겠음"]).map((z) => [z.key, z.name]), [
+    ["z1", "찬성"], ["z2", "B 영역"], ["z3", "잘 모르겠음"],
+  ]);
+});
+
+test("이름만 고칠 때 key는 그대로 — 붙은 메모가 제 영역에 남습니다", () => {
+  const zones = zonesFromNames(["찬성", "반대"]);
+  const next = renameZones(zones, ["동의해요", ""]);
+  assert.deepEqual(next, [{ key: "z1", name: "동의해요" }, { key: "z2", name: "반대" }]);
+});
+
+test("없어진 영역을 가리키는 메모는 첫 영역으로 봅니다", () => {
+  const zones = zonesFromNames(["찬성", "반대"]);
+  assert.equal(zoneOfNote({ zone: "z2" }, zones), "z2");
+  assert.equal(zoneOfNote({ zone: "z9" }, zones), "z1");
+});
+
+test("픽셀 ↔ 영역·비율은 서로 거꿀셈 — 가운데가 든 칸이 영역", () => {
+  const zones = zonesFromNames(["찬성", "반대", "중립"]);
+  const box = { boardW: 900, zoneH: 500, noteW: 180, noteH: 150, zones };
+  const place = placeFromPixels({ ...box, px: 360, py: 175 });
+  assert.equal(place.zone, "z2"); // 가운데 x=450 → 둘째 칸(300~600)
+  const back = pixelsFromPlace({ ...box, ...place });
+  assert.equal(Math.round(back.left), 360);
+  assert.equal(Math.round(back.top), 175);
+  // 경계를 살짝 넘겼어도 가운데가 아직 첫 칸이면 첫 영역
+  assert.equal(placeFromPixels({ ...box, px: 200, py: 0 }).zone, "z1");
+  // 판 밖으로 끌면 끝에 붙습니다
+  const out = placeFromPixels({ ...box, px: 2000, py: -40 });
+  assert.deepEqual([out.zone, out.x, out.y], ["z3", 1, 0]);
+});
+
+test("줄 나누기 — 1~3 한 줄 · 4는 2×2 · 5는 2/3 · 6은 3×2", () => {
+  assert.deepEqual([1, 2, 3, 4, 5, 6].map(opinionZoneRows), [[1], [2], [3], [2, 2], [2, 3], [3, 3]]);
+});
+
+test("여러 줄 판 — 가운데가 든 줄·칸이 영역이고 거꿀셈이 맞습니다", () => {
+  const noteW = 176, noteH = 142;
+  for (const n of [4, 5, 6]) {
+    const zones = zonesFromNames(Array.from({ length: n }, (_, i) => `영역${i + 1}`));
+    const box = { boardW: 1200, boardH: 800, headH: 50, noteW, noteH, zones };
+    for (const z of zones) {
+      for (const [x, y] of [[0, 0], [0.5, 0.3], [1, 1]]) {
+        const px = pixelsFromPlace({ ...box, zone: z.key, x, y });
+        const back = placeFromPixels({ ...box, px: px.left, py: px.top });
+        assert.equal(back.zone, z.key, `${n}개 · ${z.key} · ${x},${y}`);
+        assert.ok(Math.abs(back.x - x) < 1e-9 && Math.abs(back.y - y) < 1e-9);
+      }
+    }
+  }
+  // 5개: 위 줄은 둘(폭 600), 아래 줄은 셋(폭 400) — 아래 줄 가운데 칸은 z4
+  const five = zonesFromNames(["a", "b", "c", "d", "e"]);
+  const box5 = { boardW: 1200, boardH: 800, headH: 50, noteW, noteH, zones: five };
+  assert.equal(placeFromPixels({ ...box5, px: 700, py: 100 }).zone, "z2");
+  assert.equal(placeFromPixels({ ...box5, px: 500, py: 500 }).zone, "z4");
+  // 메모는 머리 아래에서 시작 — 아래 줄 첫 칸의 맨 위는 400 + 50
+  assert.equal(pixelsFromPlace({ ...box5, zone: "z3", x: 0, y: 0 }).top, 450);
+});
+
+test("새 메모 자리는 계단식이고 늘 0~1", () => {
+  const spots = Array.from({ length: 30 }, (_, i) => nextNoteSpot(i));
+  assert.ok(spots.every((s) => s.x >= 0 && s.x <= 1 && s.y >= 0 && s.y <= 1));
+  assert.notDeepEqual(spots[0], spots[1]);
+});
+
+test("이름표: 새 메모는 익명 닉네임 · 예전(실명) 메모는 '익명' · 교사는 '선생님'", () => {
+  assert.equal(noteAuthorLabel({ anon: true, authorName: "용감한 수달" }), "용감한 수달");
+  assert.equal(noteAuthorLabel({ anon: true, authorName: "" }), "익명");
+  // 예전 메모 — 실명이 들어 있어도 보이지 않습니다
+  assert.equal(noteAuthorLabel({ studentId: "30105", authorName: "홍길동" }), "익명");
+  assert.equal(noteAuthorLabel({ byTeacher: true, authorName: "선생님" }), "선생님");
+});
+
+test("실명(교사가 눌러서 봄): 명단 먼저 · 예전 메모는 적힌 학번·이름 · 교사는 '선생님'", () => {
+  assert.equal(noteRealLabel({ anon: true, authorName: "용감한 수달" }, { studentId: "30105", name: "홍길동" }), "30105 홍길동");
+  assert.equal(noteRealLabel({ studentId: "30105", authorName: "홍길동" }), "30105 홍길동");
+  assert.equal(noteRealLabel({ authorName: "홍길동" }), "홍길동");
+  assert.equal(noteRealLabel({ anon: true, authorName: "용감한 수달" }), "명단에 없는 학생");
+  assert.equal(noteRealLabel({ byTeacher: true }, { studentId: "1", name: "x" }), "선생님");
+});
+
+test("색은 여섯 파스텔 — 모르는 값은 첫 색", () => {
+  assert.equal(OPINION_COLORS.length, 6);
+  assert.equal(opinionColor("mint").key, "mint");
+  assert.equal(opinionColor("neon").key, "butter");
+});
+
+test("기울기는 id로 정해져 다시 그려도 같습니다(±2.4°)", () => {
+  assert.equal(noteTilt("abc"), noteTilt("abc"));
+  for (const id of ["a", "n1", "on12_m", "xYz9"]) assert.ok(Math.abs(noteTilt(id)) <= 2.4);
+});
+
+test("겹침 차례: 서버 시각 전(null)은 맨 위", () => {
+  assert.equal(noteStackTime({ movedAt: null, createdAt: null }), Infinity);
+  assert.equal(noteStackTime({ movedAt: new Date(5) }), 5);
+});
+
+test("영역별 메모 수 · 쓴 학생 수(교사 메모는 안 셈)", () => {
+  const zones = zonesFromNames(["찬성", "반대"]);
+  const { byZone, writers } = opinionStats(
+    [
+      { zone: "z1", authorId: "a" },
+      { zone: "z1", authorId: "a" },
+      { zone: "z2", authorId: "b" },
+      { zone: "z2", authorId: "t", byTeacher: true },
+    ],
+    zones
+  );
+  assert.deepEqual([byZone.get("z1"), byZone.get("z2")], [2, 2]);
+  assert.equal(writers.size, 2);
+});
+
+test("메모 수 — 표시가 없는 옛 활동은 여러 장, 한 장 모드는 한 장까지", () => {
+  assert.equal(opinionNoteMode({}), "multi");
+  assert.equal(opinionNoteMode({ noteMode: "single" }), "single");
+  assert.equal(canAddOpinionNote({ mode: "single", myCount: 0 }), true);
+  assert.equal(canAddOpinionNote({ mode: "single", myCount: 1 }), false);
+  // 여러 장 모드에서 바꿔 둘 이상 가진 학생도 더는 못 붙임
+  assert.equal(canAddOpinionNote({ mode: "single", myCount: 3 }), false);
+  assert.equal(canAddOpinionNote({ mode: "multi", myCount: 5 }), true);
+  // 교사는 모드와 상관없이 · 잠기면 학생은 못 붙임
+  assert.equal(canAddOpinionNote({ mode: "single", myCount: 1, isTeacher: true }), true);
+  assert.equal(canAddOpinionNote({ mode: "multi", myCount: 0, locked: true }), false);
+});

@@ -1,0 +1,15 @@
+node_modules/
+.next/
+out/
+
+.env*.local
+npm-debug.log*
+install.log
+
+# Firestore 에뮬레이터 산출물 (규칙 테스트 실행 시 생성)
+firestore-debug.log
+firebase-debug.log
+ui-debug.log
+
+# firebase deploy(scripts/deploy.sh) 로컬 캐시
+.firebase/

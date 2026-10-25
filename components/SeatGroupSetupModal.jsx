@@ -1,0 +1,369 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { backdropClose } from "@/lib/modal";
+import SeatViewToggle from "./SeatViewToggle";
+import SeatGrid from "./SeatGrid";
+import { useSeatView } from "@/lib/seatView";
+import { STUDY_SEAT_COUNT } from "@/lib/store";
+import { seatOrder } from "@/lib/seats";
+
+const GROUP_COLORS = ["#2563eb", "#16a34a", "#f97316", "#9333ea", "#dc2626", "#0891b2"];
+
+// 자리표 그리드는 6열입니다(app/globals.css .seat-setup-grid). 실제 자리 배열
+// 순서(배치·저장에 쓰는 인덱스)는 그대로 두고, 화면에 보이는 번호만 각 줄의
+// 오른쪽 끝을 1번으로 삼아 왼쪽으로 세도록 뒤집습니다.
+const SEAT_COLS = 6;
+function seatDisplayNumber(index) {
+  const row = Math.floor(index / SEAT_COLS);
+  const col = index % SEAT_COLS;
+  return row * SEAT_COLS + (SEAT_COLS - col);
+}
+
+function normalizedSeats(seats = []) {
+  const seen = new Set();
+  return Array.from({ length: STUDY_SEAT_COUNT }, (_, i) => {
+    const uid = typeof seats[i] === "string" && seats[i] ? seats[i] : null;
+    if (!uid || seen.has(uid)) return null;
+    seen.add(uid);
+    return uid;
+  });
+}
+
+function defaultGroups(groups = [], rosterUids) {
+  if (groups.length > 0) {
+    return groups.map((g, i) => ({
+      index: g.index ?? i + 1,
+      name: g.name || `${g.index ?? i + 1}모둠`,
+      color: g.color || GROUP_COLORS[i % GROUP_COLORS.length],
+      // members는 배정 당시 이름을 그대로 복사해 둔 값이라, 그 뒤 반에서
+      // 빠진(탈퇴 처리된) 학생도 지워지지 않고 계속 남아 보였습니다 —
+      // 지금 반 명단(roster)에 있는 학생만 남깁니다.
+      members: (g.members ?? []).filter((m) => rosterUids.has(m.uid)),
+    }));
+  }
+  return Array.from({ length: 4 }, (_, i) => ({
+    index: i + 1,
+    name: `${i + 1}모둠`,
+    color: GROUP_COLORS[i],
+    members: [],
+  }));
+}
+
+// 창 — 반 관리하기에서 엽니다. 안의 몸통은 수업 관리 창의 '자리 배치' 탭과
+// **같은 것**(SeatGroupSetupPanel)이라, 두 자리에서 모양과 동작이 갈리지 않습니다.
+export default function SeatGroupSetupModal({ onClose, ...rest }) {
+  return (
+    <div className="modal-backdrop" {...backdropClose(onClose)}>
+      <div className="modal seat-setup-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-head">
+          <h3>자리 배정 · 모둠 설정</h3>
+          <button className="btn-close" onClick={onClose} aria-label="닫기">×</button>
+        </div>
+        <SeatGroupSetupPanel {...rest} onCancel={onClose} onSaved={onClose} />
+      </div>
+    </div>
+  );
+}
+
+// 몸통 — 자리 배정하기 · 모둠 설정하기 두 얼굴.
+//  · onCancel: 있으면 '취소' 단추를 답니다(창에서는 닫기). 탭 안에서는 안 줍니다 —
+//    탭을 옮기거나 창을 닫는 것이 곧 취소입니다.
+//  · onSaved(kind): 저장한 뒤 부릅니다("seats" | "groups"). 창은 닫고, 탭은
+//    그 자리에 머문 채 알림만 띄웁니다.
+export function SeatGroupSetupPanel({
+  roster = [],
+  seatLayout = null,
+  groupAssignment = null,
+  initialTab = "seats",
+  onSaveSeats,
+  onSaveGroups,
+  onCancel,
+  onSaved,
+}) {
+  const [tab, setTab] = useState(initialTab);
+  // 자리표를 보는 쪽 — 자리표가 나오는 네 화면이 같은 값을 함께 씁니다.
+  // 여기서 뒤집어 배정해도 저장되는 배열은 그대로입니다(그림만 돌립니다).
+  const [teacherView, toggleSeatView] = useSeatView();
+  const [seats, setSeatsRaw] = useState(() => normalizedSeats(seatLayout?.seats ?? roster.map((s) => s.uid)));
+  const [groups, setGroupsRaw] = useState(() =>
+    defaultGroups(groupAssignment?.groups ?? [], new Set(roster.map((s) => s.uid)))
+  );
+  // 아직 손대지 않았으면 저장된 값을 따라갑니다. 탭은 주소로 곧바로 열릴 수
+  // 있어 자리표·모둠 구독이 몸통보다 늦게 도착하기도 하는데, 처음 값으로만
+  // 채우면 저장해 둔 자리표 대신 학번순 빈 배치가 서 있습니다. 손댄 뒤에는
+  // 선생님이 고치던 것을 덮지 않습니다(저장하면 다시 따라갑니다).
+  const seatsTouched = useRef(false);
+  const groupsTouched = useRef(false);
+  const setSeats = (v) => { seatsTouched.current = true; setSeatsRaw(v); };
+  const setGroups = (v) => { groupsTouched.current = true; setGroupsRaw(v); };
+  useEffect(() => {
+    if (!seatsTouched.current) setSeatsRaw(normalizedSeats(seatLayout?.seats ?? roster.map((s) => s.uid)));
+  }, [seatLayout, roster]);
+  useEffect(() => {
+    if (!groupsTouched.current) {
+      setGroupsRaw(defaultGroups(groupAssignment?.groups ?? [], new Set(roster.map((s) => s.uid))));
+    }
+  }, [groupAssignment, roster]);
+  const [pickedUid, setPickedUid] = useState(null);
+  const [drag, setDrag] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const byUid = useMemo(() => new Map(roster.map((s) => [s.uid, s])), [roster]);
+  const assignedSeatUids = new Set(seats.filter(Boolean));
+  const unseated = roster.filter((s) => !assignedSeatUids.has(s.uid));
+  const groupedUids = new Set(groups.flatMap((g) => (g.members ?? []).map((m) => m.uid)));
+  const ungrouped = roster.filter((s) => !groupedUids.has(s.uid));
+
+  function studentOf(uid) {
+    return uid ? byUid.get(uid) ?? null : null;
+  }
+
+  function placeSeat(uid, targetIndex) {
+    if (!uid) return;
+    setSeats((prev) => {
+      const next = normalizedSeats(prev);
+      const from = next.indexOf(uid);
+      const replaced = next[targetIndex];
+      if (from >= 0) next[from] = replaced || null;
+      next[targetIndex] = uid;
+      return next;
+    });
+    setPickedUid(null);
+  }
+
+  function clearSeat(index) {
+    setSeats((prev) => prev.map((uid, i) => (i === index ? null : uid)));
+  }
+
+  function setGroupCount(count) {
+    setGroups((prev) => {
+      const next = [];
+      for (let i = 1; i <= count; i++) {
+        next.push(prev[i - 1] ?? { index: i, name: `${i}모둠`, color: GROUP_COLORS[(i - 1) % GROUP_COLORS.length], members: [] });
+      }
+      return next;
+    });
+  }
+
+  function moveToGroup(uid, targetIndex) {
+    const student = byUid.get(uid);
+    if (!student) return;
+    setGroups((prev) =>
+      prev.map((g) => {
+        const cleaned = { ...g, members: (g.members ?? []).filter((m) => m.uid !== uid) };
+        if (targetIndex == null || g.index !== targetIndex) return cleaned;
+        return {
+          ...cleaned,
+          members: [...cleaned.members, {
+            uid: student.uid,
+            name: student.name,
+            studentId: student.studentId ?? null,
+            emoji: student.emoji ?? "🙂",
+          }],
+        };
+      })
+    );
+  }
+
+  async function saveSeats() {
+    setSaving(true);
+    try {
+      await onSaveSeats?.(seats);
+      seatsTouched.current = false;
+      onSaved?.("seats");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveGroups() {
+    setSaving(true);
+    try {
+      await onSaveGroups?.(
+        groups.map((g, i) => ({
+          ...g,
+          index: i + 1,
+          id: `group_${i + 1}`,
+          name: g.name.trim() || `${i + 1}모둠`,
+        }))
+      );
+      groupsTouched.current = false;
+      onSaved?.("groups");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const chipProps = (uid, source) => ({
+    draggable: true,
+    onDragStart: (e) => {
+      setDrag({ uid, source });
+      e.dataTransfer.effectAllowed = "move";
+    },
+    onDragEnd: () => setDrag(null),
+  });
+
+  return (
+      <>
+        <div className="seat-setup-tabrow">
+          <div className="seat-setup-tabs">
+            <button type="button" className={tab === "seats" ? "active" : ""} onClick={() => setTab("seats")}>
+              자리 배정하기
+            </button>
+            <button type="button" className={tab === "groups" ? "active" : ""} onClick={() => setTab("groups")}>
+              모둠 설정하기
+            </button>
+          </div>
+          {/* 자리 배정에서만 뜻이 있는 단추라 그 탭에서만 답니다 */}
+          {tab === "seats" && (
+            <SeatViewToggle teacherView={teacherView} onToggle={toggleSeatView} />
+          )}
+        </div>
+
+        {tab === "seats" ? (
+          <>
+            <div className="seat-setup-body">
+              <SeatGrid className="seat-setup-grid">
+                {/* 선생님 보기는 차례만 거꾸로 — 번호(i)는 그대로라 놓기·비우기가
+                    같은 자리를 짚습니다. 그림을 돌리면 글자가 흐려집니다(lib/seats.js) */}
+                {seatOrder(seats.length, teacherView).map((i, pos) => {
+                  if (i == null) return <div key={`pad-${pos}`} className="attend-seat-pad" aria-hidden="true" />;
+                  const uid = seats[i];
+                  const s = studentOf(uid);
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      className={`seat-slot${s ? " filled" : ""}`}
+                      onClick={() => (pickedUid ? placeSeat(pickedUid, i) : s && clearSeat(i))}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (drag?.uid) placeSeat(drag.uid, i);
+                      }}
+                    >
+                      <span className="seat-slot-no">{seatDisplayNumber(i)}</span>
+                      {s ? (
+                        <span className="seat-slot-name" {...chipProps(s.uid, "seat")}>
+                          {s.studentId && <em>{s.studentId}</em>}
+                          <span className="seat-slot-name-text">{s.name}</span>
+                        </span>
+                      ) : (
+                        <span className="seat-slot-empty">빈 자리</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </SeatGrid>
+              <aside className="seat-pool">
+                <strong>미배치 학생 {unseated.length}명</strong>
+                <div className="seat-pool-list">
+                  {unseated.length === 0 ? (
+                    <span className="seat-empty-note">모두 배치됐어요</span>
+                  ) : (
+                    unseated.map((s) => (
+                      <button
+                        key={s.uid}
+                        type="button"
+                        className={`seat-student-chip${pickedUid === s.uid ? " active" : ""}`}
+                        onClick={() => setPickedUid((v) => (v === s.uid ? null : s.uid))}
+                        {...chipProps(s.uid, "pool")}
+                      >
+                        {s.studentId && <em>{s.studentId}</em>}
+                        {s.name}
+                      </button>
+                    ))
+                  )}
+                </div>
+              </aside>
+            </div>
+            <div className="seat-setup-foot">
+              {onCancel && <button type="button" className="btn-ghost" onClick={onCancel}>취소</button>}
+              <button type="button" className="btn-primary" onClick={saveSeats} disabled={saving}>
+                {saving ? "저장 중..." : "자리표 저장"}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="group-setup-toolbar">
+              <span>모둠 수</span>
+              {[2, 3, 4, 5, 6].map((n) => (
+                <button key={n} type="button" className={groups.length === n ? "active" : ""} onClick={() => setGroupCount(n)}>
+                  {n}개
+                </button>
+              ))}
+            </div>
+            <div
+              className="group-unassigned"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (drag?.uid) moveToGroup(drag.uid, null);
+              }}
+            >
+              <strong>미배정 {ungrouped.length}명</strong>
+              {ungrouped.map((s) => (
+                <button key={s.uid} type="button" className="seat-student-chip" {...chipProps(s.uid, "group-pool")}>
+                  {s.studentId && <em>{s.studentId}</em>}
+                  {s.name}
+                </button>
+              ))}
+            </div>
+            <div className="group-setup-grid">
+              {groups.map((g, i) => (
+                <section
+                  key={g.index}
+                  className="group-setup-card"
+                  style={{ "--group-color": g.color || GROUP_COLORS[i % GROUP_COLORS.length] }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (drag?.uid) moveToGroup(drag.uid, g.index);
+                  }}
+                >
+                  <div className="group-setup-head">
+                    <input
+                      value={g.name}
+                      onChange={(e) => setGroups((prev) => prev.map((x) => (x.index === g.index ? { ...x, name: e.target.value } : x)))}
+                      maxLength={16}
+                    />
+                    <input
+                      type="color"
+                      value={g.color || GROUP_COLORS[i % GROUP_COLORS.length]}
+                      onChange={(e) => setGroups((prev) => prev.map((x) => (x.index === g.index ? { ...x, color: e.target.value } : x)))}
+                      aria-label={`${g.name} 색`}
+                    />
+                  </div>
+                  <div className="group-setup-members">
+                    {(g.members ?? []).length === 0 ? (
+                      <span className="seat-empty-note">학생을 끌어오세요</span>
+                    ) : (
+                      g.members.map((m) => (
+                        <button
+                          key={m.uid}
+                          type="button"
+                          className="seat-student-chip"
+                          onClick={() => moveToGroup(m.uid, null)}
+                          {...chipProps(m.uid, "group")}
+                        >
+                          {m.studentId && <em>{m.studentId}</em>}
+                          {m.name}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </section>
+              ))}
+            </div>
+            <div className="seat-setup-foot">
+              {onCancel && <button type="button" className="btn-ghost" onClick={onCancel}>취소</button>}
+              <button type="button" className="btn-primary" onClick={saveGroups} disabled={saving}>
+                {saving ? "저장 중..." : "모둠 저장"}
+              </button>
+            </div>
+          </>
+        )}
+      </>
+  );
+}

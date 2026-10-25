@@ -1,0 +1,248 @@
+"use client";
+
+// =============================================================
+// 독서 활동 편집 (교사 전용) — 이름·주제어·도서 정보 주소
+// -------------------------------------------------------------
+// 만들 때 쓰는 화면(BookActivityForm)과 나눠 두었습니다. 그쪽은 종류를
+// 고르고 모둠을 몇 개로 나눌지까지 정하는 자리인데, 여기서 그걸 함께
+// 보여 주면 '바꿀 수 없는 것'이 절반입니다.
+//
+// [바꿀 수 있는 것] 화면에 적히는 글자뿐입니다.
+// 낱말·기록은 활동 id로 이어져 있어(words 문서의 activityId, 경로의 actId)
+// 이름을 바꿔도 학생이 넣은 것이 떨어져 나가지 않습니다.
+//
+// [바꿀 수 없는 것] 종류·모둠 방식·모둠 수. 이미 만들어 둔 판과 그 아래
+// 낱말을 어디에 둘지가 달라지는 일이라, 편집이 아니라 새로 만드는
+// 쪽이 맞습니다. 그래서 아예 내놓지 않고, 무엇이 그대로인지만 적어 둡니다.
+// =============================================================
+import { useEffect, useRef, useState } from "react";
+import { backdropClose } from "@/lib/modal";
+import { renameBookActivity, BOOK_SOLO_TYPES, BOOK_STUDENT_TOPIC_TYPES } from "@/lib/store";
+import { safeBookUrl } from "@/lib/paratext";
+import {
+  OPINION_NOTE_MODES,
+  OPINION_PROMPT_MAX,
+  OPINION_ZONE_EXAMPLES,
+  OPINION_ZONE_NAME_MAX,
+  normalizeZones,
+  opinionNoteMode,
+} from "@/lib/opinion";
+import { HASHTAG_GUIDE_MAX } from "@/lib/hashtag";
+
+export default function BookActivityEditModal({ activity, onClose, onDone }) {
+  const [title, setTitle] = useState(activity.title ?? "");
+  const [topic, setTopic] = useState(activity.topic ?? "");
+  const [bookUrl, setBookUrl] = useState(activity.bookUrl ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const titleRef = useRef(null);
+  // '내 생각은요...' — 영역 **이름만** 고칩니다(개수·key는 그대로라 붙은
+  // 메모가 제 영역에 남습니다). 함께 생각할 물음도 여기서.
+  const isOpinion = activity.type === "opinion";
+  const [zoneNames, setZoneNames] = useState(() => normalizeZones(activity.zones).map((z) => z.name));
+  const [prompt, setPrompt] = useState(activity.prompt ?? "");
+  const [noteMode, setNoteMode] = useState(() => opinionNoteMode(activity));
+  const zonesBad = isOpinion && zoneNames.some((n) => !n.trim());
+  // 여섯 개의 해시태그 — 주제어·도서 주소 대신 안내 문구 하나
+  const isHashtag = activity.type === "hashtag";
+  const [guide, setGuide] = useState(activity.guide ?? "");
+
+  useEffect(() => { titleRef.current?.focus(); }, []);
+
+  const isSolo = BOOK_SOLO_TYPES.includes(activity.type) || activity.type === "opinion" || isHashtag;
+  const perStudent = !isSolo && activity.groupMode === "solo";
+  // 만들 때와 같은 기준 — 학생이 자기 자리에서 직접 적을 길이 있는 활동만
+  // 주제어를 비워 둘 수 있습니다(BookActivityForm의 topicRequired 참고).
+  const topicRequired =
+    !perStudent &&
+    activity.type !== "opinion" &&
+    activity.type !== "crossword" && // 가로세로는 닿소리의 주제어를 가져온 것뿐
+    !isHashtag &&
+    !BOOK_STUDENT_TOPIC_TYPES.includes(activity.type);
+  const urlBad = bookUrl.trim().length > 0 && !safeBookUrl(bookUrl);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    // 조합 중인 한글은 state에 늦게 들어오므로 입력칸의 실제 값을 먼저 읽습니다
+    const nextTitle = (titleRef.current?.value ?? title).trim();
+    if (!nextTitle || (topicRequired && !topic.trim()) || urlBad || zonesBad || saving) return;
+    setSaving(true);
+    setError("");
+    try {
+      await renameBookActivity(
+        activity.id,
+        isOpinion
+          ? { title: nextTitle, topic, bookUrl, zoneNames, prompt, noteMode }
+          : isHashtag
+          ? { title: nextTitle, topic: "", bookUrl: "", guide }
+          : { title: nextTitle, topic, bookUrl },
+        activity
+      );
+      onDone?.();
+      onClose();
+    } catch (err) {
+      setError(`저장하지 못했어요: ${err?.message ?? "알 수 없는 오류"}`);
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="modal-backdrop" {...backdropClose(onClose)}>
+      <form
+        className="modal modal-book-edit"
+        onSubmit={handleSubmit}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="modal-head">
+          <h3>활동 편집</h3>
+          <button type="button" className="btn-close" onClick={onClose} aria-label="닫기">×</button>
+        </div>
+
+        <div className="book-field-row">
+          <label className="book-field">
+            <span>활동 이름</span>
+            <input
+              ref={titleRef}
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              maxLength={40}
+            />
+          </label>
+          {!isHashtag && (
+            <label className="book-field">
+              <span>
+                주제어 · 도서명
+                {!topicRequired && <em className="book-optional">선택</em>}
+              </span>
+              <input
+                type="text"
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                placeholder={topicRequired ? "예: 어린 왕자" : activity.type === "crossword" ? "예: 어린 왕자" : "비워 두면 학생이 직접 적어요"}
+                maxLength={30}
+              />
+            </label>
+          )}
+        </div>
+
+        {isHashtag && (
+          <label className="book-field">
+            <span>
+              안내 문구 <em className="book-optional">선택</em>
+            </span>
+            <textarea
+              value={guide}
+              onChange={(e) => setGuide(e.target.value)}
+              rows={2}
+              maxLength={HASHTAG_GUIDE_MAX}
+              placeholder="예: 이번 주에 읽은 과학 기사 한 편에서 해시태그를 찾아보세요."
+            />
+          </label>
+        )}
+
+        {isSolo && !isHashtag && (
+          <label className="book-field">
+            <span>
+              도서 정보 사이트 <em className="book-optional">선택</em>
+            </span>
+            <input
+              type="text"
+              inputMode="url"
+              value={bookUrl}
+              onChange={(e) => setBookUrl(e.target.value)}
+              placeholder="예: www.yes24.com/product/goods/..."
+            />
+            {/* 만들기 화면과 같은 문구·같은 클래스 */}
+            <em className="book-help">
+              {urlBad
+                ? "열 수 없는 주소예요. http:// 또는 https:// 로 시작하는 주소를 넣어 주세요."
+                : "넣어 두면 학생 화면에 ‘도서 정보’ 버튼이 생겨 새 탭으로 열립니다."}
+            </em>
+          </label>
+        )}
+
+        {isOpinion && (
+          <>
+            <label className="book-field">
+              <span>
+                함께 생각할 물음 <em className="book-optional">선택</em>
+              </span>
+              <input
+                type="text"
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                maxLength={OPINION_PROMPT_MAX}
+              />
+            </label>
+            <div className="book-field">
+              <span>영역 이름</span>
+              <div className="opinion-zone-inputs">
+                {zoneNames.map((name, i) => (
+                  <div key={i} className="opinion-zone-input">
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) =>
+                        setZoneNames((prev) => prev.map((v, j) => (j === i ? e.target.value : v)))
+                      }
+                      placeholder={`예: ${OPINION_ZONE_EXAMPLES[i] ?? `영역 ${i + 1}`}`}
+                      maxLength={OPINION_ZONE_NAME_MAX}
+                      aria-label={`영역 ${i + 1} 이름`}
+                    />
+                  </div>
+                ))}
+              </div>
+              <em className="book-help">
+                {zonesBad
+                  ? "영역 이름을 모두 적어 주세요."
+                  : "이름만 바뀌고, 붙어 있던 메모는 제 영역에 그대로 남아요."}
+              </em>
+            </div>
+            <div className="book-field">
+              <span>학생 메모</span>
+              <div className="book-seg">
+                {OPINION_NOTE_MODES.map((m) => (
+                  <button
+                    key={m.key}
+                    type="button"
+                    className={`book-seg-btn${noteMode === m.key ? " active" : ""}`}
+                    onClick={() => setNoteMode(m.key)}
+                    aria-pressed={noteMode === m.key}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+              <em className="book-help">
+                {noteMode === "single" && opinionNoteMode(activity) === "multi"
+                  ? "이미 여러 장 붙인 학생의 메모는 그대로 남고, 그 학생은 더 붙이지만 못해요."
+                  : OPINION_NOTE_MODES.find((m) => m.key === noteMode)?.hint}
+              </em>
+            </div>
+          </>
+        )}
+
+        {/* 무엇이 그대로인지 — 바꿀 수 없는 것을 빈칸으로 두면 '왜 없지'를
+            먼저 묻게 됩니다. 없는 이유를 한 줄로 적어 둡니다. */}
+        <p className="modal-book-edit-note">
+          학생이 넣은 낱말과 기록은 그대로 남습니다. 활동 종류와 모둠 구성은
+          여기서 바꿀 수 없어요 — 이미 만들어 둔 판이 달라지기 때문입니다.
+        </p>
+
+        {error && <p className="form-error" role="alert">{error}</p>}
+
+        <div className="modal-actions">
+          <button type="button" className="btn-ghost" onClick={onClose}>취소</button>
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={!title.trim() || (topicRequired && !topic.trim()) || urlBad || zonesBad || saving}
+          >
+            {saving ? "저장 중…" : "저장"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}

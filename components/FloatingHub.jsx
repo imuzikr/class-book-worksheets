@@ -1,0 +1,507 @@
+"use client";
+
+// =============================================================
+// 떠 있는 동그라미 — 메신저와 자주 여는 기능을 한 손에
+// -------------------------------------------------------------
+// 화면 오른쪽 아래의 작은 동그라미(56px). 누르면 **큰 원으로 펼쳐지며**
+// 기능 여섯 개가 둘레에 섭니다 — 메신저 · KWLS · 수업 노트 · 출석 · 리포트 ·
+// 과일 바구니(교사는 메신저 · KWLS 차트 · 출석 관리 · 수업 관리 · 학생 분석 ·
+// 과일 바구니).
+//
+// [모양은 행성 궤도]
+// 가운데 해(고른 기능의 설명) 둘레의 궤도에 작은 행성(동그라미) 여섯이
+// 섭니다. 한때 '피자 조각'과 둘 다 두고 전환으로 오갔는데, 선생님이 궤도로
+// 정하셔서 조각 모양과 전환을 걷었습니다.
+//
+// [그림은 앱의 아이콘 그대로]
+// 이모지 대신 이미 그 기능을 가리키는 그림을 씁니다(components/StatusIcons.jsx)
+// — 메신저는 상단바 '질문방'의 말풍선(IconAnswer — 로고는 가운데 해의 기본 그림), 수업 노트는 IconRecord, 리포트는 IconReport,
+// 학생 분석은 '선생님 대시보드'의 IconTeacher, 수업 관리는 IconBlackboard,
+// KWLS는 K · W · L 세 칸, 출석은 IconCheck. 과일 바구니는 바구니 창의 그림
+// (`public/fruit-basket.webp`)을 작게 — 원을 펼쳤을 때만 그려 처음 화면에서
+// 그림을 받지 않습니다.
+//
+// [기능은 '그 자리로 데려다 주기']
+// 메신저만 이 자리에서 창을 엽니다. 나머지는 이미 공부방에 있는 창을
+// 주소로 엽니다(`/books?open=kwl|notes|attendance|fruit` — 공부방이 열고
+// 주소를 지웁니다). 같은 창을 여기에 한 벌 더 만들면 두 곳이 어긋납니다.
+//
+// [끌어 옮기기 — 교사만]
+// 학생 화면의 동그라미는 늘 기본 자리(오른쪽 아래)에 고정입니다(선생님 요청) —
+// 끌리지 않고, 이 기기에 저장된 자리가 있어도 쓰지 않습니다.
+// 교사는 동그라미를 누른 채 끌면 자리를 옮깁니다(6px 넘게 움직였을 때만 — 그 아래는
+// 누르기). 자리는 이 기기에 화면 비율로 기억합니다(localStorage `hub_fab_pos`, 셈은
+// lib/hubPlace.js). 옮긴 자리가 왼쪽 · 위쪽 절반이면 큰 원과 메신저 창이 화면
+// 가운데 쪽으로 펼쳐집니다(`is-left` · `is-top`). 옮긴 뒤에는 교사의 '방송 종료'
+// 알약 위로 비키는 것(`lifted`)을 하지 않습니다 — 자리를 고른 것은 선생님입니다.
+//
+// [읽는 문서]
+// 안 읽은 말 배지 때문에 반을 고른 동안은 늘 구독합니다 — 학생은 제 방 둘
+// (등호 질의 둘) + 모둠 문서 + 읽음 표시, 교사는 반의 최근 말 300개 + 모둠
+// 문서 + 읽음 표시(+ 교사는 반 목록). 교사의 학생 명단은 **메신저를 열었을
+// 때만** 읽습니다. 교사의 배지는 메신저 창에서 고른 반(처음엔 공부방의 반)의 것입니다.
+// =============================================================
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { HUB_DRAG_MIN, cleanHubPos, hubPlacement, hubPosFromPoint } from "@/lib/hubPlace";
+import {
+  subscribeClasses,
+  subscribeClassChat,
+  subscribeRoomsChat,
+  subscribeChatReads,
+  subscribeStudyGroupAssignment,
+} from "@/lib/store";
+import { dmRoom, groupRoom, totalUnread, MESSENGER_OPEN_EVENT } from "@/lib/messenger";
+import { isFirebaseConfigured } from "@/lib/firebase";
+import MessengerWindow from "./MessengerWindow";
+import {
+  IconLogo,
+  IconAnswer,
+  IconRecord,
+  IconBlackboard,
+  IconCheck,
+  IconKwlK,
+  IconKwlW,
+  IconKwlL,
+  IconQuizMemo,
+} from "./StatusIcons";
+import { POPQUIZ_OPEN_EVENT } from "./PopQuizButton";
+
+// KWLS — 앱에 'KWLS' 한 장짜리 그림이 없어 K · W · L 세 칸을 겹쳐 세웁니다.
+function KwlStack() {
+  return (
+    <span className="hub-kwl-stack">
+      <IconKwlK size={17} />
+      <IconKwlW size={17} />
+      <IconKwlL size={17} />
+    </span>
+  );
+}
+function FruitBasketPic({ show }) {
+  if (!show) return <span className="hub-basket-pic" />;
+  return <img className="hub-basket-pic" src="/fruit-basket.webp" alt="" width={36} height={24} />;
+}
+const ICONS = {
+  // 메신저는 상단바 '질문방'의 말풍선(IconAnswer) — 로고(말풍선 둘)는 가운데 해의
+  // 기본 그림이라, 같은 그림을 쓰면 메신저 행성과 해가 구별되지 않았습니다(선생님 요청).
+  msg: () => <IconAnswer size={28} />,
+  kwl: () => <KwlStack />,
+  notes: () => <IconRecord size={26} />,
+  attend: () => <IconCheck size={24} className="hub-icon-check" />,
+  classes: () => <IconBlackboard size={27} />,
+  quiz: () => <IconQuizMemo size={26} />,
+  fruit: ({ show }) => <FruitBasketPic show={show} />,
+};
+
+const STUDENT_ITEMS = [
+  { key: "msg", label: "메신저", hint: "선생님 · 우리 모둠과 대화해요" },
+  // 상단바 메모지는 알림만 — 창은 여기서(PopQuizButton이 이벤트를 받아 엶)
+  { key: "quiz", label: "돌발 퀴즈", hint: "퀴즈에 답하고 지난 퀴즈를 봐요", event: POPQUIZ_OPEN_EVENT },
+  { key: "kwl", label: "KWLS", hint: "KWLS 차트를 펼쳐요", href: "/books?open=kwl" },
+  { key: "notes", label: "수업 노트", hint: "지난 수업 노트를 넘겨 봐요", href: "/books?open=notes" },
+  { key: "attend", label: "내 출석부", hint: "내 출석 기록을 봐요", href: "/books?open=attendance" },
+  { key: "fruit", label: "과일 바구니", hint: "과일을 담고 이벤트에 응모해요", href: "/books?open=fruit" },
+];
+const TEACHER_ITEMS = [
+  { key: "msg", label: "메신저", hint: "학생 · 모둠과 대화해요" },
+  { key: "quiz", label: "돌발 퀴즈", hint: "퀴즈를 보내고 답을 확인해요", event: POPQUIZ_OPEN_EVENT },
+  { key: "kwl", label: "KWLS 차트", hint: "반의 KWLS 현황을 펼쳐요", href: "/books?open=kwl" },
+  { key: "attend", label: "출석 관리", hint: "출석을 시작하고 기록을 봐요", href: "/books?open=attendance" },
+  { key: "classes", label: "반 관리", hint: "반 · 입장 코드 · 자리와 모둠", href: "/books?open=classes" },
+  { key: "fruit", label: "과일 바구니", hint: "바구니 합계와 이벤트 현황", href: "/books?open=fruit" },
+];
+
+// 원판 크기(px) — CSS의 `.hub-disc` 폭·높이와 같아야 합니다.
+const DISC = 300;
+const C = DISC / 2;
+const R_ORBIT = 101; // 행성(항목)이 서는 궤도
+
+// 끌어 옮긴 자리 — 이 기기에만(화면 비율)
+const POS_KEY = "hub_fab_pos";
+function loadHubPos() {
+  try {
+    return cleanHubPos(JSON.parse(window.localStorage.getItem(POS_KEY) || "null"));
+  } catch {
+    return null;
+  }
+}
+
+const rad = (deg) => (deg * Math.PI) / 180;
+const pt = (r, deg) => [C + r * Math.cos(rad(deg)), C + r * Math.sin(rad(deg))];
+
+function ChatIcon({ size = 26 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M4 11.5C4 7.36 7.58 4 12 4s8 3.36 8 7.5S16.42 19 12 19c-1.02 0-2-.18-2.9-.5L5 20l1.2-3.4C4.83 15.27 4 13.47 4 11.5Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <circle cx="8.6" cy="11.5" r="1.1" fill="currentColor" />
+      <circle cx="12" cy="11.5" r="1.1" fill="currentColor" />
+      <circle cx="15.4" cy="11.5" r="1.1" fill="currentColor" />
+    </svg>
+  );
+}
+
+// classId — 지금 보는 반(교사는 공부방에서 고른 반, 학생은 소속 반).
+// 교사의 메신저는 이와 따로 **창 맨 위에서 반을 고릅니다**(chatClassId) —
+// 어느 화면에서든 원하는 반과 대화하고, 공부방의 반은 안 바뀝니다.
+export default function FloatingHub({ classId: pageClassId, user, isTeacher, lifted = false }) {
+  const router = useRouter();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [msgOpen, setMsgOpen] = useState(false);
+  const [hover, setHover] = useState(null);
+  // 한 번이라도 펼쳤나 — 바구니 그림은 그때부터 받습니다(닫히는 동안에도 남게).
+  const [opened, setOpened] = useState(false);
+  const rootRef = useRef(null);
+  const fabRef = useRef(null);
+  const myUid = user?.uid;
+
+  // ── 끌어 옮기기 — 자리(화면 비율) · 화면 크기 · 끄는 중 ──
+  const [pos, setPos] = useState(null);
+  const [view, setView] = useState({ w: 0, h: 0 });
+  const [dragging, setDragging] = useState(false);
+  const dragRef = useRef(null);
+  const draggedRef = useRef(false); // 방금 끌었나 — 놓을 때 따라오는 click을 누르기로 안 셈
+  useEffect(() => {
+    setPos(loadHubPos());
+    const onResize = () => setView({ w: window.innerWidth, h: window.innerHeight });
+    onResize();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  // 다 끌고 놓았을 때만 적습니다(끄는 동안 매 프레임 적지 않게).
+  useEffect(() => {
+    if (dragging || !pos) return;
+    try {
+      window.localStorage.setItem(POS_KEY, JSON.stringify(pos));
+    } catch {
+      /* 저장소를 못 쓰는 창 — 이번 화면에서만 그 자리 */
+    }
+  }, [pos, dragging]);
+  // 학생은 늘 기본 자리(끌기 없음 · 저장된 자리도 안 씀)
+  const canDrag = !!isTeacher;
+  const place = canDrag ? hubPlacement(pos, view.w, view.h) : null;
+
+  function onFabPointerDown(e) {
+    draggedRef.current = false;
+    if (!canDrag || e.button !== 0) return;
+    const r = fabRef.current?.getBoundingClientRect();
+    if (!r) return;
+    dragRef.current = {
+      id: e.pointerId,
+      sx: e.clientX,
+      sy: e.clientY,
+      // 누른 곳과 동그라미 가운데의 차이 — 끄는 내내 손 밑의 같은 자리가 따라옵니다
+      dx: r.left + r.width / 2 - e.clientX,
+      dy: r.top + r.height / 2 - e.clientY,
+      moving: false,
+    };
+    // 누르는 순간 붙잡습니다 — 빠르게 끌면 첫 움직임이 벌써 단추 밖이라, 6px을 넘긴
+    // 뒤에 붙잡으면 그 움직임을 놓칩니다. 붙잡아도 놓을 때의 click은 그대로 옵니다.
+    try {
+      fabRef.current?.setPointerCapture?.(e.pointerId);
+    } catch {
+      /* 붙잡지 못해도 단추 위에서의 끌기는 됩니다 */
+    }
+  }
+  function onFabPointerMove(e) {
+    const d = dragRef.current;
+    if (!d || d.id !== e.pointerId) return;
+    if (!d.moving) {
+      if (Math.hypot(e.clientX - d.sx, e.clientY - d.sy) < HUB_DRAG_MIN) return;
+      d.moving = true;
+      setDragging(true);
+    }
+    const next = hubPosFromPoint(e.clientX + d.dx, e.clientY + d.dy, window.innerWidth, window.innerHeight);
+    if (next) setPos(next);
+  }
+  function onFabPointerEnd(e) {
+    const d = dragRef.current;
+    if (!d || d.id !== e.pointerId) return;
+    dragRef.current = null;
+    if (d.moving) {
+      draggedRef.current = true;
+      setDragging(false);
+    }
+  }
+
+  // ── 교사 — 내가 맡은 반(보관 안 된 것, 이름순) ──
+  // 규칙이 메신저를 **반을 만든 교사**에게만 열어 두어(ownsClass) 최고 관리자도
+  // 제 반만 셉니다. 반 목록은 문서 수가 적어 늘 구독해도 가볍습니다.
+  // 데모 모드는 접속마다 uid가 새로 나와 '내가 만든 반'이 없으므로 보이는 반 전부.
+  const [teacherClasses, setTeacherClasses] = useState([]);
+  useEffect(() => {
+    if (!isTeacher || !myUid) { setTeacherClasses([]); return undefined; }
+    return subscribeClasses((list) =>
+      setTeacherClasses(
+        list
+          .filter((c) => !c.archived && (!isFirebaseConfigured || c.createdBy === myUid))
+          .sort((a, b) => String(a.name ?? "").localeCompare(String(b.name ?? ""), "ko", { numeric: true }))
+      )
+    );
+  }, [isTeacher, myUid]);
+
+  // 교사의 메신저 반 — 처음엔 공부방에서 고른 반(없으면 첫 반). 창이 닫혀 있는
+  // 동안은 공부방의 반을 따라가고, 창에서 고른 반은 창이 떠 있는 동안 지킵니다.
+  const [chatClassId, setChatClassId] = useState(null);
+  const msgOpenRef = useRef(false);
+  useEffect(() => {
+    if (!isTeacher) return;
+    const valid = (id) => id && teacherClasses.some((c) => c.id === id);
+    setChatClassId((cur) => {
+      if (msgOpenRef.current && valid(cur)) return cur;
+      if (valid(pageClassId)) return pageClassId;
+      if (valid(cur)) return cur;
+      return teacherClasses[0]?.id ?? pageClassId ?? null;
+    });
+  }, [isTeacher, pageClassId, teacherClasses]);
+  const classId = isTeacher ? chatClassId : pageClassId;
+
+  // ── 모둠 · 말 · 읽음 표시 ──
+  const [groups, setGroups] = useState([]);
+  useEffect(() => {
+    if (!classId) { setGroups([]); return undefined; }
+    return subscribeStudyGroupAssignment(classId, (d) => setGroups(d?.groups ?? []));
+  }, [classId]);
+
+  const myGroup = useMemo(
+    () => (isTeacher ? null : groups.find((g) => (g.memberUids ?? []).includes(myUid)) ?? null),
+    [groups, isTeacher, myUid]
+  );
+  // 학생의 방 — 선생님 1:1 · 우리 모둠(있으면). 열쇠를 글자로 묶어 의존성에 씁니다.
+  const studentRoomsKey = !isTeacher && myUid
+    ? [dmRoom(myUid), myGroup?.id ? groupRoom(myGroup.id) : null].filter(Boolean).join("|")
+    : "";
+
+  const [messages, setMessages] = useState([]);
+  useEffect(() => {
+    setMessages([]); // 앞 반의 말이 새 반 목록에 한 박자 남지 않게
+    if (!classId || !myUid) return undefined;
+    if (isTeacher) return subscribeClassChat(classId, setMessages);
+    return subscribeRoomsChat(classId, studentRoomsKey.split("|").filter(Boolean), setMessages);
+  }, [classId, myUid, isTeacher, studentRoomsKey]);
+
+  const [seen, setSeen] = useState({});
+  useEffect(() => {
+    if (!classId || !myUid) { setSeen({}); return undefined; }
+    return subscribeChatReads(classId, myUid, setSeen);
+  }, [classId, myUid]);
+
+  // 배지 — 교사는 반의 모든 방, 학생은 제 방들.
+  const unread = useMemo(() => {
+    if (!myUid) return 0;
+    const rooms = isTeacher
+      ? [...new Set(messages.map((m) => m.room))]
+      : studentRoomsKey.split("|").filter(Boolean);
+    return totalUnread(messages, rooms, myUid, seen);
+  }, [messages, seen, myUid, isTeacher, studentRoomsKey]);
+
+  const items = isTeacher ? TEACHER_ITEMS : STUDENT_ITEMS;
+  const step = 360 / items.length;
+  // 첫 조각(메신저)의 가운데가 맨 위에 오게.
+  const angleOf = (i) => -90 + i * step;
+
+  // ── 닫기 — 바깥 누르기 · Esc ──
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    function onDown(e) {
+      // 누르는 순간 사라진 것은 '바깥'이 아닙니다(프로젝트 문서 '바깥을 눌러 닫기').
+      if (!e.target.isConnected) return;
+      if (rootRef.current?.contains(e.target)) return;
+      setMenuOpen(false);
+    }
+    function onKey(e) {
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      e.preventDefault();
+      setMenuOpen(false);
+      fabRef.current?.focus();
+    }
+    document.addEventListener("mousedown", onDown);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (!menuOpen) setHover(null);
+    else setOpened(true);
+  }, [menuOpen]);
+
+  useEffect(() => {
+    msgOpenRef.current = msgOpen;
+  }, [msgOpen]);
+
+  // 밖에서 메신저를 그 방으로 — 손들기 창의 '메신저에서 이어 가기' · '메신저 대화'
+  // (lib/messenger.js의 openMessenger). 교사면 그 반으로 먼저 옮깁니다. 요청은 창을
+  // 닫을 때 비웁니다 — 남아 있으면 다음에 동그라미로 열 때 또 그 방으로 갑니다.
+  const [openReq, setOpenReq] = useState(null);
+  useEffect(() => {
+    function onOpen(e) {
+      const d = e.detail || {};
+      if (isTeacher && d.classId && teacherClasses.some((c) => c.id === d.classId)) {
+        msgOpenRef.current = true; // 공부방의 반을 따라가는 효과가 덮지 않게
+        setChatClassId(d.classId);
+      }
+      setMenuOpen(false);
+      setOpenReq({ classId: d.classId ?? null, room: d.room ?? null, n: Date.now() });
+      setMsgOpen(true);
+    }
+    window.addEventListener(MESSENGER_OPEN_EVENT, onOpen);
+    return () => window.removeEventListener(MESSENGER_OPEN_EVENT, onOpen);
+  }, [isTeacher, teacherClasses]);
+
+  // 학생의 반(이나 역할)이 바뀌면 접습니다 — 열려 있던 방은 앞 반의 것입니다.
+  // 교사는 창 안에서 반을 바꾸므로 접지 않습니다(창이 방을 반과 짝으로 듭니다).
+  useEffect(() => {
+    if (isTeacher) return;
+    setMsgOpen(false);
+    setMenuOpen(false);
+  }, [pageClassId, isTeacher]);
+
+  function pick(item) {
+    setMenuOpen(false);
+    if (item.key === "msg") {
+      setOpenReq(null);
+      setMsgOpen(true);
+      return;
+    }
+    if (item.event) { window.dispatchEvent(new Event(item.event)); return; }
+    if (item.href) router.push(item.href);
+  }
+
+  function onFab() {
+    // 끌어 옮기고 놓은 것은 누르기가 아닙니다
+    if (draggedRef.current) {
+      draggedRef.current = false;
+      return;
+    }
+    if (msgOpen) { setMsgOpen(false); return; }
+    setMenuOpen((v) => !v);
+  }
+
+  if (!user || !classId) return null;
+
+  const shown = hover != null ? items[hover] : null;
+  const fabOpen = menuOpen || msgOpen;
+
+  return (
+    <div
+      ref={rootRef}
+      className={[
+        "hub-root",
+        canDrag ? "can-drag" : "",
+        place ? "is-placed" : lifted ? "is-lifted" : "",
+        place?.isLeft ? "is-left" : "",
+        place?.isTop ? "is-top" : "",
+        dragging ? "is-dragging" : "",
+      ].filter(Boolean).join(" ")}
+      style={
+        place
+          ? {
+              "--hub-left": `${place.left}px`,
+              "--hub-top": `${place.top}px`,
+              "--hub-right": `${place.right}px`,
+              "--hub-bottom": `${place.bottom}px`,
+            }
+          : undefined
+      }
+    >
+      {/* 큰 원 — 접혀 있을 때도 그려 두고 크기만 0에 가깝게(펼침 움직임) */}
+      <div
+        className={`hub-disc${menuOpen ? " is-open" : ""}`}
+        // 접힌 동안은 CSS가 visibility: hidden으로 감춰 안의 단추에 초점이 안 갑니다
+        aria-hidden={!menuOpen}
+      >
+        {items.map((it, i) => {
+          const [x, y] = pt(R_ORBIT, angleOf(i));
+          const Icon = ICONS[it.key];
+          return (
+            <button
+              key={it.key}
+              type="button"
+              className={`hub-item${hover === i ? " is-hover" : ""}`}
+              style={{ left: x, top: y, "--i": i }}
+              onMouseEnter={() => setHover(i)}
+              onMouseLeave={() => setHover((h) => (h === i ? null : h))}
+              onFocus={() => setHover(i)}
+              onBlur={() => setHover((h) => (h === i ? null : h))}
+              onClick={() => pick(it)}
+              title={it.hint}
+            >
+              <span className="hub-item-icon" aria-hidden="true">{Icon ? <Icon show={opened} /> : null}</span>
+              <span className="hub-item-label">{it.label}</span>
+              {it.key === "msg" && unread > 0 && (
+                <span className="hub-item-badge" aria-label={`안 읽은 말 ${unread}개`}>
+                  {unread > 99 ? "99+" : unread}
+                </span>
+              )}
+            </button>
+          );
+        })}
+
+        {/* 가운데 — 고른 기능의 그림 · 이름 · 설명. 아무것도 안 고르면 책 나눔
+            로고와 이름(선생님 요청). 그림은 흰 동그라미에 담습니다 — 앱 아이콘은
+            먹빛 선이라 살구빛 해 위에 그대로 두면 안 보입니다. */}
+        <div className="hub-center">
+          <span className="hub-center-badge" aria-hidden="true">
+            {shown && ICONS[shown.key] ? ICONS[shown.key]({ show: opened }) : <IconLogo size={22} />}
+          </span>
+          <strong>{shown ? shown.label : "책 나눔"}</strong>
+          <span>{shown ? shown.hint : "무엇을 열까요?"}</span>
+        </div>
+      </div>
+
+      {/* 작은 동그라미 — 펼친 동안은 닫기(×) */}
+      <button
+        ref={fabRef}
+        type="button"
+        className={`hub-fab${fabOpen ? " is-open" : ""}`}
+        onClick={onFab}
+        onPointerDown={onFabPointerDown}
+        onPointerMove={onFabPointerMove}
+        onPointerUp={onFabPointerEnd}
+        onPointerCancel={onFabPointerEnd}
+        aria-expanded={menuOpen}
+        aria-label={msgOpen ? "메신저 닫기" : menuOpen ? "메뉴 닫기" : "메신저와 바로가기 열기"}
+        title={
+          msgOpen
+            ? "메신저 닫기"
+            : menuOpen
+              ? "닫기"
+              : canDrag
+                ? "메신저 · 바로가기 (끌어서 옮길 수 있어요)"
+                : "메신저 · 바로가기"
+        }
+      >
+        <span className="hub-fab-icon" aria-hidden="true">
+          {fabOpen ? <span className="hub-fab-x">×</span> : <ChatIcon />}
+        </span>
+        {!fabOpen && unread > 0 && (
+          <span className="hub-fab-badge" aria-label={`안 읽은 말 ${unread}개`}>
+            {unread > 99 ? "99+" : unread}
+          </span>
+        )}
+      </button>
+
+      {msgOpen && (
+        <MessengerWindow
+          classId={classId}
+          classes={isTeacher ? teacherClasses : []}
+          onClassChange={setChatClassId}
+          user={user}
+          isTeacher={isTeacher}
+          groups={groups}
+          messages={messages}
+          seen={seen}
+          initialRoom={openReq}
+          onClose={() => { setMsgOpen(false); setOpenReq(null); fabRef.current?.focus(); }}
+        />
+      )}
+    </div>
+  );
+}

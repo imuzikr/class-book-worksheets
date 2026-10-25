@@ -1,0 +1,760 @@
+"use client";
+
+// =============================================================
+// 서식 입력 에디터 (공통 컴포넌트)
+// -------------------------------------------------------------
+// 굵게 / 기울임 / 밑줄 / 글머리 기호 / 번호 목록을 지원합니다.
+//
+//   variant="full" : 박스 상단에 툴바 (질문·공지 작성용)
+//   variant="chat" : 박스 하단에 툴바 + **박스 아래 제 줄에** 전송 버튼
+//
+// chat은 컴포넌트가 **두 덩이**를 내놓습니다 — 박스(.rte)와 그 아래
+// 전송 줄(.rte-sendrow). 쓰는 자리가 세로 flex라야 줄이 제대로 섭니다.
+//
+// toolbarTop: chat이면서 툴바만 위로 올립니다(전송 줄은 그대로 맨 아래).
+//   메신저는 툴바가 아래인 것이 익숙하지만, '쓰는 칸'이 넓고 서식을 실제로
+//   쓰는 자리(모둠 메모)에서는 **꾸미개가 먼저, 쓰는 칸이 그다음**이라야
+//   질문·공지 작성 창과 순서가 같아집니다.
+//
+// tools로 툴바에 보일 것만 고를 수 있습니다(수업 메모처럼 서식이 몇 개면
+// 충분한 자리용). 안 주면 전부 보입니다.
+//
+// children으로 추가 도구(이미지 첨부, 그리기 등)를 툴바에 끼워
+// 넣을 수 있습니다. 내용은 HTML 문자열로 onChange에 전달되며,
+// 저장·표시 전에 lib/html.js의 sanitizeHtml()로 정화합니다.
+// 입력 내용을 비우려면 부모에서 key 값을 바꿔 다시 마운트하세요.
+// =============================================================
+import { useEffect, useMemo, useRef, useState } from "react";
+import { uploadImage } from "@/lib/storageUpload";
+import { escapeHtml, CHECK_ITEM_SELECTOR, hitCheckBox } from "@/lib/html";
+
+// ───── 툴바 아이콘 (선 스타일 SVG) ─────
+const svgProps = {
+  width: 17,
+  height: 17,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 2,
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+};
+
+function IconUl() {
+  return (
+    <svg {...svgProps}>
+      <circle cx="4" cy="6" r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="4" cy="12" r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="4" cy="18" r="1.5" fill="currentColor" stroke="none" />
+      <line x1="9" y1="6" x2="20" y2="6" />
+      <line x1="9" y1="12" x2="20" y2="12" />
+      <line x1="9" y1="18" x2="20" y2="18" />
+    </svg>
+  );
+}
+
+function IconOl() {
+  return (
+    <svg {...svgProps}>
+      <text x="2" y="8.5" fontSize="8" fill="currentColor" stroke="none">
+        1
+      </text>
+      <text x="2" y="15" fontSize="8" fill="currentColor" stroke="none">
+        2
+      </text>
+      <text x="2" y="21.5" fontSize="8" fill="currentColor" stroke="none">
+        3
+      </text>
+      <line x1="10" y1="6" x2="20" y2="6" />
+      <line x1="10" y1="12" x2="20" y2="12" />
+      <line x1="10" y1="18" x2="20" y2="18" />
+    </svg>
+  );
+}
+
+function IconCheckList() {
+  return (
+    <svg {...svgProps}>
+      <rect x="3" y="4" width="7" height="7" rx="1.5" />
+      <path d="M4.6 7.6l1.6 1.6 2.6-3" />
+      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+      <line x1="13" y1="7.5" x2="21" y2="7.5" />
+      <line x1="13" y1="17.5" x2="21" y2="17.5" />
+    </svg>
+  );
+}
+
+export function IconImage() {
+  return (
+    <svg {...svgProps}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <circle cx="9" cy="10" r="1.6" fill="currentColor" stroke="none" />
+      <path d="M5 18l5-5 4 4 2.5-2.5L21 19" />
+    </svg>
+  );
+}
+
+export function IconPen() {
+  return (
+    <svg {...svgProps}>
+      <path d="M17 3l4 4L7 21H3v-4L17 3z" />
+    </svg>
+  );
+}
+
+function IconSend() {
+  return (
+    <svg {...svgProps} width={16} height={16}>
+      <path d="M22 2L11 13" />
+      <path d="M22 2l-7 20-4-9-9-4 20-7z" />
+    </svg>
+  );
+}
+
+// 서식 명령 정의 (null은 구분선)
+const COMMANDS = [
+  {
+    cmd: "bold",
+    title: "굵게 (Ctrl+B)",
+    icon: <b className="rte-glyph">B</b>,
+  },
+  {
+    cmd: "italic",
+    title: "기울임 (Ctrl+I)",
+    icon: <i className="rte-glyph rte-serif">I</i>,
+  },
+  {
+    cmd: "underline",
+    title: "밑줄 (Ctrl+U)",
+    icon: <u className="rte-glyph">U</u>,
+  },
+  null,
+  { cmd: "insertUnorderedList", title: "글머리 기호", icon: <IconUl /> },
+  { cmd: "insertOrderedList", title: "번호 목록", icon: <IconOl /> },
+  {
+    cmd: "checkList",
+    title: "체크 줄 — 고른 줄만 네모로 (네모를 눌러 켜고 끕니다)",
+    icon: <IconCheckList />,
+    custom: true,
+  },
+  null,
+  { cmd: "codeBlock", title: "코드 블록 (</>)", icon: <code className="rte-glyph rte-code-glyph">&lt;/&gt;</code>, custom: true },
+];
+
+// tools에 적힌 것만 남깁니다. 걸러 내면 구분선만 덩그러니 남는 자리가
+// 생기므로(양 끝·잇달아 붙은 것), 그것도 함께 정리합니다.
+function pickCommands(tools) {
+  if (!tools) return COMMANDS;
+  const out = [];
+  for (const c of COMMANDS) {
+    if (c) {
+      if (tools.includes(c.cmd)) out.push(c);
+    } else if (out.length && out[out.length - 1] !== null) {
+      out.push(null);
+    }
+  }
+  while (out.length && out[out.length - 1] === null) out.pop();
+  return out;
+}
+
+export default function RichTextEditor({
+  variant = "full", // "full" | "chat"
+  toolbarTop = false, // chat이면서 툴바를 위로 (전송 버튼은 그대로 툴바에)
+  small = false, // true면 낮은 입력 높이 (공지 등 좁은 영역용)
+  className = "", // 쓰는 자리에서 크기·글자를 조정할 때
+  initialHtml = "", // 처음부터 채워 둘 내용 (예: 실행기에서 넘어온 코드)
+  onChange,
+  placeholder = "",
+  autoFocus = false, // 열자마자 쓰는 화면(수업 메모 등)에서
+  tools = null, // 보일 서식 목록 (예: ["bold", "underline"]) — 없으면 전부
+  onSend, // 전송 실행 (Ctrl/⌘+Enter로도 전송). chat이면 버튼도 함께
+  sendDisabled = false,
+  children, // 툴바에 끼워 넣을 추가 도구 (첨부, 그리기 등)
+}) {
+  const ref = useRef(null);
+  const [active, setActive] = useState({}); // 현재 커서 위치의 서식 상태
+
+  // 배열을 그대로 deps에 두면 부모가 다시 그릴 때마다 새 배열이라 매번
+  // 다시 계산됩니다 — 내용으로 열쇠를 만들어 붙듭니다.
+  const toolKey = tools ? tools.join(",") : "";
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const commands = useMemo(() => pickCommands(tools), [toolKey]);
+
+  // 초기 내용 채우기 (마운트 시 한 번만)
+  useEffect(() => {
+    if (initialHtml && ref.current && !ref.current.innerHTML) {
+      ref.current.innerHTML = initialHtml;
+      onChange(initialHtml);
+    }
+    if (autoFocus) ref.current?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 커서를 움직일 때마다 어떤 서식이 켜져 있는지 추적해 버튼 강조
+  useEffect(() => {
+    function update() {
+      const sel = window.getSelection();
+      if (!sel || !ref.current || !ref.current.contains(sel.anchorNode)) {
+        return;
+      }
+      const next = {};
+      commands.forEach((c) => {
+        if (c) next[c.cmd] = document.queryCommandState(c.cmd);
+      });
+      setActive(next);
+    }
+    document.addEventListener("selectionchange", update);
+    return () => document.removeEventListener("selectionchange", update);
+  }, [commands]);
+
+  function exec(command) {
+    ref.current?.focus();
+    document.execCommand(command, false, null);
+    onChange(ref.current.innerHTML);
+  }
+
+  // ── 체크 줄 ─────────────────────────────────────────────────
+  // 표시는 목록이 아니라 **줄(<li>)마다** 붙습니다 — 한 목록 안에서 글머리
+  // 기호 줄과 체크 줄을 섞어 쓸 수 있어야 하기 때문입니다(lib/html.js).
+  // 목록 자체는 브라우저(execCommand)가 만들어 주므로 Enter로 줄이 이어지고,
+  // 새 <li>는 앞 줄의 표시를 물려받습니다(체크 줄 뒤에서는 체크 줄로) —
+  // 할 일을 잇달아 적을 때 매번 다시 누르지 않아도 됩니다.
+  function toggleCheckList() {
+    ref.current?.focus();
+    let items = selectedListItems();
+    if (items.length === 0) {
+      document.execCommand("insertUnorderedList", false, null);
+      items = selectedListItems();
+      if (items.length === 0) return;
+    }
+    // 옛 모양(ul.checklist)이 섞여 있으면 먼저 줄마다로 풀어 둡니다 —
+    // 그래야 그중 한 줄만 글머리 기호로 되돌릴 수 있습니다.
+    items.forEach((li) => spreadLegacyList(li.parentElement));
+    // 하나라도 체크가 아니면 전부 체크로, 다 체크면 전부 글머리 기호로.
+    const allCheck = items.every((li) => li.classList.contains("check"));
+    items.forEach((li) => {
+      if (allCheck) li.classList.remove("check", "done");
+      else li.classList.add("check");
+    });
+    onChange(ref.current.innerHTML);
+  }
+
+  // ul.checklist(옛 모양) → 그 안의 li마다 check 표시로
+  function spreadLegacyList(ul) {
+    if (!ul || ul.tagName !== "UL" || !ul.classList.contains("checklist")) return;
+    ul.classList.remove("checklist");
+    [...ul.children].forEach((li) => li.classList.add("check"));
+  }
+
+  // 지금 고른 <li>들 — 커서만 있으면 그 한 줄, 여러 줄을 끌어 골랐으면 전부.
+  function selectedListItems() {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || !ref.current) return [];
+    const range = sel.getRangeAt(0);
+    const hit = [...ref.current.querySelectorAll("li")].filter((li) =>
+      range.intersectsNode(li)
+    );
+    if (hit.length > 0) return hit;
+    const node = sel.anchorNode;
+    const el = node?.nodeType === 1 ? node : node?.parentElement;
+    const li = el?.closest("li");
+    return li && ref.current.contains(li) ? [li] : [];
+  }
+
+  // 네모를 눌러 켜고 끄기 — 네모는 글자 왼쪽(글머리 기호가 서던 자리)에
+  // 그려져 있어, 줄의 왼쪽 끝보다 왼쪽을 누른 것만 봅니다.
+  function handleAreaClick(e) {
+    const li = e.target.closest?.(CHECK_ITEM_SELECTOR);
+    if (!li || !ref.current?.contains(li)) return;
+    if (!hitCheckBox(li, e.clientX)) return; // 글자를 누른 것 — 커서만 옮깁니다
+    e.preventDefault();
+    li.classList.toggle("done");
+    onChange(ref.current.innerHTML);
+  }
+
+  function insertCodeBlock() {
+    ref.current?.focus();
+    const sel = window.getSelection();
+    const selectedText = sel && !sel.isCollapsed ? sel.toString() : "";
+    // 선택 텍스트를 이스케이프해 에디터 내 HTML 오염 방지 (렌더링 시 재정화되지만
+    // 편집 중 DOM 오염을 막고, 저장 전 sanitize와 이중 방어)
+    const html = `<pre><code>${escapeHtml(selectedText) || " "}</code></pre>`;
+    document.execCommand("insertHTML", false, html);
+    // [빈 블록의 공백 한 칸 — 커서는 그 **앞**에]
+    // 빈 <code>에는 커서를 둘 수 없어 공백 하나로 시작합니다. 그런데
+    // insertHTML은 커서를 넣은 것 **뒤**에 두므로, 학생이 치는 첫 글자가 그
+    // 공백 뒤에 붙어 코드 첫 줄이 한 칸 들여쓰기된 채 시작했습니다 —
+    // 파이썬에서는 그것만으로 IndentationError입니다(서랍에서 코드를 돌릴 수
+    // 있게 되면서 드러났습니다. 그 전에는 아무도 안 돌려 티가 안 났습니다).
+    // 커서를 공백 앞에 두면 그 칸은 첫 줄 **끝**에 남고, 줄 끝 공백은
+    // 파이썬이 그냥 흘려보냅니다.
+    if (!selectedText) {
+      const pre = getContainingPre() ?? lastPre();
+      const t = pre?.querySelector("code")?.firstChild;
+      if (t && t.nodeType === Node.TEXT_NODE) {
+        const r = document.createRange();
+        r.setStart(t, 0);
+        r.collapse(true);
+        const s2 = window.getSelection();
+        s2.removeAllRanges();
+        s2.addRange(r);
+      }
+    }
+    onChange(ref.current.innerHTML);
+  }
+
+  // 방금 넣은 코드 블록 — insertHTML 뒤 커서가 블록 **밖**에 설 수도 있어
+  // getContainingPre가 놓칠 때 쓰는 대비책입니다.
+  function lastPre() {
+    const all = ref.current?.querySelectorAll("pre");
+    return all && all.length ? all[all.length - 1] : null;
+  }
+
+  function handleInput() {
+    onChange(ref.current.innerHTML);
+  }
+
+  // 본문에 이미지를 붙여넣으면 data URL이 문서에 박혀(1MB 한도·피드 부하) 문제이므로,
+  // Storage에 업로드하고 그 URL로 <img>를 삽입합니다. (데모 모드는 data URL 유지)
+  async function handlePaste(e) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const it of items) {
+      if (it.type && it.type.startsWith("image/")) {
+        e.preventDefault();
+        const file = it.getAsFile();
+        if (!file) return;
+        try {
+          const url = await uploadImage(file);
+          ref.current?.focus();
+          document.execCommand("insertHTML", false, `<img src="${url}" alt="">`);
+          onChange(ref.current.innerHTML);
+        } catch {
+          alert("이미지 업로드에 실패했어요. 잠시 후 다시 시도해 주세요.");
+        }
+        return;
+      }
+    }
+  }
+
+  // ── '- ' 로 글머리 기호 ───────────────────────────────────────
+  // 줄 맨 앞에 붙임표 하나를 적고 띄어쓰기를 누르면 그 줄이 글머리 기호가
+  // 됩니다(마크다운을 쓰는 손이 그대로 통하게). 툴바를 짚으러 가지 않아도
+  // 되어, 여러 줄을 잇달아 적을 때 흐름이 안 끊깁니다.
+  //
+  // **그 서식이 있는 에디터에서만** 합니다 — 툴바에 글머리 기호가 없는 자리
+  // (`tools`로 좁혀 둔 곳)에서 저절로 목록이 생기면 되돌릴 단추가 없습니다.
+  const canBullet = commands.some((c) => c?.cmd === "insertUnorderedList");
+
+  // 줄을 여는 블록(div·li·pre…). 첫 줄은 감싼 것 없이 뿌리에 바로 놓입니다.
+  const BLOCK_TAGS = new Set([
+    "DIV", "P", "LI", "PRE", "BLOCKQUOTE", "TD", "TH",
+    "H1", "H2", "H3", "H4", "H5", "H6",
+  ]);
+  function blockOf(node) {
+    let el = node?.nodeType === 1 ? node : node?.parentElement;
+    while (el && el !== ref.current) {
+      if (BLOCK_TAGS.has(el.nodeName)) return el;
+      el = el.parentElement;
+    }
+    return ref.current;
+  }
+
+  // 커서 앞, **같은 줄**의 글자. 줄은 블록에서 시작하고 <br>에서 다시
+  // 시작합니다 — `Range.toString()`은 <br>을 없는 셈 쳐서 앞줄까지 이어
+  // 붙이므로(그러면 `<div>가나<br>-|</div>`가 '가나-'가 됩니다), 조각을
+  // 떠서 직접 훑고 <br>을 만나면 지금까지 모은 것을 버립니다.
+  function linePrefix(range) {
+    const block = blockOf(range.startContainer);
+    if (!block) return null;
+    const r = document.createRange();
+    r.selectNodeContents(block);
+    r.setEnd(range.startContainer, range.startOffset);
+    const walker = document.createTreeWalker(
+      r.cloneContents(),
+      NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT
+    );
+    let out = "";
+    while (walker.nextNode()) {
+      const n = walker.currentNode;
+      if (n.nodeType === Node.TEXT_NODE) out += n.nodeValue;
+      else if (n.nodeName === "BR") out = "";
+    }
+    return out;
+  }
+
+  // 띄어쓰기를 가로챌 자리인가 — 맞으면 목록으로 바꾸고 true.
+  function dashToBullet(e) {
+    if (!canBullet) return false;
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return false;
+    const range = sel.getRangeAt(0);
+    if (!ref.current?.contains(range.startContainer)) return false;
+    // 이미 목록 안이면 할 일이 없고, 코드 블록 안의 '-'는 진짜 붙임표입니다.
+    if (isInList() || getContainingPre()) return false;
+    if (linePrefix(range) !== "-") return false;
+
+    e.preventDefault();
+    // 붙임표는 브라우저에게 지우게 합니다 — 커서 앞 한 글자라 범위를 손으로
+    // 잡을 것 없이 정확하고, Ctrl+Z 한 번으로 되돌아옵니다.
+    document.execCommand("delete", false, null);
+    document.execCommand("insertUnorderedList", false, null);
+    onChange(ref.current.innerHTML);
+    return true;
+  }
+
+  // ── '```' 로 코드 블록 ────────────────────────────────────────
+  // 줄 맨 앞에 백틱 셋을 적으면 그 줄이 코드 블록이 됩니다 — 마크다운과 같은
+  // 손놀림이라 툴바의 `</>`를 짚으러 가지 않아도 됩니다.
+  //
+  // **셋째 백틱을 칠 때** 바뀝니다(넷째가 아니라). 마크다운 편집기가 다들
+  // 그렇고, 앞의 둘은 이미 화면에 있어 '한 번 더 치면 되겠다'가 보입니다.
+  //
+  // 이 단축키가 특히 값진 까닭은 **빈 코드 블록이 한 번에 사라지기**
+  // 때문입니다(아래 `preWillEmpty`). 안을 다 지우면 블록이 함께 걷히는데,
+  // 지우다가 그런 것이면 다시 만들어야 합니다 — 툴바까지 가는 대신 백틱
+  // 세 번이면 그 자리에서 돌아옵니다.
+  const canCode = commands.some((c) => c?.cmd === "codeBlock");
+
+  function ticksToCode(e) {
+    if (!canCode) return false; // 툴바에 없는 서식을 몰래 만들지 않습니다
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return false;
+    const range = sel.getRangeAt(0);
+    if (!ref.current?.contains(range.startContainer)) return false;
+    // **코드 블록 안의 백틱은 진짜 백틱입니다** — 거기서 가로채면 블록 안에
+    // 블록을 만들게 되고, 파이썬 문자열에 백틱을 적을 길도 막힙니다.
+    if (getContainingPre()) return false;
+    // 줄에 적힌 것이 백틱 둘뿐일 때만(글 가운데의 `a``b`는 그대로 둡니다) —
+    // '- '와 같은 판정입니다.
+    if (linePrefix(range) !== "``") return false;
+
+    e.preventDefault();
+    // 앞의 백틱 둘을 브라우저에게 지우게 합니다(셋째는 preventDefault로 아직
+    // 안 들어왔습니다). 붙임표 하나를 지우는 그 방법이라 **Ctrl+Z 두 번이면
+    // '``'로 돌아옵니다**(실측 — 한 번은 블록, 한 번은 지운 백틱). 진짜로
+    // 백틱을 적고 싶을 때 빠져나갈 길입니다.
+    document.execCommand("delete", false, null);
+    document.execCommand("delete", false, null);
+    insertCodeBlock(); // 커서 자리까지 그 함수가 맡습니다(빈 블록의 공백 앞)
+    return true;
+  }
+
+  // 커서가 목록(li) 안에 있으면 Enter는 '새 항목 추가'로 동작해야 함
+  function isInList() {
+    let node = window.getSelection()?.anchorNode;
+    while (node && node !== ref.current) {
+      if (node.nodeName === "LI") return true;
+      node = node.parentNode;
+    }
+    return false;
+  }
+
+  // 커서가 들어 있는 <pre> 요소를 반환 (없으면 null)
+  function getContainingPre() {
+    let node = window.getSelection()?.anchorNode;
+    while (node && node !== ref.current) {
+      if (node.nodeName === "PRE") return node;
+      node = node.parentNode;
+    }
+    return null;
+  }
+
+  // ── 코드 블록 안에서는 들여쓰기가 문법입니다 ──
+  // 파이썬은 들여쓰기로 블록을 나눕니다. 그런데 이 칸은 CodeMirror가 아니라
+  // 그냥 글자 칸(contentEditable)이라, 손대지 않으면 **Tab이 칸 밖으로
+  // 포커스를 옮기고 Enter가 앞 줄 들여쓰기를 안 물려받습니다** — 줄마다
+  // 스페이스를 손으로 넣어야 했습니다. 아래 셋이 그것을 메웁니다.
+  // **코드 블록 안에서만** 바꿉니다 — 바깥에서 Tab을 가로채면 키보드만
+  // 쓰는 사람의 이동 경로가 막힙니다.
+  const PY_INDENT = "    "; // 공백 4칸 (PEP 8)
+
+  // <pre> 안에서 커서가 몇 번째 글자인가. 줄은 `\n` **글자**로 나뉩니다
+  // (에디터 바깥의 `linePrefix`가 보는 <br>이 아닙니다).
+  function caretOffsetInPre(pre) {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return 0;
+    const r = sel.getRangeAt(0);
+    const upto = document.createRange();
+    upto.selectNodeContents(pre);
+    upto.setEnd(r.endContainer, r.endOffset);
+    return upto.toString().length;
+  }
+
+  // <pre> 안의 글자 번호 → DOM 자리(텍스트 노드 + 오프셋)
+  function posInPre(pre, n) {
+    const walker = document.createTreeWalker(pre, NodeFilter.SHOW_TEXT);
+    let seen = 0;
+    let node;
+    while ((node = walker.nextNode())) {
+      const len = node.nodeValue.length;
+      if (seen + len >= n) return { node, offset: n - seen };
+      seen += len;
+    }
+    return { node: pre, offset: pre.childNodes.length };
+  }
+
+  // 커서 앞의 '같은 줄' 글자
+  function preLineBefore(pre) {
+    const upto = document.createRange();
+    upto.selectNodeContents(pre);
+    const sel = window.getSelection();
+    upto.setEnd(sel.getRangeAt(0).endContainer, sel.getRangeAt(0).endOffset);
+    const before = upto.toString();
+    const at = before.lastIndexOf("\n");
+    return at < 0 ? before : before.slice(at + 1);
+  }
+
+  // Enter — 앞 줄 들여쓰기를 물려받고, `:`로 끝나면 한 단 더.
+  //
+  // **`execCommand('insertText')`로 줄바꿈을 넣지 마세요.** 크롬은 `<pre>`
+  // 안에서 `\n`을 만나면 글자를 넣는 대신 **블록을 둘로 쪼갭니다** — Enter를
+  // 칠 때마다 코드 블록이 하나씩 늘어납니다(실측). 그래서 여기만 Range로
+  // 직접 넣습니다(Tab의 공백 넣기는 쪼개지 않아 execCommand 그대로).
+  //
+  // [꼬리 줄바꿈 하나]
+  // `<pre>`의 **맨 끝**에 `\n` 하나만 넣으면 그 줄이 그려지지 않습니다
+  // (HTML이 마지막 줄바꿈을 흘려 버립니다) — 높이도 그대로고 커서도 안
+  // 보여, 학생 눈에는 Enter가 안 먹은 것처럼 보입니다(실측 39→39px).
+  // 끝에서 칠 때만 `\n`을 **하나 더** 붙이고 커서를 그 앞에 둡니다
+  // (39→54px, 커서가 새 줄에). 꼬리는 한 번만 생기고 쌓이지 않습니다 —
+  // 그 뒤로는 커서 뒤에 글자가 있어 '맨 끝'이 아니기 때문입니다.
+  function preNewline(pre) {
+    const line = preLineBefore(pre);
+    const indent = (line.match(/^[ \t]*/) ?? [""])[0];
+    const deeper = /:\s*$/.test(line) ? PY_INDENT : "";
+    const body = `\n${indent}${deeper}`;
+    const atEnd = caretOffsetInPre(pre) === (pre.textContent ?? "").length;
+
+    const sel = window.getSelection();
+    const r = sel.getRangeAt(0);
+    r.deleteContents();
+    const node = document.createTextNode(atEnd ? `${body}\n` : body);
+    r.insertNode(node);
+    const put = document.createRange();
+    put.setStart(node, body.length);
+    put.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(put);
+  }
+
+  // Shift+Tab — 그 줄 앞의 공백을 최대 네 칸 걷어 냅니다. 커서가 줄 어디에
+  // 있든 **줄 머리**를 기준으로 잡습니다(공백이 없으면 아무 일도 안 하되,
+  // 기본 동작인 '포커스 이동'만은 막습니다).
+  function preOutdent(pre) {
+    const line = preLineBefore(pre);
+    const lead = (line.match(/^ */) ?? [""])[0];
+    const n = Math.min(PY_INDENT.length, lead.length);
+    if (n === 0) return;
+    const start = caretOffsetInPre(pre) - line.length;
+    const a = posInPre(pre, start);
+    const b = posInPre(pre, start + n);
+    const sel = window.getSelection();
+    const r = document.createRange();
+    r.setStart(a.node, a.offset);
+    r.setEnd(b.node, b.offset);
+    sel.removeAllRanges();
+    sel.addRange(r);
+    document.execCommand("delete");
+  }
+
+  // 코드 블록을 통째로 걷어 내고 그 자리에 빈 줄을 둡니다.
+  // -------------------------------------------------------------
+  // 안을 다 지워도 **빈 검은 블록이 한 줄 남아** 한 번 더 지워야 사라졌습니다.
+  // 마지막 글자를 지우는 그 backspace가 블록까지 함께 걷어 가야, 지우는 사람의
+  // 눈에는 '다 지웠다'와 '사라졌다'가 한 동작이 됩니다.
+  function dropPre(pre) {
+    const line = document.createElement("div");
+    line.innerHTML = "<br>";
+    pre.replaceWith(line);
+    const sel = window.getSelection();
+    const r = document.createRange();
+    r.setStart(line, 0);
+    r.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(r);
+    onChange(ref.current.innerHTML);
+  }
+
+  // 이번 지우기로 코드 블록이 비게 되는가.
+  // -------------------------------------------------------------
+  // **눈에 보이는 글자**로 셉니다. 코드 블록은 만들 때 빈칸 하나로 시작해서
+  // (`escapeHtml(...) || " "`) 글자 수로 세면 다 지운 뒤에도 공백 하나가 남아,
+  // 블록을 없애는 데 backspace가 한 번 더 듭니다 — 고치려던 그 증상입니다.
+  function preWillEmpty(pre) {
+    const text = (pre.textContent ?? "").replace(/\u00a0/g, " ");
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return text.trim() === "";
+    // 골라 놓고 지우는 경우 — 고른 것이 블록의 전부인가
+    if (!sel.isCollapsed) {
+      return sel.toString().replace(/\u00a0/g, " ").length >= text.length;
+    }
+    // 커서만 있는 경우 — 이미 비었거나(0), 보이는 글자가 하나뿐이라
+    // 그것을 지우면 비는 경우(1).
+    return text.trim().length <= 1;
+  }
+
+  // <pre> 블록 뒤로 커서를 이동 (내용은 그대로, 코드 블록 탈출)
+  function escapeCodeBlock(pre) {
+    let next = pre.nextSibling;
+    while (next && next.nodeType === Node.TEXT_NODE) next = next.nextSibling;
+    if (!next) {
+      next = document.createElement("div");
+      next.innerHTML = "<br>";
+      pre.after(next);
+    }
+    const sel = window.getSelection();
+    const r = document.createRange();
+    r.setStart(next, 0);
+    r.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(r);
+    onChange(ref.current.innerHTML);
+  }
+
+  function handleKeyDown(e) {
+    if (e.nativeEvent.isComposing) return;
+
+    // Ctrl/⌘ + Enter: 전송·저장 (Enter 단독은 줄바꿈 유지)
+    if (onSend && e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      if (!sendDisabled) onSend?.();
+      return;
+    }
+
+    // 코드 블록 안의 Tab·Enter — 파이썬 들여쓰기 (위 주석 참고).
+    // Ctrl/⌘+Enter(전송)는 위에서 이미 갈라졌고, Shift+Enter는 그대로
+    // 브라우저에 맡깁니다.
+    if (e.key === "Tab" || (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey)) {
+      const pre = getContainingPre();
+      if (pre) {
+        e.preventDefault();
+        if (e.key === "Enter") preNewline(pre);
+        else if (e.shiftKey) preOutdent(pre);
+        else document.execCommand("insertText", false, PY_INDENT);
+        onChange(ref.current.innerHTML);
+        return;
+      }
+    }
+
+    // 띄어쓰기: 줄 맨 앞의 '-' 하나였으면 글머리 기호로
+    if (e.key === " " && dashToBullet(e)) return;
+
+    // 백틱: 줄 맨 앞의 '``' 뒤 셋째 백틱이면 코드 블록으로
+    if (e.key === "`" && ticksToCode(e)) return;
+
+    // 지우기: 코드 블록이 비게 되면 블록까지 한 번에 걷어 냅니다
+    if (e.key === "Backspace" || e.key === "Delete") {
+      const pre = getContainingPre();
+      if (pre && preWillEmpty(pre)) {
+        e.preventDefault();
+        dropPre(pre);
+        return;
+      }
+    }
+
+    // Escape: 코드 블록 어디서든 탈출
+    if (e.key === "Escape") {
+      const pre = getContainingPre();
+      if (pre) {
+        e.preventDefault();
+        escapeCodeBlock(pre);
+      }
+    }
+  }
+
+  // 툴바 버튼: onMouseDown에서 preventDefault → 에디터의
+  // 글자 선택(selection)이 풀리지 않은 채 서식이 적용됩니다.
+  const toolbar = (
+    <div className="rte-toolbar">
+      {variant === "chat" && children}
+      {variant === "chat" && children && <span className="rte-divider" />}
+
+      {commands.map((c, i) =>
+        c === null ? (
+          <span key={`d${i}`} className="rte-divider" />
+        ) : (
+          <button
+            key={c.cmd}
+            type="button"
+            title={c.title}
+            className={`rte-tool ${active[c.cmd] ? "active" : ""}`}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() =>
+              c.cmd === "checkList"
+                ? toggleCheckList()
+                : c.custom
+                  ? insertCodeBlock()
+                  : exec(c.cmd)
+            }
+          >
+            {c.icon}
+          </button>
+        )
+      )}
+
+      {variant === "full" && children && <span className="rte-divider" />}
+      {variant === "full" && children}
+    </div>
+  );
+
+  // 전송은 **툴바가 아니라 박스 아래 제 줄**입니다. 채팅 에디터가 서는
+  // 자리는 질문 모달의 오른쪽 칸·모둠 메모의 오른쪽 칸처럼 좁아서(실측
+  // 390px 남짓), 도구 아홉에 전송까지 한 줄에 세우면 줄이 넘쳐 **오른쪽
+  // 끝의 전송 버튼이 잘렸습니다**(.rte가 overflow: hidden이라 그대로 깎임).
+  // 아래로 내리면 폭에 기대지 않고, 글자('보내기')까지 달 자리가 생겨
+  // 무엇을 누르는 단추인지 그림 하나로 짐작하지 않아도 됩니다.
+  const sendRow = variant === "chat" && (
+    <div className="rte-sendrow">
+      <button
+        type="button"
+        className="rte-send"
+        title="전송 (Ctrl+Enter)"
+        disabled={sendDisabled}
+        onClick={onSend}
+      >
+        <IconSend />
+        보내기
+      </button>
+    </div>
+  );
+
+  const area = (
+    <div
+      ref={ref}
+      className="rte-area"
+      contentEditable
+      suppressContentEditableWarning
+      data-placeholder={placeholder}
+      onInput={handleInput}
+      onKeyDown={handleKeyDown}
+      onPaste={handlePaste}
+      onClick={handleAreaClick}
+    />
+  );
+
+  // 전송 줄은 박스의 **형제**입니다(감싸는 칸을 새로 두지 않습니다) —
+  // 이 에디터를 쓰는 채팅 자리는 둘 다 세로 flex라 그대로 아래 줄이 되고,
+  // 바깥에 칸을 하나 더 두면 `.rte`를 겨냥해 둔 바깥 규칙들이 한 겹
+  // 어긋납니다.
+  return (
+    <>
+      <div
+        className={`rte rte-${variant}${toolbarTop ? " rte-toolbar-top" : ""} ${small ? "rte-sm" : ""} ${className}`.trim()}
+      >
+        {variant === "full" || toolbarTop ? (
+          <>
+            {toolbar}
+            {area}
+          </>
+        ) : (
+          <>
+            {area}
+            {toolbar}
+          </>
+        )}
+      </div>
+      {sendRow}
+    </>
+  );
+}
