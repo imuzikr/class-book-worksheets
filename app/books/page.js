@@ -271,7 +271,7 @@ function BooksPageInner() {
   //
   // **첫 답이 오기 전까지는 '소속 없음'이 아니라 '아직 모름'입니다.**
   // memberships가 []로 시작해, 그 값만 보고 판단하면 로그인 직후 서버 답을
-  // 기다리는 사이 반에 이미 든 학생에게도 입장 코드 화면이 번쩍 스칩니다
+  // 기다리는 사이 반에 이미 든 학생에게도 참여 코드 화면이 번쩍 스칩니다
   // (공부방도 같은 이유로 같은 방식을 씁니다).
   useEffect(() => {
     if (!myUid || admin) {
@@ -292,7 +292,7 @@ function BooksPageInner() {
     return subscribeUserDirectory(setDirectory);
   }, [admin]);
 
-  // 교사: 입장 코드 — '반 관리하기' 창이 씁니다(일반 교사는 본인 코드만).
+  // 교사: 참여 코드 — '반 관리하기' 창이 씁니다(일반 교사는 본인 코드만).
   useEffect(() => {
     if (!admin) { setJoinCodesMap({}); return; }
     return subscribeJoinCodes(setJoinCodesMap, superAdmin ? null : myUid);
@@ -677,7 +677,7 @@ function BooksPageInner() {
     );
   }
 
-  // ── 학생인데 아직 반에 안 들어왔으면 입장 코드부터 ──
+  // ── 학생인데 아직 반에 안 들어왔으면 참여 코드부터 ──
   //    소속 답이 온 뒤에만 판단합니다 — 그 전에는 '소속 없음'이 아닙니다.
   if (isFirebaseConfigured && !admin && user && membershipIds.length === 0) {
     return (
@@ -1025,7 +1025,7 @@ function BooksPageInner() {
 
           {admin && myClassesAll.length === 0 ? (
             <div className="empty-note books-first-class">
-              <p>아직 만든 반이 없어요. 반을 만들고 입장 코드를 학생들에게 알려 주세요.</p>
+              <p>아직 만든 반이 없어요. 반을 만들고 참여 코드를 학생들에게 알려 주세요.</p>
               <button className="btn-primary" onClick={() => setClassManagerOpen(true)}>
                 ＋ 반 만들기
               </button>

@@ -423,7 +423,7 @@ export default function StudyRewardPanel({
 
       {roster.length === 0 ? (
         <p className="reward-empty">
-          아직 이 반에 입장한 학생이 없어요. 입장 코드를 알려 주세요.
+          아직 이 반에 입장한 학생이 없어요. 참여 코드를 알려 주세요.
         </p>
       ) : (
         <SeatPickGrid

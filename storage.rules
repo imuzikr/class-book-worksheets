@@ -9,7 +9,7 @@ rules_version = '2';
 //  · 삭제 : 본인 또는 교사/관리자
 //    (교사가 학생 게시물을 삭제할 때 첨부 파일도 함께 정리하려면
 //     본인 아닌 파일도 지울 수 있어야 합니다. firestore.rules와 동일한
-//     역할 판정 — role 커스텀 클레임 또는 초기 관리자 이메일)
+//     역할 판정 — role 커스텀 클레임 하나)
 // 배포:  Firebase 콘솔 → Storage → 규칙 탭에 붙여넣고 게시
 //        (또는 firebase deploy --only storage)
 // =============================================================
@@ -17,13 +17,9 @@ service firebase.storage {
   match /b/{bucket}/o {
 
     function userRole() { return request.auth.token.get('role', ''); }
-    function isInitialAdmin() {
-      return request.auth != null && request.auth.token.email == 'iseoul72@gmail.com'
-             && request.auth.token.email_verified == true;
-    }
     function isTeacher() {
       return request.auth != null &&
-        (userRole() == 'teacher' || userRole() == 'admin' || isInitialAdmin());
+        (userRole() == 'teacher' || userRole() == 'admin');
     }
 
     match /uploads/{userId}/{fileName} {

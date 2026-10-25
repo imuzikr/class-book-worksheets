@@ -69,14 +69,15 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
 ## 새 Firebase 프로젝트 연결
 
 1. [Firebase 콘솔](https://console.firebase.google.com)에서 프로젝트를 만들고 웹 앱을 등록합니다.
-   Authentication(이메일/비밀번호 · Google) · Firestore · Storage · Functions(Blaze 요금제)를 켭니다.
+   Authentication(**Google만**) · Firestore · Storage · Functions(Blaze 요금제)를 켭니다.
 2. 프로젝트 id를 **세 곳에 같은 값으로** 적습니다 — `lib/firebase.js`의 `FIREBASE_PROJECT_ID`
    (+ `firebaseConfig`의 apiKey · messagingSenderId · appId), `next.config.mjs`의
    `FIREBASE_PROJECT_ID`, `.firebaserc`의 `default`. 관리용 스크립트(`functions/scripts/*.mjs`)의
    `PROJECT_ID`도 함께.
 3. **App Check(reCAPTCHA Enterprise) 키를 꼭 넣으세요** — `RECAPTCHA_ENTERPRISE_SITE_KEY`.
-   서버 함수(`setUserRole` · `deleteClass` · `sendClassNotice` 등)가 `enforceAppCheck: true`라
-   App Check 없이는 선생님 승인 · 반 삭제 · 반 공지가 거부됩니다. 자리표시자인 동안은
+   서버 함수(`joinClassWithCode` · `setUserRole` · `deleteClass` · `sendClassNotice` 등)가
+   `enforceAppCheck: true`라 App Check 없이는 **학생의 반 입장** · 선생님 승인 · 반 삭제 ·
+   반 공지가 거부됩니다. 자리표시자인 동안은
    앱이 App Check를 켜지 않습니다.
 4. 배포 차례는 **색인 → 규칙 → 함수 → 앱**입니다.
 
@@ -87,8 +88,45 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
 
    `npm run deploy -- --rules-only` / `--functions-only` / `--skip-tests`로 좁힐 수 있습니다
    (`scripts/deploy.sh`). Storage 규칙은 `npx firebase-tools deploy --only storage`.
-5. 최고 관리자는 `iseoul72@gmail.com`(`lib/user.js` · `lib/auth.js` · `functions/index.js` ·
-   `firestore.rules` 네 곳), 학생 가입은 학교 메일(`@hansung.hs.kr`)만 받습니다 — 배움나눔과 같습니다.
+5. **첫 관리자를 지정합니다** — 그 사람이 먼저 앱에 구글로 가입한 뒤
+   `npm run admin:grant -- <이메일> --apply`(`functions/scripts/grant-admin.mjs`, gcloud 로그인
+   필요 · `--apply` 없이는 미리보기 · `--revoke`로 해제). 지정된 사람은 다시 로그인해야 합니다.
+
+## 가입 · 반 입장 — 공개 운영 (배움나눔과 다른 점)
+
+공개로 배포하는 앱이라 **관리자 이메일과 학교 도메인을 코드에 두지 않습니다.**
+배움나눔에 있던 `iseoul72@gmail.com` 부트스트랩 관리자 · `@hansung.hs.kr` 가입 제한 ·
+등록 코드(`registrationCodes`) · 손님 계정(`homeClassId`)은 모두 걷었습니다.
+
+- **가입은 구글 계정만**입니다(`lib/auth.js`의 `signInWithGoogle` — 가입과 로그인이 한 길,
+  프로필이 없으면 만듦). 규칙이 `request.auth.token.firebase.sign_in_provider == 'google.com'`을
+  봅니다. 이메일·비밀번호 가입은 없습니다.
+- **관리자 = `role` 클레임 하나**(`isAdmin` — `lib/user.js` · `firestore.rules` · `storage.rules` ·
+  `functions/index.js`). 관리자 계정은 탈퇴 함수로 지울 수 없습니다(먼저 역할을 내림).
+- **선생님은 가입 때 '선생님'을 고르면 신청 표시(`requestedRole`)가 붙고, 관리자가 상단바
+  프로필 메뉴의 역할 관리 창(`RoleManagerModal`)에서 승인**합니다(`setUserRole`). 승인 전에는
+  학생 화면입니다. 승인된 선생님이 반을 만들면 참여 코드가 함께 생깁니다(`ClassManagerModal`).
+- **학생은 가입 뒤 참여 코드로 반에 들어갑니다**(`ClassEntry` → `joinClassWithCode`).
+  - 확인은 **서버 함수 `joinClassWithCode` 하나**가 합니다 — 코드 대조 · 소속(`memberships`)
+    기록 · `users.classIds` 이어 붙이기 · 틀린 횟수 세기를 한 트랜잭션에서.
+  - **연달아 3번 틀리면 5분 잠금**. 셈은 `lib/joinLockout.js`(앱 · 데모)와 그 CommonJS 사본
+    `functions/joinLockout.js`(서버) — **둘을 함께 고치세요**, `tests/unit/joinLockout.test.mjs`가
+    같은 표로 둘을 시험합니다. 맞히면 기록을 지우고, 만료된 코드 · 보관된 반은 '틀림'으로
+    세지 않습니다(코드는 맞게 안 것).
+  - 기록은 `joinAttempts/{uid}`(`{ fails, lockedUntil }`) — 규칙에 match가 없어 **클라이언트는
+    읽지도 쓰지도 못합니다**(admin SDK만).
+  - **잠금이 뜻을 가지려면 다른 길이 닫혀 있어야 합니다** — 그래서 규칙이 학생의
+    `memberships` 생성과 `joinCodes` 읽기를 막습니다. 교사는 자기 코드와 **아직 없는 코드**만
+    읽습니다(새 코드가 겹치는지 볼 때 — 남의 코드는 거부되고 앱은 '이미 쓰임'으로 봅니다).
+    **이 둘을 다시 열지 마세요.** 시험 `tests/rules/signup.test.mjs` · `memberships.test.mjs`.
+  - 잠금은 **계정마다**입니다. 구글 계정을 새로 만들어 가며 두드리는 것까지는 못 막지만,
+    코드가 6자리(32글자, 10억 가지)라 그 길로 맞히기는 사실상 어렵습니다.
+  - 화면은 서버가 돌려준 남은 기회 · 풀리는 시각을 적기만 합니다(남은 시간을 초 단위로 셈).
+  - 데모 모드에서는 학생 입장 화면이 원래 안 뜹니다(소속을 안 읽음). 데모용 셈
+    (`mockJoinWithCode`)은 같은 `lib/joinLockout.js`를 씁니다.
+- 화면 글자는 '입장 코드'가 아니라 **'참여 코드'**입니다(코드 · 주석의 `joinCode` 이름은 그대로).
+- 바닥글 · 개인정보처리방침의 **문의 이메일**(`SiteFooter.jsx` · `PrivacyContent.jsx`)은 접근
+  권한과 무관한 연락처라 남겨 두었습니다 — 운영자가 바뀌면 그 두 곳만 고치면 됩니다.
 
 ### 구글 로그인 창을 우리 주소로 띄우기 (`authDomain`)
 

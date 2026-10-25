@@ -7,6 +7,7 @@
 //   [1] 데이터 무결성  : 답변 생성/삭제 시 answerCount를 서버가 집계
 //   [2] 역할 부여      : 관리자/교사/학생 역할을 커스텀 클레임으로 지정
 //   [3] 알림          : 새 답변 알림 발송
+//   [5] 반 입장        : 참여 코드 확인(3회 틀리면 5분 잠금)
 //
 // 배포: 프로젝트 루트에서
 //   npm install -g firebase-tools
@@ -24,6 +25,12 @@ const {
 } = require("firebase-functions/v2/firestore");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { purgeClassData } = require("./purgeClass");
+const {
+  lockedUntilOf,
+  recordFailure,
+  triesLeft,
+  normalizeJoinCode,
+} = require("./joinLockout");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const admin = require("firebase-admin");
 
@@ -47,11 +54,12 @@ const db = admin.firestore();
 // 몇 번 도는 이 앱에서는 콜드 스타트 몇 초를 없애자고 낼 값이 아닙니다.
 setGlobalOptions({ region: "asia-northeast3", maxInstances: 10 });
 
-// 역할 종류와 최초 관리자 이메일
-// (첫 관리자는 아직 admin 클레임이 없으므로, 이 이메일로 로그인한
-//  계정에 한해 스스로 역할을 부여할 수 있게 허용합니다.)
+// 역할 종류. 관리자를 이메일로 코드에 박아 두지 않습니다(공개 운영) —
+// 관리자는 role 클레임 하나로만 정해지고, 첫 관리자는 배포한 사람이
+// `npm run admin:grant -- <이메일>`(functions/scripts/grant-admin.mjs)로
+// 한 번 지정합니다. 그 뒤로는 관리자가 이 앱의 역할 관리 창에서 선생님을
+// 승인합니다(setUserRole).
 const ROLES = ["admin", "teacher", "student"];
-const INITIAL_ADMIN_EMAIL = "iseoul72@gmail.com";
 
 // =============================================================
 // [1] 데이터 무결성 — answerCount 서버 집계
@@ -149,12 +157,9 @@ exports.setUserRole = onCall({ enforceAppCheck: true }, async (request) => {
     throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
   }
 
-  // 호출 권한: 이미 admin이거나, 최초 관리자 이메일 본인
+  // 호출 권한: admin 클레임이 있는 사람만
   const callerIsAdmin = request.auth.token.role === "admin";
-  const callerIsInitialAdmin =
-    request.auth.token.email === INITIAL_ADMIN_EMAIL &&
-    request.auth.token.email_verified === true;
-  if (!callerIsAdmin && !callerIsInitialAdmin) {
+  if (!callerIsAdmin) {
     throw new HttpsError("permission-denied", "역할을 부여할 권한이 없습니다.");
   }
 
@@ -346,10 +351,7 @@ exports.deleteAuthUser = onCall({ enforceAppCheck: true }, async (request) => {
     throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
   }
   const callerRole = request.auth.token.role;
-  const callerIsAdmin =
-    callerRole === "admin" ||
-    (request.auth.token.email === INITIAL_ADMIN_EMAIL &&
-      request.auth.token.email_verified === true);
+  const callerIsAdmin = callerRole === "admin";
   const callerIsTeacher = callerRole === "teacher" || callerIsAdmin;
   if (!callerIsTeacher) {
     throw new HttpsError("permission-denied", "탈퇴 처리 권한이 없습니다.");
@@ -364,9 +366,10 @@ exports.deleteAuthUser = onCall({ enforceAppCheck: true }, async (request) => {
   const target = await admin.auth().getUser(uid).catch(() => null);
   if (!target) return { ok: true, alreadyGone: true };
 
-  // 최고 관리자 계정은 삭제 불가
-  if (target.email === INITIAL_ADMIN_EMAIL) {
-    throw new HttpsError("permission-denied", "최고 관리자 계정은 삭제할 수 없습니다.");
+  // 관리자 계정은 이 경로로 지우지 않습니다(관리자를 잃으면 되살릴 길이
+  // 콘솔뿐이라) — 먼저 역할을 내린 뒤 지웁니다.
+  if (target.customClaims && target.customClaims.role === "admin") {
+    throw new HttpsError("permission-denied", "관리자 계정은 삭제할 수 없습니다. 먼저 역할을 내려 주세요.");
   }
   // 선생님/관리자 계정 삭제는 최고 관리자만
   const targetRole = target.customClaims && target.customClaims.role;
@@ -406,10 +409,7 @@ exports.deleteStudentAccount = onCall({ enforceAppCheck: true }, async (request)
   if (!request.auth) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
 
   const callerRole = request.auth.token.role;
-  const callerIsAdmin =
-    callerRole === "admin" ||
-    (request.auth.token.email === INITIAL_ADMIN_EMAIL &&
-      request.auth.token.email_verified === true);
+  const callerIsAdmin = callerRole === "admin";
   if (!(callerRole === "teacher" || callerIsAdmin)) {
     throw new HttpsError("permission-denied", "탈퇴 처리 권한이 없습니다.");
   }
@@ -423,8 +423,8 @@ exports.deleteStudentAccount = onCall({ enforceAppCheck: true }, async (request)
   }
 
   const target = await admin.auth().getUser(uid).catch(() => null);
-  if (target && target.email === INITIAL_ADMIN_EMAIL) {
-    throw new HttpsError("permission-denied", "최고 관리자 계정은 삭제할 수 없습니다.");
+  if (target && target.customClaims && target.customClaims.role === "admin") {
+    throw new HttpsError("permission-denied", "관리자 계정은 삭제할 수 없습니다. 먼저 역할을 내려 주세요.");
   }
   const targetRole = target && target.customClaims && target.customClaims.role;
   if ((targetRole === "teacher" || targetRole === "admin") && !callerIsAdmin) {
@@ -487,10 +487,7 @@ async function deleteAttachedFilesAdmin(cardData) {
 exports.deleteClass = onCall({ enforceAppCheck: true }, async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
   const callerRole = request.auth.token.role;
-  const callerIsAdmin =
-    callerRole === "admin" ||
-    (request.auth.token.email === INITIAL_ADMIN_EMAIL &&
-      request.auth.token.email_verified === true);
+  const callerIsAdmin = callerRole === "admin";
   const callerIsTeacher = callerRole === "teacher" || callerIsAdmin;
   if (!callerIsTeacher) {
     throw new HttpsError("permission-denied", "반 삭제 권한이 없습니다.");
@@ -542,10 +539,7 @@ const NOTICE_BATCH = 400;
 exports.sendClassNotice = onCall({ enforceAppCheck: true }, async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
   const callerRole = request.auth.token.role;
-  const callerIsAdmin =
-    callerRole === "admin" ||
-    (request.auth.token.email === INITIAL_ADMIN_EMAIL &&
-      request.auth.token.email_verified === true);
+  const callerIsAdmin = callerRole === "admin";
   const callerIsTeacher = callerRole === "teacher" || callerIsAdmin;
   if (!callerIsTeacher) {
     throw new HttpsError("permission-denied", "공지를 보낼 권한이 없습니다.");
@@ -631,4 +625,105 @@ exports.sendClassNotice = onCall({ enforceAppCheck: true }, async (request) => {
   });
 
   return { ok: true, sent: uids.length };
+});
+
+// =============================================================
+// [5] 참여 코드로 반에 들어가기 — 3번 틀리면 5분 잠금
+// -------------------------------------------------------------
+// 학생이 반에 들어가는 길은 이 함수 하나입니다. 예전에는 학생이 직접
+// memberships 문서를 쓰고 규칙이 코드를 대조했는데, 그러면 틀린 횟수를
+// 셀 자리가 없어 하나씩 대 보는 것을 막을 수 없었습니다(화면에서만 세면
+// 새로고침 한 번으로 풀림). 그래서 규칙은 학생의 소속 생성과 joinCodes
+// 읽기를 닫고, 여기서만 코드를 확인합니다.
+//
+//  · 틀린 횟수는 joinAttempts/{uid}에 둡니다 — 규칙에 이 컬렉션의 match가
+//    없어 학생은 읽지도 지우지도 못합니다(admin SDK만 씀).
+//  · 연달아 3번 틀리면 5분 동안 막습니다(셈은 joinLockout.js).
+//  · 만료된 코드·보관된 반은 '틀림'으로 세지 않습니다 — 코드는 맞게 알고
+//    있으니 선생님께 새 코드를 받으면 됩니다.
+//  · 맞히면 소속(memberships)을 만들고 users.classIds에 이어 붙이고 기록을
+//    지웁니다. 이미 그 반 소속이면 그대로 성공입니다.
+//
+// 오류는 HttpsError의 details로 남은 기회·풀리는 시각을 함께 돌려줘,
+// 화면이 '앞으로 n번 · m분 뒤에 다시'를 적습니다.
+// =============================================================
+exports.joinClassWithCode = onCall({ enforceAppCheck: true }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+  const uid = request.auth.uid;
+  const code = normalizeJoinCode(request.data && request.data.code);
+  if (!code) throw new HttpsError("invalid-argument", "참여 코드를 입력해 주세요.");
+
+  const attemptRef = db.doc(`joinAttempts/${uid}`);
+  const now = Date.now();
+
+  // 잠금 확인과 코드 확인을 한 트랜잭션에 — 같은 순간 여러 번 보내도
+  // 횟수가 빠지지 않게(트랜잭션이 부딪히면 다시 읽고 셈).
+  const outcome = await db.runTransaction(async (tx) => {
+    const attemptSnap = await tx.get(attemptRef);
+    const rec = attemptSnap.exists ? attemptSnap.data() : null;
+    const until = lockedUntilOf(rec, now);
+    if (until) return { kind: "locked", lockedUntil: until };
+
+    const codeSnap = await tx.get(db.doc(`joinCodes/${code}`));
+    const codeData = codeSnap.exists ? codeSnap.data() : null;
+    const classSnap = codeData && codeData.classId
+      ? await tx.get(db.doc(`classes/${codeData.classId}`))
+      : null;
+
+    if (!codeData || !classSnap || !classSnap.exists) {
+      const next = recordFailure(rec, now);
+      tx.set(attemptRef, { ...next, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+      return next.lockedUntil
+        ? { kind: "locked", lockedUntil: next.lockedUntil, justLocked: true }
+        : { kind: "wrong", triesLeft: triesLeft(next, now) };
+    }
+    const expiresAt = codeData.expiresAt && codeData.expiresAt.toMillis
+      ? codeData.expiresAt.toMillis()
+      : 0;
+    if (expiresAt && expiresAt < now) return { kind: "expired" };
+    if (classSnap.data().archived) return { kind: "archived" };
+
+    const classId = codeData.classId;
+    const memRef = db.doc(`memberships/${uid}_${classId}`);
+    const memSnap = await tx.get(memRef);
+    if (!memSnap.exists) {
+      tx.set(memRef, {
+        uid,
+        classId,
+        code,
+        joinedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+    // 급우 이름표 읽기 판정(isClassmateOf)의 기준 — 들어갈 때 함께 채웁니다.
+    tx.set(
+      db.doc(`users/${uid}`),
+      { classIds: admin.firestore.FieldValue.arrayUnion(classId) },
+      { merge: true }
+    );
+    if (attemptSnap.exists) tx.delete(attemptRef);
+    return { kind: "ok", classId, name: classSnap.data().name || "" };
+  });
+
+  if (outcome.kind === "ok") return { classId: outcome.classId, name: outcome.name };
+  if (outcome.kind === "locked") {
+    throw new HttpsError(
+      "resource-exhausted",
+      outcome.justLocked
+        ? "참여 코드를 3번 틀려 5분 동안 입력할 수 없어요."
+        : "참여 코드를 여러 번 틀려 잠시 입력할 수 없어요.",
+      { reason: "locked", lockedUntil: outcome.lockedUntil }
+    );
+  }
+  if (outcome.kind === "wrong") {
+    throw new HttpsError("not-found", "참여 코드가 맞지 않아요.", {
+      reason: "wrong",
+      triesLeft: outcome.triesLeft,
+    });
+  }
+  if (outcome.kind === "expired") {
+    throw new HttpsError("failed-precondition", "만료된 참여 코드예요.", { reason: "expired" });
+  }
+  throw new HttpsError("failed-precondition", "지금은 들어갈 수 없는 반이에요.", {
+    reason: "archived",
+  });
 });

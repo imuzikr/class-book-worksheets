@@ -33,22 +33,24 @@ export async function makeEnv(projectId) {
 
 // ── 로그인 컨텍스트 ──
 // 이 앱의 규칙은 role을 커스텀 클레임에서 읽습니다(users 문서가 아님).
-// email_verified는 초기 관리자 판정에 쓰이므로 항상 넣어 둡니다.
+// 가입은 구글 계정만 받으므로(users 생성 규칙) 로그인 방식도 구글로 둡니다.
 export const asStudent = (env, uid) =>
-  env.authenticatedContext(uid, { email: `${uid}@hansung.hs.kr`, email_verified: true });
+  env.authenticatedContext(uid, { email: `${uid}@example.com`, email_verified: true, firebase: { sign_in_provider: "google.com" } });
 
 export const asTeacher = (env, uid) =>
   env.authenticatedContext(uid, {
     role: "teacher",
-    email: `${uid}@hansung.hs.kr`,
+    email: `${uid}@example.com`,
     email_verified: true,
+    firebase: { sign_in_provider: "google.com" },
   });
 
 export const asAdmin = (env, uid) =>
   env.authenticatedContext(uid, {
     role: "admin",
-    email: `${uid}@hansung.hs.kr`,
+    email: `${uid}@example.com`,
     email_verified: true,
+    firebase: { sign_in_provider: "google.com" },
   });
 
 // 규칙을 우회해 사전 데이터를 심습니다(테스트 준비용).

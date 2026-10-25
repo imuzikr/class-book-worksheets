@@ -4039,7 +4039,7 @@ button.footer-link:hover {
   color: var(--text-sub);
   margin-bottom: 8px;
 }
-/* 카드마다 되풀이되던 입장 코드 안내 — 목록 위에 한 번만 */
+/* 카드마다 되풀이되던 참여 코드 안내 — 목록 위에 한 번만 */
 .class-mgr-section-hint {
   margin: -4px 0 8px;
   font-size: 12.5px;
@@ -4297,7 +4297,7 @@ button.footer-link:hover {
   background: rgba(255, 255, 255, 0.28);
 }
 
-/* ===================== 반별 입장 코드 ===================== */
+/* ===================== 반별 참여 코드 ===================== */
 .class-mgr-row--with-code {
   flex-direction: column;
   align-items: stretch;
@@ -4308,7 +4308,7 @@ button.footer-link:hover {
   gap: 10px;
   min-width: 0;
 }
-/* 카드 안의 입장 코드는 '한 줄'입니다 — 반이 여섯이면 그만큼 되풀이되는
+/* 카드 안의 참여 코드는 '한 줄'입니다 — 반이 여섯이면 그만큼 되풀이되는
    줄이라, 쌓아 두면 목록이 화면 하나를 넘깁니다. 재발급은 이 줄이 아니라
    머리줄의 편집(✏) 옆에 있고, 안내 한 줄은 목록 위에 한 번만 섭니다.
    아래 자식 규칙은 전부 이 껍데기 안으로 한정해, 같은 클래스를 쓰는
@@ -15167,7 +15167,7 @@ button.lesson-usage-row:hover { background: var(--primary-light); }
   margin-top: 4px;
 }
 
-/* 입장 코드 토글 버튼 */
+/* 참여 코드 토글 버튼 */
 .study-code-btn {
   font-family: var(--font-mono);
   font-size: 13px;

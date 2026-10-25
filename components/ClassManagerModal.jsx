@@ -5,7 +5,7 @@
 // -------------------------------------------------------------
 // 보관한 반은 반 선택 목록(상단 드롭다운)에서 사라지고, 이 모달의
 // '보관된 반' 목록에서만 확인·복원·삭제할 수 있습니다. 보관 중엔
-// 학생 접근이 완전히 막히고(입장 코드 폐기), 교사도 데이터를 보기만
+// 학생 접근이 완전히 막히고(참여 코드 폐기), 교사도 데이터를 보기만
 // 할 수 있습니다(편집하려면 먼저 복원). 삭제는 되돌릴 수 없어
 // 보관을 거친 반만 가능합니다.
 // =============================================================
@@ -152,7 +152,7 @@ export default function ClassManagerModal({
     setError("");
     try {
       await unarchiveClass(c.id, user);
-      onToast?.(`'${c.name}' 반을 복원했어요. 새 입장 코드가 발급됐어요.`);
+      onToast?.(`'${c.name}' 반을 복원했어요. 새 참여 코드가 발급됐어요.`);
     } catch {
       setError("반을 복원하지 못했어요.");
     } finally {
@@ -214,7 +214,7 @@ export default function ClassManagerModal({
         <div className="class-mgr-section">
           <div className="class-mgr-section-title">운영 중인 반 ({active.length})</div>
           {active.length > 0 && (
-            <p className="class-mgr-section-hint">학생은 책방 입장 화면에서 아래 입장 코드를 입력합니다.</p>
+            <p className="class-mgr-section-hint">학생은 책방 입장 화면에서 아래 참여 코드를 입력합니다.</p>
           )}
           {active.length === 0 ? (
             <p className="empty-note">아직 만든 반이 없어요.</p>
@@ -264,8 +264,8 @@ export default function ClassManagerModal({
                         className="btn-ghost class-mgr-regen"
                         onClick={() => handleRegenerateCode(c)}
                         disabled={busyId === c.id || regeneratingCodeIds.includes(c.id)}
-                        title="새 입장 코드를 발급해요. 지금 코드는 더 이상 쓸 수 없어요"
-                        aria-label="입장 코드 재발급"
+                        title="새 참여 코드를 발급해요. 지금 코드는 더 이상 쓸 수 없어요"
+                        aria-label="참여 코드 재발급"
                       >
                         🔄
                         {/* 좁은 화면에서는 글자만 접습니다 — 세 단추가 이름을 밀어냅니다 */}
@@ -320,7 +320,7 @@ export default function ClassManagerModal({
                       className="btn-ghost"
                       onClick={() => handleUnarchive(c)}
                       disabled={busyId === c.id}
-                      title="다시 운영 중인 반으로 되돌립니다(새 입장 코드 발급)"
+                      title="다시 운영 중인 반으로 되돌립니다(새 참여 코드 발급)"
                     >
                       ♻️ 복원
                     </button>

@@ -6,22 +6,19 @@
 //   - 중앙 여백: 서비스 타이틀 + 상세 설명
 //   - 오른쪽 상단: 로그인 / 회원가입 버튼 (클릭 시 모달)
 // -------------------------------------------------------------
-// 실서비스 모드: Firebase Authentication으로 실제 로그인/회원가입합니다
-// (이메일·비밀번호 + Google, lib/auth.js). 회원가입은 학생/선생님 역할을
-// 먼저 고르며, 선생님은 관리자 승인 후 권한이 부여됩니다.
-// 데모 모드(Firebase 미설정)에서는 입력값과 무관하게 임시 유저로 입장합니다.
+// 실서비스 모드: 구글 계정 하나로 로그인/회원가입합니다(lib/auth.js).
+// 학교 도메인 제한도 등록 코드도 없습니다 — 반에 들어가는 관문은 로그인 뒤
+// 교사가 미리 만든 **참여 코드**입니다(components/ClassEntry.jsx).
+// 회원가입은 학생/선생님을 먼저 고르며, 선생님은 관리자 승인 후 권한이
+// 부여됩니다(승인 전에는 학생 화면).
+// 데모 모드(Firebase 미설정)에서는 임시 사용자로 곧바로 입장합니다.
 // =============================================================
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isFirebaseConfigured } from "@/lib/firebase";
 import { useAuth } from "@/lib/authContext";
 import { backdropClose } from "@/lib/modal";
-import {
-  signUpWithEmail,
-  signInWithEmail,
-  signInWithGoogle,
-  SCHOOL_EMAIL_DOMAIN,
-} from "@/lib/auth";
+import { signInWithGoogle } from "@/lib/auth";
 import { isInAppBrowser } from "@/lib/browser";
 import SiteFooter from "@/components/SiteFooter";
 import { IconLogo } from "@/components/StatusIcons";
@@ -29,12 +26,6 @@ import { IconLogo } from "@/components/StatusIcons";
 // Firebase 인증 오류 코드를 한국어 메시지로
 function authErrorMessage(code) {
   const map = {
-    "auth/invalid-email": "이메일 형식이 올바르지 않습니다.",
-    "auth/user-not-found": "등록되지 않은 이메일입니다.",
-    "auth/wrong-password": "비밀번호가 올바르지 않습니다.",
-    "auth/invalid-credential": "이메일 또는 비밀번호가 올바르지 않습니다.",
-    "auth/email-already-in-use": "이미 가입된 이메일입니다.",
-    "auth/weak-password": "비밀번호는 6자 이상이어야 합니다.",
     "auth/popup-closed-by-user": "구글 로그인 창이 닫혔습니다. 카카오톡 등 앱 안에서 열었다면 브라우저(Chrome·Safari)에서 다시 시도해 주세요.",
     "auth/popup-blocked": "브라우저가 로그인 창을 막았어요. 팝업 차단을 해제한 뒤 다시 시도해 주세요.",
     "auth/cancelled-popup-request": "로그인 창이 중복으로 열려 취소됐어요. 다시 시도해 주세요.",
@@ -42,17 +33,10 @@ function authErrorMessage(code) {
     "auth/operation-not-allowed": "구글 로그인이 꺼져 있어요. 선생님께 알려 주세요.",
     "auth/network-request-failed": "네트워크 연결을 확인하고 다시 시도해 주세요.",
     "auth/too-many-requests": "잠시 후 다시 시도해 주세요.",
-    // 도메인 제한은 이제 등록 코드가 정합니다 — '이 코드로는'이라고 짚어 줘야
-    // 손님용 코드를 받은 사람이 계정을 바꿔 가며 헤매지 않습니다.
-    "auth/school-domain-required": `이 등록 코드는 학교 이메일(@${SCHOOL_EMAIL_DOMAIN})로만 가입할 수 있습니다.`,
-    "auth/registration-code-invalid": "등록 코드가 올바르지 않습니다. 선생님께 받은 코드를 다시 확인해 주세요.",
-    // 코드를 '확인하지 못한' 경우 — 코드가 틀린 게 아니라 서버 설정 문제라
-    // 학생이 아무리 다시 입력해도 통과하지 못합니다. 그래서 학생을 붙잡지 않고
-    // 선생님께 알리도록 안내합니다.
-    "auth/registration-code-unavailable":
-      "등록 코드를 확인할 수 없습니다. 잠시 후 다시 시도하고, 계속 안 되면 선생님께 알려 주세요.",
+    "auth/profile-check-failed":
+      "계정 정보를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.",
     "auth/profile-create-failed":
-      "가입 정보를 저장하지 못했습니다. 등록 코드를 다시 확인하고, 계속 안 되면 선생님께 알려 주세요.",
+      "가입 정보를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.",
     // 프로필을 읽지 못해 막힌 경우(주로 보안 규칙 문제) — '비밀번호가 틀렸나'
     // 하고 헤매지 않도록 따로 구분해 줍니다.
     "permission-denied":
@@ -81,14 +65,10 @@ export default function LandingPage() {
   const router = useRouter();
   const [authMode, setAuthMode] = useState(null); // null | 'login' | 'signup'
   const [signupRole, setSignupRole] = useState(null); // 회원가입 시 선택: 'student' | 'teacher'
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [regCode, setRegCode] = useState(""); // 회원가입 시 선생님이 알려준 등록 코드
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   // 카카오톡 등 인앱 브라우저 — 구글이 이 안에서의 OAuth 로그인 자체를
-  // 막아, 학교 이메일(구글) 계정만 가입이 안 되고 이메일·비밀번호는
-  // 되는 신고의 가장 흔한 원인입니다. 서버에는 navigator가 없어 마운트
+  // 막습니다. 가입·로그인이 구글 하나뿐이라 여기서 미리 알려야 합니다. 서버에는 navigator가 없어 마운트
   // 후에만 판별합니다.
   const [inApp, setInApp] = useState(false);
   useEffect(() => {
@@ -108,7 +88,7 @@ export default function LandingPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [authMode]);
 
-  // 열리면 첫 입력칸으로 포커스를 옮겨 줍니다.
+  // 열리면 첫 단추로 포커스를 옮겨 줍니다.
   useEffect(() => {
     if (authMode) firstFieldRef.current?.focus();
   }, [authMode]);
@@ -117,7 +97,6 @@ export default function LandingPage() {
   function switchMode(mode) {
     setAuthMode(mode);
     setSignupRole(null);
-    setRegCode("");
     setError("");
   }
 
@@ -144,8 +123,7 @@ export default function LandingPage() {
     }
   }, [authStatus, router]);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  async function handleGoogle() {
     if (!isFirebaseConfigured) {
       // 데모 모드 — 바로 입장
       router.push("/books");
@@ -154,34 +132,8 @@ export default function LandingPage() {
     setError("");
     setBusy(true);
     try {
-      if (authMode === "signup") {
-        await signUpWithEmail(email.trim(), password, signupRole, regCode);
-      } else {
-        await signInWithEmail(email.trim(), password);
-      }
-      router.push("/books");
-    } catch (err) {
-      setError(authErrorMessage(err?.code));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleGoogle() {
-    setError("");
-    // "Google 계정으로 계속하기"는 type="button"이라 <form>의 required
-    // 검사(등록 코드 입력칸)를 거치지 않습니다 — 그냥 두면 코드 없이도
-    // 구글 팝업이 열려 버립니다. 팝업을 열기 전에 여기서 먼저 막습니다.
-    if (authMode === "signup" && !regCode.trim()) {
-      setError("등록 코드를 입력해 주세요.");
-      return;
-    }
-    setBusy(true);
-    try {
-      await signInWithGoogle(
-        authMode === "signup" ? signupRole : null,
-        authMode === "signup" ? regCode : ""
-      );
+      // 역할은 새로 가입할 때만 반영됩니다(이미 가입한 계정은 그대로 로그인).
+      await signInWithGoogle(authMode === "signup" ? signupRole : null);
       router.push("/books");
     } catch (err) {
       setError(authErrorMessage(err?.code));
@@ -263,11 +215,12 @@ export default function LandingPage() {
               </button>
             </div>
 
-            {/* 회원가입 1단계 — 역할 선택 (실서비스만; 데모는 바로 입력) */}
+            {/* 회원가입 1단계 — 역할 선택 (실서비스만; 데모는 바로 입장) */}
             {isFirebaseConfigured && authMode === "signup" && !signupRole ? (
               <div className="signup-role-select">
                 <p className="signup-role-q">어떤 역할로 가입하시나요?</p>
                 <button
+                  ref={firstFieldRef}
                   type="button"
                   className="signup-role-card"
                   onClick={() => setSignupRole("student")}
@@ -275,7 +228,7 @@ export default function LandingPage() {
                   <span className="signup-role-emoji">🎒</span>
                   <span className="signup-role-text">
                     <strong>학생</strong>
-                    <small>반에 들어가 독서 활동에 참여해요.</small>
+                    <small>가입한 뒤 선생님이 알려 준 참여 코드로 반에 들어가요.</small>
                   </span>
                 </button>
                 <button
@@ -286,12 +239,12 @@ export default function LandingPage() {
                   <span className="signup-role-emoji">🧑‍🏫</span>
                   <span className="signup-role-text">
                     <strong>선생님</strong>
-                    <small>반을 만들고 독서 활동을 운영해요. (관리자 승인 후 활성화)</small>
+                    <small>반과 참여 코드를 만들고 독서 활동을 운영해요. (관리자 승인 후 활성화)</small>
                   </span>
                 </button>
               </div>
             ) : (
-            <form className="form-grid" onSubmit={handleSubmit}>
+            <div className="form-grid">
               {authMode === "signup" && signupRole && (
                 <>
                   <div className="signup-role-chosen">
@@ -308,94 +261,60 @@ export default function LandingPage() {
                   </div>
                   {signupRole === "teacher" ? (
                     <p className="signup-role-note">
-                      선생님도 <strong>학교 이메일(@{SCHOOL_EMAIL_DOMAIN})</strong>로 가입해야 하며,
-                      권한은 <strong>관리자 승인 후</strong> 부여됩니다. 승인 전까지는 학생으로
-                      이용할 수 있어요.
+                      구글 계정으로 가입하면 <strong>선생님 신청</strong>이 관리자에게 전달되고,
+                      권한은 <strong>관리자 승인 후</strong> 부여됩니다. 승인되면 반과 참여 코드를
+                      만들 수 있어요.
                     </p>
                   ) : (
-                    // 어떤 이메일을 받아 줄지는 등록 코드가 정합니다 — 손님용
-                    // 코드는 개인 계정도 허용하므로 '학교 이메일만'이라고
-                    // 단정하면 손님이 시도해 보지도 않고 돌아섭니다.
                     <p className="signup-role-note">
-                      가입은 <strong>학교 이메일(@{SCHOOL_EMAIL_DOMAIN})</strong>로 하는 것이
-                      기본이에요. <strong>손님용 등록 코드</strong>를 받았다면 다른 이메일이나
-                      개인 구글 계정으로도 가입할 수 있어요.
+                      구글 계정으로 가입한 뒤, 선생님이 알려 준 <strong>참여 코드</strong>를
+                      입력하면 우리 반에 들어갑니다. 코드를 <strong>3번 틀리면 5분</strong> 동안
+                      입력할 수 없어요.
                     </p>
                   )}
-                  <label className="sr-only" htmlFor="auth-regcode">등록 코드</label>
-                  <input
-                    id="auth-regcode"
-                    type="text"
-                    autoComplete="off"
-                    placeholder="등록 코드 (선생님께 받은 코드)"
-                    value={regCode}
-                    onChange={(e) => setRegCode(e.target.value)}
-                    maxLength={24}
-                    required
-                  />
                 </>
               )}
-              {/* placeholder는 입력을 시작하면 사라져 라벨을 대신할 수 없습니다.
-                  화면에는 보이지 않되 스크린 리더가 읽는 라벨을 따로 답니다. */}
-              <label className="sr-only" htmlFor="auth-email">이메일</label>
-              <input
-                id="auth-email"
-                ref={firstFieldRef}
-                type="email"
-                autoComplete="email"
-                placeholder="이메일"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-              <label className="sr-only" htmlFor="auth-password">비밀번호 (6자 이상)</label>
-              <input
-                id="auth-password"
-                type="password"
-                autoComplete={authMode === "login" ? "current-password" : "new-password"}
-                placeholder="비밀번호 (6자 이상)"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+              {authMode === "login" && (
+                <p className="signup-role-note">
+                  가입할 때 쓴 <strong>구글 계정</strong>으로 로그인합니다.
+                </p>
+              )}
+
+              {inApp && isFirebaseConfigured && (
+                <p className="auth-inapp-warning" role="alert">
+                  ⚠️ 카카오톡 등 앱 안에서 열린 화면이에요. 구글 로그인은
+                  여기서 막힐 수 있으니, 우측 상단 메뉴에서 &apos;다른
+                  브라우저로 열기&apos;를 눌러 Chrome이나 Safari에서
+                  다시 시도해 주세요.
+                </p>
+              )}
 
               {error && (
                 <p className="auth-error" role="alert">{error}</p>
               )}
 
-              <button type="submit" className="btn-primary" disabled={busy}>
-                {busy ? "처리 중…" : authMode === "login" ? "로그인" : "회원가입"}
+              <button
+                ref={authMode === "login" ? firstFieldRef : undefined}
+                type="button"
+                className="btn-google"
+                onClick={handleGoogle}
+                disabled={busy}
+              >
+                <GoogleMark />{" "}
+                {busy
+                  ? "처리 중…"
+                  : authMode === "signup"
+                    ? "Google 계정으로 가입하기"
+                    : "Google 계정으로 로그인"}
               </button>
-
-              {isFirebaseConfigured && (
-                <>
-                  <div className="auth-divider"><span>또는</span></div>
-                  {inApp && (
-                    <p className="auth-inapp-warning" role="alert">
-                      ⚠️ 카카오톡 등 앱 안에서 열린 화면이에요. 구글 로그인은
-                      여기서 막힐 수 있으니, 우측 상단 메뉴에서 &apos;다른
-                      브라우저로 열기&apos;를 눌러 Chrome이나 Safari에서
-                      다시 시도해 주세요.
-                    </p>
-                  )}
-                  <button
-                    type="button"
-                    className="btn-google"
-                    onClick={handleGoogle}
-                    disabled={busy}
-                  >
-                    <GoogleMark /> Google 계정으로 계속하기
-                  </button>
-                </>
-              )}
 
               {!isFirebaseConfigured && (
                 <div className="dev-note">
-                  🔧 <strong>데모 모드</strong> — Firebase 미설정 상태라 입력값과
-                  무관하게 임시 사용자로 입장합니다.
+                  🔧 <strong>데모 모드</strong> — Firebase 미설정 상태라 구글 로그인 없이
+                  임시 사용자로 입장합니다.
                 </div>
               )}
-            </form>
+            </div>
             )}
           </div>
         </div>

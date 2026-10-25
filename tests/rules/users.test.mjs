@@ -8,14 +8,10 @@
 import { describe, it, before, after, beforeEach } from "node:test";
 import { assertSucceeds, assertFails } from "@firebase/rules-unit-testing";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
-import { makeEnv, asStudent, asTeacher, seed } from "./helpers.mjs";
+import { makeEnv, asStudent, asTeacher, asAdmin, seed } from "./helpers.mjs";
 
-// 초기(최고) 관리자 — 규칙이 이메일로 판정하므로 클레임 없이도 admin입니다.
-const asInitialAdmin = (env) =>
-  env.authenticatedContext("rootAdmin", {
-    email: "iseoul72@gmail.com",
-    email_verified: true,
-  });
+// 최고 관리자 — role 클레임으로만 정해집니다(이메일을 규칙에 박아 두지 않음).
+const asInitialAdmin = (env) => asAdmin(env, "rootAdmin");
 
 describe("사용자 프로필 규칙", () => {
   let env;
@@ -32,7 +28,7 @@ describe("사용자 프로필 규칙", () => {
     await seed(env, async (db) => {
       await setDoc(doc(db, "users", "stu1"), {
         uid: "stu1", role: "student", realName: "학생A", studentId: "30101",
-        displayName: "다급한 달팽이", emoji: "🐌", email: "stu1@hansung.hs.kr",
+        displayName: "다급한 달팽이", emoji: "🐌", email: "stu1@example.com",
       });
       await setDoc(doc(db, "users", "teacherA"), {
         uid: "teacherA", role: "teacher", realName: "김선생", displayName: "선생님", emoji: "🧑‍🏫",
@@ -88,7 +84,7 @@ describe("사용자 프로필 규칙", () => {
       await assertSucceeds(
         updateDoc(doc(db, "users", "stu1"), {
           displayName: "느긋한 판다", emoji: "🐼", realName: "홍길동",
-          email: "stu1@hansung.hs.kr", studentId: "30102",
+          email: "stu1@example.com", studentId: "30102",
         })
       );
     });
@@ -242,12 +238,24 @@ describe("사용자 프로필 규칙", () => {
   });
 
   describe("최고 관리자", () => {
+    // 예전 최고 관리자 이메일이라도 클레임이 없으면 관리자가 아닙니다.
+    it("이메일만으로는 관리자가 아니다", async () => {
+      const db = env
+        .authenticatedContext("someone", {
+          email: "iseoul72@gmail.com",
+          email_verified: true,
+          firebase: { sign_in_provider: "google.com" },
+        })
+        .firestore();
+      await assertFails(updateDoc(doc(db, "users", "stu1"), { role: "teacher" }));
+    });
+
     it("역할을 부여할 수 있다", async () => {
       const db = asInitialAdmin(env).firestore();
       await assertSucceeds(updateDoc(doc(db, "users", "stu1"), { role: "teacher" }));
     });
 
-    it("자기 문서를 admin으로 맞출 수 있다 (부트스트랩 자가 치유)", async () => {
+    it("자기 문서를 admin으로 맞출 수 있다 (클레임에 맞춘 자가 치유)", async () => {
       const db = asInitialAdmin(env).firestore();
       await assertSucceeds(
         updateDoc(doc(db, "users", "rootAdmin"), {

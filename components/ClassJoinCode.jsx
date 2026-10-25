@@ -1,9 +1,9 @@
 "use client";
 
 // =============================================================
-// 반별 입장 코드 — 카드 안 한 줄 + 전체 화면(칠판 투사)
+// 반별 참여 코드 — 카드 안 한 줄 + 전체 화면(칠판 투사)
 // -------------------------------------------------------------
-// 반 관리하기의 카드에서는 '입장 코드 · 코드 · 유효기간 · 전체 화면'이
+// 반 관리하기의 카드에서는 '참여 코드 · 코드 · 유효기간 · 전체 화면'이
 // 한 줄로 섭니다(반이 여섯이면 그만큼 되풀이되는 줄이라 짧아야 합니다).
 // '코드 재발급'은 이 줄이 아니라 카드 머리줄의 편집(✏) 옆에 있습니다 —
 // 반에 하는 일끼리 한자리에 모으고, 여기는 보기만 하는 줄로 둡니다.
@@ -73,7 +73,7 @@ export default function ClassJoinCode({
 
   return (
     <div className="class-joincode" onDragStart={(event) => { event.preventDefault(); event.stopPropagation(); }}>
-      <span className="joincode-label">입장 코드</span>
+      <span className="joincode-label">참여 코드</span>
       <span className="joincode-value" aria-live="polite">{codeInfo?.code ?? "—"}</span>
       {expiry && <span className={`joincode-expiry${expired ? " expired" : ""}`}>{expiry}</span>}
       <button ref={triggerRef} type="button" className="btn-ghost joincode-expand" onClick={() => setFullscreen(true)} aria-haspopup="dialog">
@@ -84,7 +84,7 @@ export default function ClassJoinCode({
           <button type="button" className="btn-ghost joincode-close" onClick={() => setFullscreen(false)} aria-label="전체 화면 닫기">닫기 ×</button>
           <div className="joincode-fullscreen-content">
             <h2 id={titleId} className="joincode-class">{classroom.name}</h2>
-            <p className="joincode-label">입장 코드</p>
+            <p className="joincode-label">참여 코드</p>
             <p className="joincode-value" aria-live="polite">{codeInfo?.code ?? "—"}</p>
             <p className="joincode-hint">책방 입장 화면에서 이 코드를 입력하세요</p>
             {expiry && <p className={`joincode-expiry${expired ? " expired" : ""}`}>{expiry}</p>}

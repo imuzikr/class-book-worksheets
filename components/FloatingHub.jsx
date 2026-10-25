@@ -107,7 +107,7 @@ const TEACHER_ITEMS = [
   { key: "quiz", label: "돌발 퀴즈", hint: "퀴즈를 보내고 답을 확인해요", event: POPQUIZ_OPEN_EVENT },
   { key: "kwl", label: "KWLS 차트", hint: "반의 KWLS 현황을 펼쳐요", href: "/books?open=kwl" },
   { key: "attend", label: "출석 관리", hint: "출석을 시작하고 기록을 봐요", href: "/books?open=attendance" },
-  { key: "classes", label: "반 관리", hint: "반 · 입장 코드 · 자리와 모둠", href: "/books?open=classes" },
+  { key: "classes", label: "반 관리", hint: "반 · 참여 코드 · 자리와 모둠", href: "/books?open=classes" },
   { key: "fruit", label: "과일 바구니", hint: "바구니 합계와 이벤트 현황", href: "/books?open=fruit" },
 ];
 

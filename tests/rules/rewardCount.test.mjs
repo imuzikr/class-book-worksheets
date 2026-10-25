@@ -47,7 +47,7 @@ describe("student reward count subscription", () => {
     });
   });
 
-  for (const [classId, uid, email] of [["guestRoom", "guest", "guest@gmail.com"], ["school", "student", "student@hansung.hs.kr"]]) {
+  for (const [classId, uid, email] of [["guestRoom", "guest", "guest@gmail.com"], ["school", "student", "student@example.com"]]) {
     it(`${classId}: observes the first and second reward without reconnecting`, async () => {
       const db = env.authenticatedContext(uid, { email, email_verified: true }).firestore();
       const teacher = asAdmin(env, "admin").firestore();

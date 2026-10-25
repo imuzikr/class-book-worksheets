@@ -316,7 +316,7 @@ export default function StudyProgressBoard({
           </p>
         ) : roster.length === 0 ? (
           <p className="lesson-note-empty">
-            이 반에 입장한 학생이 없어요. 입장 코드를 알려 주세요.
+            이 반에 입장한 학생이 없어요. 참여 코드를 알려 주세요.
           </p>
         ) : (
           /* 잔디 히트맵 — 한 줄이 활동 하나, 한 칸이 학생 한 명(가로 배치).

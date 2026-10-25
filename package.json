@@ -10,6 +10,7 @@
     "test:rules": "npm --prefix tests/rules test",
     "lint": "npm --prefix tools/lint run lint",
     "deploy": "bash scripts/deploy.sh",
+    "admin:grant": "node functions/scripts/grant-admin.mjs",
     "books:to-solo": "node functions/scripts/consonant-to-solo.mjs",
     "books:rescue": "node functions/scripts/rescue-activity.mjs",
     "books:purge-orphans": "node functions/scripts/purge-orphan-notifications.mjs",
