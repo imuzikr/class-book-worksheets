@@ -10859,6 +10859,14 @@ pre code {
   background: var(--neutral);
   border: 1px solid var(--border);
 }
+/* 자리 없음(브레인 라이팅 — 모둠이 작아 그 차례가 없는 칸) — 빈 점선 네모 */
+.progress-mark--none,
+.grass-cell--none {
+  background: transparent;
+  border: 1px dashed var(--border);
+}
+.grass-cell--none { cursor: default; }
+.grass-cell--none:hover { transform: none; }
 .progress-legend {
   display: flex;
   flex-wrap: wrap;
@@ -21771,7 +21779,9 @@ button.wall-who-btn.open strong { color: var(--primary-dark); }
 .mate-raft-plan dt { font-size: 11.5px; font-weight: 700; color: var(--text-sub); }
 .mate-raft-plan dd { margin: 2px 0 0; font-size: 13px; color: var(--text); overflow-wrap: anywhere; }
 .mate-raft-plan dd em { font-style: normal; color: var(--text-faint); }
-.mate-raft-write strong { display: block; font-size: 12.5px; color: var(--text-sub); margin-bottom: 4px; }
+/* 글쓰기도 네 요소처럼 흰 칸 하나 — 칸 없이 바탕에 흘러 다른 덩이로 안 읽혔습니다 */
+.mate-raft-write { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px 10px; }
+.mate-raft-write strong { display: block; font-size: 11.5px; font-weight: 700; color: var(--text-sub); margin-bottom: 4px; }
 .mate-raft-write p { margin: 0; font-size: 14px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text); }
 @media (max-width: 760px) {
   .peer-split { grid-template-columns: minmax(0, 1fr); }
@@ -23469,6 +23479,10 @@ span.cloud-word { cursor: default; }
      수업 중에 교사가 답을 읽는 창이라 넉넉해야 합니다. */
   width: 100%;
   max-width: 960px;
+  /* 높이를 못 박습니다(선생님 요청) — 영역마다 글 양이 달라 넘길 때마다 창이
+     늘었다 줄었다 했습니다. 가장 긴 RAFT 글쓰기에 맞춘 값이고, 모자라면 본문만
+     구릅니다. 곁텍스트 · KWLS · 물음표 · 해시태그도 같은 창이라 함께 고정됩니다. */
+  height: min(780px, 88vh);
   max-height: 88vh;
   display: flex;
   flex-direction: column;
@@ -23682,6 +23696,38 @@ span.cloud-word { cursor: default; }
 .entry-cast[data-size="lg"] .entry-cast-prompt {
   font-size: clamp(15px, 1.3vw, 19px);
   margin-bottom: 18px;
+}
+
+/* RAFT 글쓰기 — '한 눈에 보기' 카드 모양(EntryCastCard · `look: "card"`).
+   학생 방송 화면과 교사의 수업 화면 창이 같은 조각입니다. 글자 크기는 위의
+   data-size 단계(`.entry-cast-body .paratext-read-text`)가 그대로 정합니다. */
+.entry-cast--card { background: var(--bg); }
+.entry-cast-card .eov-lead { margin: 0 0 16px; }
+.entry-cast-card .eov-card { box-shadow: none; padding: 18px 22px 22px; }
+.entry-cast-card .eov-text { color: var(--text); }
+.entry-cast--card .eov-lead { font-size: clamp(16px, 1.4vw, 22px); }
+.entry-cast--card .eov-card-head .paratext-card-title strong { font-size: clamp(18px, 1.6vw, 26px); }
+.entry-cast--card .eov-state { font-size: 13px; padding: 4px 11px; }
+.entry-cast--card .eov-prompt { font-size: clamp(13px, 1.1vw, 17px); }
+.entry-cast--card .eov-field { padding: 16px 20px; }
+/* 화면에 맞추기(fit) — 카드가 방송 칸의 높이를 다 쓰고, 글 칸이 남는 높이를 받아
+   그 안에 다 들도록 EntryCastCard가 --fit-size를 잽니다. */
+.broadcast-overlay--entry .broadcast-body:has(.entry-cast--fit) { padding: 20px 24px; }
+.entry-cast--fit {
+  width: min(97vw, 1650px);
+  align-self: stretch;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 22px 30px 26px;
+}
+.entry-cast-card--fit { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.entry-cast-card--fit .eov-card { flex: 1; min-height: 0; }
+.entry-cast-card--fit .eov-fields { flex: 1; min-height: 0; overflow-y: auto; }
+.entry-cast-card--fit .eov-fields .eov-text {
+  font-size: var(--fit-size, 24px);
+  line-height: 1.6;
+  font-weight: 400;
 }
 
 /* 두 칸 꾸러미(물음표로 책 읽기 — `columns: 2`) — 칸을 둘씩 한 줄로.
@@ -27788,20 +27834,9 @@ ul.checklist > li.done {
   gap: 6px;
 }
 
-/* 모둠 줄 오른쪽 끝의 단추 묶음 — '받은 한 마디'와 '동료 평가' */
+/* 모둠 줄 오른쪽 끝의 단추 묶음 — '동료 평가' */
 .peer-row-actions { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; }
 .peer-row-actions .peer-open-btn { margin-left: 0; }
-.peer-got-btn { padding: 6px 12px; font-size: 12.5px; }
-.peer-got-btn em {
-  font-style: normal;
-  margin-left: 6px;
-  padding: 1px 7px;
-  border-radius: 999px;
-  background: var(--primary);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 800;
-}
 /* 잠긴 동안의 '동료 평가' — 자리는 남기되 지금은 쓰는 자리가 아님을 색으로 */
 .peer-open-btn.is-locked { color: var(--text-sub); }
 .peer-open-btn.is-locked em { background: var(--neutral); color: var(--text-sub); }
@@ -28958,13 +28993,14 @@ h4.attendance-seat-help { margin-top: 16px; }
   line-height: 1.5;
 }
 
-/* 영역 띠 색 — 메모 색과 같은 식구에서, 영역끼리 겹치지 않게 */
-.tint-peach { --tint-bg: #ffe4d4; --tint-ink: #b8663f; --tint-wash: rgba(255, 220, 200, 0.18); }
-.tint-mint { --tint-bg: #d9f3e6; --tint-ink: #3f8a68; --tint-wash: rgba(212, 242, 227, 0.22); }
-.tint-sky { --tint-bg: #dcecff; --tint-ink: #4d7fb8; --tint-wash: rgba(215, 234, 255, 0.22); }
-.tint-lavender { --tint-bg: #ebe3fc; --tint-ink: #7b62b8; --tint-wash: rgba(231, 222, 251, 0.22); }
-.tint-butter { --tint-bg: #fdf0c4; --tint-ink: #9a7a1e; --tint-wash: rgba(253, 240, 196, 0.24); }
-.tint-rose { --tint-bg: #fde0e8; --tint-ink: #b65473; --tint-wash: rgba(253, 224, 232, 0.22); }
+/* 영역 색 — 판 위에서 영역이 한눈에 갈리도록 바탕을 또렷하게 칠합니다
+   (선생님이 주신 그림의 색). 한때 흰색에 가까운 띠 하나뿐이라 영역끼리
+   잘 안 갈렸습니다. --tint-zone 영역 바탕 · --tint-line 경계선 · --tint-ink 글자 */
+.tint-mint { --tint-zone: #d5faf1; --tint-line: #5cc5a8; --tint-ink: #2f8a72; }
+.tint-rose { --tint-zone: #f9dbdb; --tint-line: #e15241; --tint-ink: #c2453a; }
+.tint-lime { --tint-zone: #e4fee0; --tint-line: #69c44b; --tint-ink: #4a8f35; }
+.tint-peach { --tint-zone: #fbeacc; --tint-line: #ef8a4f; --tint-ink: #c06a2f; }
+.tint-sky { --tint-zone: #ddedfc; --tint-line: #5a9be0; --tint-ink: #3a74b8; }
 
 .opinion-board {
   border: 1.5px solid #eee0cb;
@@ -28978,35 +29014,22 @@ h4.attendance-seat-help { margin-top: 16px; }
   overflow-y: hidden;
   box-shadow: 0 1px 2px rgba(120, 90, 50, 0.05);
 }
-/* 판 = 여섯 칸 격자 하나. 칸마다 6/줄의 칸 수만큼 차지합니다
-   (1~3개 한 줄 · 4개 2×2 · 5개 위 2 · 아래 3 · 6개 3×2 — lib/opinion.js의
-   opinionZoneRows와 같은 셈). 줄은 높이를 똑같이 나눠 갖습니다. */
+.opinion-heads,
 .opinion-body {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  grid-template-rows: repeat(var(--rows, 1), minmax(0, 1fr));
-  min-width: calc(var(--cols, 2) * 200px);
+  grid-template-columns: repeat(var(--zones, 2), minmax(0, 1fr));
+  min-width: calc(var(--zones, 2) * 200px);
 }
-.opinion-cell {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 0;
-}
-.opinion-cell.is-right { border-left: 1.5px dashed #e9d6bb; }
-.opinion-cell.is-lower { border-top: 1.5px dashed #e9d6bb; }
-/* 높이 50px은 OPINION_HEAD_H와 같아야 합니다(메모가 그 아래에서 시작) */
 .opinion-zone-head {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex: 0 0 50px;
-  box-sizing: border-box;
-  height: 50px;
   min-width: 0;
-  padding: 0 14px;
-  border-bottom: 1.5px dashed #e9d6bb;
+  padding: 10px 14px;
+  background: var(--tint-zone);
+  border-bottom: 2px solid var(--tint-line);
 }
+.opinion-zone-head + .opinion-zone-head { border-left: 2px solid var(--tint-line); }
 .opinion-zone-head strong {
   min-width: 0;
   overflow: hidden;
@@ -29014,7 +29037,8 @@ h4.attendance-seat-help { margin-top: 16px; }
   white-space: nowrap;
   padding: 4px 13px;
   border-radius: 999px;
-  background: var(--tint-bg);
+  border: 1.5px solid var(--tint-line);
+  background: #fff;
   color: var(--tint-ink);
   font-size: 15px;
   font-weight: 800;
@@ -29034,27 +29058,22 @@ h4.attendance-seat-help { margin-top: 16px; }
   line-height: 1;
   cursor: pointer;
 }
-.opinion-zone-add:hover { background: var(--tint-bg); border-style: solid; }
+.opinion-zone-add:hover { background: #fff; border-style: solid; }
 /* 한 장을 이미 붙인 학생 — 꺼진 ＋(까닭은 툴팁) */
 .opinion-zone-add:disabled { opacity: 0.4; cursor: not-allowed; }
 .opinion-zone-add:disabled:hover { background: transparent; border-style: dashed; }
 
-/* 메모가 서는 판 — 높이가 곧 자리 셈의 boardH입니다(머리 포함).
-   두 줄이면 한 줄일 때보다 키워 칸마다 메모 두어 장이 설 자리를 둡니다. */
+/* 메모가 서는 몸통 — 높이가 곧 자리 셈의 zoneH입니다 */
 .opinion-body {
   position: relative;
-  height: clamp(470px, calc(100vh - 290px), 830px);
-}
-.opinion-board--rows2 .opinion-body {
-  height: clamp(640px, calc(100vh - 230px), 1100px);
+  height: clamp(420px, calc(100vh - 340px), 780px);
 }
 .opinion-zone {
-  flex: 1;
-  min-height: 0;
   background:
-    radial-gradient(circle at 1px 1px, rgba(150, 120, 80, 0.13) 1px, transparent 0) 0 0 / 22px 22px,
-    linear-gradient(180deg, var(--tint-wash), transparent 60%);
+    radial-gradient(circle at 1px 1px, rgba(90, 70, 40, 0.12) 1px, transparent 0) 0 0 / 22px 22px,
+    var(--tint-zone);
 }
+.opinion-zone + .opinion-zone { border-left: 2px solid var(--tint-line); }
 .opinion-empty {
   position: absolute;
   inset: 0;
@@ -29283,6 +29302,7 @@ h4.attendance-seat-help { margin-top: 16px; }
   cursor: pointer;
 }
 .opinion-zone-chip.on { background: #fff; border-color: var(--note-ink); color: var(--note-ink); }
+.opinion-zone-chip:disabled { opacity: 0.4; cursor: not-allowed; }
 .opinion-swatches { display: flex; flex-wrap: wrap; gap: 9px; }
 .opinion-swatch {
   width: 30px;
@@ -29298,6 +29318,65 @@ h4.attendance-seat-help { margin-top: 16px; }
 .opinion-modal .modal-actions { margin-top: 20px; }
 .opinion-modal-tools { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
 .opinion-modal-remove { color: #b42318; }
+
+/* ── 닉네임 칸 — 익명(nick) 활동에서 글마다 ── */
+.opinion-nick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-bottom: 10px; }
+.opinion-nick > span { flex-shrink: 0; font-size: 13px; font-weight: 700; color: var(--text-sub); }
+.opinion-nick input { flex: 1 1 180px; min-width: 0; max-width: 280px; padding: 7px 11px; font-size: 14px; }
+.opinion-nick em { flex-basis: 100%; font-style: normal; font-size: 12px; color: var(--text-faint); }
+.opinion-modal .opinion-nick > span,
+.opinion-modal .opinion-nick em { color: var(--note-ink); }
+
+/* ── 목록형 — 영역마다 한 칸, 글이 올린 차례대로 쌓임 ── */
+.opinion-list-body {
+  display: grid;
+  grid-template-columns: repeat(var(--zones, 2), minmax(0, 1fr));
+  min-width: calc(var(--zones, 2) * 200px);
+  /* 창 바닥까지 — 높이는 OpinionBoard가 판의 자리를 재어 --list-h로 줍니다
+     (위에 서는 머리말 · 물음 줄의 높이가 화면마다 달라 고정 값으로는 중간에서
+     끊긴 듯 보였습니다). 재기 전에는 아래 값. */
+  min-height: var(--list-h, clamp(300px, calc(100vh - 340px), 900px));
+}
+.opinion-list-col { padding: 10px; background: var(--tint-zone); }
+.opinion-list-col + .opinion-list-col { border-left: 2px solid var(--tint-line); }
+.opinion-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.opinion-list-item {
+  display: flex;
+  gap: 9px;
+  padding: 10px 12px;
+  border: 1px solid rgba(90, 70, 40, 0.12);
+  border-left: 4px solid var(--note-ink);
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  transition: box-shadow 0.15s, transform 0.1s;
+}
+.opinion-list-item:hover { box-shadow: 0 3px 10px rgba(120, 90, 50, 0.12); transform: translateY(-1px); }
+.opinion-list-item:focus-visible { outline: 2.5px solid var(--tint-line); outline-offset: 2px; }
+.opinion-list-item.is-mine { background: var(--note-bg); }
+.opinion-list-no {
+  flex-shrink: 0;
+  min-width: 20px;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--tint-ink);
+  font-variant-numeric: tabular-nums;
+}
+.opinion-list-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.opinion-list-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--text);
+}
+.opinion-list-who { align-self: flex-start; font-size: 12px; font-weight: 700; color: var(--note-ink); }
+.opinion-list-item.is-teacher .opinion-list-who::before { content: "✦ "; }
+.opinion-list-empty { margin: 8px 4px; font-size: 13px; color: var(--text-faint); }
 
 /* 만들기 · 편집 창의 영역 이름 칸 — 한 줄에 둘씩 */
 .opinion-zone-inputs {
@@ -29325,15 +29404,16 @@ h4.attendance-seat-help { margin-top: 16px; }
 }
 .opinion-zone-del:hover { background: var(--bg-deep); color: var(--text); }
 .opinion-zone-more { justify-self: start; }
-/* 만들기 창은 한 줄에 셋 — 영역이 여섯이어도 두 줄이라 창 높이(908px)를 안 넘깁니다 */
-.opinion-zone-inputs--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* 만들기 창은 고른 개수(2~4)가 한 줄에 같은 폭으로 — 판의 영역 차례와 같게 */
+.opinion-zone-inputs--row { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
 
 /* 좁은 화면 — 영역을 짜부라뜨리지 않고 판이 옆으로 구릅니다 */
 @media (max-width: 768px) {
   .opinion-bar { flex-wrap: wrap; }
   .modal.opinion-modal { padding: 30px 20px 20px; }
   .opinion-modal-text { font-size: 18px; }
-  .opinion-zone-inputs { grid-template-columns: 1fr; }
+  .opinion-zone-inputs,
+  .opinion-zone-inputs--row { grid-template-columns: 1fr; grid-auto-flow: row; }
 }
 
 /* =============================================================
@@ -33037,4 +33117,177 @@ button.msgr-receipt:hover { color: var(--text-sub); }
   font-size: 13px;
   text-decoration: underline;
   cursor: pointer;
+}
+
+/* =============================================================
+   브레인 라이팅 (BrainWriteForm · BrainWriteBoard)
+   모둠원마다 세로 칸(컬럼) 하나 — 맨 위 주인의 첫 줄, 그 아래로 이어 쓴 줄.
+   ============================================================= */
+.bw-prompt {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 12px 16px;
+  background: var(--primary-light);
+  border-radius: var(--radius);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--dark);
+  line-height: 1.5;
+}
+.bw-prompt-tag {
+  flex: none;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.bw-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.bw-rail {
+  background: var(--card-bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+}
+.bw-rail h3 { margin: 0 0 8px; font-size: 13.5px; color: var(--text-sub); }
+.bw-rail ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.bw-rail-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 11px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-btn);
+  background: #fff;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+.bw-rail-item:hover { border-color: var(--primary); }
+.bw-rail-item.on { border-color: var(--primary); background: var(--primary-light); }
+.bw-rail-name { display: flex; align-items: center; gap: 6px; min-width: 0; font-weight: 600; }
+.bw-rail-name em,
+.bw-row-who em {
+  font-style: normal;
+  font-size: 11.5px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+}
+.bw-rail-state { flex: none; font-size: 12px; color: var(--text-faint); }
+.bw-rail-item.done .bw-rail-state { color: #3f8f5c; font-weight: 700; }
+
+.bw-col {
+  max-width: 760px;
+  width: 100%;
+  margin: 0;
+  background: var(--card-bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.bw-col--read { max-width: none; }
+/* 교사 가운데 — 컬럼을 칸 가운데에, 그 위에 같은 폭의 머리(이름 · 모둠 · 수업 시작) */
+.bw-col-wrap {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.bw-col-top {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+}
+.bw-col-top h2 { margin: 0; font-size: 19px; display: flex; align-items: baseline; gap: 6px; }
+.bw-col-top h2 em { font-style: normal; font-size: 13px; color: var(--text-sub); font-weight: 500; }
+.bw-col-top .bw-cast-btn { margin-left: auto; }
+.bw-col-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 18px;
+  border-bottom: 1.5px solid var(--border);
+  background: var(--bg);
+}
+.bw-col-head strong { font-size: 18px; color: var(--dark); }
+.bw-col-head span { font-size: 12.5px; color: var(--text-sub); }
+.bw-rows { list-style: none; margin: 0; padding: 0; }
+.bw-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 18px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.bw-row:last-child { border-bottom: none; }
+.bw-row.filled { border-left: 4px solid #8cc79f; padding-left: 14px; }
+.bw-row.mine { background: #fffaf6; border-left: 4px solid var(--primary); padding-left: 14px; }
+.bw-row-who {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+.bw-row-who b {
+  width: 20px;
+  height: 20px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--neutral);
+  font-size: 11.5px;
+  color: var(--text-sub);
+}
+.bw-row-save { margin-left: auto; font-size: 12px; font-weight: 500; color: var(--text-faint); }
+.bw-row-save.saved { color: #3f8f5c; }
+.bw-row-save.error { color: #c0392b; }
+.bw-row-text { margin: 0; font-size: 15px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text); }
+.bw-row-text.empty { color: var(--text-faint); font-size: 13.5px; }
+.bw-row-hint { margin: 0; font-size: 12.5px; color: var(--text-sub); }
+.bw-rail-item.ready .bw-rail-state { color: var(--primary-dark); font-weight: 700; }
+/* 앞 사람이 아직 안 써서 잠긴 내 줄 — 쓰는 칸 자리를 같은 높이로 지킵니다 */
+.bw-row-wait {
+  margin: 0;
+  min-height: 84px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-btn);
+  background: var(--bg);
+  font-size: 13.5px;
+  color: var(--text-sub);
+  text-align: center;
+  padding: 10px 14px;
+}
+.bw-row-input {
+  width: 100%;
+  min-height: 84px;
+  resize: vertical;
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.6;
+}
+@media (max-width: 768px) {
+  .bw-layout { grid-template-columns: minmax(0, 1fr); }
 }

@@ -17,6 +17,15 @@
 // 아니면 누르기(크게 보기). 끄는 동안은 화면에서만 움직이고, 놓는 순간
 // 영역 + 영역 안의 비율로 바꿔 한 번 저장합니다(lib/opinion.js).
 // 저장이 돌아오기 전에 원래 자리로 튀지 않게 놓은 자리를 잠깐 붙들어 둡니다.
+//
+// [판 모양] 활동의 layout — memo(메모지, 위 그대로) / list(목록). 목록이면
+// 영역 머리의 ＋가 쓰기 창(메모지와 같은 창, 색 고르기만 뺌)을 열고, '제출'한
+// 글은 그 영역 칸에
+// **올린 차례대로** 한 줄씩 쌓입니다. 줄을 누르면 같은 크게 보기 창이 뜹니다.
+// 자료는 같은 opinionNotes라 메모지 ↔ 목록을 오가도 글이 그대로입니다
+// (목록에서 쓴 글도 자리 x·y를 함께 적어 둡니다).
+// [이름표] 활동의 nameMode — nick이면 학생이 글마다 **닉네임을 직접** 적습니다
+// (안 적으면 알림 창). 고른 닉네임은 다음 글에 미리 채웁니다(내 글 · 이 기기).
 // =============================================================
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -28,19 +37,24 @@ import {
 } from "@/lib/store";
 import {
   OPINION_COLORS,
+  OPINION_NICK_MAX,
   OPINION_TEXT_MAX,
   canAddOpinionNote,
+  myZoneCount,
+  cleanNickname,
   nextNoteSpot,
+  nicknameProblem,
   noteAuthorLabel,
   noteRealLabel,
   noteStackTime,
   noteTilt,
   normalizeZones,
   opinionColor,
+  opinionLayout,
+  opinionListByZone,
+  opinionNameMode,
   opinionNoteMode,
   opinionStats,
-  OPINION_HEAD_H,
-  opinionZoneRows,
   pixelsFromPlace,
   placeFromPixels,
   zoneOfNote,
@@ -50,13 +64,23 @@ import { backdropClose } from "@/lib/modal";
 import ConfirmModal from "./ConfirmModal";
 import { IconBook, IconLock, IconUnlock } from "./StatusIcons";
 
+// 닉네임을 이 기기에 기억 — 다음 활동에서도 같은 이름으로 시작하게
+const nickStoreKey = (uid) => `opinion_nick:${uid}`;
+function readStoredNick(uid) {
+  try { return uid ? localStorage.getItem(nickStoreKey(uid)) || "" : ""; } catch { return ""; }
+}
+function storeNick(uid, nick) {
+  try { if (uid && nick) localStorage.setItem(nickStoreKey(uid), nick); } catch { /* 막힌 저장소 — 다음에 다시 적으면 됨 */ }
+}
+const randomColor = () => OPINION_COLORS[Math.floor(Math.random() * OPINION_COLORS.length)].key;
+
 // 메모지 크기 — CSS의 .opinion-note와 같은 값이어야 자리 셈이 맞습니다.
 const NOTE_W = 176;
 const NOTE_H = 142;
 // 이만큼 움직여야 '끌기' — 그보다 작으면 누른 것으로 봅니다(손 떨림).
 const DRAG_SLOP = 4;
-// 영역마다 머리 띠 색 — 메모 색과 같은 식구에서 고르되 겹치지 않게.
-const ZONE_TINTS = ["peach", "mint", "sky", "lavender", "butter", "rose"];
+// 영역 색(바탕 · 경계선) — globals.css의 .tint-*. 차례는 선생님이 주신 그림대로.
+const ZONE_TINTS = ["mint", "rose", "lime", "peach", "sky"];
 
 export default function OpinionBoard({
   activity,
@@ -100,16 +124,30 @@ export default function OpinionBoard({
   const labelOf = (n) => noteAuthorLabel(n);
   const realOf = (n) => noteRealLabel(n, rosterById.get(n.authorId) ?? null);
 
-  // ── 줄 나누기 — 영역마다 몇째 줄 · 몇째 칸인가 ──
-  const zoneRows = opinionZoneRows(zones.length);
-  const cellRow = [];
-  const cellCol = [];
-  zoneRows.forEach((cols, r) => {
-    for (let c = 0; c < cols; c += 1) { cellRow.push(r); cellCol.push(c); }
-  });
-
   // ── 판 크기 재기 — 자리 셈이 픽셀을 알아야 합니다 ──
   const bodyRef = useRef(null);
+  // 목록 판은 창 바닥까지 — 판이 선 자리에서 창 끝까지를 잽니다. 판 아래에
+  // 붙는 것(판 테두리 · 페이지 여백)만큼 빼서 페이지 스크롤이 안 생기게.
+  const listRef = useRef(null);
+  const [listH, setListH] = useState(0);
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return undefined;
+    const measure = () => {
+      const r = el.getBoundingClientRect();
+      const top = r.top + window.scrollY;
+      const board = el.closest(".opinion-board");
+      const main = el.closest("main");
+      const below =
+        (board ? board.getBoundingClientRect().bottom - r.bottom : 0) +
+        (main ? parseFloat(getComputedStyle(main).paddingBottom) || 0 : 0);
+      const h = Math.max(300, Math.round(window.innerHeight - top - below - 12));
+      setListH((prev) => (prev === h ? prev : h));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  });
   const [box, setBox] = useState({ w: 0, h: 0 });
   useEffect(() => {
     const el = bodyRef.current;
@@ -132,12 +170,47 @@ export default function OpinionBoard({
   const [error, setError] = useState("");
 
   const isMine = (n) => !!uid && n.authorId === uid;
-  // 붙이기 — 한 사람에 한 장이면 이미 붙인 학생은 더 못 붙입니다(고치고 옮기는
-  // 것은 그대로). 교사 메모(byTeacher)는 세지 않습니다.
+  const layout = opinionLayout(activity);
+  const isList = layout === "list";
+  const unit = isList ? "글" : "메모";
+  const nameMode = opinionNameMode(activity);
+  const askNick = !isTeacher && nameMode === "nick";
+
+  // 닉네임 — 내가 이 활동에 마지막으로 쓴 닉네임, 없으면 이 기기에 적어 둔 것.
+  // 손대기 시작하면 더는 덮지 않습니다.
+  const [nick, setNickRaw] = useState("");
+  const nickTouched = useRef(false);
+  const setNick = (v) => { nickTouched.current = true; setNickRaw(v); };
+  const myLastNick = useMemo(() => {
+    const mine = notes.filter((n) => uid && n.authorId === uid && n.nick && n.authorName);
+    mine.sort((a, b) => noteStackTime(b) - noteStackTime(a));
+    return mine[0]?.authorName ?? "";
+  }, [notes, uid]);
+  useEffect(() => {
+    if (!askNick || !loaded || nickTouched.current) return;
+    setNickRaw(myLastNick || readStoredNick(uid));
+  }, [askNick, loaded, myLastNick, uid]);
+  // 쓰는 사람 이름표(미리 보기) — 판 모양과 상관없이 같은 셈
+  const composeLabel = isTeacher
+    ? "선생님"
+    : nameMode === "nick"
+      ? cleanNickname(nick) || "닉네임"
+      : nameMode === "real"
+        ? noteAuthorLabel({ real: true, studentId: user?.studentId, authorName: user?.realName || user?.displayName })
+        : noteAuthorLabel({ anon: true, authorName: user?.displayName });
+  // 붙이기 — 한 장 모드는 **영역마다** 한 장입니다. 그 영역에 이미 붙인 학생은
+  // 그 영역에만 더 못 붙이고, 다른 영역에는 붙입니다(고치는 것은 그대로).
+  // 교사 메모(byTeacher)는 세지 않습니다.
   const noteMode = opinionNoteMode(activity);
-  const myStudentNotes = isTeacher ? 0 : notes.filter((n) => isMine(n) && !n.byTeacher).length;
-  const canPost = canAddOpinionNote({ mode: noteMode, myCount: myStudentNotes, isTeacher, locked });
-  const usedMyOne = !isTeacher && !locked && !canPost;
+  const singleStudent = !isTeacher && noteMode === "single";
+  const canPostIn = (zoneKey) =>
+    canAddOpinionNote({
+      mode: noteMode,
+      myCount: isTeacher ? 0 : myZoneCount(notes, zones, uid, zoneKey),
+      isTeacher,
+      locked,
+    });
+  const canPost = !locked || isTeacher;
   const canMove = (n) => isTeacher || (isMine(n) && !locked);
   const canEdit = (n) => isMine(n) && !locked;
   const canRemove = (n) => isTeacher || (isMine(n) && !locked);
@@ -147,6 +220,7 @@ export default function OpinionBoard({
     [notes]
   );
   const { byZone, writers } = useMemo(() => opinionStats(notes, zones), [notes, zones]);
+  const listByZone = useMemo(() => opinionListByZone(notes, zones), [notes, zones]);
   // 교사 머리말의 '쓴 학생 n / N' — **지금 명단에 있는** 학생만 셉니다
   // (반에서 빠진 학생의 메모까지 세면 분자가 분모를 넘습니다).
   const rosterWriters = useMemo(
@@ -163,7 +237,7 @@ export default function OpinionBoard({
   }
   function pixelsOf(n) {
     const p = placeOf(n);
-    return pixelsFromPlace({ ...p, boardW: box.w, boardH: box.h, headH: OPINION_HEAD_H, noteW: NOTE_W, noteH: NOTE_H, zones });
+    return pixelsFromPlace({ ...p, boardW: box.w, zoneH: box.h, noteW: NOTE_W, noteH: NOTE_H, zones });
   }
 
   // ── 누르기 / 끌기 ──
@@ -210,8 +284,14 @@ export default function OpinionBoard({
     setDrag(null);
     if (!cur) return;
     const place = placeFromPixels({
-      px: cur.left, py: cur.top, boardW: box.w, boardH: box.h, headH: OPINION_HEAD_H, noteW: NOTE_W, noteH: NOTE_H, zones,
+      px: cur.left, py: cur.top, boardW: box.w, zoneH: box.h, noteW: NOTE_W, noteH: NOTE_H, zones,
     });
+    // 영역마다 한 장 — 학생은 제 메모를 다른 영역으로 못 옮깁니다(옮긴 뒤 빈
+    // 영역에 또 붙이면 한 영역에 두 장이 됩니다). 제자리로 돌아갑니다.
+    if (singleStudent && place.zone !== zoneOfNote(n, zones)) {
+      setError("메모는 영역마다 한 장이라, 붙인 영역 안에서만 옮길 수 있어요.");
+      return;
+    }
     setPending((p) => ({ ...p, [n.id]: place }));
     try {
       await moveOpinionNote(activity.id, n.id, place);
@@ -228,10 +308,14 @@ export default function OpinionBoard({
 
   // ── 붙이기 · 고치기 · 떼어 내기 ──
   async function createNote({ text, color, zone }) {
+    if (!canPostIn(zone)) throw new Error("이 영역에는 이미 글을 남겼어요. 다른 영역을 골라 주세요.");
     const spot = nextNoteSpot(byZone.get(zone) ?? 0);
     await addOpinionNote(activity.id, user, {
       text, color, zone, ...spot, byTeacher: isTeacher, single: noteMode === "single",
+      nameMode: isTeacher ? "auto" : nameMode,
+      nickname: nick,
     });
+    if (askNick) storeNick(uid, cleanNickname(nick));
   }
   async function saveNote(n, { text, color, zone }) {
     await updateOpinionNote(activity.id, n.id, { text, color });
@@ -263,11 +347,11 @@ export default function OpinionBoard({
             {topic && <span className="book-group-topic">{topic}</span>}
             {classPicker ?? (className && <span className="book-group-class">{className}</span>)}
             <span className="paratext-sum">
-              메모 {notes.length}장
+              {unit} {notes.length}{isList ? "개" : "장"}
               {isTeacher && studentTotal > 0
                 ? ` · 쓴 학생 ${rosterWriters} / ${studentTotal}명`
                 : !isTeacher && myCount > 0
-                  ? ` · 내 메모 ${myCount}장`
+                  ? ` · 내 ${unit} ${myCount}${isList ? "개" : "장"}`
                   : ""}
             </span>
             {locked && (
@@ -300,48 +384,119 @@ export default function OpinionBoard({
         <p className="form-error" role="alert" onClick={() => setError("")}>{error}</p>
       )}
 
-      <section
-        className={`opinion-board${zoneRows.length > 1 ? " opinion-board--rows2" : ""}`}
-        style={{ "--cols": Math.max(...zoneRows), "--rows": zoneRows.length }}
-        aria-label="메모판"
-      >
-        {/* 영역 칸 — 머리(이름 · 개수 · ＋)와 바탕을 한 칸에 그립니다. 줄이
-            여럿이라(4개 2×2 · 5개 2/3 · 6개 3×2) 머리를 한 줄로 따로 둘 수
-            없습니다. 격자는 여섯 칸이고 칸마다 6/줄의 칸 수만큼 차지합니다.
-            메모는 그 위 한 겹에 절대 배치로 섭니다(영역을 넘나들며 끌 수 있게). */}
-        <div className="opinion-body" ref={bodyRef}>
-          {zones.map((z, i) => (
-            <div
-              key={z.key}
-              className={`opinion-cell tint-${ZONE_TINTS[i % ZONE_TINTS.length]}${
-                cellRow[i] > 0 ? " is-lower" : ""
-              }${cellCol[i] > 0 ? " is-right" : ""}`}
-              style={{ gridColumn: `span ${6 / zoneRows[cellRow[i]]}` }}
-            >
-              <div className="opinion-zone-head">
+      {isList ? (
+        <section className="opinion-board is-list" style={{ "--zones": zones.length }} aria-label="생각 목록">
+          <div className="opinion-heads">
+            {zones.map((z, i) => (
+              <div key={z.key} className={`opinion-zone-head tint-${ZONE_TINTS[i % ZONE_TINTS.length]}`}>
                 <strong>{z.name}</strong>
                 <span className="opinion-zone-count">{byZone.get(z.key) ?? 0}</span>
-                {/* 한 장을 이미 붙인 학생은 ＋가 꺼지고 까닭을 툴팁으로 —
-                    단추가 그냥 사라지면 고장으로 보입니다. */}
-                {(canPost || usedMyOne) && (
+                {canPost && (
                   <button
                     type="button"
                     className="opinion-zone-add"
-                    onClick={() => canPost && setComposeZone(z.key)}
-                    disabled={!canPost}
-                    aria-label={canPost ? `‘${z.name}’에 메모 붙이기` : "메모는 한 사람에 한 장이에요"}
+                    onClick={() => canPostIn(z.key) && setComposeZone(z.key)}
+                    disabled={!canPostIn(z.key)}
+                    aria-label={canPostIn(z.key) ? `‘${z.name}’에 글 쓰기` : "글은 영역마다 하나예요"}
                     title={
-                      canPost
-                        ? `‘${z.name}’에 메모 붙이기`
-                        : "메모는 한 사람에 한 장이에요 — 붙인 메모를 눌러 고칠 수 있어요"
+                      canPostIn(z.key)
+                        ? `‘${z.name}’에 글 쓰기`
+                        : "글은 영역마다 하나예요 — 이 영역의 내 글을 눌러 고칠 수 있어요"
                     }
                   >
                     ＋
                   </button>
                 )}
               </div>
-              <div className="opinion-zone" aria-hidden="true" />
+            ))}
+          </div>
+          <div className="opinion-list-body" ref={listRef} style={listH ? { "--list-h": `${listH}px` } : undefined}>
+            {zones.map((z, i) => {
+              const items = listByZone.get(z.key) ?? [];
+              return (
+                <div key={z.key} className={`opinion-list-col tint-${ZONE_TINTS[i % ZONE_TINTS.length]}`}>
+                  {!loaded ? (
+                    i === 0 && <p className="opinion-list-empty">불러오는 중이에요…</p>
+                  ) : items.length === 0 ? (
+                    <p className="opinion-list-empty">아직 글이 없어요.</p>
+                  ) : (
+                    <ol className="opinion-list">
+                      {items.map((n, k) => {
+                        const c = opinionColor(n.color);
+                        return (
+                          <li
+                            key={n.id}
+                            className={`opinion-list-item${isMine(n) ? " is-mine" : ""}${n.byTeacher ? " is-teacher" : ""}`}
+                            style={{ "--note-bg": c.bg, "--note-ink": c.ink }}
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`${k + 1}번 · ${labelOf(n)}의 글 — 눌러서 크게 보기`}
+                            onClick={() => setOpenId(n.id)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                setOpenId(n.id);
+                              }
+                            }}
+                          >
+                            <span className="opinion-list-no" aria-hidden="true">{k + 1}</span>
+                            <span className="opinion-list-main">
+                              <span className="opinion-list-text">{n.text}</span>
+                              <NoteWho
+                                note={n}
+                                label={labelOf(n)}
+                                real={isRevealed(n) ? realOf(n) : null}
+                                onToggle={canReveal(n) ? () => toggleReveal(n) : null}
+                                className="opinion-list-who"
+                              />
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ) : (
+      <section
+        className="opinion-board"
+        style={{ "--zones": zones.length }}
+        aria-label="메모판"
+      >
+        <div className="opinion-heads">
+          {zones.map((z, i) => (
+            <div key={z.key} className={`opinion-zone-head tint-${ZONE_TINTS[i % ZONE_TINTS.length]}`}>
+              <strong>{z.name}</strong>
+              <span className="opinion-zone-count">{byZone.get(z.key) ?? 0}</span>
+              {/* 한 장을 이미 붙인 학생은 ＋가 꺼지고 까닭을 툴팁으로 —
+                  단추가 그냥 사라지면 고장으로 보입니다. */}
+              {canPost && (
+                <button
+                  type="button"
+                  className="opinion-zone-add"
+                  onClick={() => canPostIn(z.key) && setComposeZone(z.key)}
+                  disabled={!canPostIn(z.key)}
+                  aria-label={canPostIn(z.key) ? `‘${z.name}’에 메모 붙이기` : "메모는 영역마다 한 장이에요"}
+                  title={
+                    canPostIn(z.key)
+                      ? `‘${z.name}’에 메모 붙이기`
+                      : "메모는 영역마다 한 장이에요 — 이 영역의 내 메모를 눌러 고칠 수 있어요"
+                  }
+                >
+                  ＋
+                </button>
+              )}
             </div>
+          ))}
+        </div>
+        <div className="opinion-body" ref={bodyRef}>
+          {/* 영역 칸 — 배경과 가르는 선만 그립니다. 메모는 그 위 한 겹에
+              절대 배치로 섭니다(영역을 넘나들며 끌 수 있게). */}
+          {zones.map((z, i) => (
+            <div key={z.key} className={`opinion-zone tint-${ZONE_TINTS[i % ZONE_TINTS.length]}`} aria-hidden="true" />
           ))}
           {!loaded ? (
             <p className="opinion-empty">불러오는 중이에요…</p>
@@ -397,20 +552,33 @@ export default function OpinionBoard({
           )}
         </div>
       </section>
+      )}
 
       {composeZone && (
         <OpinionNoteModal
           mode="new"
           zones={zones}
           initialZone={composeZone}
+          zoneAllowed={canPostIn}
           who={
             <NoteWho
-              note={isTeacher ? { byTeacher: true } : { anon: true, authorName: user?.displayName, authorEmoji: user?.emoji }}
-              label={isTeacher ? "선생님" : noteAuthorLabel({ anon: true, authorName: user?.displayName })}
+              note={
+                isTeacher
+                  ? { byTeacher: true }
+                  : nameMode === "auto"
+                    ? { anon: true, authorName: user?.displayName, authorEmoji: user?.emoji }
+                    : {}
+              }
+              label={composeLabel}
               className="opinion-modal-who"
             />
           }
-          authorLabel={isTeacher ? "선생님" : noteAuthorLabel({ anon: true, authorName: user?.displayName })}
+          authorLabel={composeLabel}
+          showColors={!isList}
+          submitLabel={isList ? "제출" : "메모 붙이기"}
+          askNick={askNick}
+          nick={nick}
+          onNick={setNick}
           onSave={async (v) => { await createNote(v); setComposeZone(null); }}
           onClose={() => setComposeZone(null)}
         />
@@ -430,6 +598,8 @@ export default function OpinionBoard({
             />
           }
           authorLabel={labelOf(openNote)}
+          showColors={!isList}
+          zoneAllowed={singleStudent ? (k) => k === zoneOfNote(openNote, zones) : undefined}
           canEdit={canEdit(openNote)}
           canRemove={canRemove(openNote)}
           onSave={(v) => saveNote(openNote, v)}
@@ -449,18 +619,26 @@ function OpinionNoteModal({
   note = null,
   zones,
   initialZone = null,
+  zoneAllowed = null,
   authorLabel,
   who = null,
   canEdit = false,
   canRemove = false,
+  showColors = true,
+  submitLabel = "메모 붙이기",
+  askNick = false,
+  nick = "",
+  onNick,
   onSave,
   onRemove,
   onClose,
 }) {
   const isNew = mode === "new";
+  const [nickAlert, setNickAlert] = useState(null);
+  const nickRef = useRef(null);
   const [editing, setEditing] = useState(isNew);
   const [text, setText] = useState(note?.text ?? "");
-  const [color, setColor] = useState(note?.color ?? OPINION_COLORS[Math.floor(Math.random() * OPINION_COLORS.length)].key);
+  const [color, setColor] = useState(note?.color ?? randomColor);
   const [zone, setZone] = useState(isNew ? initialZone : zoneOfNote(note, zones));
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
@@ -485,6 +663,10 @@ function OpinionNoteModal({
 
   async function submit() {
     if (!trimmed || saving) return;
+    if (isNew && askNick) {
+      const problem = nicknameProblem(nick);
+      if (problem) { setNickAlert(problem); return; }
+    }
     setSaving(true);
     setErr("");
     try {
@@ -524,6 +706,9 @@ function OpinionNoteModal({
 
         {editing ? (
           <>
+            {isNew && askNick && (
+              <NickField value={nick} onChange={onNick} inputRef={nickRef} />
+            )}
             <textarea
               ref={textRef}
               className="opinion-modal-input"
@@ -548,6 +733,12 @@ function OpinionNoteModal({
                     type="button"
                     className={`opinion-zone-chip${zone === z.key ? " on" : ""}`}
                     aria-pressed={zone === z.key}
+                    disabled={!!zoneAllowed && zone !== z.key && !zoneAllowed(z.key)}
+                    title={
+                      zoneAllowed && zone !== z.key && !zoneAllowed(z.key)
+                        ? isNew ? "이 영역에는 이미 글을 남겼어요" : "영역마다 한 장이라 다른 영역으로는 못 옮겨요"
+                        : undefined
+                    }
                     onClick={() => setZone(z.key)}
                   >
                     {z.name}
@@ -555,6 +746,7 @@ function OpinionNoteModal({
                 ))}
               </div>
             </div>
+            {showColors && (
             <div className="opinion-modal-pick">
               <span>색</span>
               <div className="opinion-swatches">
@@ -572,11 +764,12 @@ function OpinionNoteModal({
                 ))}
               </div>
             </div>
+            )}
             {err && <p className="form-error">{err}</p>}
             <div className="modal-actions">
               <button type="button" className="btn-ghost" onClick={cancelEdit}>취소</button>
               <button type="button" className="btn-primary" onClick={submit} disabled={!trimmed || saving}>
-                {saving ? "저장 중…" : isNew ? "메모 붙이기" : "저장"}
+                {saving ? "저장 중…" : isNew ? submitLabel : "저장"}
               </button>
             </div>
           </>
@@ -600,6 +793,12 @@ function OpinionNoteModal({
           </>
         )}
       </div>
+      {nickAlert && (
+        <NickAlert
+          problem={nickAlert}
+          onClose={() => { setNickAlert(null); setTimeout(() => nickRef.current?.focus(), 0); }}
+        />
+      )}
       {confirmRemove && (
         <ConfirmModal
           title="이 메모를 떼어 낼까요?"
@@ -649,5 +848,44 @@ function NoteWho({ note, label, real = null, onToggle = null, className = "opini
     >
       {body}
     </button>
+  );
+}
+
+// ─── 닉네임 칸 · 알림 ───────────────────────────────────────────
+// 익명 활동(nameMode 'nick')에서 학생이 글마다 적는 이름. 붙인 뒤에는 그 글의
+// 이름표를 못 바꾸므로(규칙) 쓰기 전에 받습니다. 내 글을 찾고 고칠 때 씁니다.
+function NickField({ value, onChange, inputRef }) {
+  return (
+    <label className="opinion-nick">
+      <span>닉네임</span>
+      <input
+        ref={inputRef}
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value.slice(0, OPINION_NICK_MAX))}
+        maxLength={OPINION_NICK_MAX}
+        placeholder="예: 생각하는 고양이"
+        aria-describedby="opinion-nick-help"
+      />
+      <em id="opinion-nick-help">친구들에게는 이 이름만 보여요 — 나중에 내 글을 찾을 때 써요.</em>
+    </label>
+  );
+}
+
+function NickAlert({ problem, onClose }) {
+  return (
+    <ConfirmModal
+      icon={<span aria-hidden="true">✍️</span>}
+      title={problem === "teacher" ? "‘선생님’은 쓸 수 없어요" : "닉네임을 입력해야 해요"}
+      description={
+        problem === "teacher"
+          ? "다른 닉네임을 적어 주세요. 친구들에게는 이 이름만 보여요."
+          : "이 활동은 익명이에요. 글을 올리기 전에 닉네임을 적어 주세요 — 나중에 내 글을 쉽게 찾고 고칠 수 있어요."
+      }
+      confirmLabel="닉네임 적으러 가기"
+      cancelLabel={null}
+      onConfirm={onClose}
+      onClose={onClose}
+    />
   );
 }
