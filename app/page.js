@@ -191,9 +191,9 @@ export default function LandingPage() {
           <img
             className="hero-art"
             src="/landing-reading.webp"
-            width={985}
-            height={343}
-            alt="네 친구가 책상에 둘러앉아 책을 펼쳐 들고 이야기를 나누는 그림"
+            width={1654}
+            height={725}
+            alt="도서관 책상에 둘러앉은 네 친구가 책을 펼쳐 들고 이야기하고, 뒤에서 두 친구가 책장의 책을 고르는 그림"
           />
           <button
             type="button"

@@ -237,7 +237,7 @@ html[data-auth-pending] .site-footer {
   margin-bottom: 20px;
 }
 
-/* 그림은 카드 폭을 다 씁니다 — 넓은 화면일수록 크게(원본 비율 그대로) */
+/* 그림은 카드 폭을 다 씁니다 — 넓은 화면일수록 크게(원본 비율 1654×725 그대로) */
 .hero-art {
   display: block;
   width: 100%;
