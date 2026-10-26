@@ -179,13 +179,42 @@ html[data-auth-pending] .site-footer {
   color: var(--dark);
 }
 
+/* 두 단추는 같은 크기(격자 두 칸) · 연한 초록 — 가운데 카드의 '생각 적어보기'와
+   같은 세이지 톤. 회원가입만 한 단계 짙게 채워 먼저 눈에 들어오게 합니다. */
 .landing-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
+.landing-actions button {
+  min-width: 92px;
+  height: 40px;
+  min-height: 0; /* 768px 아래 .btn-primary의 44px 터치 규칙이 한쪽만 키우지 않게 */
+  padding: 0 18px;
+  border-radius: var(--radius-btn);
+  border: 1px solid #c9d3c8;
+  font-size: 15px;
+  font-weight: 700;
+  color: #2f4a37;
+  background: #f6f8f4;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.landing-actions button:hover {
+  background: #e9efe6;
+  border-color: #b3c2b1;
+}
 .landing-actions .btn-primary {
-  padding: 10px 20px;
+  background: #dde8d8;
+  border-color: #bccbb9;
+}
+.landing-actions .btn-primary:hover {
+  background: #cfdecb;
+  border-color: #a9bca5;
+}
+@media (max-width: 768px) {
+  .landing-actions button { height: 44px; }
 }
 
 .btn-outline {
