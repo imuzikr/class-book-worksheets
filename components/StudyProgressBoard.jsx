@@ -23,8 +23,6 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { backdropClose } from "@/lib/modal";
 import {
   subscribeCardsForBoards,
-  fetchAnswerCounts,
-  subscribeQuestionsByAuthors,
   todayDateKey,
 } from "@/lib/store";
 import { stripHtml } from "@/lib/html";
@@ -95,21 +93,6 @@ export default function StudyProgressBoard({
   onOpenStudent = null,    // 정보창의 '카드 열어 보기' — 안 넘기면 버튼이 없습니다
   onClose,
 }) {
-  // 학생별 '질문 수' — 이 반 학생들이 쓴 질문만 받습니다.
-  // 예전에는 공부방 화면이 학교 전체 질문을 늘 받아 두고 그걸 넘겨줬는데,
-  // 이 전광판은 교사가 열었을 때만 필요합니다. 세는 기준은 그대로
-  // '이 학생이 지금까지 쓴 질문 전체'입니다 — 프로젝트 키워드로 좁히면
-  // 숫자가 달라지므로 작성자 기준으로 따로 받습니다.
-  const rosterUids = useMemo(
-    () => roster.map((s) => s.uid).filter(Boolean),
-    [roster]
-  );
-  const [questions, setQuestions] = useState([]);
-  useEffect(() => {
-    if (rosterUids.length === 0) { setQuestions([]); return; }
-    return subscribeQuestionsByAuthors(rosterUids, setQuestions);
-  }, [rosterUids]);
-
   const activities = board?.activities ?? [];
   const isGroup = board?.activityType === "group";
 
@@ -163,24 +146,6 @@ export default function StudyProgressBoard({
     return subscribeCardsForBoards(boardIdsKey.split(","), setAllCards);
   }, [boardIdsKey]);
 
-  // 답변 수는 질문 수를 함께 셀 수 있을 때만 셉니다 — 질문 수는 0인데
-  // 답변 수만 진짜 값이 뜨면 두 숫자가 어긋나 보입니다.
-  //
-  // 예전에는 이 조건이 'questions prop이 넘어왔는가'였습니다(안 넘어오면
-  // 빈 배열이라 길이 0). 이제 이 컴포넌트가 명단 기준으로 직접 받으므로,
-  // 셀 대상(명단)이 있으면 질문 수는 언제나 진짜 값입니다 — 반 학생이 아직
-  // 질문을 하나도 안 썼다는 이유로 칸을 숨길 이유는 없습니다(그 경우
-  // 0개가 사실입니다).
-  const rosterKey = roster.map((s) => s.uid).join(",");
-  const wantQnaStats = rosterUids.length > 0;
-  const [answerCounts, setAnswerCounts] = useState({});
-  useEffect(() => {
-    if (!rosterKey || !wantQnaStats) { setAnswerCounts({}); return; }
-    let alive = true;
-    fetchAnswerCounts(rosterKey.split(",")).then((c) => { if (alive) setAnswerCounts(c); });
-    return () => { alive = false; };
-  }, [rosterKey, wantQnaStats]);
-
   // 이 반이 출석을 실시한 날 수 — 출석률의 분모
   const attendDays = new Set(attendanceRecords.map((r) => r.date).filter(Boolean)).size;
 
@@ -209,9 +174,6 @@ export default function StudyProgressBoard({
       present: attendanceRecords.filter((r) => r.uid === uid).length,
       actDone,
       actTotal,
-      hasQna: wantQnaStats,
-      asked: questions.filter((q) => q.authorId === uid).length,
-      answered: answerCounts[uid] ?? 0,
       groupName: group?.name ?? null,
       groupSize: (group?.members ?? []).length,
     };
@@ -410,8 +372,9 @@ export default function StudyProgressBoard({
 // -------------------------------------------------------------
 // 이 프로젝트의 활동별 제출 여부는 잔디 격자가 이미 색으로 보여 주므로 여기서
 // 되풀이하지 않습니다. 대신 '이 학생은 평소 어떤가'를 모았습니다 —
-// 출석률, 반의 모든 프로젝트를 통틀어 본 활동 참여도, 질문방에서의 질문·답변
-// 수, 그리고 어느 모둠인지. 수업 중 한 학생을 짚어 볼 때 필요한 것들입니다.
+// 출석률, 반의 모든 프로젝트를 통틀어 본 활동 참여도, 그리고 어느 모둠인지.
+// (배움나눔에 있던 '질문방 질문·답변 수' 줄은 책 나눔에 질문방이 없어 걷었습니다.)
+// 수업 중 한 학생을 짚어 볼 때 필요한 것들입니다.
 function CellPopup({ row, stats, pos, onOpenStudent, onClose }) {
   const attendPct =
     stats.attendDays > 0 ? Math.round((stats.present / stats.attendDays) * 100) : null;
@@ -460,20 +423,6 @@ function CellPopup({ row, stats, pos, onOpenStudent, onClose }) {
                 <strong>{actPct}%</strong>
                 <small> · {stats.actDone}/{stats.actTotal}칸</small>
               </>
-            )}
-          </dd>
-        </div>
-        <div>
-          <dt>질문방</dt>
-          <dd>
-            {stats.hasQna ? (
-              <>
-                질문 <strong>{stats.asked}</strong>
-                <small> · </small>
-                답변 <strong>{stats.answered}</strong>
-              </>
-            ) : (
-              <small>기록 없음</small>
             )}
           </dd>
         </div>

@@ -71,36 +71,6 @@
           "order": "ASCENDING"
         }
       ]
-    },
-    {
-      "//": "pruneOldNotifications — 읽은 지 오래된 알림 정리: read==, createdAt <",
-      "collectionGroup": "notifications",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "read",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "//": "subscribeMyNotifications — 안 읽은 알림만 최신순: read==, createdAt desc",
-      "collectionGroup": "notifications",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "read",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
-      ]
     }
   ],
   "fieldOverrides": [

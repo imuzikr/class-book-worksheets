@@ -65,7 +65,10 @@ npm run deploy             # 규칙 시험 → firestore(rules·indexes) + stora
 
 - **반**은 앱에서 지우지 않고 **보관**합니다. 학생은 '반에서 빼기'로 명단에서만 뺍니다.
 - 완전히 지우려면 Firebase 콘솔을 씁니다 — Firestore에서 `classes/{반}` 문서를
-  지우면 하위 컬렉션까지 함께 지울지 묻습니다(그 반의 노트 · 과일 · 메신저 등).
+  지우면 그 아래 하위 컬렉션(그 반의 노트 · 과일 · 메신저 등)까지 함께 지워집니다.
+  CLI로는 `npx firebase-tools firestore:delete classes/<반 id> --recursive`가 같은
+  일을 합니다. 앱 코드(웹 SDK)의 문서 삭제는 그 문서 한 장만 지우고 하위 기록은
+  남기므로, 이 일은 앱 안에 두지 않았습니다.
   반 바깥에 있는 것(`bookActivities` · `memberships` · `attendanceRecords` ·
   `kwl` · `joinCodes`)은 `classId`로 따로 지웁니다. 로그인 계정은
   Authentication 탭에서 지우고, 그 사람의 `users/{uid}` 문서도 함께 지웁니다.

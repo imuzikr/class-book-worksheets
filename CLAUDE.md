@@ -147,15 +147,22 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
 ### 서버 함수 없이 돌리기 — 무엇이 바뀌었나
 
 - **반은 보관까지**입니다(반 관리하기에 '완전 삭제' 없음). 하위 기록까지 지우는 일은
-  서버 함수가 아니면 못 해서, 학기 정리는 Firebase 콘솔에서 합니다(반 문서를 지우면
-  하위 컬렉션째 지울지 묻습니다 — 반 바깥의 `bookActivities` · `memberships` ·
-  `attendanceRecords` · `kwl` · `joinCodes`는 `classId`로 따로).
+  앱 코드(웹 SDK의 `deleteDoc`은 문서 한 장만 지움)로는 못 해서, 학기 정리는 Firebase
+  콘솔에서 합니다 — 콘솔에서 반 문서를 지우면 하위 컬렉션까지 함께 지워집니다(CLI는
+  `firestore:delete classes/<id> --recursive`). 반 바깥의 `bookActivities` · `memberships` ·
+  `attendanceRecords` · `kwl` · `joinCodes`는 `classId`로 따로.
 - **학생 탈퇴 대신 '반에서 빼기'** — 명단에서만 빠지고 글은 남습니다. 로그인 계정은
   Authentication 탭에서, 프로필은 `users/{uid}` 문서를 콘솔에서 지웁니다.
 - **반 공지는 교사가 곧바로 씁니다** — `classes/{cId}/classNotices`에 한 장(`sendClassNotice`,
-  500자 · 고치기 · 지우기 없음). 학생 알림함(`users/{uid}/notifications`)에 나눠 쓰지 않고, 알림
+  500자 · 고치기 · 지우기 없음). 학생 알림함에 나눠 쓰지 않고, 알림
   벨이 그 반의 최근 5장을 구독해 안 읽은 것을 셉니다 — 읽음 표시는 `chatReads.rooms.notice`
   (서버 시각 ms). 시험 `tests/rules/classNotices.test.mjs`.
+- **개인 알림함(`users/{uid}/notifications`)은 걷었습니다** — 배움나눔에서 서버 함수가 새 답변 ·
+  채택 알림을 쓰던 자리라 늘 비어 있었습니다. 벨의 그 구독 · 정리 질의, 데이터 함수, 규칙의
+  `match`, 색인 둘을 함께 지웠습니다. 벨은 모둠 메모도 더는 구독하지 않습니다(쓰는 화면이 없음).
+- 공부중 전광판의 학생 정보창에서 **'질문방 질문 · 답변 수'** 줄과 그 구독을 걷었습니다(질문방이
+  없어 늘 0이던 값). 아래 원본 기록 가운데 개인 알림함 · 질문방 집계 함수를 다루는 대목은 이
+  저장소에 없는 이야기입니다.
 - 관리용 스크립트는 `scripts/admin/`(gcloud 로그인 + REST — 설치 없음).
 
 ## 주요 페이지
