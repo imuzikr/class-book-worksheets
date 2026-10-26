@@ -2,8 +2,8 @@
 
 // =============================================================
 // 메인 랜딩 페이지
-//   - 전체 배경: public/landing.png (학생들이 질문하는 일러스트)
-//   - 중앙 여백: 서비스 타이틀 + 상세 설명
+//   - 가운데: 디자인 시안 그대로 — 머리 제목 + 흰 카드(함께 책 읽는 일러스트
+//     public/landing-reading.webp + '생각 적어보기' → 회원가입 창)
 //   - 오른쪽 상단: 로그인 / 회원가입 버튼 (클릭 시 모달)
 // -------------------------------------------------------------
 // 실서비스 모드: 구글 계정 하나로 로그인/회원가입합니다(lib/auth.js).
@@ -182,16 +182,26 @@ export default function LandingPage() {
     </header>
 
     <main className="landing">
-      {/* ── 중앙 여백: 타이틀 + 상세 설명 (글래스 카드) ── */}
+      {/* ── 디자인 시안 그대로: 머리 제목 → 흰 카드(제목 · 그림 · 단추) ── */}
       <section className="hero">
-        <div className="hero-glass">
-          <h1>책 나눔</h1>
-          <p className="hero-sub">함께 읽고 생각을 나누는 우리 반 책방</p>
-          <div className="hero-desc">
-            <p>책을 읽으며 떠오른 낱말과 물음을 모아 보세요.</p>
-            <p>친구들과 한 판에 생각을 붙이고, 서로의 글에 한 마디를 남깁니다.</p>
-            <p>함께 읽으면 한 권의 책이 더 넓어집니다.</p>
-          </div>
+        <h1 className="hero-title">꼬리에 꼬리를 무는 책 나눔</h1>
+
+        <div className="hero-card">
+          <h2 className="hero-card-title">함께 읽고 생각을 나누는 공간</h2>
+          <img
+            className="hero-art"
+            src="/landing-reading.webp"
+            width={985}
+            height={343}
+            alt="네 친구가 책상에 둘러앉아 책을 펼쳐 들고 이야기를 나누는 그림"
+          />
+          <button
+            type="button"
+            className="hero-cta"
+            onClick={() => switchMode("signup")}
+          >
+            생각 적어보기 →
+          </button>
         </div>
       </section>
     </main>

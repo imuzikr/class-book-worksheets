@@ -151,12 +151,11 @@ html[data-auth-pending] .site-footer {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  /* public/landing-image.png — 학생 일러스트 배경 */
-  background-color: var(--bg);
-  background-image: url("/landing-image.png");
-  background-size: cover;
-  background-position: center bottom;
-  background-repeat: no-repeat;
+  /* 옅은 세이지 바탕 — 일러스트의 초록 책 · 책장과 어울리게. 그림은
+     배경이 아니라 가운데 흰 카드 안에 크게 섭니다(public/landing-reading.webp). */
+  background:
+    radial-gradient(1200px 520px at 50% -120px, #ffffff 0%, rgba(255, 255, 255, 0) 70%),
+    #f1f3ee;
 }
 
 /* 상단 바: 로고(왼쪽) + 로그인/회원가입(오른쪽) — 글래스 바 */
@@ -205,66 +204,67 @@ html[data-auth-pending] .site-footer {
   background: rgba(248, 236, 229, 0.85);
 }
 
-/* 중앙 여백: 타이틀 + 상세 설명 */
+/* 가운데: 디자인 시안 그대로 — 머리 제목 + 흰 카드 */
 .hero {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding: 9vh 24px 0;
+  width: min(1240px, 100%);
+  margin: 0 auto;
+  padding: 40px 28px 64px;
 }
 
-.hero h1 {
-  font-family: var(--font-serif);
-  font-size: clamp(40px, 6vw, 64px);
+/* 시안의 탭 줄 자리에 남긴 가는 선 하나로 머리와 카드를 가릅니다 */
+.hero-title {
+  font-size: clamp(22px, 2.6vw, 28px);
   font-weight: 700;
-  color: var(--dark);
-  letter-spacing: -1.5px;
-  text-shadow: 0 2px 4px rgba(255, 255, 255, 0.95), 0 2px 16px rgba(255, 255, 255, 0.85);
+  color: #2f3a31;
+  letter-spacing: -0.5px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid #dde2da;
 }
 
-/* 제목 일부 강조용 — 테라코타 포인트 */
-.hero h1 em,
-.hero h1 .accent {
-  font-style: normal;
-  color: var(--primary);
+.hero-card {
+  margin-top: 24px;
+  padding: 30px 30px 32px;
+  background: #fff;
+  border-radius: 22px;
+  box-shadow: 0 1px 3px rgba(46, 60, 46, 0.05), 0 10px 32px rgba(46, 60, 46, 0.06);
 }
 
-.hero-sub {
-  margin-top: 12px;
-  font-size: clamp(17px, 2.2vw, 24px);
+.hero-card-title {
+  font-size: clamp(19px, 2vw, 23px);
   font-weight: 700;
-  color: var(--text);
-  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.95), 0 1px 10px rgba(255, 255, 255, 0.85);
+  color: #2f3a31;
+  margin-bottom: 20px;
 }
 
-/* 글래스 카드: 타이틀 + 설명을 감싸는 반투명 유리판 */
-.hero-glass {
-  /* 뒤의 일러스트가 비치되, 너무 흐려지지 않도록 살짝 더 불투명하게 */
-  background: rgba(250, 249, 245, 0.16);
-  backdrop-filter: blur(6px) saturate(140%);
-  -webkit-backdrop-filter: blur(6px) saturate(140%);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: 0 12px 40px rgba(70, 50, 35, 0.08);
-  border-radius: 28px;
-  padding: 44px 52px;
-  max-width: 720px;
+/* 그림은 카드 폭을 다 씁니다 — 넓은 화면일수록 크게(원본 비율 그대로) */
+.hero-art {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 18px;
 }
 
-.hero-desc {
-  margin-top: 16px;
-  max-width: 560px;
+.hero-cta {
+  margin-top: 26px;
+  padding: 13px 22px;
+  border-radius: 14px;
+  border: 1px solid #c9d3c8;
+  background: #f6f8f4;
+  color: #2f4a37;
   font-size: 15px;
-  line-height: 1.7;
-  color: #5e5d56;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9), 0 1px 8px rgba(255, 255, 255, 0.75);
+  font-weight: 700;
 }
-.hero-desc p {
-  margin: 0 0 6px;
+.hero-cta:hover {
+  background: #e9efe6;
+  border-color: #b3c2b1;
 }
-.hero-desc p:last-child {
-  margin-bottom: 0;
+
+@media (max-width: 640px) {
+  .hero { padding: 24px 14px 40px; }
+  .hero-card { padding: 18px 14px 20px; border-radius: 18px; }
+  .hero-art { border-radius: 12px; }
+  .hero-cta { width: 100%; }
 }
 
 /* 로그인/회원가입 모달도 글래스 스타일 */
@@ -422,10 +422,6 @@ html[data-auth-pending] .site-footer {
 @media (max-width: 720px) {
   .landing-top {
     padding: 16px;
-  }
-
-  .hero {
-    padding-top: 6vh;
   }
 }
 
