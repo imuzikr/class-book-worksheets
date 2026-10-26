@@ -89,7 +89,6 @@ export default function OpinionBoard({
   roster = [],
   className = "",
   classPicker = null,
-  classTools = null,
   onBack,
 }) {
   const [notes, setNotes] = useState([]);
@@ -340,7 +339,6 @@ export default function OpinionBoard({
         <div className="books-head-title">
           <h1 className="book-group-title">{activity.title}</h1>
           <button type="button" className="btn-ghost" onClick={onBack}>← 활동 목록</button>
-          {classTools}
         </div>
         <div className="books-head-row">
           <div className="books-head-main">

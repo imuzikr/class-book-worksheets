@@ -3,8 +3,9 @@
 교실에서 함께 책을 읽고 생각을 나누는 **독서 활동 웹앱**입니다.
 [배움나눔(imuzikr/class-peer-qna)](https://github.com/imuzikr/class-peer-qna)의
 **책방(`/books`)** 을 떼어 따로 세운 앱이고, 책방 화면에 함께 붙어 있던 것
-('오늘' 패널 · '멋진 순간' 자리표와 과일 · KWLS 차트 · 성장 기록 · 수업 노트 서랍 ·
-돌발 퀴즈 · 손들기 · 메신저 · 학급 방송)은 그대로 가져왔습니다.
+('멋진 순간' 자리표와 과일 · 수업 노트 서랍 · 돌발 퀴즈 · 손들기 · 메신저 ·
+학급 방송)은 그대로 가져왔습니다. 함께 가져왔던 '오늘' 패널 · KWLS 차트 ·
+성장 기록은 걷었습니다(아래).
 
 ## 배움나눔과 무엇이 다른가
 
@@ -20,11 +21,26 @@
     `SeatGroupSetupModal`) · **'출석 관리'**(`StudyAttendanceModal`), 학생
     **'출석하기'**(선생님이 오늘 출석을 열었을 때만).
   - 반이 하나도 없는 교사에게는 목록 자리에 **'＋ 반 만들기'**가 섭니다.
-  - 떠 있는 동그라미(`FloatingHub`)의 행성은 `/books?open=kwl|notes|attendance|fruit|classes`
+  - 떠 있는 동그라미(`FloatingHub`)의 행성은 `/books?open=notes|attendance|fruit|classes`
     로 이 화면의 창을 엽니다(연 뒤 `open`만 지움). 학생 '리포트', 교사 '수업 관리 ·
     학생 분석'은 걷었고 교사에게 '반 관리'를 더했습니다.
-- **'오늘' 패널의 '카드' 칸은 안 섭니다** — 공부방 프로젝트가 없어서입니다
-  (`StudyTodayFeed`가 프로젝트가 없으면 출석 · 성찰 · 과일 셋만 그림).
+- **KWLS 차트 · 왼쪽 '오늘' 패널 · 성장 기록은 걷었습니다**(선생님 요청).
+  - **KWLS는 책방의 'KWLS로 성찰하기' 활동으로만** 씁니다. 머리말의 'KWLS 차트'
+    단추와 그 패널(`TeacherKwlPanel` · `KwlPanel` · `KwlFullscreenModal`), 동그라미의
+    KWLS 행성을 지웠습니다. 활동의 저장(`saveKwlsActivityEntry` — entries와 `kwl`
+    둘에 씀)과 교사 화면(`KwlsBoard` — `kwl`에서 읽음)은 그대로이고, 학생의 지난
+    KWLS는 수업 노트 창의 'KWLS 노트' 탭(`MyKwlsNotes`)에서 그대로 넘겨 봅니다.
+  - 왼쪽 '📌 오늘' 패널(`StudyActivityPanel` · `StudyTodayFeed`)을 지웠습니다.
+    `.books-body`에는 본문과 오른쪽 '멋진 순간'만 섭니다. 출석 기록 구독은
+    출석 관리 · '출석하기' · 자리표가 쓰므로 남겼습니다.
+  - 교사의 '성장 기록' 단추와 창(`ClassNotesTools` · `ClassNotesManagerModal` —
+    누가기록 · 수업 노트 · 수업 메모 탭)과 거기에만 쓰이던 조각(`CornellNotesPanel` ·
+    `CornellNoteReadModal` · `LessonMemoPanel`)을 지웠습니다. 보드들의 `classTools`
+    prop도 함께 걷었습니다. **자리표 팝오버의 '누가기록 열기'는 남아 있습니다**
+    (학생 한 명의 기록을 적고 보는 자리 — `StudentNotesModal`).
+  - 그 바람에 아무도 안 부르게 된 `StudyActivityWall` · `StudyProgressBoard` ·
+    `KwlSemesterHeatmap` · `UploadProgress`도 지웠습니다. 자료층 함수와
+    `globals.css`의 해당 클래스는 남아 있습니다(위 '자료층' 항목과 같은 까닭).
 - 알림 벨은 반 공지만 받습니다(질문 답변 · 모둠 메모로 옮겨 갈 화면이 없음).
 - **자료층(`lib/data/*`) · 규칙(`firestore.rules`)은 통째로 가져왔습니다.** 질문 ·
   공부방 프로젝트 · 수업 자료 같은 컬렉션의 함수와 규칙이 남아 있지만 화면이 부르지
@@ -181,7 +197,6 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
 | `components/TopNav.jsx` | 상단바(로고 · 책방 · 전광판 · 손들기 · 돌발 퀴즈 · 공지 · 알림 · 프로필) + 방송 오버레이 · 수업 노트 서랍 · 동그라미 |
 | `components/BookActivityForm.jsx` · `BookActivityEditModal.jsx` | 독서 활동 만들기 · 고치기 |
 | `components/ClassManagerModal.jsx` · `SeatGroupSetupModal.jsx` | 반 만들기 · 입장 코드 · 보관 / 자리 배정 · 기본 모둠 |
-| `components/StudyActivityPanel.jsx` · `StudyTodayFeed.jsx` | 왼쪽 '오늘' 패널 |
 | `components/StudyRewardPanel.jsx` | 오른쪽 '멋진 순간'(자리표 · 과일 · 모둠 현황) |
 | `lib/store.js` · `lib/data/*.js` | 데이터 함수의 입구 · 영역별 Firestore CRUD + Mock |
 | `lib/firebase.js` | Firebase 초기화 — 자리표시자면 데모 모드 |
@@ -222,24 +237,9 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
 실측(데모 1440px): 첫 카드 · 단추 top 모두 155 · 빈 목록 안내도 같은 높이 ·
 700px 가로 넘침 0 · 학생 화면은 단추 없이 격자가 가로를 다 씀.
 
-`ClassNotesTools`는 공부방 제목 줄, 책방 목록 머리말(반 고르는 줄 오른쪽),
-책방 모아보기 화면들의 제목 끝에 같은 것을 끼워 씁니다. 책방 쪽은
-`app/books/page.js`에서 **한 번 만들어** `classTools` prop으로 각 보드에
-내려 줍니다 — 보드마다 명단·반 정보를 따로 구독하지 않으려고요.
-
-왼쪽 **'📌 오늘' 패널**(오늘 이 반의 출석·카드·성찰·과일)도 공부방과 책방이
-같은 컴포넌트를 씁니다 — `StudyActivityPanel`에 `board={null}`을 주면 그
-모습이 됩니다. 책방은 `.books-body`(가로 flex)로 감싸 왼쪽에 놓았고,
-`studyBoards`·출석은 책방 페이지에서 따로 구독합니다. 첫 줄 안내는
-`todayNote`로 바꿉니다(책방에서는 이 자리가 활동 관리로 바뀌지 않으므로).
-접힘 상태는 두 화면이 같은 localStorage 키를 공유합니다.
-
-**'KWLS 차트' 패널**도 두 화면이 같습니다 — 머리말의 단추로 왼쪽 끝에서 폭을
-벌리며 열리고(`.study-kwl-slot`), 교사는 `TeacherKwlPanel`('반이 어디까지
-썼나'), 학생은 `KwlPanel`('내가 쓰는 곳')입니다. 책방 KWLS 활동도 공부방과
-같은 `kwl` 컬렉션에 쌓이므로, 오늘 현황을 보러 화면을 옮길 이유가 없습니다.
-책방에서는 **활동 목록 화면에서만** 답니다 — 활동을 열면 그 화면이 가로를 다
-쓰는 데다 여는 단추(머리말)가 사라져 닫을 길이 없어집니다(연 상태는 기억).
+한때 이 아래에 성장 기록 메뉴(`ClassNotesTools`) · 왼쪽 '📌 오늘' 패널 ·
+'KWLS 차트' 패널의 약속이 있었는데, 셋 다 걷었습니다(위 '배움나눔과 무엇이
+다른가'). **되살리지 마세요** — 되살리려면 선생님께 먼저 여쭙니다.
 
 ## 첫 화면 — '아직 모름'과 '없음'을 가릅니다
 

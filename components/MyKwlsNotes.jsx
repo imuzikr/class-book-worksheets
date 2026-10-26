@@ -110,7 +110,7 @@ export default function MyKwlsNotes({ classId, user, active = true }) {
   if (notes.length === 0) {
     return (
       <p className="empty-note">
-        아직 쓴 KWLS가 없어요. 책방의 ‘KWLS 차트’나 KWLS 활동에서
+        아직 쓴 KWLS가 없어요. 책방의 ‘KWLS로 성찰하기’ 활동에서
         적어 보세요.
       </p>
     );

@@ -58,11 +58,7 @@ import Toast from "@/components/Toast";
 import ConfirmModal from "@/components/ConfirmModal";
 import BookActivityForm from "@/components/BookActivityForm";
 import BookActivityEditModal from "@/components/BookActivityEditModal";
-import ClassNotesTools from "@/components/ClassNotesTools";
-import StudyActivityPanel from "@/components/StudyActivityPanel";
 import { isGroupedActivity } from "@/lib/bookGroups";
-import KwlPanel from "@/components/KwlPanel";
-import TeacherKwlPanel from "@/components/TeacherKwlPanel";
 import StudyRewardPanel from "@/components/StudyRewardPanel";
 import BookGroupBoard from "@/components/BookGroupBoard";
 import ConsonantCanvas from "@/components/ConsonantCanvas";
@@ -238,14 +234,10 @@ function BooksPageInner() {
   const [emptying, setEmptying] = useState(false);         // 휴지통 비우기 진행 중
   const [confirmEmpty, setConfirmEmpty] = useState(false); // 휴지통 통째로 비우기
   const [trashOpen, setTrashOpen] = useState(false);
-  // KWLS 차트 — 공부방과 같은 패널을 왼쪽에서 폭을 벌리며 밀어 넣습니다.
-  // 책방에서도 KWLS를 쓰므로(책방 활동의 KWLS는 공부방과 같은 `kwl` 컬렉션에
-  // 쌓입니다) '오늘 반이 어디까지 썼나'를 보러 공부방으로 건너가지 않게.
-  const [kwlPanelOpen, setKwlPanelOpen] = useState(false);
   // 편집 중인 활동 (교사)
   const [editingActivity, setEditingActivity] = useState(null);
   const [toast, setToast] = useState("");
-  // 왼쪽 '오늘' 패널용 — 공부방과 같은 자료를 봅니다(출석·카드·성찰·과일)
+  // 오늘 출석 기록 — 출석 관리 · 학생 '출석하기' · '멋진 순간' 자리표가 봅니다
   const [attendanceRecords, setAttendanceRecords] = useState([]);
   // 책 나눔에는 공부방이 없어, 공부방 머리말에 있던 창들을 여기서 엽니다 —
   // 반 관리하기 · 자리/모둠 · 출석 · 수업 노트 · 과일 바구니.
@@ -397,20 +389,17 @@ function BooksPageInner() {
 
   const attendedToday = !admin && attendanceRecords.some((r) => r.date === todayKey);
 
-  // ── 떠 있는 동그라미에서 온 바로가기 (?open=kwl|notes|attendance|fruit|classes) ──
+  // ── 떠 있는 동그라미에서 온 바로가기 (?open=notes|attendance|fruit|classes) ──
   // 연 뒤 `open`만 지웁니다(남겨 두면 창을 닫고 새로 고칠 때마다 다시 열립니다).
   const openParam = searchParams.get("open");
   useEffect(() => {
     if (!openParam) return;
-    if (openParam === "kwl") setKwlPanelOpen(true);
-    else if (openParam === "notes" && !admin) setNoteViewerOpen(true);
+    if (openParam === "notes" && !admin) setNoteViewerOpen(true);
     else if (openParam === "attendance") setAttendanceOpen(true);
     else if (openParam === "fruit") setFruitBasketOpen(true);
     else if (openParam === "classes" && admin) setClassManagerOpen(true);
     const rest = new URLSearchParams(searchParams.toString());
     rest.delete("open");
-    // 동그라미에서 연 창은 목록 화면 위에 뜹니다(KWLS 차트가 목록에서만 서므로)
-    if (openParam === "kwl") rest.delete("activity");
     const qs = rest.toString();
     router.replace(qs ? `/books?${qs}` : "/books");
   }, [openParam, admin, searchParams, router]);
@@ -621,19 +610,6 @@ function BooksPageInner() {
     }
   }
 
-  // 누가기록 관리·수업 메모 — 화면마다 다시 만들지 않고 이 한 덩어리를
-  // 목록 머리말과 모아보기 화면들의 제목 끝에 나눠 끼웁니다(교사 전용).
-  // 활동은 지금 고른 반의 것만 목록에 오르므로 명단(roster)도 그대로 맞습니다.
-  const classTools =
-    admin && classId ? (
-      <ClassNotesTools
-        classId={classId}
-        className={currentClass?.name ?? ""}
-        roster={roster}
-        user={user}
-      />
-    ) : null;
-
   // 활동 화면의 반 표시 — 목록 머리말의 반 고르개를 그대로 씁니다.
   // 예전에는 반 이름 배지 하나뿐이라, 다른 반의 활동을 보려면 '← 활동 목록'
   // 으로 나갔다가 거기서 반을 고쳐야 했습니다. 활동을 보다가 옆 반으로
@@ -697,55 +673,8 @@ function BooksPageInner() {
     <div className="board-shell">
       <TopNav active="books" />
 
-      {/* 왼쪽 '오늘' 패널 + 본문. 공부방과 같은 배치라 패널도 같은 컴포넌트를
-          그대로 씁니다(프로젝트를 넘기지 않으면 '오늘' 모습이 됩니다). */}
+      {/* 본문 + 오른쪽 '멋진 순간' 패널 */}
       <div className="books-body">
-        {/* KWLS 차트 — 공부방과 같은 패널·같은 여닫이(폭이 0에서 벌어지며
-            오른쪽을 밀어냅니다). 교사는 '반이 어디까지 썼나', 학생은 '내가
-            쓰는 곳'이라 담기는 것이 다릅니다. 자리도 공부방과 같은 맨 왼쪽 —
-            두 화면을 오갈 때 같은 것이 같은 자리에 있어야 합니다.
-            **목록 화면에서만** 답니다. 활동을 열면 그 화면이 가로를 다 쓰는
-            데다 여는 단추(머리말)가 사라져 닫을 길이 없어집니다. 열어 둔
-            것은 기억해 두어 목록으로 돌아오면 그대로 다시 펴집니다. */}
-        {classId && user && !activeActivity && (
-          <div
-            className={`study-kwl-slot${kwlPanelOpen ? " open" : ""}`}
-            aria-hidden={!kwlPanelOpen}
-          >
-            {kwlPanelOpen &&
-              (admin ? (
-                <TeacherKwlPanel
-                  classId={classId}
-                  user={user}
-                  roster={roster}
-                  onAward={currentClass?.archived ? null : awardReward}
-                  onClose={() => setKwlPanelOpen(false)}
-                />
-              ) : (
-                <KwlPanel
-                  classId={classId}
-                  user={user}
-                  isTeacher={false}
-                  /* 모바일에선 폭을 벌릴 자리가 없어 떠 있는 패널로 열립니다 */
-                  mobileOpen={kwlPanelOpen}
-                  onMobileClose={() => setKwlPanelOpen(false)}
-                />
-              ))}
-          </div>
-        )}
-
-        {admin && classId && (
-          <StudyActivityPanel
-            board={null}
-            isTeacher={admin}
-            classRoster={roster}
-            classId={classId}
-            boards={NO_BOARDS}
-            attendanceRecords={attendanceRecords}
-            todayNote="오늘 이 반에서 일어난 일이에요."
-          />
-        )}
-
       {/* 여섯 개의 해시태그 — 교사는 두 칸(학생 목록·슬라이드, '수업 시작'으로
           방송), 학생은 제 해시태그 */}
       {isHashtag && admin ? (
@@ -758,7 +687,6 @@ function BooksPageInner() {
           roster={roster}
           onBack={goToList}
           onToast={setToast}
-          classTools={classTools}
         />
       ) : isHashtag ? (
         <HashtagForm
@@ -775,7 +703,6 @@ function BooksPageInner() {
           roster={roster}
           className={activeClassName}
           classPicker={admin ? classPicker : null}
-          classTools={admin ? classTools : null}
           onBack={goToList}
         />
       ) : /* 마인드맵(개인 활동) — 교사는 왼쪽 학생 목록+오른쪽 마인드맵, 학생은 자기 판 */
@@ -788,7 +715,6 @@ function BooksPageInner() {
           user={user}
           roster={roster}
           onBack={goToList}
-          classTools={classTools}
         />
       ) : isMindmap ? (
         <MindmapForm
@@ -808,7 +734,6 @@ function BooksPageInner() {
           baseGroupAssignment={baseGroupAssignment}
           onBack={goToList}
           onToast={setToast}
-          classTools={classTools}
         />
       ) : isBrainwrite ? (
         <BrainWriteForm
@@ -826,7 +751,6 @@ function BooksPageInner() {
           user={user}
           roster={roster}
           onBack={goToList}
-          classTools={classTools}
         />
       ) : isQmark ? (
         <QmarkForm
@@ -844,7 +768,6 @@ function BooksPageInner() {
           user={user}
           roster={roster}
           onBack={goToList}
-          classTools={classTools}
         />
       ) : isKwls ? (
         <KwlsForm
@@ -864,7 +787,6 @@ function BooksPageInner() {
           baseGroupAssignment={baseGroupAssignment}
           onBack={goToList}
           onToast={setToast}
-          classTools={classTools}
         />
       ) : isRaft ? (
         <RaftForm
@@ -884,7 +806,6 @@ function BooksPageInner() {
           baseGroupAssignment={baseGroupAssignment}
           onBack={goToList}
           onToast={setToast}
-          classTools={classTools}
         />
       ) : isParatext ? (
         <ParatextForm
@@ -902,7 +823,6 @@ function BooksPageInner() {
           classPicker={classPicker}
           onBack={goToList}
           onToast={setToast}
-          classTools={classTools}
         />
       ) : isCrossword && studentCanvasGroupId ? (
         <CrosswordGroupStudent
@@ -938,7 +858,6 @@ function BooksPageInner() {
           onClose={() => setBooksView(null)}
           initialView={dashView}
           onViewChange={setDashView}
-          classTools={classTools}
         />
       ) : /* 학생: 활동을 열면 자기 판으로 바로 */
       studentCanvasGroupId && activeActivity ? (
@@ -964,7 +883,6 @@ function BooksPageInner() {
           onOpenAll={() => setBooksView("all")}
           onBack={goToList}
           onToast={setToast}
-          classTools={classTools}
         />
       ) : (
         <main className="books-main">
@@ -1006,24 +924,6 @@ function BooksPageInner() {
                   <span className="books-class-name">{currentClass.name}</span>
                 )
               )}
-              {/* 공부방 머리말과 같은 자리·같은 이름 — 두 화면에서 같은 것을
-                  여는 단추라 순서도 같게 둡니다(KWLS 차트 → 기록 관리). */}
-              {classId && user && (
-                <button
-                  className={`btn-ghost${kwlPanelOpen ? " active" : ""}`}
-                  onClick={() => setKwlPanelOpen((v) => !v)}
-                  aria-pressed={kwlPanelOpen}
-                  title={
-                    kwlPanelOpen
-                      ? "KWLS 차트를 닫습니다"
-                      : admin
-                      ? "KWLS 차트를 왼쪽에 펼칩니다 — 작성 현황·궁금한 점 모아보기"
-                      : "KWLS 차트를 왼쪽에 펼칩니다"
-                  }
-                >
-                  KWLS 차트
-                </button>
-              )}
               {admin && (
                 <button className="btn-ghost" onClick={() => setClassManagerOpen(true)}>
                   반 관리하기
@@ -1044,7 +944,6 @@ function BooksPageInner() {
                   {attendedToday ? "✓ 출석 완료" : attending ? "출석하는 중…" : "출석하기"}
                 </button>
               )}
-              {classTools}
             </div>
           </div>
 
@@ -1119,10 +1018,6 @@ function BooksPageInner() {
         )}
       </div>
 
-      {/* KWLS 차트가 모바일에서 떠 있을 때의 배경(누르면 닫힘) — 공부방과 같음 */}
-      {kwlPanelOpen && !activeActivity && (
-        <div className="kwl-mobile-backdrop" onClick={() => setKwlPanelOpen(false)} />
-      )}
 
       {creatingType && (
         <BookActivityForm
@@ -1275,7 +1170,6 @@ function BooksPageInner() {
 // 하는 일이 종류를 고르는 것뿐이라 만들기 창의 종류 고르기와 겹쳤습니다.
 // 종류는 카드마다 적혀 있으니 목록을 나눌 이유가 없습니다.
 // 책 나눔에는 공부방 프로젝트가 없습니다 — '오늘' 패널에 빈 목록을 넘깁니다(렌더마다 새 [] 대신)
-const NO_BOARDS = [];
 
 function ActivityList({
   activities,

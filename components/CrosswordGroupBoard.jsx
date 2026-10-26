@@ -84,7 +84,7 @@ function useGroupXw(actId, groupIds, boardIds) {
   return { hintsBy, boardsBy };
 }
 
-export default function CrosswordGroupBoard({ activity, onBack, onToast, classPicker = null, classTools = null }) {
+export default function CrosswordGroupBoard({ activity, onBack, onToast, classPicker = null }) {
   const [groups, setGroups] = useState([]);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
@@ -293,7 +293,6 @@ export default function CrosswordGroupBoard({ activity, onBack, onToast, classPi
         <strong className="canvas-head-name">{activity.title}</strong>
         <button type="button" className="btn-ghost" onClick={onBack}>← 활동 목록</button>
         {classPicker}
-        {classTools}
         <span className="canvas-head-stats">
           {activity.sourceTitle ? `낱말: ${activity.sourceTitle} · ` : ""}
           {solo ? "개별 활동" : `모둠 ${liveGroups.length}개`} · 학생 {studentCount}명

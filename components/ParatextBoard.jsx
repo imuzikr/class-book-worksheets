@@ -43,8 +43,6 @@ export default function ParatextBoard({
   user = null,
   roster = [],
   onBack,
-  // 누가기록 관리·수업 메모 버튼 묶음 (교사 전용, 없으면 null)
-  classTools = null,
   classPicker = null,
   // 반의 기본 모둠 — '활동 모둠' 창이 '기본 모둠 그대로 가져오기'에 씁니다
   baseGroupAssignment = null,
@@ -226,7 +224,6 @@ export default function ParatextBoard({
         <div className="books-head-title">
           <h1 className="book-group-title">{activity.title}</h1>
           <button type="button" className="btn-ghost" onClick={onBack}>← 활동 목록</button>
-          {classTools}
         </div>
         <div className="books-head-row">
           <div className="books-head-main">

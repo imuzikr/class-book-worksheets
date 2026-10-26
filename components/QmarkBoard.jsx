@@ -51,7 +51,6 @@ export default function QmarkBoard({
   user = null,
   roster = [],
   onBack,
-  classTools = null,
   classPicker = null,
 }) {
   const [entries, setEntries] = useState([]);
@@ -170,7 +169,6 @@ export default function QmarkBoard({
         <div className="books-head-title">
           <h1 className="book-group-title">{activity.title}</h1>
           <button type="button" className="btn-ghost" onClick={onBack}>← 활동 목록</button>
-          {classTools}
         </div>
         <div className="books-head-row">
           <div className="books-head-main">

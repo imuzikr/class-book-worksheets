@@ -4,26 +4,26 @@
 // 떠 있는 동그라미 — 메신저와 자주 여는 기능을 한 손에
 // -------------------------------------------------------------
 // 화면 오른쪽 아래의 작은 동그라미(56px). 누르면 **큰 원으로 펼쳐지며**
-// 기능 여섯 개가 둘레에 섭니다 — 메신저 · KWLS · 수업 노트 · 출석 · 리포트 ·
-// 과일 바구니(교사는 메신저 · KWLS 차트 · 출석 관리 · 수업 관리 · 학생 분석 ·
-// 과일 바구니).
+// 기능 다섯 개가 둘레에 섭니다 — 메신저 · 돌발 퀴즈 · 수업 노트 · 내 출석부 ·
+// 과일 바구니(교사는 메신저 · 돌발 퀴즈 · 출석 관리 · 반 관리 · 과일 바구니).
+// KWLS 차트는 걷었습니다 — KWLS는 책방의 독서 활동으로만 씁니다.
 //
 // [모양은 행성 궤도]
-// 가운데 해(고른 기능의 설명) 둘레의 궤도에 작은 행성(동그라미) 여섯이
+// 가운데 해(고른 기능의 설명) 둘레의 궤도에 작은 행성(동그라미)들이
 // 섭니다. 한때 '피자 조각'과 둘 다 두고 전환으로 오갔는데, 선생님이 궤도로
 // 정하셔서 조각 모양과 전환을 걷었습니다.
 //
 // [그림은 앱의 아이콘 그대로]
 // 이모지 대신 이미 그 기능을 가리키는 그림을 씁니다(components/StatusIcons.jsx)
-// — 메신저는 상단바 '질문방'의 말풍선(IconAnswer — 로고는 가운데 해의 기본 그림), 수업 노트는 IconRecord, 리포트는 IconReport,
-// 학생 분석은 '선생님 대시보드'의 IconTeacher, 수업 관리는 IconBlackboard,
-// KWLS는 K · W · L 세 칸, 출석은 IconCheck. 과일 바구니는 바구니 창의 그림
+// — 메신저는 말풍선(IconAnswer — 로고는 가운데 해의 기본 그림), 돌발 퀴즈는
+// 메모지(IconQuizMemo), 수업 노트는 IconRecord, 반 관리는 IconBlackboard,
+// 출석은 IconCheck. 과일 바구니는 바구니 창의 그림
 // (`public/fruit-basket.webp`)을 작게 — 원을 펼쳤을 때만 그려 처음 화면에서
 // 그림을 받지 않습니다.
 //
 // [기능은 '그 자리로 데려다 주기']
 // 메신저만 이 자리에서 창을 엽니다. 나머지는 이미 공부방에 있는 창을
-// 주소로 엽니다(`/books?open=kwl|notes|attendance|fruit` — 공부방이 열고
+// 주소로 엽니다(`/books?open=notes|attendance|fruit` — 공부방이 열고
 // 주소를 지웁니다). 같은 창을 여기에 한 벌 더 만들면 두 곳이 어긋납니다.
 //
 // [끌어 옮기기 — 교사만]
@@ -60,23 +60,10 @@ import {
   IconRecord,
   IconBlackboard,
   IconCheck,
-  IconKwlK,
-  IconKwlW,
-  IconKwlL,
   IconQuizMemo,
 } from "./StatusIcons";
 import { POPQUIZ_OPEN_EVENT } from "./PopQuizButton";
 
-// KWLS — 앱에 'KWLS' 한 장짜리 그림이 없어 K · W · L 세 칸을 겹쳐 세웁니다.
-function KwlStack() {
-  return (
-    <span className="hub-kwl-stack">
-      <IconKwlK size={17} />
-      <IconKwlW size={17} />
-      <IconKwlL size={17} />
-    </span>
-  );
-}
 function FruitBasketPic({ show }) {
   if (!show) return <span className="hub-basket-pic" />;
   return <img className="hub-basket-pic" src="/fruit-basket.webp" alt="" width={36} height={24} />;
@@ -85,7 +72,6 @@ const ICONS = {
   // 메신저는 상단바 '질문방'의 말풍선(IconAnswer) — 로고(말풍선 둘)는 가운데 해의
   // 기본 그림이라, 같은 그림을 쓰면 메신저 행성과 해가 구별되지 않았습니다(선생님 요청).
   msg: () => <IconAnswer size={28} />,
-  kwl: () => <KwlStack />,
   notes: () => <IconRecord size={26} />,
   attend: () => <IconCheck size={24} className="hub-icon-check" />,
   classes: () => <IconBlackboard size={27} />,
@@ -97,7 +83,6 @@ const STUDENT_ITEMS = [
   { key: "msg", label: "메신저", hint: "선생님 · 우리 모둠과 대화해요" },
   // 상단바 메모지는 알림만 — 창은 여기서(PopQuizButton이 이벤트를 받아 엶)
   { key: "quiz", label: "돌발 퀴즈", hint: "퀴즈에 답하고 지난 퀴즈를 봐요", event: POPQUIZ_OPEN_EVENT },
-  { key: "kwl", label: "KWLS", hint: "KWLS 차트를 펼쳐요", href: "/books?open=kwl" },
   { key: "notes", label: "수업 노트", hint: "지난 수업 노트를 넘겨 봐요", href: "/books?open=notes" },
   { key: "attend", label: "내 출석부", hint: "내 출석 기록을 봐요", href: "/books?open=attendance" },
   { key: "fruit", label: "과일 바구니", hint: "과일을 담고 이벤트에 응모해요", href: "/books?open=fruit" },
@@ -105,7 +90,6 @@ const STUDENT_ITEMS = [
 const TEACHER_ITEMS = [
   { key: "msg", label: "메신저", hint: "학생 · 모둠과 대화해요" },
   { key: "quiz", label: "돌발 퀴즈", hint: "퀴즈를 보내고 답을 확인해요", event: POPQUIZ_OPEN_EVENT },
-  { key: "kwl", label: "KWLS 차트", hint: "반의 KWLS 현황을 펼쳐요", href: "/books?open=kwl" },
   { key: "attend", label: "출석 관리", hint: "출석을 시작하고 기록을 봐요", href: "/books?open=attendance" },
   { key: "classes", label: "반 관리", hint: "반 · 참여 코드 · 자리와 모둠", href: "/books?open=classes" },
   { key: "fruit", label: "과일 바구니", hint: "바구니 합계와 이벤트 현황", href: "/books?open=fruit" },

@@ -32148,9 +32148,6 @@ h4.attendance-seat-help { margin-top: 16px; }
 }
 .hub-item:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
 .hub-item .hub-item-badge { top: -2px; right: -2px; }
-/* KWLS — K · W · L 세 칸을 살짝 겹쳐 한 덩이로 */
-.hub-kwl-stack { display: flex; }
-.hub-kwl-stack svg + svg { margin-left: -5px; }
 /* 출석 — 체크 하나(currentColor)라 '됐다'의 초록으로 */
 .hub-icon-check { color: #3f704b; }
 /* 과일 바구니 — 바구니 창의 그림을 작게(흰 바탕을 원판에 녹임) */
@@ -32209,7 +32206,6 @@ h4.attendance-seat-help { margin-top: 16px; }
   margin-bottom: 1px;
 }
 .hub-center-badge svg { width: 20px; height: 20px; }
-.hub-center-badge .hub-kwl-stack svg { width: 11px; height: 11px; }
 .hub-center-badge .hub-kwl-stack svg + svg { margin-left: -3px; }
 .hub-center-badge .hub-basket-pic { width: 24px; height: 16px; }
 

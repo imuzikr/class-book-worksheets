@@ -48,8 +48,6 @@ export default function ConsonantDashboard({
   initialView = "grid",
   onViewChange = null,
   embedded = false,
-  // 누가기록 관리·수업 메모 버튼 묶음 (교사 전용, 없으면 null)
-  classTools = null,
 }) {
   const [groups, setGroups] = useState([]);
   const [wordsByGroup, setWordsByGroup] = useState({});
@@ -317,8 +315,6 @@ export default function ConsonantDashboard({
         {!embedded && (
           <button type="button" className="btn-ghost" onClick={onClose}>← 모둠</button>
         )}
-        {/* 제목 바로 뒤 — 수업 중에 관찰한 것을 적으러 화면을 옮기지 않게 */}
-        {classTools}
         <div className="dash-head-actions">
           {canCast && (
             <button
