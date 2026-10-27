@@ -394,7 +394,7 @@ export default function BookActivityForm({
             <div className="book-field-row">
               <div className="book-field">
                 <span>영역 개수</span>
-                <div className="book-seg book-seg--tight">
+                <div className="book-seg book-seg--zones">
                   {OPINION_ZONE_COUNTS.map((n) => (
                     <button
                       key={n}

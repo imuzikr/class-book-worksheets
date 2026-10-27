@@ -20705,6 +20705,15 @@ button.wall-who-btn.open strong { color: var(--primary-dark); }
 /* 숫자 한 자짜리 줄(모둠 수) — 반 칸 안에 다섯이 한 줄로 서야 옆 칸의
    '모둠 짜는 방법'이 접히지 않습니다. */
 .book-seg--tight .book-seg-btn { flex: 1 1 40px; max-width: 72px; }
+/* '내 생각은요'의 영역 개수(1~5) — 아래 줄 '판 모양'(두 단추, 저마다 천장
+   180px + 틈 6px)과 **같은 폭**으로 다섯 칸을 똑같이 나눕니다. 칸이 그보다
+   좁으면 둘 다 칸 폭을 다 씁니다. .book-seg-btn의 max-width를 고치면 여기도. */
+.book-seg--zones {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  max-width: calc(180px * 2 + 6px);
+}
+.book-seg--zones .book-seg-btn { max-width: none; min-width: 0; padding: 8px 0; }
 /* 모둠 설정의 아랫부분 — 고른 갈래에 따라 내용이 통째로 바뀌는 자리입니다.
    '이 활동만의 모둠'이 가장 크고(줄 둘 + 안내 두 줄 = 164px), '기본 모둠
    그대로'·'개별 활동'은 안내문 한 덩이뿐이라 60~100px입니다. 그대로 두면

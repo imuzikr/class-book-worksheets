@@ -2455,12 +2455,12 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
 
 ### 내 생각은요... — 영역 위에 붙이는 메모판 (`opinionNotes`)
 
-- 책방의 여섯째 독서 활동(`type: 'opinion'`). 교사가 판을 **영역 2~5개**로
+- 책방의 여섯째 독서 활동(`type: 'opinion'`). 교사가 판을 **영역 1~5개**로
   나누고(찬성 · 반대 · 잘 모르겠어요…) 학생이 포스트잇 같은 메모에 제 생각을
   적어 붙입니다. **반 전체가 서로 다 읽습니다** — 그것이 이 활동의 전부라,
   개인 활동(`entries` — 본인·교사만)과 갈라 `BOOK_SHARED_TYPES`로 둡니다.
   모둠도 entries도 없습니다(`groupCount` 0, `groupMode` 'solo').
-- **만들기 창은 '영역 개수'(2 · 3 · 4 · 5, `OPINION_ZONE_COUNTS`)를 먼저 고르고, 그
+- **만들기 창은 '영역 개수'(1 · 2 · 3 · 4 · 5, `OPINION_ZONE_COUNTS`)를 먼저 고르고, 그
   아래 이름 칸이 그 수만큼 섭니다**(선생님 요청 — 한때 ＋/× 로 하나씩 더하고
   뺐습니다). 늘리면 빈 칸이 뒤에 붙고 줄이면 뒤 칸이 빠집니다(앞의 이름은 그대로).
   개수 고르개는 '학생 메모'와 한 줄(`book-field-row`), 이름 칸은 **고른 수가 한 줄에
@@ -2473,6 +2473,12 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
     그 사이(배포된 동안)에 5~6개로 만든 활동은 지금 앞의 다섯이 보이고, z6에 붙은
     메모는 첫 영역으로 갑니다(`normalizeZones` · `zoneOfNote`).
   - 실측(데모 1600px): 2 · 3 · 4개 이름 칸이 같은 y 한 줄(418 · 276 · 205px) · 넘침 0.
+  - **영역 하나도 됩니다**(선생님 요청 — `OPINION_ZONE_MIN` 1). 영역 구분 없이 반 전체가
+    한 판에 붙이는 메모판입니다. 빈 값을 손질할 때도 이제 한 칸만 채웁니다.
+  - **'영역 개수' 다섯 단추는 아래 줄 '판 모양'과 같은 폭**입니다(`.book-seg--zones` —
+    다섯 칸 격자 · 천장 `180px × 2 + 6px`, 판 모양 단추의 천장과 같은 셈). 한때
+    `.book-seg--tight`(단추마다 72px 천장)라 판 모양보다 짧게 끝났습니다. **모둠 수 줄은
+    그대로 tight**입니다 — 그쪽은 옆 칸이 접히지 않는 것이 먼저라서요.
 - 활동 문서에 `zones: [{ key, name }]` · `prompt`(함께 생각할 물음, 80자).
   메모는 `bookActivities/{id}/opinionNotes/{noteId}`(자동 id — 한 학생이 여러
   장) `{ authorId, authorName, authorEmoji, anon, studentId(null), byTeacher,
