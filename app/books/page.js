@@ -16,6 +16,8 @@
 // =============================================================
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import ReadingHub from "@/components/reading/ReadingHub";
+import { readingEnabled } from "@/lib/reading";
 import {
   subscribeBookActivities,
   subscribeBookGroups,
@@ -46,7 +48,6 @@ import {
   subscribeMyStudyAttendance,
   subscribeMyClassRewardCount,
 } from "@/lib/store";
-import { isFirebaseConfigured } from "@/lib/firebase";
 import { isAdmin, isTeacher, getCurrentUser } from "@/lib/user";
 import { getSelectedClassId, setSelectedClassId } from "@/lib/classroom";
 import { useCurrentUser } from "@/lib/useCurrentUser";
@@ -321,6 +322,8 @@ function BooksPageInner() {
 
   const classId = admin ? teacherClassId : studentClassId;
   const currentClass = (admin ? myClassesAll : classes).find((c) => c.id === classId) ?? null;
+  const growthEnabled = readingEnabled(currentClass);
+  const readingOpen = growthEnabled && searchParams.get("area") === "reading";
 
   useEffect(() => subscribeBookActivities(classId, setActivities), [classId]);
 
@@ -646,7 +649,7 @@ function BooksPageInner() {
   // ── 학생 소속을 아직 확인하는 중 — 입장 화면도 본문도 아직 그리지 않습니다.
   //    (AuthGate의 로그인 대기 화면과 같은 모습이라, 학생 눈에는 스피너
   //     하나가 이어지다 제 화면이 뜨는 것으로 보입니다) ──
-  if (isFirebaseConfigured && !admin && user && !membershipsLoaded) {
+  if (!admin && user && !membershipsLoaded) {
     return (
       <div className="board-shell">
         <TopNav active="books" />
@@ -660,7 +663,7 @@ function BooksPageInner() {
 
   // ── 학생인데 아직 반에 안 들어왔으면 참여 코드부터 ──
   //    소속 답이 온 뒤에만 판단합니다 — 그 전에는 '소속 없음'이 아닙니다.
-  if (isFirebaseConfigured && !admin && user && membershipIds.length === 0) {
+  if (!admin && user && membershipIds.length === 0) {
     return (
       <div className="board-shell">
         <TopNav active="books" />
@@ -890,7 +893,7 @@ function BooksPageInner() {
             <PageTagline />
             <div className="books-head-main">
               <h1>
-                <IconBook size={26} /> 책방
+                <IconBook size={26} /> 책나눔
               </h1>
               {admin && myClasses.length > 0 && (
                 <select
@@ -947,7 +950,21 @@ function BooksPageInner() {
             </div>
           </div>
 
-          {admin && myClassesAll.length === 0 ? (
+          {growthEnabled && (
+            <nav className="books-reading-tabs" aria-label="책나눔 공간">
+              <button type="button" className={`btn-ghost${!readingOpen ? " active" : ""}`}
+                aria-current={!readingOpen ? "page" : undefined}
+                onClick={() => patchBooksQuery({ area: null })}>독서 활동</button>
+              <button type="button" className={`btn-ghost${readingOpen ? " active" : ""}`}
+                aria-current={readingOpen ? "page" : undefined}
+                onClick={() => patchBooksQuery({ area: "reading" })}>내 서재·성장</button>
+            </nav>
+          )}
+          {readingOpen ? (
+            <ReadingHub key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin}
+              activities={liveActivities} onOpenActivity={goToActivity}
+              onDisabled={() => patchBooksQuery({ area: null }, { replace: true })} />
+          ) : admin && myClassesAll.length === 0 ? (
             <div className="empty-note books-first-class">
               <p>아직 만든 반이 없어요. 반을 만들고 참여 코드를 학생들에게 알려 주세요.</p>
               <button className="btn-primary" onClick={() => setClassManagerOpen(true)}>

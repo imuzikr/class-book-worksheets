@@ -57,6 +57,9 @@ jobs:
           key: firebase-emulators-${{ hashFiles('tests/rules/package-lock.json') }}
       - run: npm ci --prefix tests/rules
       - run: npm run test:rules
+      # Reading API uses the root Admin SDK and real Auth/Firestore transactions.
+      - run: npm ci
+      - run: npm run test:reading-server
 
   lint:
     runs-on: ubuntu-latest

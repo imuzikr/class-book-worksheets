@@ -11,7 +11,8 @@
     "lint": "npm --prefix tools/lint run lint",
     "deploy": "bash scripts/deploy.sh",
     "books:rescue": "node scripts/admin/rescue-activity.mjs",
-    "notes:purge-orphans": "node scripts/admin/purge-orphan-cornell-notes.mjs"
+    "notes:purge-orphans": "node scripts/admin/purge-orphan-cornell-notes.mjs",
+    "test:reading-server": "FIREBASE_ADMIN_PROJECT_ID=demo-reading-api tests/rules/node_modules/.bin/firebase emulators:exec --config tests/server/firebase.json --only auth,firestore --project demo-reading-api 'node --test tests/server/reading.test.mjs'"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.18.0",
@@ -22,6 +23,7 @@
     "@codemirror/view": "^6.34.0",
     "codemirror": "^6.0.1",
     "firebase": "^11.9.0",
+    "firebase-admin": "^13.10.0",
     "next": "^15.3.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"

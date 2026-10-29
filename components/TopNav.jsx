@@ -279,9 +279,9 @@ export default function TopNav({ active, onStudyExport = null }) {
         <button
           className={`btn-ghost ${active === "books" ? "nav-active" : ""}`}
           onClick={() => go("/books")}
-          title="책방"
+          title="책나눔"
         >
-          <IconBook size={20} /> <span className="nav-label">책방</span>
+          <IconBook size={20} /> <span className="nav-label">책나눔</span>
         </button>
       </nav>
 

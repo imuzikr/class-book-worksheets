@@ -1,3 +1,8 @@
+# 책나눔 성장 기능 추가 안내
+
+`READING_GROWTH.md`가 새 개인 서재·경험치·18종 뱃지·반 랭킹의 현재 기준입니다. 반별 `readingEnabled === true`일 때만 활성화하며 기본 꺼짐입니다. 기존 독서 활동은 이 스위치와 무관하게 유지합니다.
+새 영역은 Next.js Node API와 Firebase Admin SDK에서 인증·반 권한·보상 트랜잭션을 검증합니다. 기존 문서의 “서버 함수 없음”은 Cloud Functions/App Check를 추가하지 않는다는 뜻이며, 새 성장 기능에는 Vercel 서버 API 및 서버 전용 Admin 인증 설정이 필요합니다. 클라이언트에서 경험치·랭킹 정본에 직접 접근하지 마세요. 데모/서버는 `lib/reading.js`의 같은 계산·검증 로직을 사용합니다.
+
 # class-book-worksheets — 책 나눔
 
 교실에서 함께 책을 읽고 생각을 나누는 **독서 활동 웹앱**입니다.

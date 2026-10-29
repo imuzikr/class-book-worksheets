@@ -406,6 +406,14 @@ service cloud.firestore {
       // 프로필 삭제는 관리자만. 교사에게 열어 두면 아무 반 학생이나 지울 수
       // 있어(되돌릴 수 없음) 막습니다 — 학생을 내보낼 때는 '반에서 빼기'.
       allow delete: if isAdmin();
+      // 독서 기록·보상 원장과 요청 영수증은 인증된 서버 API만 처리합니다.
+      // Admin SDK는 규칙을 우회하므로 API가 활성 반/소속/본인 여부를 검사합니다.
+      match /reading/{document} {
+        allow read, write: if false;
+      }
+      match /readingRequests/{requestId} {
+        allow read, write: if false;
+      }
       // (배움나눔의 개인 알림함 users/{uid}/notifications는 서버 함수가 쓰던
       //  자리라 걷었습니다 — match가 없으니 아무도 못 읽고 못 씁니다.)
     }
@@ -559,12 +567,26 @@ service cloud.firestore {
     //    먼저 거치도록 강제합니다.
     match /classes/{cId} {
       allow read: if signedIn();
-      allow create: if isTeacher() && request.resource.data.createdBy == uid();
-      allow update: if isAdmin()
-                    || (isTeacher() && resource.data.createdBy == uid());
+      // 새 반은 기본 꺼짐. 켜기는 운영 중인 반의 담당 교사/관리자만 합니다.
+      function readingSettingValid() {
+        return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['readingEnabled'])
+               || (request.resource.data.get('readingEnabled', null) is bool
+                   && resource.data.get('archived', false) != true
+                   && request.resource.data.get('archived', false) != true);
+      }
+      allow create: if isTeacher() && request.resource.data.createdBy == uid()
+                    && request.resource.data.get('readingEnabled', false) == false;
+      allow update: if (isAdmin()
+                    || (isTeacher() && resource.data.createdBy == uid()))
+                    && readingSettingValid();
       allow delete: if isAdmin()
                     || (isTeacher() && resource.data.createdBy == uid()
                         && resource.data.get('archived', false) == true);
+
+      // 랭킹 요약도 서버 API에서 현재 반 학생에게만 최소 필드를 제공합니다.
+      match /readingMembers/{studentUid} {
+        allow read, write: if false;
+      }
 
       // ── 언제든 질문하기(손들기) ─────────────────────────────
       //  · 경로 = classes/{classId}/questionSignals/{uid}

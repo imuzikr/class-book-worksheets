@@ -19,6 +19,7 @@ import {
   unarchiveClass,
   reorderClasses,
   regenerateJoinCode,
+  setClassReadingEnabled,
 } from "@/lib/store";
 import ClassJoinCode from "./ClassJoinCode";
 import { IconPen, IconArchive, IconChair } from "./StatusIcons";
@@ -40,6 +41,7 @@ export default function ClassManagerModal({
   const [renameDraft, setRenameDraft] = useState("");
   const [busyId, setBusyId] = useState(null);
   const [regeneratingCodeIds, setRegeneratingCodeIds] = useState([]);
+  const [readingBusyIds, setReadingBusyIds] = useState([]);
   const [error, setError] = useState("");
 
   const active = classes.filter((c) => !c.archived);
@@ -130,8 +132,25 @@ export default function ClassManagerModal({
     }
   }
 
+  async function handleReadingToggle(c) {
+    if (readingBusyIds.includes(c.id) || busyId === c.id || c.archived) return;
+    const enabled = c.readingEnabled !== true;
+    setReadingBusyIds((ids) => [...ids, c.id]);
+    setError("");
+    try {
+      await setClassReadingEnabled(c.id, enabled);
+      onToast?.(enabled
+        ? `'${c.name}' 반의 책나눔 성장 기능을 켰어요.`
+        : `'${c.name}' 반의 책나눔 성장 기능을 껐어요. 기존 기록은 보관됩니다.`);
+    } catch (e) {
+      setError(e?.message || "책나눔 사용 설정을 저장하지 못했어요.");
+    } finally {
+      setReadingBusyIds((ids) => ids.filter((id) => id !== c.id));
+    }
+  }
+
   async function handleArchive(c) {
-    if (busyId || regeneratingCodeIds.includes(c.id)) return;
+    if (busyId || regeneratingCodeIds.includes(c.id) || readingBusyIds.includes(c.id)) return;
     setBusyId(c.id);
     setError("");
     try {
@@ -259,12 +278,32 @@ export default function ClassManagerModal({
                         type="button"
                         className="btn-ghost"
                         onClick={() => handleArchive(c)}
-                        disabled={busyId === c.id || regeneratingCodeIds.includes(c.id)}
+                        disabled={busyId === c.id || regeneratingCodeIds.includes(c.id) || readingBusyIds.includes(c.id)}
                         title="보관하면 학생 접근이 막히고 목록에서 숨겨져요"
                       >
                         <IconArchive size={15} /> 보관
                       </button>
                     </div>
+                  </div>
+                  <div className="class-mgr-reading" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 4px", flexWrap: "wrap" }}>
+                    <div>
+                      <strong>책나눔 성장 기능</strong>
+                      <p className="class-mgr-section-hint" id={`reading-setting-${c.id}`} style={{ margin: "4px 0 0" }}>
+                        내 서재·경험치·뱃지·랭킹 · 꺼도 기존 독서 활동은 계속 사용할 수 있어요.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      className={c.readingEnabled === true ? "btn-primary" : "btn-ghost"}
+                      aria-checked={c.readingEnabled === true}
+                      aria-label={`${c.name} 책나눔 성장 기능 사용`}
+                      aria-describedby={`reading-setting-${c.id}`}
+                      disabled={readingBusyIds.includes(c.id) || busyId === c.id}
+                      onClick={() => handleReadingToggle(c)}
+                    >
+                      {readingBusyIds.includes(c.id) ? "저장 중…" : c.readingEnabled === true ? "사용 중 · 끄기" : "사용 안 함 · 켜기"}
+                    </button>
                   </div>
                   <ClassJoinCode
                     classroom={c}

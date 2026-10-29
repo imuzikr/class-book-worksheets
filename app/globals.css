@@ -20450,6 +20450,8 @@ button.wall-who-btn.open strong { color: var(--primary-dark); }
   min-width: 0;
 }
 .books-head-main h1 {
+  flex-shrink: 0;
+  white-space: nowrap;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -22140,6 +22142,7 @@ span.cloud-word { cursor: default; }
 /* ── 모바일 ── */
 @media (max-width: 768px) {
   .books-main { padding: 16px 12px 60px; }
+  .books-head > .books-head-main { flex-wrap: wrap; }
   .canvas-main { padding: 12px 10px 16px; overflow-y: auto; }
   .consonant-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -33321,6 +33324,9 @@ button.msgr-receipt:hover { color: var(--text-sub); }
 @media (max-width: 768px) {
   .bw-layout { grid-template-columns: minmax(0, 1fr); }
 }
+
+.books-reading-tabs { display: flex; gap: 6px; padding: 6px; margin: 0 0 22px; width: fit-content; border: 1px solid var(--border); border-radius: 14px; background: var(--bg-deep); }
+.books-reading-tabs .active { background: var(--surface, #fff); color: #174f4b; box-shadow: 0 1px 4px #183f3014; }
 
 /* 원본 독서 활동 업데이트: 질문 · 댓글 · 방송 */
 .notif-dropdown--wide {
