@@ -2,17 +2,17 @@ import Link from "next/link";
 import SiteFooter from "@/components/SiteFooter";
 import TermsContent from "@/components/policies/TermsContent";
 
-export const metadata = { title: "이용약관 — 책으로" };
+export const metadata = { title: "이용약관 — 책봄" };
 
 // =============================================================
-// 이용약관 — 앱뜰(App-Tteul) 약관 체계를 책으로 실정에 맞게 조정한 문서.
+// 이용약관 — 앱뜰(App-Tteul) 약관 체계를 책봄 실정에 맞게 조정한 문서.
 // 본문은 components/policies/TermsContent.jsx (푸터 모달과 공유).
 // =============================================================
 export default function TermsPage() {
   return (
     <div className="policy-shell">
       <header className="policy-top">
-        <Link href="/" className="policy-home">📚 책으로</Link>
+        <Link href="/" className="policy-home">📚 책봄</Link>
       </header>
       <main className="policy-body">
         <TermsContent />

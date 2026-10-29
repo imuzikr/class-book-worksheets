@@ -1,4 +1,4 @@
-# 책으로 — 교실 독서 활동 웹 앱
+# 책봄 — 교실 독서 활동 웹 앱
 
 교실에서 함께 책을 읽고 생각을 나누는 독서 활동판입니다.
 [배움나눔](https://github.com/imuzikr/class-peer-qna)의 책방을 떼어 따로 세운 앱으로,
@@ -36,9 +36,10 @@ npm run build # 프로덕션 빌드
 - **실서비스 모드** (Firebase 설정됨): Firebase Authentication으로
   실제 로그인/회원가입하고, 데이터는 Firestore에 저장됩니다. 권한은
   Firestore · Storage 보안 규칙이 서버에서 강제합니다(서버 함수는 없습니다).
-- **데모 모드** (Firebase 미설정 · 현재 상태): 브라우저 메모리에 임시 저장(새로고침 시
-  초기화)되고, 테스트 유저로 자동 입장합니다. 화면·기능을 빠르게 확인할 때만
-  쓰입니다. (`lib/user.js`의 `TEST_USER`)
+- **데모 모드** (Firebase 미설정 · 현재 상태): 테스트 유저로 자동 입장합니다.
+  반 정보와 책나눔 활성화 설정은 같은 브라우저의 사이트 저장소에 보관하므로 새로고침해도 유지됩니다.
+  개인 독서 기록 등 나머지 데모 자료는 메모리 임시 저장이며 새로고침 시 초기화됩니다.
+  여러 기기·학생에게 설정과 기록을 공유하려면 실제 Firebase를 연결해야 합니다. (`lib/user.js`의 `TEST_USER`)
 
 ## 인증과 권한
 
@@ -87,7 +88,7 @@ npm run deploy             # 규칙 시험 → firestore(rules·indexes) + stora
 - 학년도가 바뀌어 통째로 비우려면 `npx firebase-tools firestore:delete --all-collections`
   (되돌릴 수 없음)로 비운 뒤 `config/teacherSignup`과 관리자 role만 다시 적으면 됩니다.
 
-## Firestore 데이터 구조 (책으로에서 쓰는 것)
+## Firestore 데이터 구조 (책봄에서 쓰는 것)
 
 식별 정보(실명·이메일·학번)는 `users/{uid}`에만 저장합니다.
 
@@ -113,7 +114,7 @@ broadcasts/{cId}            학급 화면 방송
 ```
 
 배움나눔에서 가져온 규칙에는 질문(`questions`) · 공부방(`studyBoards`) 같은
-컬렉션도 남아 있지만 책으로 화면은 쓰지 않습니다.
+컬렉션도 남아 있지만 책봄 화면은 쓰지 않습니다.
 
 ## 폴더 구조
 

@@ -2,7 +2,7 @@ import Link from "next/link";
 import SiteFooter from "@/components/SiteFooter";
 import PrivacyContent from "@/components/policies/PrivacyContent";
 
-export const metadata = { title: "개인정보처리방침 — 책으로" };
+export const metadata = { title: "개인정보처리방침 — 책봄" };
 
 // =============================================================
 // 개인정보처리방침 — 운영자 제공 공식 전문(2026. 8. 25. 시행)을 골격으로,
@@ -13,7 +13,7 @@ export default function PrivacyPage() {
   return (
     <div className="policy-shell">
       <header className="policy-top">
-        <Link href="/" className="policy-home">📚 책으로</Link>
+        <Link href="/" className="policy-home">📚 책봄</Link>
       </header>
       <main className="policy-body">
         <PrivacyContent />

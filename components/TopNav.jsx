@@ -3,7 +3,7 @@
 // =============================================================
 // 공통 상단 내비게이션
 // -------------------------------------------------------------
-// 왼쪽: 책으로 로고 ｜ 책방 · 책나눔(반별 활성화 시)
+// 왼쪽: 책봄 로고 ｜ 책방 · 책나눔(반별 활성화 시)
 // 오른쪽: 역할 전환(개발용) ｜ 돌발 퀴즈 ｜ 손들기 ｜ 공지 ｜ 알림 ｜ 사용자 프로필(로그아웃은 그 메뉴 안)
 // =============================================================
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -266,8 +266,8 @@ export default function TopNav({ active, growthEnabled = false, readingOpen = fa
       <div className="topbar-left">
         {/* 로고 = '처음으로'. 첫 화면이 공부방이 되었으므로 여기도 공부방으로
             갑니다 — 로고만 질문방으로 가면 '처음'이 두 곳이 됩니다. */}
-        <button className="logo logo-button" onClick={() => go("/books")} aria-label="책으로 홈">
-          <IconLogo size={30} /> 책으로
+        <button className="logo logo-button" onClick={() => go("/books")} aria-label="책봄 홈">
+          <IconLogo size={30} /> 책봄
         </button>
         <span className="topbar-divider" aria-hidden="true" />
         <nav className="topnav-menu" aria-label="주요 메뉴">
