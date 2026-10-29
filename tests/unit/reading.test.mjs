@@ -247,3 +247,30 @@ test("감상문만 있는 책도 전체 쪽수를 고정하고 아직 기록 없
   const reviewed = review(empty);
   assert.throws(() => applyReadingAction(reviewed, { type: "updateBook", bookId: "book1", totalPages: 120 }, context("edit")), /전체 쪽수/);
 });
+
+test("네이버 도서 정보는 서재 저장·수정 후에도 유지되고 메타데이터만으로 보상하지 않음", () => {
+  const metadata = { isbn: "9780306406157", publisher: "출판사", coverImage: "https://shopping-phinf.pstatic.net/book.jpg", bookLink: "https://search.shopping.naver.com/book/catalog/123" };
+  const state = applyReadingAction(initialReadingState(), { type: "addBook", title: "검색한 책", author: "저자", totalPages: 200, ...metadata }, context("searched"));
+  for (const [key, value] of Object.entries(metadata)) assert.equal(state.books[0][key], value);
+  assert.equal(deriveReading(state, NOW).xp, 0);
+  const edited = applyReadingAction(state, { type: "updateBook", bookId: "searched", status: "paused" }, context("edit"));
+  assert.equal(edited.books[0].isbn, metadata.isbn);
+  assert.equal(edited.books[0].coverImage, metadata.coverImage);
+  const manual = applyReadingAction(edited, { type: "updateBook", bookId: "searched", title: "다른 직접 입력 책", author: "다른 저자", isbn: "", publisher: "", coverImage: "", bookLink: "" }, context("manual"));
+  for (const key of Object.keys(metadata)) assert.equal(manual.books[0][key], undefined);
+  assert.equal(state.books[0].isbn, metadata.isbn);
+});
+
+test("같은 ISBN의 표기만 다른 검색 도서 중복 등록을 거부", () => {
+  const state = applyReadingAction(initialReadingState(), { type: "addBook", title: "원제", author: "저자", totalPages: 100, isbn: "978-0-306-40615-7" }, context("original"));
+  assert.equal(state.books[0].isbn, "9780306406157");
+  assert.throws(() => applyReadingAction(state, { type: "addBook", title: "원제 (개정 표기)", author: "저자 번역가", totalPages: 100, isbn: "9780306406157" }, context("duplicate")), /이미/);
+  let more = book(state, "manual", 100, "다른 책");
+  assert.throws(() => applyReadingAction(more, { type: "updateBook", bookId: "manual", isbn: "9780306406157" }, context("merge")), /이미/);
+});
+
+test("도서 메타데이터는 잘못된 ISBN·비보안 URL·비네이버 링크를 거부", () => {
+  for (const fields of [{ isbn: "9780306406158" }, { isbn: "not-isbn" }, { coverImage: "javascript:alert(1)" }, { coverImage: "http://example.com/book.jpg" }, { bookLink: "https://naver.com.evil.test/book" }, { bookLink: "https://user:password@naver.com/book" }]) {
+    assert.throws(() => applyReadingAction(initialReadingState(), { type: "addBook", title: "책", author: "저자", totalPages: 100, ...fields }, context("bad")));
+  }
+});

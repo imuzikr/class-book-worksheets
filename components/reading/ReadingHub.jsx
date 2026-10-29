@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useId, useMemo, useRef, useState 
 import { deriveReading, initialReadingState, kstToday, READING_BADGES } from "@/lib/reading";
 import { subscribeReadingState, mutateReading, fetchReadingRankings } from "@/lib/data/reading";
 import ReadingBadge from "./ReadingBadge";
+import BookSearch from "./BookSearch";
 import "./reading.css";
 
 const ReadingErrorContext = createContext("");
@@ -160,23 +161,55 @@ function BookCard({ book, index, busy, onOpen, onLog, onRestore }) {
   const status = book.status === "completed" ? "완독" : book.status === "paused" ? "잠시 멈춤" : "읽는 중";
   return <article className={`reading-book-card reading-book-color-${index % 4}`}>
     <button type="button" className="reading-book-open" onClick={onOpen} aria-label={`${book.title} 상세 보기`}>
-      <div className="reading-book-cover"><span className="reading-book-cover-line" /><BookIcon size={30} /><span className="reading-book-cover-title">{book.title}</span><small>{book.author}</small></div>
+      <BookCover book={book} />
       <div className="reading-book-info"><span className={`reading-status reading-status--${book.status}`}>{book.archived ? "보관 중" : status}</span><h4>{book.title}</h4><p>{book.author}</p><div className="reading-book-pages"><strong>{number(book.pagesRead ?? book.currentPage)}</strong> / {number(book.totalPages)}쪽</div><div className="reading-progress"><i style={{ width: `${book.progress || 0}%` }} /></div><span className="reading-book-percent">{Math.round(book.progress || 0)}% 읽었어요</span></div>
     </button>
     <div className="reading-book-actions"><button type="button" className="btn-ghost" onClick={onOpen}>기록 살펴보기</button><button type="button" className="reading-small-primary" disabled={busy} onClick={book.archived ? onRestore : onLog}>{book.archived ? "서재로 복원" : "독서 기록"}</button></div>
   </article>;
 }
 
+function BookCover({ book }) {
+  const [failedUrl, setFailedUrl] = useState(null);
+  const image = book.coverImage && failedUrl !== book.coverImage;
+  return <div className={`reading-book-cover${image ? " reading-book-cover--image" : ""}`}>
+    {image ? <img src={book.coverImage} alt={`${book.title} 표지`} loading="lazy" referrerPolicy="no-referrer" onError={() => setFailedUrl(book.coverImage)} />
+      : <><span className="reading-book-cover-line" /><BookIcon size={30} /><span className="reading-book-cover-title">{book.title}</span><small>{book.author}</small></>}
+  </div>;
+}
+
 function BookForm({ book, pagesLocked, activities, busy, onSave, onClose }) {
-  const [form, setForm] = useState({ title: book?.title || "", author: book?.author || "", totalPages: book?.totalPages || "", status: book?.status === "paused" ? "paused" : "reading", activityId: book?.activityId || "" });
-  const change = (key, v) => setForm((p) => ({ ...p, [key]: v }));
+  const [form, setForm] = useState({ title: book?.title || "", author: book?.author || "", totalPages: book?.totalPages || "", status: book?.status === "paused" ? "paused" : "reading", activityId: book?.activityId || "", publisher: book?.publisher || "", isbn: book?.isbn || "", coverImage: book?.coverImage || "", bookLink: book?.bookLink || "" });
+  const [selectedSearch, setSelectedSearch] = useState(false);
+  const titleRef = useRef(null);
+  const pagesRef = useRef(null);
+  const hasMetadata = !!(form.publisher || form.isbn || form.coverImage || form.bookLink);
+  function change(key, value) {
+    if (key === "title" || key === "author") {
+      setSelectedSearch(false);
+      setForm((p) => ({ ...p, [key]: value, publisher: "", isbn: "", coverImage: "", bookLink: "" }));
+    } else setForm((p) => ({ ...p, [key]: value }));
+  }
+  function selectSearch(result) {
+    setForm((p) => ({ ...p, title: result.title || "", author: result.author || "", totalPages: "",
+      publisher: result.publisher || "", isbn: result.isbn || "", coverImage: result.coverImage || "", bookLink: result.link || "" }));
+    setSelectedSearch(true);
+    requestAnimationFrame(() => pagesRef.current?.focus());
+  }
   return <Modal title={book ? "책 정보 고치기" : "새 책 등록"} onClose={onClose} busy={busy}>
+    {!book && <BookSearch busy={busy} onSelect={selectSearch} onManual={() => titleRef.current?.focus()} />}
+    {hasMetadata && <div className="reading-selected-book">
+      <BookCover book={form} />
+      <div><strong>{selectedSearch ? "검색에서 선택한 책" : "도서 정보"}</strong>{form.publisher && <span>{form.publisher}</span>}{form.isbn && <span>ISBN {form.isbn}</span>}
+        <button type="button" className="reading-search-manual" disabled={busy} onClick={() => { setForm((p) => ({ ...p, publisher: "", isbn: "", coverImage: "", bookLink: "" })); setSelectedSearch(false); }}>검색 정보 해제</button>
+      </div>
+    </div>}
     <form className="reading-form" onSubmit={(e) => { e.preventDefault(); onSave({ ...form, title: form.title.trim(), author: form.author.trim(), totalPages: Number(form.totalPages) }); }}>
-      <label>책 제목<input data-initial-focus required maxLength={120} value={form.title} onChange={(e) => change("title", e.target.value)} placeholder="책 제목을 적어 주세요" /></label>
-      <label>지은이<input required maxLength={80} value={form.author} onChange={(e) => change("author", e.target.value)} placeholder="저자 이름" /></label>
-      <div className="reading-form-row"><label>전체 쪽수<input required type="number" min={1} max={100000} step={1} disabled={pagesLocked || busy} value={form.totalPages} onChange={(e) => change("totalPages", e.target.value)} inputMode="numeric" /></label>{book && <label>읽기 상태<select value={form.status} onChange={(e) => change("status", e.target.value)}><option value="reading">읽는 중</option><option value="paused">잠시 멈춤</option></select></label>}</div>
+      <label>책 제목<input ref={titleRef} data-initial-focus={book ? true : undefined} required maxLength={150} value={form.title} onChange={(e) => change("title", e.target.value)} placeholder="책 제목을 적어 주세요" disabled={busy} /></label>
+      <label>지은이<input required maxLength={100} value={form.author} onChange={(e) => change("author", e.target.value)} placeholder="저자 이름" disabled={busy} /></label>
+      <div className="reading-form-row"><label>전체 쪽수<input ref={pagesRef} required type="number" min={1} max={100000} step={1} disabled={pagesLocked || busy} value={form.totalPages} onChange={(e) => change("totalPages", e.target.value)} inputMode="numeric" /></label>{book && <label>읽기 상태<select value={form.status} onChange={(e) => change("status", e.target.value)} disabled={busy}><option value="reading">읽는 중</option><option value="paused">잠시 멈춤</option></select></label>}</div>
+      {selectedSearch && <p className="reading-search-pages-help" role="status">검색 결과에 쪽수가 없어 직접 입력해 주세요.</p>}
       {pagesLocked && <p className="reading-help">독서 기록이나 감상문이 있는 책의 전체 쪽수는 고정돼요. 잘못 입력한 기록은 먼저 정정해 주세요.</p>}
-      <label>함께할 독서 활동 <span className="reading-optional">선택</span><select value={form.activityId} onChange={(e) => change("activityId", e.target.value)}><option value="">연결하지 않음</option>{form.activityId && !activities.some((a) => a.id === form.activityId) && <option value={form.activityId}>이전에 연결한 활동</option>}{activities.filter((a) => !a.deleted).map((a) => <option key={a.id} value={a.id}>{a.title}</option>)}</select></label>
+      <label>함께할 독서 활동 <span className="reading-optional">선택</span><select value={form.activityId} onChange={(e) => change("activityId", e.target.value)} disabled={busy}><option value="">연결하지 않음</option>{form.activityId && !activities.some((a) => a.id === form.activityId) && <option value={form.activityId}>이전에 연결한 활동</option>}{activities.filter((a) => !a.deleted).map((a) => <option key={a.id} value={a.id}>{a.title}</option>)}</select></label>
       <p className="reading-help">완독 여부는 읽은 페이지 기록으로 확인해요. 같은 책은 중복으로 등록할 수 없어요.</p>
       <div className="reading-form-actions"><button type="button" className="btn-ghost" onClick={onClose} disabled={busy}>취소</button><button type="submit" className="btn-primary" disabled={busy || !form.title.trim() || !form.author.trim()}>{busy ? "저장 중…" : book ? "변경 저장" : "서재에 담기"}</button></div>
     </form>
@@ -215,7 +248,7 @@ function ReviewForm({ book, review, busy, onSave, onClose }) {
 function BookDetail({ book, classId, activity, onOpenActivity, logs, review, busy, onClose, onEdit, onLog, onReview, onDeleteLog, onDeleteReview, onArchive }) {
   const sorted = [...logs].sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.createdAt).localeCompare(String(a.createdAt)));
   return <Modal title={book.title} wide busy={busy} onClose={onClose}>
-    <div className="reading-detail-meta"><span>{book.author}</span><span>{number(book.pagesRead ?? book.currentPage)} / {number(book.totalPages)}쪽 읽음</span><span>{book.status === "completed" ? "완독" : book.status === "paused" ? "잠시 멈춤" : "읽는 중"}</span></div>
+    <div className="reading-detail-overview"><BookCover book={book} /><div className="reading-detail-meta"><span>{book.author}</span>{book.publisher && <span>{book.publisher}</span>}{book.isbn && <span>ISBN {book.isbn}</span>}<span>{number(book.pagesRead ?? book.currentPage)} / {number(book.totalPages)}쪽 읽음</span><span>{book.status === "completed" ? "완독" : book.status === "paused" ? "잠시 멈춤" : "읽는 중"}</span>{book.bookLink && <a href={book.bookLink} target="_blank" rel="noopener noreferrer">네이버 도서 정보 보기 ↗</a>}</div></div>
     <div className="reading-detail-tools"><button type="button" className="btn-ghost" disabled={busy} onClick={onEdit}>책 정보 고치기</button><button type="button" className="btn-ghost" disabled={busy} onClick={onArchive}>{book.archived ? "서재로 복원" : "보관함으로"}</button>{!book.archived && <button type="button" className="btn-primary" disabled={busy} onClick={() => onLog(null)}>＋ 독서 기록</button>}</div>
     {activity && onOpenActivity && <div className="reading-linked-activity"><div><span>함께 연결한 독서 활동</span><strong>{activity.title}</strong></div><button type="button" className="btn-ghost" disabled={busy} onClick={() => onOpenActivity(activity)}>활동 열기 →</button></div>}
     <section className="reading-detail-section"><header><h3>책 한 권, 나의 생각</h3><button type="button" className="btn-ghost" disabled={busy || (review && review.classId !== classId)} onClick={onReview}>{review ? "감상문 고치기" : "감상문 쓰기"}</button></header>{review ? <article className="reading-review"><p className="reading-review-rating">나의 별점 {review.rating} / 5</p><p>{review.text}</p>{review.classId !== classId && <p className="reading-help">다른 반에서 작성한 감상문이에요. 작성한 반에서 고치거나 삭제할 수 있어요.</p>}<button type="button" className="reading-text-danger" disabled={busy || review.classId !== classId} onClick={onDeleteReview}>감상문 삭제</button></article> : <p className="reading-muted">한 권을 읽고 떠오른 생각을 담아 보세요.</p>}</section>
