@@ -33321,3 +33321,258 @@ button.msgr-receipt:hover { color: var(--text-sub); }
 @media (max-width: 768px) {
   .bw-layout { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* 원본 독서 활동 업데이트: 질문 · 댓글 · 방송 */
+.notif-dropdown--wide {
+  width: min(360px, calc(100vw - 24px));
+  max-height: min(520px, 75vh);
+}
+.notif-op-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  border-left: 3px solid var(--border);
+  background: #fff;
+}
+.notif-op-block--reply {
+  border-left-color: #6fbf8a;
+  background: #eef8f1;
+}
+.notif-op-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-sub);
+}
+.notif-op-block--reply .notif-op-label {
+  color: #3f8f5c;
+}
+.notif-op-text {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.entry-cast-card--fit .entry-cast-main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
+/* 모둠 RAFT — 카드 아래 '모둠 친구들이 남긴 한 마디'(꾸러미의 peers, 선생님 요청).
+   카드(문장 + 글)는 지금처럼 방송 칸 한 화면 높이를 그대로 쓰고(글자 크기도 그대로),
+   한 마디는 그 아래로 이어져 방송 칸(.broadcast-body)을 굴려 내려 읽습니다.
+   높이는 방송 칸을 크기 컨테이너로 두고 100cqh(그 칸의 안쪽 높이)에서 카드 틀의 위아래
+   여백(22+26)을 뺍니다 — 한 마디가 없을 때와 카드 높이 · 글자 크기가 같습니다(실측).
+   넘치는 내용을 가운데로 맞추면 위가 잘리므로 위에서부터 쌓습니다. */
+.broadcast-overlay--entry .broadcast-body:has(.entry-cast-card--fit.has-peers) {
+  container-type: size;
+  align-items: flex-start;
+}
+.entry-cast--fit:has(.has-peers) { align-self: flex-start; }
+.entry-cast-card--fit.has-peers { flex: none; }
+.entry-cast-card--fit.has-peers .entry-cast-main {
+  flex: none;
+  height: calc(100cqh - 48px);
+  min-height: 360px;
+}
+.entry-cast--card .eov-peer { margin-top: 22px; }
+.entry-cast--card .eov-peer h4 { font-size: clamp(16px, 1.3vw, 22px); margin-bottom: 12px; }
+.entry-cast--card .eov-peer h4 span { font-size: clamp(13px, 1vw, 16px); }
+.entry-cast--card .eov-peer-row {
+  grid-auto-flow: row;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  overflow-x: visible;
+  gap: 14px;
+}
+.entry-cast--card .eov-peer-row .peer-card {
+  padding: 14px 18px;
+  font-size: clamp(15px, 1.15vw, 20px);
+  line-height: 1.65;
+  min-height: 120px;
+}
+.entry-cast--card .eov-peer-row .peer-card header { font-size: clamp(13px, 1vw, 16px); }
+/* 이름표 줄 — 이름표 + 선생님 댓글 표식 */
+.opinion-list-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+
+/* ── 선생님 댓글 — 표식(목록 줄 · 메모지)과 크게 보기 창의 칸 ──
+   색은 이 앱의 '선생님 말' 초록(손들기 · 돌발 퀴즈 대화의 선생님 말과 같은 값). */
+.opinion-reply-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px 2px 6px;
+  border: 1px solid #a6d8b6;
+  border-radius: 999px;
+  background: #e8f7ed;
+  color: #2f6b45;
+  font-size: 11.5px;
+  font-weight: 800;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+.opinion-reply-mark svg { flex-shrink: 0; }
+/* 메모지 — 왼쪽 위 작은 동그라미(오른쪽 아래는 접힌 귀, 아래는 다섯 줄 글이
+   닿는 자리). 내 메모의 핀이 있으면 그 오른쪽으로 비켜 서고, 오른쪽 위 이름표는
+   그만큼 덜 넓게 둡니다. */
+.opinion-reply-mark--note {
+  position: absolute;
+  top: 4px;
+  left: 8px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(60, 90, 60, 0.18);
+}
+.opinion-note-pin ~ .opinion-reply-mark--note { left: 25px; }
+.opinion-note.has-reply .opinion-note-who { max-width: calc(100% - 64px); }
+.opinion-reply {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1px solid #a6d8b6;
+  border-radius: 12px;
+  background: rgba(232, 247, 237, 0.92);
+}
+.opinion-reply-head { display: flex; align-items: center; gap: 6px; color: #2f6b45; font-size: 13.5px; }
+.opinion-reply-tools { margin-left: auto; display: inline-flex; gap: 4px; }
+.opinion-reply-btn {
+  padding: 3px 10px;
+  border: 1px solid #a6d8b6;
+  border-radius: 999px;
+  background: #fff;
+  color: #2f6b45;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.opinion-reply-btn.danger { color: #b42318; border-color: #f1c4bf; }
+.opinion-reply-text {
+  margin: 8px 0 0;
+  max-height: 22vh;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 16px;
+  line-height: 1.6;
+  color: #2b3a2f;
+}
+.opinion-reply-add {
+  margin-top: 8px;
+  padding: 7px 14px;
+  border: 1.5px dashed #a6d8b6;
+  border-radius: 10px;
+  background: #fff;
+  color: #2f6b45;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.opinion-reply-input {
+  width: 100%;
+  min-height: 96px;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid #a6d8b6;
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.55;
+  resize: vertical;
+}
+.opinion-reply-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.opinion-reply-foot .opinion-modal-count { margin: 0 auto 0 0; }
+
+/* 학생이 여는 브레인 라이팅: 첫 칸은 답변 목록의 제목입니다. */
+.bw-row.bw-question-row {
+  background: #edf7ec;
+  border-left: 4px solid #79a973;
+  border-bottom: 2px solid #c8dfc4;
+  padding: 22px 18px;
+}
+.bw-question-row .bw-row-who { color: #365e38; }
+.bw-question-row .bw-row-who b { width: auto; padding: 3px 9px; border-radius: 6px; background: #fff; }
+.bw-question-row .bw-row-text:not(.empty),
+.bw-question-row .bw-row-input { font-size: 19px; font-weight: 700; line-height: 1.6; }
+.bw-question-row .bw-row-input { background: #fafff8; }
+
+/* 질문 방식은 아래 질문 칸과 폭을 맞추고, 두 단추가 반씩 채웁니다. */
+.bw-question-mode-field { width: calc((100% - 12px) / 2); }
+.bw-question-mode { flex-wrap: nowrap; }
+.bw-question-mode .book-seg-btn { flex: 1 1 0; min-width: 0; max-width: none; }
+.book-field .bw-teacher-question-input:disabled {
+  background: var(--bg-deep);
+  color: var(--text-faint);
+  cursor: not-allowed;
+  opacity: 1;
+}
+@media (max-width: 768px) {
+  .bw-question-mode-field { width: 100%; }
+}
+
+.bw-cast-question {
+  margin: 0 0 24px;
+  padding: 22px 26px;
+  border: 1px solid #c8dfc4;
+  border-left: 5px solid #79a973;
+  border-radius: 14px;
+  background: #edf7ec;
+  color: #294c2d;
+  overflow-wrap: anywhere;
+}
+.bw-cast-question-by { display: flex; align-items: center; gap: 10px; font-size: 15px; }
+.bw-cast-question p { margin: 12px 0 0; font-size: clamp(23px, 2.6vw, 36px); font-weight: 750; line-height: 1.5; white-space: pre-wrap; }
+.bw-cast-question p.empty { color: #60765e; font-size: 20px; font-weight: 500; }
+@media (max-width: 768px) {
+  .bw-cast-question { padding: 18px; }
+}
+
+.opinion-modal-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid color-mix(in srgb, var(--note-ink) 20%, transparent);
+}
+.opinion-modal-nav > span { color: var(--note-ink); font-size: 13px; font-variant-numeric: tabular-nums; }
+.opinion-modal-nav button { min-width: 88px; }
+
+/* 교실 뒤에서도 함께 읽을 수 있는 큰 메모지 */
+.modal-backdrop.opinion-modal-backdrop {
+  overflow-y: auto;
+  align-items: safe center;
+  padding: 32px 16px;
+}
+.modal.opinion-modal {
+  width: min(1040px, 94vw);
+  flex-shrink: 0;
+  padding: 40px 44px 30px;
+}
+.opinion-modal-zone { font-size: 18px; }
+.opinion-modal-who { font-size: 22px; }
+.opinion-modal-text {
+  min-height: 220px;
+  font-size: clamp(26px, 2.5vw, 36px);
+  line-height: 1.65;
+}
+.opinion-modal-input { font-size: 25px; }
+.opinion-modal .opinion-reply { padding: 18px 22px; }
+.opinion-modal .opinion-reply-head { font-size: 18px; flex-wrap: wrap; }
+.opinion-modal .opinion-reply-text,
+.opinion-modal .opinion-reply-input { font-size: 25px; }
+.opinion-modal .opinion-reply-btn,
+.opinion-modal .opinion-reply-add,
+.opinion-modal .btn-ghost,
+.opinion-modal .btn-primary { font-size: 17px; }
+.opinion-modal-nav > span { font-size: 18px; }
+.opinion-modal .btn-close { font-size: 28px; min-width: 40px; min-height: 40px; }
+@media (max-width: 768px) {
+  .modal.opinion-modal { padding: 30px 20px 22px; }
+  .opinion-modal-text { min-height: 160px; font-size: 26px; }
+  .opinion-modal-who { font-size: 19px; }
+  .opinion-modal .opinion-reply { padding: 14px; }
+  .opinion-modal .opinion-reply-text,
+  .opinion-modal .opinion-reply-input { font-size: 22px; }
+}

@@ -3,6 +3,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   OPINION_COLORS,
+  isOpinionReplyUnread,
+  noteReplyText,
   canAddOpinionNote,
   myZoneCount,
   cleanNickname,
@@ -26,11 +28,13 @@ import {
   zonesFromNames,
 } from "@/lib/opinion";
 
-test("영역은 늘 2~5개 — 모자라면 채우고 넘치면 자릅니다", () => {
+test("영역은 1~5개 — 빈 목록은 한 칸으로 채우고 넘치면 자릅니다", () => {
   assert.deepEqual(normalizeZones([]).map((z) => z.name), ["A 영역"]);
   assert.equal(normalizeZones(zonesFromNames(["가", "나", "다", "라", "마"])).length, 5);
   assert.equal(normalizeZones(zonesFromNames(["가", "나", "다", "라", "마", "바"])).length, 5);
-  assert.deepEqual(normalizeZones([{ key: "z4", name: "" }]).map((z) => z.name), ["A 영역"]);
+  // 영역 하나짜리 판과 기존 빈 값의 기본 한 칸을 유지합니다.
+  assert.deepEqual(normalizeZones([{ key: "z4", name: "" }]).map((z) => [z.key, z.name]), [["z4", "A 영역"]]);
+  assert.deepEqual(normalizeZones(zonesFromNames(["모두의 생각"])).map((z) => z.name), ["모두의 생각"]);
   assert.deepEqual(zonesFromNames(["찬성", " ", "잘 모르겠음"]).map((z) => [z.key, z.name]), [
     ["z1", "찬성"], ["z2", "B 영역"], ["z3", "잘 모르겠음"],
   ]);
@@ -176,4 +180,20 @@ test("목록 — 영역마다 올린 차례대로, 서버 시각 전의 글은 �
   const m = opinionListByZone(notes, zones);
   assert.deepEqual(m.get("z1").map((n) => n.id), ["a", "b", "c"]);
   assert.deepEqual(m.get("z2").map((n) => n.id), ["d"]);
+});
+
+
+test("교사 댓글 읽음 — 댓글 유무와 서버 시각·수정 시각을 함께 판정", () => {
+  assert.equal(noteReplyText({ reply: "  한 마디  " }), "한 마디");
+  assert.equal(noteReplyText({ reply: 123 }), "");
+  assert.equal(isOpinionReplyUnread({}), false);
+  assert.equal(isOpinionReplyUnread({ reply: " " }), false);
+  assert.equal(isOpinionReplyUnread({ reply: "좋아요", byTeacher: true }), false);
+  assert.equal(isOpinionReplyUnread({ reply: "좋아요" }), true);
+  const note = { reply: "좋아요", replyAt: new Date(2000) };
+  assert.equal(isOpinionReplyUnread({ ...note, replySeenAt: new Date(1000) }), true);
+  assert.equal(isOpinionReplyUnread({ ...note, replySeenAt: new Date(2000) }), false);
+  assert.equal(isOpinionReplyUnread({ ...note, replySeenAt: { toMillis: () => 3000 } }), false);
+  assert.equal(isOpinionReplyUnread({ reply: "수정", replyAt: { seconds: 4, nanoseconds: 0 }, replySeenAt: 3000 }), true);
+  assert.equal(isOpinionReplyUnread({ reply: "저장 중", replyAt: null, replySeenAt: new Date(3000) }), true);
 });

@@ -132,6 +132,7 @@ export default function BookActivityForm({
   // 영역 개수를 고르면 이름 칸이 그 수만큼 — 앞의 이름은 그대로 두고 뒤를 붙이거나 뺍니다
   const setZoneCount = (n) =>
     setZoneNames((prev) => (prev.length >= n ? prev.slice(0, n) : [...prev, ...Array(n - prev.length).fill("")]));
+  const [questionMode, setQuestionMode] = useState("teacher");
   const [prompt, setPrompt] = useState("");
   // '여섯 개의 해시태그'의 안내 문구 — 학생 화면 맨 위에 한 줄로 섭니다
   const [guide, setGuide] = useState("");
@@ -194,7 +195,7 @@ export default function BookActivityForm({
   // '내 생각은요...'는 물음이 주제 노릇을 해서 주제어를 비워 둘 수 있습니다.
   const topicRequired =
     !perStudent && !isOpinion && !isHashtag && !isCrossword && !isBrainwrite && !BOOK_STUDENT_TOPIC_TYPES.includes(type);
-  const promptBad = isBrainwrite && !prompt.trim();
+  const promptBad = isBrainwrite && questionMode !== "student" && !prompt.trim();
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -222,7 +223,8 @@ export default function BookActivityForm({
         maxPerGroup,
         groupNames: perStudent || fromBase ? [] : names,
         zones: isOpinion ? zoneNames.map((n) => n.trim()) : [],
-        prompt: isOpinion || isBrainwrite ? prompt.trim() : "",
+        questionMode: isBrainwrite ? questionMode : undefined,
+        prompt: isBrainwrite && questionMode === "student" ? "" : isOpinion || isBrainwrite ? prompt.trim() : "",
         noteMode: isOpinion ? noteMode : undefined,
         layout: isOpinion ? opLayout : undefined,
         nameMode: isOpinion ? nameMode : undefined,
@@ -394,7 +396,7 @@ export default function BookActivityForm({
             <div className="book-field-row">
               <div className="book-field">
                 <span>영역 개수</span>
-                <div className="book-seg book-seg--zones">
+                <div className="book-seg book-seg--tight">
                   {OPINION_ZONE_COUNTS.map((n) => (
                     <button
                       key={n}
@@ -494,6 +496,18 @@ export default function BookActivityForm({
           </>
         )}
 
+        {isBrainwrite && (
+          <div className="book-field bw-question-mode-field">
+            <span>질문 방식</span>
+            <div className="book-seg bw-question-mode" role="group" aria-label="질문 방식">
+              {[ ["teacher", "선생님이 질문하기"], ["student", "학생이 질문하기"] ].map(([value, label]) => (
+                <button key={value} type="button" className={`book-seg-btn${questionMode === value ? " active" : ""}`}
+                  aria-pressed={questionMode === value} onClick={() => setQuestionMode(value)}>{label}</button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {canGroup && (
           <>
             {/* ①② 한 줄에 나란히 — '모둠으로 할까'와 '어떤 모둠으로 할까'는
@@ -509,6 +523,8 @@ export default function BookActivityForm({
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
                     placeholder="예: 주인공이 그 선택을 한 까닭은 무엇일까?"
+                    className="bw-teacher-question-input"
+                    disabled={questionMode === "student"}
                     maxLength={BW_PROMPT_MAX}
                     title="모둠원마다 칸이 생기고, 첫 줄은 칸 주인이 · 그 아래로 학번순으로 돌아가며 이어 씁니다"
                   />

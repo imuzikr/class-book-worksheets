@@ -1,21 +1,12 @@
 "use client";
 
-// =============================================================
-// 상단바 알림 벨 — 반 공지(학생만)
-// -------------------------------------------------------------
-// classes/{cId}/classNotices의 최근 공지를 구독해 안 읽은 것을 셉니다.
-// 교사가 서버 함수 없이 곧바로 쓰는 문서라 학생 알림함에는 들어오지
-// 않습니다. 어디까지 읽었나는 간편 메신저와 같은 문서(chatReads)의
-// 'notice' 칸에 '여기까지 봤다'(그 공지의 서버 시각)로 적습니다 — 기기를
-// 바꿔도 같습니다.
-//
-// 배움나눔 시절에는 개인 알림함(users/{uid}/notifications — 서버 함수가
-// 쓰던 새 답변 · 채택 알림)과 모둠 메모(groupMemos)도 함께 합쳤는데,
-// 책 나눔에는 서버 함수도 질문방 · 모둠 메모 화면도 없어 늘 비어 있는
-// 구독이었으므로 걷었습니다.
-// =============================================================
+// 반 공지는 기존 classNotices/chatReads 구독을 유지합니다.
+// 교사 댓글은 내 opinionNotes를 구독해 합치고, 메모의 replySeenAt으로 읽음을 표시합니다.
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  subscribeMyOpinionReplies,
+  markOpinionReplySeen,
   subscribeClassNotices,
   subscribeChatReads,
   markChatRoomSeen,
@@ -31,6 +22,8 @@ const NOTICE_WINDOW = 5;
 const NOTICE_SEEN_KEY = "notice"; // chatReads.rooms의 칸 이름(방 열쇠 dm_ · grp_와 안 겹침)
 
 export default function NotificationBell({ uid, classId = null, isStudent = false }) {
+  const router = useRouter();
+  const [replies, setReplies] = useState([]);
   const [notices, setNotices] = useState([]);
   const [seen, setSeen] = useState({});
   const [open, setOpen] = useState(false);
@@ -46,6 +39,10 @@ export default function NotificationBell({ uid, classId = null, isStudent = fals
     if (!noticeOn) { setSeen({}); return; }
     return subscribeChatReads(classId, uid, setSeen);
   }, [noticeOn, classId, uid]);
+  useEffect(() => {
+    if (!uid) { setReplies([]); return; }
+    return subscribeMyOpinionReplies(uid, setReplies);
+  }, [uid]);
   const seenNotice = Number(seen?.[NOTICE_SEEN_KEY]) || 0;
   const unreadNotices = useMemo(
     () =>
@@ -61,11 +58,21 @@ export default function NotificationBell({ uid, classId = null, isStudent = fals
     [notices, seenNotice]
   );
 
-  // 최신순
-  const items = useMemo(
-    () => [...unreadNotices].sort((x, y) => y._ms - x._ms),
-    [unreadNotices]
-  );
+  const items = useMemo(() => [
+    ...unreadNotices.map((n) => ({ ...n, _src: "notice", type: "class_notice" })),
+    ...replies.map((r) => ({
+      id: r.id, _src: "opinion", type: "opinion_reply",
+      activityId: r.activityId, createdAt: r.replyAt ?? r.updatedAt ?? r.createdAt,
+      text: String(r.reply ?? ""), original: String(r.text ?? ""),
+    })),
+  ].sort((a, b) => (toDate(b.createdAt)?.getTime() ?? 0) - (toDate(a.createdAt)?.getTime() ?? 0)),
+  [unreadNotices, replies]);
+
+  function handleOpen(n) {
+    if (n._src !== "opinion" || !n.activityId) return;
+    setOpen(false);
+    router.push(`/books?activity=${encodeURIComponent(n.activityId)}&note=${encodeURIComponent(n.id)}`);
+  }
 
   // 반 공지 읽음 — '여기까지 봤다'를 앞으로만 옮깁니다(더 옛 공지를 읽어도
   // 이미 본 새 공지가 되살아나지 않게).
@@ -83,21 +90,25 @@ export default function NotificationBell({ uid, classId = null, isStudent = fals
     return () => document.removeEventListener("pointerdown", onDown);
   }, [open]);
 
-  // 안 읽은 공지만 올라오므로 그 수가 곧 뱃지 수입니다.
+  // 읽지 않은 공지와 교사 댓글의 합계입니다.
   const unreadCount = items.length;
   const [markingAll, setMarkingAll] = useState(false);
 
   // 한 건 읽음 — '여기까지 봤다'를 그 공지로 옮겨 목록에서 뺍니다.
   function handleRead(e, n) {
     e.stopPropagation();
-    markNoticeSeen(n._ms).catch(() => {});
+    if (n._src === "opinion") markOpinionReplySeen(n.activityId, n.id).catch(() => {});
+    else markNoticeSeen(n._ms).catch(() => {});
   }
 
   async function handleReadAll() {
     if (markingAll || items.length === 0) return;
     setMarkingAll(true);
     try {
-      await markNoticeSeen(Math.max(0, ...unreadNotices.map((n) => n._ms)));
+      await Promise.all([
+        markNoticeSeen(Math.max(0, ...unreadNotices.map((n) => n._ms))),
+        ...replies.map((r) => markOpinionReplySeen(r.activityId, r.id)),
+      ]);
     } catch {
       /* 실패하면 목록이 그대로 남습니다 — 다시 누르면 됩니다 */
     } finally {
@@ -121,7 +132,7 @@ export default function NotificationBell({ uid, classId = null, isStudent = fals
       </button>
 
       {open && (
-        <div className="notif-dropdown" role="menu">
+        <div className={`notif-dropdown${replies.length ? " notif-dropdown--wide" : ""}`} role="menu">
           {items.length === 0 ? (
             <p className="notif-empty">읽지 않은 알림이 없어요.</p>
           ) : (
@@ -138,30 +149,73 @@ export default function NotificationBell({ uid, classId = null, isStudent = fals
               </button>
             </div>
             <ul className="notif-list">
-              {items.map((n) => (
-                <li key={n.id} className="notif-row">
-                  {/* 공지는 내용이 알림 줄에 다 들어 있어 눌러 갈 곳이 없습니다 —
-                      누를 수 있는 것처럼 보이지 않게 버튼이 아닌 칸으로 그립니다. */}
-                  <div className="notif-item unread notif-item--static">
+              {items.map((n) => {
+                const label = n.type === "opinion_reply" ? { icon: "💬", text: "내 생각에 선생님 댓글" } : NOTICE_LABEL;
+                const isReply = n._src === "opinion";
+                // 공지와 교사 댓글의 본문을 알림에서 바로 읽을 수 있습니다.
+                const isNotice = n.type === "class_notice" || isReply;
+                // 반 공지는 열어 볼 글이 없어 눌러도 갈 곳이 없습니다 —
+                // 누를 수 있는 것처럼 보이지 않도록 버튼이 아닌 칸으로 그립니다.
+                // 선생님 댓글은 그 활동의 메모로 갑니다.
+                const canOpen = isReply && !!n.activityId;
+                const body = isReply ? (
+                  <>
                     <span className="notif-item-head">
-                      <span aria-hidden="true">{NOTICE_LABEL.icon}</span> {NOTICE_LABEL.text}
+                      <span aria-hidden="true">{label.icon}</span> {label.text}
                       <span className="notif-item-time">{formatTime(n.createdAt)}</span>
                     </span>
-                    <span className="notif-item-sub notif-item-sub--full">{n.text}</span>
-                    {n.senderName && (
-                      <span className="notif-item-from">{n.senderName}</span>
+                    <span className="notif-op-block notif-op-block--mine">
+                      <span className="notif-op-label">내 글</span>
+                      <span className="notif-op-text">{n.original || "(내용 없음)"}</span>
+                    </span>
+                    <span className="notif-op-block notif-op-block--reply">
+                      <span className="notif-op-label">선생님 댓글</span>
+                      <span className="notif-op-text">{n.text}</span>
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="notif-item-head">
+                      <span aria-hidden="true">{label.icon}</span> {label.text}
+                      <span className="notif-item-time">{formatTime(n.createdAt)}</span>
+                    </span>
+                    <span
+                      className={`notif-item-sub${isNotice ? " notif-item-sub--full" : ""}`}
+                    >
+                      {isNotice ? n.text : n.questionTitle}
+                    </span>
+                    {isNotice && (n.senderName || n.className) && (
+                      <span className="notif-item-from">
+                        {[n.className, n.senderName].filter(Boolean).join(" · ")}
+                      </span>
                     )}
-                  </div>
-                  <button
-                    type="button"
-                    className="notif-read-btn"
-                    onClick={(e) => handleRead(e, n)}
-                    title="읽음으로 표시하고 목록에서 치우기"
-                  >
-                    읽음
-                  </button>
-                </li>
-              ))}
+                  </>
+                );
+                return (
+                  <li key={`${n._src}_${n.id}`} className="notif-row">
+                    {canOpen ? (
+                      <button
+                        type="button"
+                        className="notif-item unread"
+                        onClick={() => handleOpen(n)}
+                      >
+                        {body}
+                      </button>
+                    ) : (
+                      <div className="notif-item unread notif-item--static">{body}</div>
+                    )}
+                    {/* 댓글 메모를 열거나 읽음 버튼을 누르면 알림이 사라집니다. */}
+                    <button
+                      type="button"
+                      className="notif-read-btn"
+                      onClick={(e) => handleRead(e, n)}
+                      title="읽음으로 표시하고 목록에서 치우기"
+                    >
+                      읽음
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
             </>
           )}
