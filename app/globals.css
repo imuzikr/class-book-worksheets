@@ -4046,8 +4046,15 @@ button.footer-link:hover {
   min-width: 0;
 }
 .class-mgr-create .btn-primary {
+  background: #f8e5da;
+  color: #81523e;
+  border: 1px solid #e9c9b8;
   flex-shrink: 0;
   white-space: nowrap;
+}
+.class-mgr-create .btn-primary:hover:not(:disabled) {
+  background: #f2d7c7;
+  border-color: #ddb59e;
 }
 .class-mgr-seat-btn {
   flex-shrink: 0;
