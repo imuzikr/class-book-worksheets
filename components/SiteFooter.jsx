@@ -30,7 +30,7 @@ export default function SiteFooter() {
             <span className="footer-logo" aria-hidden="true">
               <IconLogo size={30} />
             </span>
-            <strong>책 나눔</strong>
+            <strong>책으로</strong>
           </div>
           <p className="footer-tagline">
             함께 읽고 생각을 나누는 우리 반 책방
@@ -77,7 +77,7 @@ export default function SiteFooter() {
 
       {/* 하단 저작권 바 — 정책 링크는 위 '정책 및 약관'에 이미 있어 중복 표기하지 않음 */}
       <div className="site-footer-bottom">
-        <span>© {year} 책 나눔. All rights reserved.</span>
+        <span>© {year} 책으로. All rights reserved.</span>
       </div>
 
       {/* 정책 모달 */}

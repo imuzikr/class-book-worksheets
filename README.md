@@ -1,4 +1,4 @@
-# 책 나눔 — 교실 독서 활동 웹 앱
+# 책으로 — 교실 독서 활동 웹 앱
 
 교실에서 함께 책을 읽고 생각을 나누는 독서 활동판입니다.
 [배움나눔](https://github.com/imuzikr/class-peer-qna)의 책방을 떼어 따로 세운 앱으로,
@@ -87,7 +87,7 @@ npm run deploy             # 규칙 시험 → firestore(rules·indexes) + stora
 - 학년도가 바뀌어 통째로 비우려면 `npx firebase-tools firestore:delete --all-collections`
   (되돌릴 수 없음)로 비운 뒤 `config/teacherSignup`과 관리자 role만 다시 적으면 됩니다.
 
-## Firestore 데이터 구조 (책 나눔이 쓰는 것)
+## Firestore 데이터 구조 (책으로에서 쓰는 것)
 
 식별 정보(실명·이메일·학번)는 `users/{uid}`에만 저장합니다.
 
@@ -113,7 +113,7 @@ broadcasts/{cId}            학급 화면 방송
 ```
 
 배움나눔에서 가져온 규칙에는 질문(`questions`) · 공부방(`studyBoards`) 같은
-컬렉션도 남아 있지만 책 나눔 화면은 쓰지 않습니다.
+컬렉션도 남아 있지만 책으로 화면은 쓰지 않습니다.
 
 ## 폴더 구조
 

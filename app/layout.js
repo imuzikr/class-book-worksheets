@@ -2,7 +2,7 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/authContext";
 
 export const metadata = {
-  title: "책 나눔 — 함께 읽고 생각을 나누는 독서 활동",
+  title: "책으로 — 함께 읽고 생각을 나누는 독서 활동",
   description: "닿소리 채우기 · 곁텍스트 · RAFT · KWLS · 마인드맵 · 해시태그 · 가로세로 낱말 퀴즈로 함께 읽는 교실 독서 활동판",
 };
 

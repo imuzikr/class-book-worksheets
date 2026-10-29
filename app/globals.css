@@ -33332,8 +33332,38 @@ button.msgr-receipt:hover { color: var(--text-sub); }
   .bw-layout { grid-template-columns: minmax(0, 1fr); }
 }
 
-.books-reading-tabs { display: flex; gap: 6px; padding: 6px; margin: 0 0 22px; width: fit-content; border: 1px solid var(--border); border-radius: 14px; background: var(--bg-deep); }
-.books-reading-tabs .active { background: var(--surface, #fff); color: #174f4b; box-shadow: 0 1px 4px #183f3014; }
+/* 앱 이름과 두 공간의 이동 버튼은 좁은 화면에서도 한 묶음으로 둡니다. */
+.topbar-book-navigation .topbar-left { gap: 12px; }
+.topbar-book-navigation .topbar-left > .topnav-menu {
+  display: flex;
+  flex: 0 0 auto;
+  width: auto;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+}
+.topbar-book-navigation .topbar-gap { display: none; }
+.topbar-book-navigation .topnav-menu > .btn-ghost {
+  display: inline-flex;
+  flex: 0 0 auto;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  height: 36px;
+  padding: 0 11px;
+  gap: 6px;
+  white-space: nowrap;
+}
+.topbar-book-navigation .topnav-menu .nav-label { font-size: 13px; line-height: 1.2; white-space: nowrap; }
+@media (max-width: 480px) {
+  .topbar-book-navigation .topbar-left { gap: 8px; }
+  .topbar-book-navigation .topnav-menu > .btn-ghost { height: 34px; padding: 0 9px; }
+  .topbar-book-navigation .topnav-menu .nav-label { font-size: 12px; }
+  .topbar-book-navigation .topnav-menu svg { width: 17px; height: 17px; }
+}
 
 /* 원본 독서 활동 업데이트: 질문 · 댓글 · 방송 */
 .notif-dropdown--wide {

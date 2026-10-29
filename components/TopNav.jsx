@@ -3,7 +3,7 @@
 // =============================================================
 // 공통 상단 내비게이션
 // -------------------------------------------------------------
-// 왼쪽: 책 나눔 로고 ｜ 책방
+// 왼쪽: 책으로 로고 ｜ 책방 · 책나눔(반별 활성화 시)
 // 오른쪽: 역할 전환(개발용) ｜ 돌발 퀴즈 ｜ 손들기 ｜ 공지 ｜ 알림 ｜ 사용자 프로필(로그아웃은 그 메뉴 안)
 // =============================================================
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -44,7 +44,7 @@ import { useRewardCelebration } from "@/lib/useRewardCelebration";
 import { useClassMembers } from "@/lib/useClassRoster";
 import { IconLogo, IconBook } from "./StatusIcons";
 
-export default function TopNav({ active, onStudyExport = null }) {
+export default function TopNav({ active, growthEnabled = false, readingOpen = false, onStudyExport = null }) {
   const router = useRouter();
   const user = useCurrentUser();
   const admin = user ? isTeacher(user) : false;      // 교사+관리자 (대시보드 접근)
@@ -261,29 +261,30 @@ export default function TopNav({ active, onStudyExport = null }) {
         '작은 변화로 시작하는 성장의 기록' 문구는 상단바에서 빠져 각 화면의
         제목 곁으로 갔습니다(`PageTagline` — 공부방·책방 제목 위, 질문방
         '전체 질문 n개' 왼쪽). */}
-    <header className="topbar">
+    <header className="topbar topbar-book-navigation">
       {/* ① 로고 — 좁은 화면에서도 항상 첫 줄에 남습니다 */}
       <div className="topbar-left">
         {/* 로고 = '처음으로'. 첫 화면이 공부방이 되었으므로 여기도 공부방으로
             갑니다 — 로고만 질문방으로 가면 '처음'이 두 곳이 됩니다. */}
-        <button className="logo logo-button" onClick={() => go("/books")}>
-          <IconLogo size={30} /> 책 나눔
+        <button className="logo logo-button" onClick={() => go("/books")} aria-label="책으로 홈">
+          <IconLogo size={30} /> 책으로
         </button>
         <span className="topbar-divider" aria-hidden="true" />
+        <nav className="topnav-menu" aria-label="주요 메뉴">
+          <button type="button"
+            className={`btn-ghost ${active === "books" && !readingOpen ? "nav-active" : ""}`}
+            aria-current={active === "books" && !readingOpen ? "page" : undefined}
+            onClick={() => go("/books")} title="책방">
+            <IconBook size={20} /> <span className="nav-label">책방</span>
+          </button>
+          {growthEnabled && <button type="button"
+            className={`btn-ghost ${readingOpen ? "nav-active" : ""}`}
+            aria-current={readingOpen ? "page" : undefined}
+            onClick={() => go("/books?area=reading")} title="책나눔">
+            <IconBook size={20} /> <span className="nav-label">책나눔</span>
+          </button>}
+        </nav>
       </div>
-
-      {/* ② 이동 메뉴 — 질문방 · 공부방 · 책방 · 파이썬 실행기 ·
-          리포트(학생). **로고 바로 오른쪽**입니다(1180px 이상). 그보다 좁으면
-          2행으로 내려가고, 768px 이하에서는 단추가 정사각형 칸으로 바뀝니다. */}
-      <nav className="topnav-menu">
-        <button
-          className={`btn-ghost ${active === "books" ? "nav-active" : ""}`}
-          onClick={() => go("/books")}
-          title="책나눔"
-        >
-          <IconBook size={20} /> <span className="nav-label">책나눔</span>
-        </button>
-      </nav>
 
       {roleMgrOpen && (
         <RoleManagerModal

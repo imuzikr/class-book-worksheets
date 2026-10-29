@@ -169,7 +169,7 @@ export default function LandingPage() {
     {/* ── 상단 바: 로고(왼쪽) + 로그인/회원가입(오른쪽) — 배경 일러스트 바깥 ── */}
     <header className="landing-top">
       <span className="landing-logo">
-        <IconLogo size={26} /> 책 나눔
+        <IconLogo size={26} /> 책으로
       </span>
       <div className="landing-actions">
         <button className="btn-outline" onClick={() => switchMode("login")}>
@@ -184,7 +184,7 @@ export default function LandingPage() {
     <main className="landing">
       {/* ── 디자인 시안 그대로: 머리 제목 → 흰 카드(제목 · 그림 · 단추) ── */}
       <section className="hero">
-        <h1 className="hero-title">꼬리에 꼬리를 무는 책 나눔</h1>
+        <h1 className="hero-title">책으로, 함께 읽고 생각을 나누다</h1>
 
         <div className="hero-card">
           <h2 className="hero-card-title">함께 읽고 생각을 나누는 공간</h2>

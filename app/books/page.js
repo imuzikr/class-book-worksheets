@@ -323,7 +323,7 @@ function BooksPageInner() {
   const classId = admin ? teacherClassId : studentClassId;
   const currentClass = (admin ? myClassesAll : classes).find((c) => c.id === classId) ?? null;
   const growthEnabled = readingEnabled(currentClass);
-  const readingOpen = growthEnabled && searchParams.get("area") === "reading";
+  const readingOpen = growthEnabled && !openActivityId && searchParams.get("area") === "reading";
 
   useEffect(() => subscribeBookActivities(classId, setActivities), [classId]);
 
@@ -674,7 +674,7 @@ function BooksPageInner() {
 
   return (
     <div className="board-shell">
-      <TopNav active="books" />
+      <TopNav active="books" growthEnabled={growthEnabled} readingOpen={readingOpen} />
 
       {/* 본문 + 오른쪽 '멋진 순간' 패널 */}
       <div className="books-body">
@@ -893,7 +893,7 @@ function BooksPageInner() {
             <PageTagline />
             <div className="books-head-main">
               <h1>
-                <IconBook size={26} /> 책나눔
+                <IconBook size={26} /> {readingOpen ? "책나눔" : "책방"}
               </h1>
               {admin && myClasses.length > 0 && (
                 <select
@@ -950,16 +950,6 @@ function BooksPageInner() {
             </div>
           </div>
 
-          {growthEnabled && (
-            <nav className="books-reading-tabs" aria-label="책나눔 공간">
-              <button type="button" className={`btn-ghost${!readingOpen ? " active" : ""}`}
-                aria-current={!readingOpen ? "page" : undefined}
-                onClick={() => patchBooksQuery({ area: null })}>독서 활동</button>
-              <button type="button" className={`btn-ghost${readingOpen ? " active" : ""}`}
-                aria-current={readingOpen ? "page" : undefined}
-                onClick={() => patchBooksQuery({ area: "reading" })}>내 서재·성장</button>
-            </nav>
-          )}
           {readingOpen ? (
             <ReadingHub key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin}
               activities={liveActivities} onOpenActivity={goToActivity}
