@@ -68,10 +68,8 @@ export default function ConsonantCanvas({
   onBack,
   // 모둠 판에서 한 사람의 낱말만 보고 싶을 때(교사가 왼쪽에서 이름을 누름).
   // '내 판'(mineOnly)이 자기 것만 거르는 것과 같은 방식입니다.
-  // 한 사람만 보기 — **판 위의 모둠원 칩**을 눌러 고릅니다. 모둠 목록의
-  // 카드 안에도 이름 단추를 뒀었는데, 모둠을 고르는 것인지 학생을 고르는
-  // 것인지 구분이 어려웠습니다. 이름표가 이미 판 위에 색과 함께 있으니
-  // 그것을 그대로 단추로 씁니다.
+  // 한 사람만 보기 — 판 위의 모둠원 칩과 왼쪽 모둠 카드의 이름 알약에서
+  // 고릅니다. 왼쪽 알약과 진행 조각의 요청은 focusRequest로 받습니다.
   onFocusChange = null,
   // Teacher progress segments can select a student and the exact initial.
   focusRequest = null,
@@ -291,7 +289,7 @@ export default function ConsonantCanvas({
 
       {/* 한 사람만 보는 중 — 모둠 판인데 낱말이 확 줄어 보이므로, 왜 그런지
           이 자리에서 밝히고 되돌아가는 길도 함께 둡니다.
-          (왼쪽 목록에서 그 이름을 다시 눌러도 돌아옵니다) */}
+          (왼쪽 모둠 카드의 여백을 눌러도 돌아옵니다) */}
       {focusUid && (
         <p className="canvas-focus-note">
           {/* 문장을 span으로 묶습니다 — 부모가 flex라 <b>와 뒤 글자가 따로

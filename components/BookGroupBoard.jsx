@@ -34,6 +34,7 @@ import { barTint, memberLegend, rowColor } from "@/lib/bookColors";
 import GroupComposer from "./GroupComposer";
 import ConsonantCanvas from "./ConsonantCanvas";
 import ProgressStageFilter from "./ProgressStageFilter";
+import "./BookActivityGroupRail.css";
 import { IconPeople, IconLock } from "./StatusIcons";
 import { filterProgressCards, getProgressStageStates } from "@/lib/progressStageFilter";
 
@@ -58,7 +59,7 @@ export default function BookGroupBoard({
   const [pickedId, setPickedId] = useState(null); // 교사가 고른 모둠
   // 모둠 안에서 한 학생만 골라 볼 때 그 학생 uid. 모둠 판은 모둠원 낱말이
   // 섞여 있어 "이 학생이 뭘 넣었지"를 보려면 색을 눈으로 좇아야 했습니다.
-  // 이름을 누르면 그 학생 낱말만 남고, 다시 누르면 모둠 판으로 돌아옵니다.
+  // 이름 알약을 누르면 그 학생 낱말만 남고, 모둠 카드 여백으로 전체를 봅니다.
   const [focusUid, setFocusUid] = useState(null);
   const [focusRequest, setFocusRequest] = useState(null);
 
@@ -179,6 +180,14 @@ export default function BookGroupBoard({
   // 임의로 첫 모둠을 열어 두면 마치 교사가 그 모둠을 고른 것처럼 보이므로,
   // 실제로 고르기 전까지 가운데 칸은 비워 둡니다.
   const picked = groups.find((g) => g.id === pickedId) ?? null;
+
+  function pickBoard(groupId, uid = null, stageKey = null) {
+    setPickedId(groupId);
+    setFocusUid(uid);
+    setFocusRequest((previous) => ({
+      groupId, uid, stageKey, sequence: (previous?.sequence ?? 0) + 1,
+    }));
+  }
 
   async function handleJoin(group) {
     if (busy) return;
@@ -357,7 +366,7 @@ export default function BookGroupBoard({
       ) : (
         <div className="book-workspace">
           {/* 왼쪽 — 모둠 목록(개별 활동이면 학생 목록) */}
-          <aside className="book-group-rail">
+          <aside className="book-group-rail book-activity-group-rail" aria-label={perStudent ? "학생 목록" : "모둠"}>
             {soloMissingRow}
             {groups.map((g) => {
               // 모둠에 저장된 members는 배정 당시 스냅샷이라, 반에서 빠진
@@ -376,10 +385,7 @@ export default function BookGroupBoard({
                     key={g.id}
                     type="button"
                     className={`book-rail-card book-rail-card--student${on ? " on" : ""}`}
-                    onClick={() => {
-                      setPickedId(g.id); setFocusUid(null);
-                      setFocusRequest((previous) => ({ groupId: g.id, uid: null, stageKey: null, sequence: (previous?.sequence ?? 0) + 1 }));
-                    }}
+                    onClick={() => pickBoard(g.id)}
                     aria-pressed={on}
                   >
                     <span className="book-rail-head">
@@ -393,39 +399,43 @@ export default function BookGroupBoard({
                 );
               }
 
-              // 카드는 '모둠 고르기' 하나만 합니다. 한때 카드 안의 이름도
-              // 각각 단추였는데, 모둠을 고르는 것인지 학생을 고르는 것인지
-              // 구분이 어려웠습니다. 학생 고르기는 **판 위의 색 칩**이 맡습니다
-              // (ConsonantCanvas의 범례).
+              // 모둠 이름·여백과 학생 이름을 별도 단추로 두어 각각 선택합니다.
               return (
-                <button
+                <div
                   key={g.id}
-                  type="button"
-                  className={`book-rail-card${on ? " on" : ""}`}
-                  onClick={() => {
-                      setPickedId(g.id); setFocusUid(null);
-                      setFocusRequest((previous) => ({ groupId: g.id, uid: null, stageKey: null, sequence: (previous?.sequence ?? 0) + 1 }));
-                    }}
-                  aria-pressed={on}
+                  className={`book-rail-card book-activity-group-card${on ? " on" : ""}`}
                 >
-                  <span className="book-rail-head">
-                    <strong>{g.groupName || `${g.groupIndex}모둠`}</strong>
-                    <span className="book-group-count">{members.length}명</span>
-                  </span>
+                  <button
+                    type="button"
+                    className="book-activity-group-select"
+                    onClick={() => pickBoard(g.id)}
+                    aria-pressed={on}
+                    aria-label={`${g.groupName || `${g.groupIndex}모둠`} 학생 ${members.length}명 모둠 선택`}
+                  >
+                    <span className="book-rail-head">
+                      <strong>{g.groupName || `${g.groupIndex}모둠`}</strong>
+                      <span className="book-group-count">{members.length}명</span>
+                    </span>
+                  </button>
                   {members.length === 0 ? (
                     <span className="book-group-empty">아직 모둠원이 없어요</span>
                   ) : (
-                    // 이름은 칩으로 한 줄에 셋. 가운뎃점으로 이어 붙이면 이름이
-                    // 어디서 끊기는지 눈으로 세어야 해서, 여섯 명쯤 되면 읽는
-                    // 데 시간이 걸립니다. 누르는 자리는 아니고(모둠 고르기는
-                    // 카드 전체가 맡습니다) 읽기 위한 칩입니다.
                     <span className="book-rail-chips">
                       {members.map((m) => (
-                        <span key={m.uid} className="book-rail-chip">{m.name}</span>
+                        <button
+                          key={m.uid}
+                          type="button"
+                          className={`book-rail-chip raft-mate-pill${on && focusUid === m.uid ? " on" : ""}`}
+                          data-member-uid={m.uid}
+                          onClick={() => pickBoard(g.id, m.uid)}
+                          aria-pressed={on && focusUid === m.uid}
+                          aria-label={`${m.name} 개인 판 보기`}
+                          title={`${m.studentId ? `${m.studentId} ` : ""}${m.name} — 개인 판 보기`}
+                        >{m.name}</button>
                       ))}
                     </span>
                   )}
-                </button>
+                </div>
               );
             })}
           </aside>
@@ -466,14 +476,7 @@ export default function BookGroupBoard({
               pickedUid={perStudent ? (picked?.members ?? [])[0]?.uid ?? null : focusUid}
               colorByRow={perStudent}
               roster={roster}
-              onPickStage={(member, stageKey) => {
-                setPickedId(member.groupId);
-                setFocusUid(member.uid);
-                setFocusRequest((previous) => ({
-                  groupId: member.groupId, uid: member.uid, stageKey,
-                  sequence: (previous?.sequence ?? 0) + 1,
-                }));
-              }}
+              onPickStage={(member, stageKey) => pickBoard(member.groupId, member.uid, stageKey)}
             />
           )}
         </div>
