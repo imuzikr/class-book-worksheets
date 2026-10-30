@@ -22,10 +22,16 @@ import {
   hashtagSlideSize,
   hashtagSourceLine,
   normalizeHashtagSlide,
+  normalizeHashtagPost,
 } from "@/lib/hashtag";
 
-export default function HashtagSlide({ slide, variant = "page", maxCols = 3 }) {
-  const s = normalizeHashtagSlide(slide);
+export default function HashtagSlide({ slide, variant = "page", maxCols = 3, progressPost }) {
+  // 교사의 단계 바로가기는 빈 칸도 원래 번호대로 남겨야 합니다. 방송과
+  // 친구 보기에서는 기존처럼 작성한 칸만 보여 줍니다.
+  const progress = progressPost !== undefined;
+  const s = normalizeHashtagSlide(progress
+    ? { ...slide, entries: normalizeHashtagPost(progressPost).tags }
+    : slide);
   const size = hashtagSlideSize(s);
   const src = hashtagSourceLine(s.source);
   const tagged = s.entries.filter((e) => e.tag);
@@ -74,7 +80,13 @@ export default function HashtagSlide({ slide, variant = "page", maxCols = 3 }) {
       ) : (
         <ol className="hts-grid">
           {s.entries.map((e, i) => (
-            <li key={i} className="hts-card">
+            <li
+              key={i}
+              className="hts-card"
+              data-progress-stage={progress ? `t${i}` : undefined}
+              tabIndex={progress ? -1 : undefined}
+              aria-label={progress ? `해시태그 ${i + 1}` : undefined}
+            >
               <h3 className={`hts-card-tag${e.tag ? "" : " empty"}`}>
                 {e.tag ? `#${e.tag}` : "태그 없음"}
               </h3>

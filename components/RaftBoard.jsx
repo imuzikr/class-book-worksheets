@@ -21,6 +21,7 @@ import {
   composeBookGroups,
 } from "@/lib/store";
 import { useEntryCast } from "@/lib/useEntryCast";
+import { useProgressStageFocus } from "@/lib/useProgressStageFocus";
 import {
   RAFT_COLUMNS,
   RAFT_COLUMN_COUNT,
@@ -73,6 +74,12 @@ export default function RaftBoard({
 }) {
   const [entries, setEntries] = useState([]);
   const [openUid, setOpenUid] = useState(null);
+  const stageFocus = useProgressStageFocus(`${activity.id}:${openUid}`);
+
+  function pickStudent(uid, stageKey) {
+    setOpenUid(uid);
+    stageFocus.focusStage(stageKey, `${activity.id}:${uid}`);
+  }
   // 수업 화면 — '수업 시작'을 누르면 열리는 큰 창. 지금 띄우는 것을 교사도
   // 보고, **같은 영역을 학생별로** 넘깁니다(CastStageModal).
   const [stageOpen, setStageOpen] = useState(false);
@@ -297,7 +304,7 @@ export default function RaftBoard({
   );
 
   return (
-    <main className="books-main book-workspace-main">
+    <main className="books-main book-workspace-main" ref={stageFocus.ref}>
       <div className="books-head">
         {/* 제목 · 돌아가는 길 · 도구 순서 — 닿소리 머리말(BookGroupBoard)과
             같은 차례입니다. 아래 둘째 줄은 딸림 정보(주제어·반)만 두는 자리라
@@ -413,7 +420,7 @@ export default function RaftBoard({
                               key={c.uid}
                               type="button"
                               className={`book-rail-chip raft-mate-pill${picked ? " on" : ""}${done ? " done" : ""}`}
-                              onClick={() => setOpenUid(c.uid)}
+                              onClick={() => pickStudent(c.uid)}
                               aria-pressed={picked}
                               title={`${c.studentId ? `${c.studentId} ` : ""}${c.name} — ${
                                 done ? "다 썼어요" : raftStarted(c.entry?.answers) ? "쓰는 중" : "아직 시작 전"
@@ -429,15 +436,19 @@ export default function RaftBoard({
                           return (
                             <span key={c.uid} className="raft-mate-cell">
                               {pill}
-                              <span className="raft-mate-marks" aria-hidden="true">
+                              <span className="raft-mate-marks">
                                 {RAFT_COLUMNS.map((col) => (
-                                  <span
+                                  <button
                                     key={col.key}
+                                    type="button"
                                     className={`raft-mate-mark${String(ans[col.key] ?? "").trim() ? " done" : ""}`}
-                                    title={col.ko}
+                                    style={{ border: 0, padding: 0 }}
+                                    onClick={() => pickStudent(c.uid, col.key)}
+                                    title={`${c.name} · ${col.ko} 답안 열기`}
+                                    aria-label={`${c.name} · ${col.ko} · ${String(ans[col.key] ?? "").trim() ? "작성 완료" : "미작성"} · 답안 열기`}
                                   >
                                     {col.letter}
-                                  </span>
+                                  </button>
                                 ))}
                               </span>
                               {/* RAFT로 만든 한 문장 — 아직 한 칸도 안 정했으면 밑줄 넷만
@@ -460,7 +471,7 @@ export default function RaftBoard({
               cards={shownCards}
               allCards={cards}
               pickedUid={openUid}
-              onPick={setOpenUid}
+              onPick={pickStudent}
               rows={stepRows}
               cellState={raftCellState}
               castUid={cast.target?.uid ?? null}
@@ -534,6 +545,9 @@ export default function RaftBoard({
                     return (
                       <section
                         key={r.key}
+                        data-progress-stage={r.key}
+                        tabIndex={-1}
+                        aria-label={`${open.name} · ${r.ko}`}
                         className={`entry-region${text ? " done" : ""}${live ? " live" : ""}${isWriting ? " wide" : ""}`}
                       >
                         <header className="paratext-card-head">
@@ -592,7 +606,7 @@ export default function RaftBoard({
               rows={stepRows}
               cellState={raftCellState}
               pickedUid={openUid}
-              onPick={setOpenUid}
+              onPick={pickStudent}
               extra={(m) => ` · 글 ${raftWritingChars(m.entry?.answers)}자`}
             />
           )}
@@ -627,7 +641,7 @@ export default function RaftBoard({
           activityTitle={activity.title}
           cards={shownCards.some((c) => c.uid === open.uid) ? shownCards : cards}
           uid={open.uid}
-          onPick={setOpenUid}
+          onPick={pickStudent}
           onClose={() => setOverviewOpen(false)}
           sectionsOf={overviewSections}
           summaryOf={(c) =>
@@ -647,7 +661,7 @@ export default function RaftBoard({
         <RaftProgressBoard
           activity={activity}
           cards={cards}
-          onOpenStudent={(uid) => { setOpenUid(uid); setBoardOpen(false); }}
+          onOpenStudent={(uid, stageKey) => { pickStudent(uid, stageKey); setBoardOpen(false); }}
           onClose={() => setBoardOpen(false)}
         />
       )}

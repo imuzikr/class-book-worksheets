@@ -25,8 +25,11 @@ import {
   notesByColumn,
   writerSlots,
   writerChars,
+  brainwriteStageTarget,
+  brainwriteSlotState,
 } from "@/lib/brainwrite";
 import { useEntryCast } from "@/lib/useEntryCast";
+import { useProgressStageFocus } from "@/lib/useProgressStageFocus";
 import CastStageModal from "./CastStageModal";
 import BrainWriteProgressBoard from "./BrainWriteProgressBoard";
 import { useBookGroups } from "@/lib/bookGroups";
@@ -88,12 +91,13 @@ export default function BrainWriteBoard({
     }
     for (const s of roster) {
       if (placed.has(s.uid)) continue;
-      out.push({ uid: s.uid, name: s.name, studentId: s.studentId ?? null, emoji: s.emoji, group: null, members: [], slots: [] });
+      out.push({ uid: s.uid, name: s.name, studentId: s.studentId ?? null, emoji: s.emoji, group: null, unassigned: true, members: [], slots: [] });
     }
     return out;
   }, [live, notesBy, roster, rosterSet]);
 
   const [openUid, setOpenUid] = useState(null);
+  const stageFocus = useProgressStageFocus(`${activity.id}:${openUid}`);
   const open = cards.find((c) => c.uid === openUid) ?? null;
   const openRows = useMemo(() => {
     if (!open?.group) return [];
@@ -105,6 +109,29 @@ export default function BrainWriteBoard({
   const studentQuestions = activity.questionMode === "student";
   const prompt = studentQuestions ? "" : String(activity.prompt ?? "").trim();
   const bookUrl = safeBookUrl(activity.bookUrl);
+
+  function openStudent(uid, stageKey) {
+    const card = cards.find((c) => c.uid === uid);
+    if (!card) return false;
+    if (!card.group) {
+      setOpenUid(uid);
+      stageFocus.focusStage(null, `${activity.id}:${uid}`);
+      return true;
+    }
+    if (stageKey != null) {
+      const target = brainwriteStageTarget(card, stageKey);
+      if (!target || !cards.some((c) => c.uid === target.ownerUid && c.group?.id === card.group.id)) {
+        onToast?.("이 학생에게는 해당 이어쓰기 차례가 없어요.");
+        return false;
+      }
+      setOpenUid(target.ownerUid);
+      stageFocus.focusStage(target.stageKey, `${activity.id}:${target.ownerUid}`);
+      return true;
+    }
+    setOpenUid(uid);
+    stageFocus.focusStage(null, `${activity.id}:${uid}`);
+    return true;
+  }
 
   // ── 방송 — 한 학생의 컬럼 한 장 ──
   const cast = useEntryCast(classId, user);
@@ -149,7 +176,7 @@ export default function BrainWriteBoard({
   const openLive = open ? cast.isCasting(open.uid, "col") : false;
 
   return (
-    <main className="books-main book-workspace-main">
+    <main className="books-main book-workspace-main" ref={stageFocus.ref}>
       <div className="books-head">
         <div className="books-head-title">
           <h1 className="book-group-title">{activity.title}</h1>
@@ -226,7 +253,7 @@ export default function BrainWriteBoard({
                             key={c.uid}
                             type="button"
                             className={`book-rail-chip raft-mate-pill${picked ? " on" : ""}${done ? " done" : ""}`}
-                            onClick={() => setOpenUid(c.uid)}
+                            onClick={() => openStudent(c.uid)}
                             aria-pressed={picked}
                             title={`${c.studentId ? `${c.studentId} ` : ""}${c.name} — 쓴 칸 ${
                               c.slots.filter((p) => p.done).length
@@ -243,9 +270,18 @@ export default function BrainWriteBoard({
             })}
             {cards.some((c) => !c.group) && (
               <div className="book-rail-card raft-group-card">
-                <span className="book-rail-head"><strong>모둠 없음</strong></span>
-                <span className="book-group-empty">
-                  {cards.filter((c) => !c.group).map((c) => c.name).join(", ")}
+                <span className="book-rail-head"><strong>모둠 배정 대기</strong></span>
+                <span className="book-rail-chips">
+                  {cards.filter((c) => !c.group).map((c) => (
+                    <button
+                      key={c.uid}
+                      type="button"
+                      className={`book-rail-chip raft-mate-pill${c.uid === openUid ? " on" : ""}`}
+                      onClick={() => openStudent(c.uid)}
+                      aria-pressed={c.uid === openUid}
+                      title={`${c.studentId ? `${c.studentId} ` : ""}${c.name} — 모둠 배정 대기`}
+                    >{c.name}</button>
+                  ))}
                 </span>
               </div>
             )}
@@ -278,12 +314,16 @@ export default function BrainWriteBoard({
                   )}
                 </div>
                 {!open.group ? (
-                  <p className="empty-note">이 학생은 아직 모둠에 들지 않아 칸이 없어요.</p>
+                  <div className="empty-note">
+                    <p>{open.name} · 모둠 배정 대기</p>
+                    <p>{freeMode ? "학생이 모둠을 고르면 이어쓰기에 참여할 수 있어요." : "활동 모둠에서 이 학생을 배정하면 이어쓰기에 참여할 수 있어요."}</p>
+                    {!freeMode && <button type="button" className="btn-ghost" onClick={() => setComposing(true)}>활동 모둠 열기</button>}
+                  </div>
                 ) : (
                   <section className="bw-col bw-col--read" aria-label={`${open.name}의 칸`}>
                     <ol className="bw-rows">
                       {openRows.map((r, i) => (
-                        <li key={r.member.uid} className={`bw-row${studentQuestions && i === 0 ? " bw-question-row" : ""}${r.filled ? " filled" : ""}`}>
+                        <li key={r.member.uid} data-progress-stage={`k${i}`} tabIndex={-1} className={`bw-row${studentQuestions && i === 0 ? " bw-question-row" : ""}${r.filled ? " filled" : ""}`}>
                           <span className="bw-row-who">
                             <b>{studentQuestions ? (i === 0 ? "질문" : i) : i + 1}</b>
                             {r.member.name}
@@ -309,7 +349,11 @@ export default function BrainWriteBoard({
             cards={open?.group ? cards.filter((c) => c.group?.id === open.group.id) : []}
             emptyText="왼쪽 모둠 카드에서 학생 이름을 누르면 그 모둠의 진행이 보여요. 반 전체는 ‘살펴보기’에서 봐요."
 
-            rows={[]}
+            rows={(open?.slots ?? []).map((p) => ({
+              key: `k${p.k}`,
+              k: p.k,
+              label: p.k === 0 ? (studentQuestions ? "나의 질문" : "제 칸 · 첫 줄") : `${p.k + 1}번째 줄`,
+            }))}
             rowsOf={(c) =>
               c.slots.map((p) => ({
                 key: `k${p.k}`,
@@ -317,12 +361,10 @@ export default function BrainWriteBoard({
                 label: p.k === 0 ? (studentQuestions ? "나의 질문" : "제 칸 · 첫 줄") : `${p.owner.name}의 칸 · ${p.k + 1}번째 줄`,
               }))
             }
-            cellState={(row, _a, c) => {
-              const p = c.slots[row.k];
-              return p?.done ? "done" : p?.ready ? "doing" : "empty";
-            }}
+            cellState={(row, _a, c) => brainwriteSlotState(c, row.k)}
+            labels={{ done: "작성 완료", doing: "내 차례", empty: "앞 차례 대기", none: "해당 차례 없음", unassigned: "모둠 배정 대기" }}
             pickedUid={openUid}
-            onPick={setOpenUid}
+            onPick={openStudent}
             extra={(m) => ` · ${writerChars(m.uid, allNotes)}자`}
           />
         </div>
@@ -349,8 +391,8 @@ export default function BrainWriteBoard({
       {boardOpen && (
         <BrainWriteProgressBoard
           activity={activity}
-          cards={cards.filter((c) => c.group)}
-          onOpenStudent={(uid) => { setOpenUid(uid); setBoardOpen(false); }}
+          cards={cards}
+          onOpenStudent={(uid, stageKey) => { if (openStudent(uid, stageKey)) setBoardOpen(false); }}
           onClose={() => setBoardOpen(false)}
         />
       )}

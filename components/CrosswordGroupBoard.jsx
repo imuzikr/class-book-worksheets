@@ -48,6 +48,7 @@ import {
   groupSolveProgress,
   rankGroupProgress,
   entryLen,
+  entryCellKeys,
   normalizeXwProgress,
   rankSoloProgress,
   soloScoreLetters,
@@ -58,6 +59,13 @@ import CrosswordGrid from "./CrosswordGrid";
 import ConfirmModal from "./ConfirmModal";
 import FloatingPanel from "./FloatingPanel";
 import XwGroupHintPopover, { pointAnchor } from "./XwGroupHintPopover";
+import ProgressStageFilter from "./ProgressStageFilter";
+import { filterProgressCards, getProgressStageStates } from "@/lib/progressStageFilter";
+import { useProgressStageFocus } from "@/lib/useProgressStageFocus";
+
+const HINT_STEP = [{ key: "hint", label: "힌트 작성" }];
+const HINT_STATE_LABELS = { done: "제출", doing: "일부 작성", empty: "미작성", none: "맡은 낱말 없음" };
+const hintCellState = (_row, _answers, student) => student.progressState;
 
 const DIR_LABEL = { across: "가로", down: "세로" };
 
@@ -92,6 +100,11 @@ export default function CrosswordGroupBoard({ activity, onBack, onToast, classPi
   const [picked, setPicked] = useState(null); // 낱말 채우기 — 가운데에 크게 볼 모둠
   // 모둠 카드를 누르면 마우스 옆에 그 모둠의 낱말 · 힌트(사람별) — { gId, anchor }
   const [hintPop, setHintPop] = useState(null);
+  const [hintSelection, setHintSelection] = useState(null);
+  const [filterStage, setFilterStage] = useState("");
+  const [filterState, setFilterState] = useState("");
+  const focusScope = `${activity.id}:${hintSelection?.idx ?? ""}`;
+  const stageFocus = useProgressStageFocus(focusScope);
   // 팝오버를 연 모둠의 '누가 맞혔나' — 그 모둠 하나만 구독합니다
   const [solveRecs, setSolveRecs] = useState({ gId: null, list: [] });
   const popGroupId = hintPop?.gId ?? null;
@@ -175,6 +188,10 @@ export default function CrosswordGroupBoard({ activity, onBack, onToast, classPi
         uid,
         name: nameOf(g, uid),
         words: mine.map((h) => h.word),
+        hintIndices: mine.map((h) => h.idx),
+        progressState: done ? "done" : mine.length
+          ? mine.some((h) => h.hint.trim()) ? "doing" : "empty"
+          : allTaken || !list.length ? "none" : "empty",
         state: done ? "done" : mine.length ? "doing" : allTaken || !list.length ? "free" : "none",
       };
     }),
@@ -182,6 +199,49 @@ export default function CrosswordGroupBoard({ activity, onBack, onToast, classPi
   })), [liveGroups, hintsOf]);
   const submitted = studentRows.reduce((n, x) => n + x.rows.filter((r) => r.state === "done").length, 0);
   const hintsDone = allHints.filter(xwHintDone).length;
+  const filterOptions = { rows: HINT_STEP, cellState: hintCellState, stageKey: filterStage, state: filterState };
+  const hintStudents = studentRows.flatMap(({ rows }) => rows);
+  const filterStates = getProgressStageStates(hintStudents, filterOptions);
+  const visibleStudentRows = studentRows.map((group) => ({
+    ...group, rows: filterProgressCards(group.rows, filterOptions),
+  }));
+  const visibleHintCount = visibleStudentRows.reduce((count, group) => count + group.rows.length, 0);
+  const selectedHint = hintSelection
+    ? (hintsOf[hintSelection.groupId] ?? []).find((hint) => hint.idx === hintSelection.idx && hint.writerUid === hintSelection.uid) ?? null
+    : null;
+  const selectedHintKeys = useMemo(() => selectedHint && puzzle?.entries[selectedHint.idx]
+    ? new Set(entryCellKeys(puzzle.entries[selectedHint.idx])) : null, [selectedHint, puzzle]);
+
+  useEffect(() => {
+    setFilterStage(""); setFilterState(""); setHintSelection(null);
+  }, [activity.id, activity.crossword?.createdAt]);
+
+  function openStudentHint(group, student) {
+    const ownHints = (hintsOf[group.id] ?? []).filter((hint) => hint.writerUid === student.uid);
+    const hint = ownHints.find((item) => !xwHintDone(item)) ?? ownHints[0];
+    if (!hint) return;
+    setHintSelection({ groupId: group.id, uid: student.uid, idx: hint.idx });
+    setPicked(group.id);
+    stageFocus.focusStage(`hint-${hint.idx}`, `${activity.id}:${hint.idx}`);
+  }
+
+  function studentHintRow(group, student) {
+    const hasHint = student.hintIndices.length > 0;
+    return (
+      <li key={student.uid} className={`xwg-stu xwg-stu--${student.state}`}>
+        {hasHint ? <button type="button"
+          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, width: "100%", border: 0, padding: 0, background: "transparent", textAlign: "left", font: "inherit", cursor: "pointer" }}
+          onClick={() => openStudentHint(group, student)}
+          aria-label={`${student.name} · ${HINT_STATE_LABELS[student.progressState]} — 맡은 힌트 원문 열기`}>
+          <span className="xwg-stu-name">{student.name}</span>
+          {puzzle && <span className="xwg-stu-state">{HINT_STATE_LABELS[student.progressState]}</span>}
+        </button> : <>
+          <span className="xwg-stu-name">{student.name}</span>
+          {puzzle && <span className="xwg-stu-state">{HINT_STATE_LABELS[student.progressState]}</span>}
+        </>}
+      </li>
+    );
+  }
   // 힌트를 낼 학생 수 — 낱말 하나에 한 사람이라 낱말 수를 넘지 않습니다
   const writerSlots = Math.min(studentCount, puzzle?.entries.length ?? 0);
 
@@ -286,7 +346,7 @@ export default function CrosswordGroupBoard({ activity, onBack, onToast, classPi
   const missingHints = puzzle ? puzzle.entries.length - hintsDone : 0;
 
   return (
-    <main className="canvas-main dash-root xw-main">
+    <main ref={stageFocus.ref} className="canvas-main dash-root xw-main">
       <div className="canvas-head">
         {/* 머리말 — 활동 이름 · ← 활동 목록 · 반 고르개 · 기록 관리 · 진행 요약.
             낱말을 가져온 닿소리 채우기의 이름을 함께 적습니다. */}
@@ -411,20 +471,19 @@ export default function CrosswordGroupBoard({ activity, onBack, onToast, classPi
                 )}
               </header>
               {!puzzle && <p className="xw-card-note">퀴즈를 만들면 학생마다 힌트를 냈는지 여기에 떠요.</p>}
+              {puzzle && <ProgressStageFilter
+                rows={HINT_STEP} states={filterStates} labels={HINT_STATE_LABELS}
+                stageKey={filterStage} state={filterState}
+                onStageChange={(key) => { setFilterStage(key); setFilterState(""); }}
+                onStateChange={setFilterState} total={hintStudents.length} shown={visibleHintCount}
+                onReset={() => { setFilterStage(""); setFilterState(""); }}
+              />}
+              {puzzle && visibleHintCount === 0 && <p className="xw-card-note">선택한 단계와 상태에 해당하는 학생이 없어요.</p>}
               {solo ? (
                 <ul className="xwg-solo-list">
-                  {studentRows.map(({ group, rows }) => rows.map((r) => (
-                    <li key={r.uid} className={`xwg-stu xwg-stu--${r.state}`}>
-                      <span className="xwg-stu-name">{soloName(group)}</span>
-                      {puzzle && (
-                        <span className="xwg-stu-state">
-                          {r.state === "done" ? "제출" : r.state === "doing" ? "쓰는 중" : r.state === "free" ? "맡은 낱말 없음" : "미제출"}
-                        </span>
-                      )}
-                    </li>
-                  )))}
+                  {visibleStudentRows.map(({ group, rows }) => rows.map((student) => studentHintRow(group, student)))}
                 </ul>
-              ) : studentRows.map(({ group, rows, unassigned }, gi) => (
+              ) : visibleStudentRows.filter(({ rows }) => rows.length > 0).map(({ group, rows, unassigned }, gi) => (
                 <div key={group.id} className="xwg-subgroup" style={{ "--xwg-c": colorOf(group.id).border }}>
                   <div className="xwg-subgroup-head">
                     <strong>{group.groupName || `${group.groupIndex ?? gi + 1}모둠`}</strong>
@@ -434,18 +493,7 @@ export default function CrosswordGroupBoard({ activity, onBack, onToast, classPi
                       </span>
                     )}
                   </div>
-                  <ul>
-                    {rows.map((r) => (
-                      <li key={r.uid} className={`xwg-stu xwg-stu--${r.state}`}>
-                        <span className="xwg-stu-name">{r.name}</span>
-                        {puzzle && (
-                          <span className="xwg-stu-state">
-                            {r.state === "done" ? "제출" : r.state === "doing" ? "쓰는 중" : r.state === "free" ? "맡은 낱말 없음" : "미제출"}
-                          </span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
+                  <ul>{rows.map((student) => studentHintRow(group, student))}</ul>
                 </div>
               ))}
             </section>
@@ -525,15 +573,26 @@ export default function CrosswordGroupBoard({ activity, onBack, onToast, classPi
               </div>
             </div>
 
+            {selectedHint && (
+              <section className="xw-card-note" data-progress-stage={`hint-${selectedHint.idx}`} tabIndex={-1} aria-label="선택한 학생의 힌트 원문">
+                <div className="xw-card-head">
+                  <h3>{selectedHint.writerName || nameOf(liveGroups.find((group) => group.id === hintSelection.groupId) ?? {}, hintSelection.uid)}의 힌트 · {DIR_LABEL[selectedHint.dir]} {selectedHint.num}</h3>
+                  <button type="button" className="btn-ghost" onClick={() => setHintSelection(null)}>닫기</button>
+                </div>
+                <strong>{selectedHint.word}</strong>
+                <p style={{ whiteSpace: "pre-wrap" }}>{selectedHint.hint.trim() || "아직 힌트를 작성하지 않았어요."}</p>
+              </section>
+            )}
             {!puzzle ? null : stage === "solve" && pickedRow ? (
               <CrosswordGrid
                 puzzle={puzzle}
                 letters={boardsBy[pickedRow.groupId] ?? {}}
                 fixed={pickedRow.fixed}
                 solvedKeys={pickedRow.solvedKeys}
+                selKeys={selectedHintKeys}
               />
             ) : (
-              <CrosswordGrid puzzle={puzzle} fixed={answerLetters} />
+              <CrosswordGrid puzzle={puzzle} fixed={answerLetters} selKeys={selectedHintKeys} />
             )}
           </section>
         </div>

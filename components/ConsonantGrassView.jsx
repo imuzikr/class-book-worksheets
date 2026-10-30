@@ -27,12 +27,22 @@
 // 대시보드가 이미 구독해 둔 모둠·낱말을 그대로 받아 셉니다.
 // =============================================================
 import { Fragment, useMemo, useState } from "react";
-import { CONSONANT_LABELS, CELL_COUNT } from "@/lib/consonants";
+import { CONSONANT_LABELS, CELL_COUNT, cellKey } from "@/lib/consonants";
+import ProgressStageFilter from "./ProgressStageFilter";
+import { filterProgressCards, getProgressStageStates } from "@/lib/progressStageFilter";
+
+const STEPS = CONSONANT_LABELS.map((label, index) => ({ key: cellKey(index), label, index }));
+const cellState = (row, _answers, student) => (student.counts?.[row.index] ?? 0) > 0 ? "done" : "empty";
 
 export default function ConsonantGrassView({ students = [], onPickStudent = null }) {
   // 툴팁은 칸마다 두지 않고 하나를 옮겨 씁니다 — 칸이 14 × 반 인원이라
   // (스물여섯 명이면 364개) 저마다 달면 그만큼 요소가 늘어납니다.
   const [tip, setTip] = useState(null);
+  const [filterStage, setFilterStage] = useState("");
+  const [filterState, setFilterState] = useState("");
+  const filterOptions = { rows: STEPS, cellState, stageKey: filterStage, state: filterState };
+  const shownStudents = filterProgressCards(students, filterOptions);
+  const filterStates = getProgressStageStates(students, filterOptions);
 
   // 줄마다 '채운 인원'. 이미 받아 둔 값으로 세므로 읽기가 늘지 않습니다.
   const doneCounts = useMemo(
@@ -72,6 +82,13 @@ export default function ConsonantGrassView({ students = [], onPickStudent = null
       {/* 범례와 격자를 한 덩이로 가운데에 — 범례가 격자의 왼쪽 끝에 맞춰 섭니다.
           격자가 칸보다 넓으면 이 덩이가 칸 폭을 다 쓰고 격자만 옆으로 구릅니다 */}
       <div className="dash-grass-inner">
+        <ProgressStageFilter
+          rows={STEPS} states={filterStates} stageKey={filterStage} state={filterState}
+          onStageChange={(key) => { setFilterStage(key); setFilterState(""); setTip(null); }}
+          onStateChange={(value) => { setFilterState(value); setTip(null); }}
+          total={students.length} shown={shownStudents.length}
+          onReset={() => { setFilterStage(""); setFilterState(""); }}
+        />
         <div className="progress-legend">
           <span className="progress-legend-item">
             <i className="progress-mark progress-mark--done" /> 채움
@@ -84,12 +101,12 @@ export default function ConsonantGrassView({ students = [], onPickStudent = null
           </span>
         </div>
 
-        <div className="progress-scroll" onScroll={() => setTip(null)}>
-          <div className="progress-grass" style={{ "--students": students.length }}>
+        {shownStudents.length === 0 ? <p className="dash-side-empty">선택한 단계와 상태에 해당하는 학생이 없어요.</p> : <div className="progress-scroll" onScroll={() => setTip(null)}>
+          <div className="progress-grass" style={{ "--students": shownStudents.length }}>
             {/* 이름 줄 — 세로쓰기. 세로로 구를 때 위에 붙어 있어야 어느 칸이
                 누구인지 잃지 않습니다(sticky). */}
             <span className="grass-act grass-corner" aria-hidden="true" />
-            {students.map((s) => {
+            {shownStudents.map((s) => {
               const filled = (s.counts ?? []).filter((n) => n > 0).length;
               const done = filled >= CELL_COUNT;
               return (
@@ -120,7 +137,7 @@ export default function ConsonantGrassView({ students = [], onPickStudent = null
                     {doneCounts[i]}/{students.length}
                   </span>
                 </span>
-                {students.map((s) => {
+                {shownStudents.map((s) => {
                   const n = s.counts?.[i] ?? 0;
                   const text =
                     `${s.name} · ${label} — ` +
@@ -130,7 +147,7 @@ export default function ConsonantGrassView({ students = [], onPickStudent = null
                       key={s.uid}
                       type="button"
                       className={`grass-cell grass-cell--${n > 0 ? "done" : "empty"}`}
-                      onClick={() => onPickStudent?.(s.uid)}
+                      onClick={() => onPickStudent?.(s.uid, cellKey(i))}
                       onMouseEnter={(e) => showTip(e, text)}
                       onMouseLeave={() => setTip(null)}
                       onFocus={(e) => showTip(e, text)}
@@ -142,7 +159,7 @@ export default function ConsonantGrassView({ students = [], onPickStudent = null
               </Fragment>
             ))}
           </div>
-        </div>
+        </div>}
       </div>
 
       {tip && (

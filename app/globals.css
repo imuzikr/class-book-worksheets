@@ -33628,3 +33628,24 @@ button.msgr-receipt:hover { color: var(--text-sub); }
   .opinion-modal .opinion-reply-text,
   .opinion-modal .opinion-reply-input { font-size: 22px; }
 }
+
+/* A teacher's progress segment opens and identifies the saved answer section. */
+[data-progress-stage] { scroll-margin-block: 105px; }
+.progress-stage-target {
+  outline: 3px solid #bd775b;
+  outline-offset: 4px;
+  border-radius: 8px;
+  box-shadow: 0 0 0 7px rgba(210, 151, 123, 0.13);
+}
+.xwg-center--teacher .xw-cell.sel {
+  box-shadow: inset 0 0 0 2px var(--primary);
+}
+@media (max-width: 900px) {
+  /* Stacked teacher panels scroll as a single page. A long student rail must
+     not shrink the selected original-answer panel to zero height. */
+  .book-workspace-main { overflow-y: auto; }
+  .book-workspace-main > .book-workspace { flex: 0 0 auto; }
+  .book-workspace-main .book-workspace-center { flex: 0 0 auto; overflow: visible; }
+  .book-workspace-main .book-group-rail { overflow: visible; }
+  .book-rail-card--student .dash-progress-num { grid-column: 1 / -1; }
+}

@@ -7,6 +7,7 @@ import {
   hashtagCloud,
   hashtagPostForSave,
   hashtagProgress,
+  hashtagCellState,
   addTagsTo,
   hasHashtagEntries,
   hashtagEntries,
@@ -66,6 +67,24 @@ test("진행 — 태그와 생각이 다 찬 칸만, 중복 칸은 빼고 · 원
   assert.equal(pr.complete, false);
   const six = Array.from({ length: 6 }, (_, i) => ({ tag: `t${i}`, insight: "생각" }));
   assert.equal(hashtagProgress({ tags: six }).complete, true);
+});
+
+test("교사 단계 상태 — 빈 칸 번호와 중복 태그를 전체 진행과 일치시킵니다", () => {
+  const post = { tags: [
+    { tag: "", insight: "" },
+    { tag: "바다", insight: "함께 지켜야 한다" },
+    { tag: "#바다", insight: "다시 적은 생각" },
+    { tag: "나무", insight: "" },
+  ] };
+  assert.equal(hashtagCellState(0, post), "empty");
+  assert.equal(hashtagCellState(1, post), "done");
+  assert.equal(hashtagCellState(2, post), "doing");
+  assert.equal(hashtagCellState(3, post), "doing");
+  assert.equal(hashtagCellState(5, post), "empty");
+  assert.equal(hashtagCellState(1, null), "empty");
+  const filled = Array.from({ length: 6 }, (_, i) => hashtagCellState(i, post))
+    .filter((state) => state === "done").length;
+  assert.equal(filled, hashtagProgress(post).done);
 });
 
 test("저장 모양 — 위험한 그림 주소는 걷습니다", () => {

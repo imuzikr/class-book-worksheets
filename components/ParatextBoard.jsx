@@ -16,6 +16,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { subscribeParatextEntries, composeBookGroups } from "@/lib/store";
 import { useEntryCast } from "@/lib/useEntryCast";
+import { useProgressStageFocus } from "@/lib/useProgressStageFocus";
 import GroupComposer from "./GroupComposer";
 import GroupFilterRow from "./GroupFilterRow";
 import ParatextProgressBoard from "./ParatextProgressBoard";
@@ -50,6 +51,12 @@ export default function ParatextBoard({
 }) {
   const [entries, setEntries] = useState([]);
   const [openUid, setOpenUid] = useState(null);
+  const stageFocus = useProgressStageFocus(`${activity.id}:${openUid}`);
+
+  function pickStudent(uid, stageKey) {
+    setOpenUid(uid);
+    stageFocus.focusStage(stageKey, `${activity.id}:${uid}`);
+  }
   // 모둠으로 진행하는 활동이면 카드를 모둠으로 좁혀 볼 수 있습니다.
   // 글은 모둠으로 묶여도 학생마다 한 장이라, 모둠은 '보는 차례'만 정합니다.
   const grouped = isGroupedActivity(activity);
@@ -212,7 +219,7 @@ export default function ParatextBoard({
   );
 
   return (
-    <main className="books-main book-workspace-main">
+    <main className="books-main book-workspace-main" ref={stageFocus.ref}>
       <div className="books-head">
         {/* 제목 · 돌아가는 길 · 도구 순서 — 닿소리 머리말(BookGroupBoard)과
             같은 차례입니다. 화면을 한 단계 되돌리는 버튼은 '무엇을 읽는
@@ -298,7 +305,7 @@ export default function ParatextBoard({
             cards={shownCards}
             allCards={cards}
             pickedUid={openUid}
-            onPick={setOpenUid}
+            onPick={pickStudent}
             rows={stepRows}
             cellState={paratextCellState}
             castUid={cast.target?.uid ?? null}
@@ -340,6 +347,9 @@ export default function ParatextBoard({
                     return (
                       <section
                         key={s.key}
+                        data-progress-stage={s.key}
+                        tabIndex={-1}
+                        aria-label={`${open.name} · ${s.ko}`}
                         className={`entry-region${isSectionDone(s, answers) ? " done" : ""}${live ? " live" : ""}`}
                       >
                         <header className="paratext-card-head">
@@ -419,7 +429,7 @@ export default function ParatextBoard({
           activityTitle={activity.title}
           cards={shownCards.some((c) => c.uid === open.uid) ? shownCards : cards}
           uid={open.uid}
-          onPick={setOpenUid}
+          onPick={pickStudent}
           onClose={() => setOverviewOpen(false)}
           sectionsOf={(c) =>
             PARATEXT_SECTIONS.map((r, i) => ({
@@ -438,7 +448,7 @@ export default function ParatextBoard({
         <ParatextProgressBoard
           activity={activity}
           cards={cards}
-          onOpenStudent={(uid) => { setOpenUid(uid); setBoardOpen(false); }}
+          onOpenStudent={(uid, stageKey) => { pickStudent(uid, stageKey); setBoardOpen(false); }}
           onClose={() => setBoardOpen(false)}
         />
       )}

@@ -8,17 +8,17 @@
 //   한 줄 = '몇 번째로 이어 쓰는 칸인가'(1 = 제 칸의 첫 줄, 2 = 바로 앞 친구의
 //           칸에 두 번째로 …)   한 칸 = 학생 한 명
 //
-// 칸 상태는 넷 — 다 씀(초록) · 내 차례(주황 — 앞 사람이 써서 이제 쓸 수
-// 있음) · 기다림(회색 — 앞 사람이 아직) · 자리 없음(점선 — 모둠이 작아 그
-// 차례가 없음). '내 차례'가 오래 머무는 학생이 곧 모둠의 흐름을 막는 학생입니다.
+// 작성 완료 · 내 차례 · 앞 차례 대기 · 해당 차례 없음 · 모둠 배정 대기를
+// 구분합니다. 모둠에 들지 않은 학생도 반 전체 명부에서 빠지지 않습니다.
 //
 // 셈은 보드가 이미 만든 학생마다의 `slots`(lib/brainwrite.js의 writerSlots)를
 // 그대로 씁니다 — 읽는 문서가 늘지 않습니다.
 // =============================================================
 import { useCallback, useMemo } from "react";
+import { brainwriteSlotState } from "@/lib/brainwrite";
 import BookProgressBoard from "./BookProgressBoard";
 
-const LABELS = { done: "다 씀", doing: "내 차례", empty: "기다림", none: "자리 없음" };
+const LABELS = { done: "작성 완료", doing: "내 차례", empty: "앞 차례 대기", none: "해당 차례 없음", unassigned: "모둠 배정 대기" };
 
 export default function BrainWriteProgressBoard({ activity, cards = [], onOpenStudent, onClose }) {
   const depth = Math.max(0, ...cards.map((c) => c.slots?.length ?? 0));
@@ -41,16 +41,12 @@ export default function BrainWriteProgressBoard({ activity, cards = [], onOpenSt
     [cards]
   );
 
-  const cellState = useCallback((row, answers) => {
-    const slot = answers?.slots?.[row.k];
-    if (!slot) return "none";
-    if (slot.done) return "done";
-    return slot.ready ? "doing" : "empty";
-  }, []);
+  const cellState = useCallback((row, _answers, card) => brainwriteSlotState(card, row.k), []);
 
   const cellTip = useCallback((row, card, answers) => {
     const slot = answers?.slots?.[row.k];
     const who = `${card.studentId ? `${card.studentId} ` : ""}${card.name}`;
+    if (card.unassigned) return `${who} — 모둠 배정 대기`;
     if (!slot) return `${who} · ${row.label} — 모둠이 작아 이 차례가 없어요`;
     const where = row.k === 0 ? "제 칸" : `${slot.owner.name}의 칸`;
     const st = slot.done ? "다 씀" : slot.ready ? "내 차례(앞 사람이 썼어요)" : "기다림(앞 사람이 아직)";
@@ -67,7 +63,7 @@ export default function BrainWriteProgressBoard({ activity, cards = [], onOpenSt
       rows={rows}
       cellState={cellState}
       cellTip={cellTip}
-      states={["done", "doing", "empty", "none"]}
+      states={["done", "doing", "empty", "none", ...(cards.some((c) => c.unassigned) ? ["unassigned"] : [])]}
       labels={LABELS}
       summary={`모든 칸에 쓴 학생 ${doneAll} / ${cards.length}명`}
       headWidth={150}

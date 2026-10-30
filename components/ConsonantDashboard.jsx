@@ -31,6 +31,7 @@ import {
 import { cloudWords, CLOUD_TOP_N } from "@/lib/wordCloud";
 import WordCloud from "./WordCloud";
 import ConsonantGrassView from "./ConsonantGrassView";
+import ConsonantCanvas from "./ConsonantCanvas";
 import DashViewTabs from "./DashViewTabs";
 
 // [학생 화면에 중계]
@@ -51,6 +52,7 @@ export default function ConsonantDashboard({
 }) {
   const [groups, setGroups] = useState([]);
   const [wordsByGroup, setWordsByGroup] = useState({});
+  const [studentTarget, setStudentTarget] = useState(null);
   const [zoomSlot, setZoomSlot] = useState(null); // 크게 보기 모달
   // 같은 집계의 세 얼굴 — 잔디(누가 어디까지) / 격자(첫 글자로 나뉜 자리) /
   // 낱말 구름(낱말만). 탭이 선 차례와 **처음 여는 얼굴은 별개**입니다 —
@@ -161,6 +163,7 @@ export default function ConsonantDashboard({
           uid,
           name: m?.name || "이름 미설정",
           studentId: m?.studentId ?? null,
+          groupId: g.id,
           groupIndex: g.groupIndex,
           groupName: gname,
           counts: Array(CELL_COUNT).fill(0),
@@ -301,6 +304,15 @@ export default function ConsonantDashboard({
     }
   }
 
+  useEffect(() => {
+    if (!studentTarget) return undefined;
+    const onKey = (event) => {
+      if (event.key === "Escape") { event.preventDefault(); setStudentTarget(null); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [studentTarget]);
+
   const Root = embedded ? "section" : "main";
   return (
     <Root className={`${embedded ? "dash-embed" : "canvas-main"} dash-root`}>
@@ -358,7 +370,11 @@ export default function ConsonantDashboard({
         // 잔디는 가로가 인원만큼 늘어나므로 진행 패널을 접고 폭을 다 씁니다
         // (구름과 같은 이유). 모달이 아니라 이 자리에 그대로 그립니다.
         <div className="dash-body dash-body--grass">
-          <ConsonantGrassView students={students} />
+          <ConsonantGrassView students={students} onPickStudent={(uid, stageKey) => {
+            const student = students.find((item) => item.uid === uid);
+            if (!student) return;
+            setStudentTarget((previous) => ({ ...student, stageKey, sequence: (previous?.sequence ?? 0) + 1 }));
+          }} />
         </div>
       ) : view === "cloud" ? (
         // 구름은 판을 넓게 쓸수록 낱말이 커집니다 — 진행 패널은 접어 두고
@@ -452,6 +468,21 @@ export default function ConsonantDashboard({
           )}
         </aside>
       </div>
+      )}
+
+      {studentTarget && (
+        <div className="modal-backdrop" {...backdropClose(() => setStudentTarget(null))}>
+          <div className="modal dash-zoom-modal" role="dialog" aria-modal="true" aria-labelledby="consonant-student-original-title" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-head">
+              <h3 id="consonant-student-original-title">{studentTarget.name}의 낱말 · {studentTarget.stageKey ? CONSONANT_LABELS[Number(studentTarget.stageKey.slice(1))] : "전체 칸"}</h3>
+              <button type="button" className="btn-close" aria-label="닫기" onClick={() => setStudentTarget(null)}>×</button>
+            </div>
+            <ConsonantCanvas
+              key={studentTarget.groupId} activity={activity} groupId={studentTarget.groupId}
+              user={user} isTeacher viewMode="group" embedded focusRequest={studentTarget}
+            />
+          </div>
+        </div>
       )}
 
       {/* 자음 한 칸 크게 보기 — 칠판에 띄워 함께 짚어 볼 때 */}

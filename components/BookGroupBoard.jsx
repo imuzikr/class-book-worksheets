@@ -33,7 +33,12 @@ import { CELL_COUNT, CONSONANT_LABELS, cellKey } from "@/lib/consonants";
 import { barTint, memberLegend, rowColor } from "@/lib/bookColors";
 import GroupComposer from "./GroupComposer";
 import ConsonantCanvas from "./ConsonantCanvas";
+import ProgressStageFilter from "./ProgressStageFilter";
 import { IconPeople, IconLock } from "./StatusIcons";
+import { filterProgressCards, getProgressStageStates } from "@/lib/progressStageFilter";
+
+const CONSONANT_STEPS = CONSONANT_LABELS.map((label, index) => ({ key: cellKey(index), label, index }));
+const consonantProgressState = (row, _answers, card) => (card.cellCounts?.[row.index] ?? 0) > 0 ? "done" : "empty";
 
 export default function BookGroupBoard({
   activity,
@@ -55,6 +60,7 @@ export default function BookGroupBoard({
   // 섞여 있어 "이 학생이 뭘 넣었지"를 보려면 색을 눈으로 좇아야 했습니다.
   // 이름을 누르면 그 학생 낱말만 남고, 다시 누르면 모둠 판으로 돌아옵니다.
   const [focusUid, setFocusUid] = useState(null);
+  const [focusRequest, setFocusRequest] = useState(null);
 
   useEffect(() => subscribeBookGroups(activity.id, setGroups), [activity.id]);
 
@@ -370,7 +376,10 @@ export default function BookGroupBoard({
                     key={g.id}
                     type="button"
                     className={`book-rail-card book-rail-card--student${on ? " on" : ""}`}
-                    onClick={() => setPickedId(g.id)}
+                    onClick={() => {
+                      setPickedId(g.id); setFocusUid(null);
+                      setFocusRequest((previous) => ({ groupId: g.id, uid: null, stageKey: null, sequence: (previous?.sequence ?? 0) + 1 }));
+                    }}
                     aria-pressed={on}
                   >
                     <span className="book-rail-head">
@@ -393,7 +402,10 @@ export default function BookGroupBoard({
                   key={g.id}
                   type="button"
                   className={`book-rail-card${on ? " on" : ""}`}
-                  onClick={() => setPickedId(g.id)}
+                  onClick={() => {
+                      setPickedId(g.id); setFocusUid(null);
+                      setFocusRequest((previous) => ({ groupId: g.id, uid: null, stageKey: null, sequence: (previous?.sequence ?? 0) + 1 }));
+                    }}
                   aria-pressed={on}
                 >
                   <span className="book-rail-head">
@@ -430,6 +442,7 @@ export default function BookGroupBoard({
                 viewMode="group"
                 embedded
                 onFocusChange={setFocusUid}
+                focusRequest={focusRequest?.groupId === picked.id ? focusRequest : null}
               />
             ) : (
               <p className="empty-note">
@@ -453,6 +466,14 @@ export default function BookGroupBoard({
               pickedUid={perStudent ? (picked?.members ?? [])[0]?.uid ?? null : focusUid}
               colorByRow={perStudent}
               roster={roster}
+              onPickStage={(member, stageKey) => {
+                setPickedId(member.groupId);
+                setFocusUid(member.uid);
+                setFocusRequest((previous) => ({
+                  groupId: member.groupId, uid: member.uid, stageKey,
+                  sequence: (previous?.sequence ?? 0) + 1,
+                }));
+              }}
             />
           )}
         </div>
@@ -498,8 +519,11 @@ function GroupProgress({
   pickedUid = null,
   colorByRow = false,
   roster = [],
+  onPickStage = null,
 }) {
   const [wordsByGroup, setWordsByGroup] = useState({});
+  const [filterStage, setFilterStage] = useState("");
+  const [filterState, setFilterState] = useState("");
 
   // 판이 바뀌면 각 판의 낱말을 각각 구독합니다(전체 집계 화면과 같은 방식).
   const idsKey = useMemo(
@@ -540,6 +564,11 @@ function GroupProgress({
     return colorByRow ? out.map((m, i) => ({ ...m, color: rowColor(i) })) : out;
   }, [groups, wordsByGroup, colorByRow]);
 
+  useEffect(() => { setFilterStage(""); setFilterState(""); }, [activity.id, idsKey]);
+  const filterOptions = { rows: CONSONANT_STEPS, cellState: consonantProgressState, stageKey: filterStage, state: filterState };
+  const shownRows = filterProgressCards(rows, filterOptions);
+  const filterStates = getProgressStageStates(rows, filterOptions);
+
   // 학번은 판에 저장된 members가 아니라 반 명단에서 찾습니다 — 예전에 만든
   // 판에는 학번이 없고, 명단 쪽이 늘 최신입니다.
   const sidOf = useMemo(() => {
@@ -571,6 +600,12 @@ function GroupProgress({
           </b>
         )}
       </h3>
+      {rows.length > 0 && <ProgressStageFilter
+        rows={CONSONANT_STEPS} states={filterStates} stageKey={filterStage} state={filterState}
+        onStageChange={(key) => { setFilterStage(key); setFilterState(""); }}
+        onStateChange={setFilterState} total={rows.length} shown={shownRows.length}
+        onReset={() => { setFilterStage(""); setFilterState(""); }}
+      />}
       {attendanceKnown && (
         <p className="book-progress-legend">
           {activityDate} 출석 기준 · 결석 {absentCount}명
@@ -580,7 +615,8 @@ function GroupProgress({
         <p className="dash-side-empty">아직 참여한 학생이 없어요.</p>
       ) : (
         <ul className="dash-progress-list">
-          {rows.map((m) => {
+          {shownRows.length === 0 && <li className="dash-side-empty">선택한 단계와 상태에 해당하는 학생이 없어요.</li>}
+          {shownRows.map((m) => {
             const absent = absentUids.has(m.uid);
             return (
               <li
@@ -631,9 +667,12 @@ function GroupProgress({
                     점이라 '다 됐다'가 목록을 훑는 중에도 눈에 걸립니다. */}
                 <span className="dash-heat">
                   {m.cellCounts.map((n, i) => (
-                    <i
+                    <button
                       key={i}
-                      className={`dash-heat-cell${
+                      type="button"
+                      onClick={() => onPickStage?.(m, cellKey(i))}
+                      aria-label={`${m.name} · ${CONSONANT_LABELS[i]} · 낱말 ${n}개 — 원문 열기`}
+                      className={`dash-heat-cell progress-stage-button${
                         m.filled >= CELL_COUNT && i === CELL_COUNT - 1 ? " is-done" : ""
                       }`}
                       style={n > 0 ? { background: m.color.border } : undefined}

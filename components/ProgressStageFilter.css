@@ -1,0 +1,100 @@
+.progress-stage-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 7px 10px;
+  margin: 0 0 12px;
+  padding: 9px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card-bg);
+  font-size: 11.5px;
+  min-width: 0;
+}
+.progress-stage-filter label {
+  display: flex;
+  flex: 1 1 100px;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  color: var(--text-sub);
+  font-weight: 700;
+}
+.progress-stage-filter select {
+  min-width: 0;
+  max-width: 100%;
+  padding: 5px 7px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--card-bg);
+  color: var(--text);
+  font: inherit;
+}
+.progress-stage-filter select:disabled { opacity: .55; }
+.progress-stage-filter-count { color: var(--text-sub); font-variant-numeric: tabular-nums; }
+.progress-stage-filter-reset {
+  border: 0;
+  padding: 2px;
+  margin-left: auto;
+  background: transparent;
+  color: var(--primary-dark);
+  font: inherit;
+  cursor: pointer;
+}
+.book-rail-select {
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.progress-stage-name-button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.progress-stage-button {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+  height: 20px;
+  cursor: pointer;
+}
+.progress-stage-button:focus-visible,
+.book-rail-select:focus-visible,
+.progress-stage-name-button:focus-visible {
+  outline: 2px solid var(--primary-dark);
+  outline-offset: 2px;
+}
+.progress-stage-empty, .progress-stage-unassigned {
+  margin: 8px 0;
+  color: var(--text-sub);
+  font-size: 12px;
+}
+.progress-stage-unassigned-list { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 0; }
+.progress-stage-unassigned-student {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 9px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 9px;
+  background: var(--card-bg);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.progress-stage-unassigned-student span { color: var(--text-sub); font-size: 11px; }
+.grass-cell--unassigned, .progress-mark--unassigned,
+.entry-heat-cell--unassigned { background: #eee9df; border: 1px dashed #b9ad98; }
+.entry-heat-cell--none { background: transparent; border: 1px dashed var(--border); }
+.book-group-rail > .progress-stage-filter { flex-shrink: 0; }
+@media (max-width: 760px) {
+  .book-group-rail > .progress-stage-filter { flex: 1 0 100%; }
+}

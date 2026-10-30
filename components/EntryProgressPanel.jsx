@@ -19,8 +19,10 @@
 // 여기 학생들은 모둠 안 자리가 없어 '모둠 색'을 쓸 수 없고, 붙어 있는 줄끼리만
 // 달라도 목록을 훑는 데 충분합니다.
 // =============================================================
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { barTint, rowColor } from "@/lib/bookColors";
+import { PROGRESS_STAGE_LABELS, filterProgressCards, getProgressStageRows, getProgressStageStates } from "@/lib/progressStageFilter";
+import ProgressStageFilter from "./ProgressStageFilter";
 
 export default function EntryProgressPanel({
   title = "학생별 진행",
@@ -35,14 +37,22 @@ export default function EntryProgressPanel({
   rowsOf = null,
   // 목록이 빌 때의 말 — 모둠 하나로 좁혀 보이는 화면은 '고르기 전'이 빈 까닭입니다.
   emptyText = "아직 이 반에 들어온 학생이 없어요.",
+  labels = null,
 }) {
   const total = rows.length;
+  const [filterStage, setFilterStage] = useState("");
+  const [filterState, setFilterState] = useState("");
+  const filterRows = getProgressStageRows(cards, { rows, rowsOf });
+  const stageKey = filterRows.some((row) => String(row.key) === filterStage) ? filterStage : "";
+  const filterOptions = { rows, rowsOf, cellState, stageKey, state: filterState };
+  const shownUids = new Set(filterProgressCards(cards, filterOptions).map((card) => card.uid));
+  const filterStates = getProgressStageStates(cards, filterOptions);
 
   const list = useMemo(
     () =>
       cards.map((c, i) => {
         const answers = c.entry?.answers ?? {};
-        const own = rowsOf ? rowsOf(c) : rows;
+        const own = rowsOf ? rowsOf(c) ?? [] : rows;
         const states = own.map((r) => cellState(r, answers, c));
         return {
           ...c,
@@ -73,19 +83,28 @@ export default function EntryProgressPanel({
           </b>
         )}
       </h3>
+      <ProgressStageFilter
+        rows={filterRows} states={filterStates} labels={labels} stageKey={stageKey}
+        state={stageKey ? filterState : ""} total={list.length} shown={shownUids.size}
+        onStageChange={(key) => { setFilterStage(key); setFilterState(""); }}
+        onStateChange={setFilterState}
+        onReset={() => { setFilterStage(""); setFilterState(""); }}
+      />
       {list.length === 0 ? (
         <p className="dash-side-empty">{emptyText}</p>
       ) : (
+        <>
+        {shownUids.size === 0 && <p className="progress-stage-empty">조건에 맞는 학생이 없습니다. 필터를 바꾸거나 초기화해 주세요.</p>}
         <ul className="dash-progress-list">
-          {list.map((m) => (
+          {list.filter((m) => shownUids.has(m.uid)).map((m) => (
             <li key={m.uid} className={m.uid === pickedUid ? "is-picked" : ""}>
-              <span className="dash-progress-name">
+              <button type="button" className="dash-progress-name progress-stage-name-button" onClick={() => onPick?.(m.uid)} aria-label={`${m.name} 화면 열기`}>
                 <i className="dash-dot" style={{ background: m.color.border }} />
                 {m.studentId && <em className="dash-progress-sid">{m.studentId}</em>}
                 <span className="dash-progress-who">{m.name}</span>
-              </span>
+              </button>
               <span className="dash-progress-num">
-                {m.filled}/{m.total}칸
+                {m.unassigned ? "모둠 배정 대기" : `${m.filled}/${m.total}칸`}
                 {extra && <span className="dash-progress-words">{extra(m)}</span>}
               </span>
               <span className="dash-progress-bar">
@@ -96,29 +115,28 @@ export default function EntryProgressPanel({
                   }}
                 />
               </span>
-              {/* 네모를 누르면 그 학생 화면으로 — 왼쪽 목록과 같은 일입니다.
-                  줄 전체를 버튼으로 만들면 이름·숫자·막대까지 눌리는 것처럼
-                  보여, 실제로 누르는 자리인 네모 줄만 버튼입니다. */}
-              <button
-                type="button"
+              <div
                 className="dash-heat entry-heat"
-                onClick={() => onPick?.(m.uid)}
-                title={`${m.name} 화면 열기`}
+                aria-label={`${m.name} 단계별 답안`}
               >
                 {m.states.map((st, i) => (
-                  <i
+                  <button
                     key={m.rows[i].key}
-                    className={`dash-heat-cell entry-heat-cell entry-heat-cell--${st}${
+                    type="button"
+                    className={`dash-heat-cell entry-heat-cell progress-stage-button entry-heat-cell--${st}${
                       m.filled >= m.total && i === m.total - 1 ? " is-done" : ""
                     }`}
                     style={st === "done" ? { background: m.color.border } : undefined}
-                    title={`${m.rows[i].label}`}
+                    onClick={() => onPick?.(m.uid, m.rows[i].key)}
+                    title={`${m.rows[i].label} · ${labels?.[st] ?? PROGRESS_STAGE_LABELS[st] ?? st}`}
+                    aria-label={`${m.name} · ${m.rows[i].label} · ${labels?.[st] ?? PROGRESS_STAGE_LABELS[st] ?? st} — 답안 열기`}
                   />
                 ))}
-              </button>
+              </div>
             </li>
           ))}
         </ul>
+        </>
       )}
     </aside>
   );

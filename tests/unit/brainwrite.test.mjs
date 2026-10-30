@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   bwNoteId, sortMembers, columnOrder, notesByColumn, columnRows,
-  previousRow, writerProgress, writerChars,
+  previousRow, writerProgress, writerChars, brainwriteStageTarget, brainwriteSlotState,
 } from "../../lib/brainwrite.js";
 
 const M = [
@@ -76,4 +76,45 @@ test("학생 질문은 본인 첫 칸에 남고 저장된 뒤 친구의 답변 �
   assert.equal(rowWritable(rows, 2), true);
   assert.equal(rowWritable(rows, 3), false);
   assert.equal(writerSlots(M, "a", by)[0].done, true);
+});
+
+test("진행 조각은 쓴 학생의 칸이 아니라 실제 기여한 친구 컬럼과 줄로 이동", () => {
+  const slots = writerSlots(M, "b", notesByColumn([
+    { ownerUid: "a", writerUid: "a", text: "친구 질문" },
+    { ownerUid: "a", writerUid: "b", text: "내가 쓴 답" },
+  ]));
+  const card = { uid: "b", group: { id: "g" }, slots };
+  assert.deepEqual(brainwriteStageTarget(card, "k0"), { ownerUid: "b", writerUid: "b", k: 0, stageKey: "k0" });
+  assert.deepEqual(brainwriteStageTarget(card, "k1"), { ownerUid: "a", writerUid: "b", k: 1, stageKey: "k1" });
+  const target = brainwriteStageTarget(card, "k1");
+  const rows = columnRows(M, target.ownerUid, notesByColumn([
+    { ownerUid: "a", writerUid: "a", text: "친구 질문" },
+    { ownerUid: "a", writerUid: "b", text: "내가 쓴 답" },
+  ]));
+  assert.equal(rows[target.k].member.uid, target.writerUid);
+  assert.equal(rows[target.k].note.text, "내가 쓴 답");
+});
+
+test("작은 모둠에 없는 차례와 미배정 학생은 다른 원문으로 이동하지 않음", () => {
+  const pair = M.slice(0, 2);
+  const card = { uid: "a", group: { id: "g" }, slots: writerSlots(pair, "a", {}) };
+  assert.equal(brainwriteStageTarget(card, "k2"), null);
+  assert.equal(brainwriteStageTarget({ uid: "a", group: null, slots: [] }, "k0"), null);
+  assert.equal(brainwriteStageTarget({ ...card, group: null }, "k0"), null);
+  assert.equal(brainwriteStageTarget(card, "col"), null);
+  assert.equal(brainwriteStageTarget(card, "k-1"), null);
+  assert.equal(brainwriteStageTarget(card, undefined), null);
+});
+
+test("미배정·해당 차례 없음·앞 차례 대기·내 차례·완료를 서로 구분", () => {
+  assert.equal(brainwriteSlotState({ group: null, unassigned: true, slots: [] }, 0), "unassigned");
+  const card = { group: { id: "g" }, slots: [
+    { k: 0, done: true, ready: true },
+    { k: 1, done: false, ready: true },
+    { k: 2, done: false, ready: false },
+  ] };
+  assert.equal(brainwriteSlotState(card, 0), "done");
+  assert.equal(brainwriteSlotState(card, 1), "doing");
+  assert.equal(brainwriteSlotState(card, 2), "empty");
+  assert.equal(brainwriteSlotState(card, 3), "none");
 });

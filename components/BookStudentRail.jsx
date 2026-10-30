@@ -33,8 +33,10 @@
 // 줄 색은 **반 전체 차례**(allCards)로 매깁니다. 모둠으로 좁힌 목록의 차례로
 // 매기면 같은 학생이 왼쪽과 오른쪽에서 다른 색이 됩니다.
 // =============================================================
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { barTint, rowColor } from "@/lib/bookColors";
+import { PROGRESS_STAGE_LABELS, filterProgressCards, getProgressStageStates } from "@/lib/progressStageFilter";
+import ProgressStageFilter from "./ProgressStageFilter";
 
 export default function BookStudentRail({
   cards = [],
@@ -47,7 +49,14 @@ export default function BookStudentRail({
   extra = null,     // (card) => `n/N칸` 뒤에 붙일 것 (예: ' · 120자') — 오른쪽 패널과 같은 자리
   meta = null,      // (card) => 카드 맨 아래 한 줄 — 칸 수 말고 더 말할 것이 있을 때만
   unit = "칸",      // `n/N` 뒤의 말 — 가로세로 낱말 풀이는 '개'
+  labels = null,
 }) {
+  const [filterStage, setFilterStage] = useState("");
+  const [filterState, setFilterState] = useState("");
+  const stageKey = rows.some((row) => String(row.key) === filterStage) ? filterStage : "";
+  const options = { rows, cellState, stageKey, state: filterState };
+  const shownCards = filterProgressCards(cards, options);
+  const filterStates = getProgressStageStates(cards, options);
   const colorIdx = useMemo(
     () => new Map((allCards ?? cards).map((c, i) => [c.uid, i])),
     [allCards, cards]
@@ -56,22 +65,27 @@ export default function BookStudentRail({
 
   return (
     <aside className="book-group-rail" aria-label="학생 목록">
-      {cards.map((c) => {
+      <ProgressStageFilter
+        rows={rows} states={filterStates} labels={labels} stageKey={stageKey}
+        state={stageKey ? filterState : ""} total={cards.length} shown={shownCards.length}
+        onStageChange={(key) => { setFilterStage(key); setFilterState(""); }}
+        onStateChange={setFilterState}
+        onReset={() => { setFilterStage(""); setFilterState(""); }}
+      />
+      {cards.length > 0 && shownCards.length === 0 && <p className="progress-stage-empty">조건에 맞는 학생이 없습니다. 필터를 바꾸거나 초기화해 주세요.</p>}
+      {shownCards.map((c) => {
         const answers = c.entry?.answers ?? {};
         const on = c.uid === pickedUid;
         const color = rowColor(colorIdx.get(c.uid) ?? 0);
-        const states = rows.map((row) => cellState(row, answers));
+        const states = rows.map((row) => cellState(row, answers, c));
         const filled = states.filter((st) => st === "done").length;
         const full = total > 0 && filled >= total;
         return (
-          <button
+          <div
             key={c.uid}
-            type="button"
             className={`book-rail-card book-rail-card--student${on ? " on" : ""}`}
-            onClick={() => onPick?.(c.uid)}
-            aria-pressed={on}
           >
-            {/* 오른쪽 '학생별 진행'의 한 줄과 같은 격자·같은 클래스 */}
+            <button type="button" className="book-rail-select" onClick={() => onPick?.(c.uid)} aria-pressed={on} aria-label={`${c.name} 화면 열기`}>
             <span className="book-rail-progress">
               <span className="dash-progress-name">
                 <i className="dash-dot" style={{ background: color.border }} />
@@ -99,23 +113,25 @@ export default function BookStudentRail({
                   }}
                 />
               </span>
-              {/* 카드 전체가 이미 '그 학생 열기' 단추라 네모 줄은 span입니다
-                  (단추 안의 단추를 피함) — 누르면 오른쪽 패널의 네모와 같은 일. */}
-              <span className="dash-heat entry-heat">
+              {meta && <span className="book-rail-meta">{meta(c)}</span>}
+            </span>
+            </button>
+              <div className="dash-heat entry-heat" aria-label={`${c.name} 단계별 답안`}>
                 {rows.map((row, i) => (
-                  <i
+                  <button
                     key={row.key}
-                    className={`dash-heat-cell entry-heat-cell entry-heat-cell--${states[i]}${
+                    type="button"
+                    className={`dash-heat-cell entry-heat-cell progress-stage-button entry-heat-cell--${states[i]}${
                       full && i === total - 1 ? " is-done" : ""
                     }`}
                     style={states[i] === "done" ? { background: color.border } : undefined}
-                    title={row.label}
+                    onClick={() => onPick?.(c.uid, row.key)}
+                    title={`${row.label} · ${labels?.[states[i]] ?? PROGRESS_STAGE_LABELS[states[i]] ?? states[i]}`}
+                    aria-label={`${c.name} · ${row.label} · ${labels?.[states[i]] ?? PROGRESS_STAGE_LABELS[states[i]] ?? states[i]} — 답안 열기`}
                   />
                 ))}
-              </span>
-              {meta && <span className="book-rail-meta">{meta(c)}</span>}
-            </span>
-          </button>
+              </div>
+          </div>
         );
       })}
     </aside>

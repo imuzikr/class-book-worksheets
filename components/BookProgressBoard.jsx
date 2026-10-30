@@ -35,14 +35,17 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { backdropClose } from "@/lib/modal";
 import { IconLockState } from "./StatusIcons";
+import { filterProgressCards, getProgressStageStates } from "@/lib/progressStageFilter";
+import ProgressStageFilter from "./ProgressStageFilter";
 
 // 범례에 적는 말 — 상태 이름은 네 화면이 같아야 합니다.
 const STATE_LABEL = {
-  done: "다 씀",
-  doing: "쓰는 중",
-  empty: "시작 전",
+  done: "작성 완료",
+  doing: "일부 작성",
+  empty: "미작성",
   locked: "잠김",
-  none: "자리 없음", // 브레인 라이팅 — 모둠이 작아 그 차례가 없는 칸
+  none: "해당 단계 없음", // 브레인 라이팅 — 모둠이 작아 그 차례가 없는 칸
+  unassigned: "모둠 배정 대기",
 };
 
 export default function BookProgressBoard({
@@ -60,6 +63,12 @@ export default function BookProgressBoard({
   onClose,
 }) {
   const [tip, setTip] = useState(null);
+  const [filterStage, setFilterStage] = useState("");
+  const [filterState, setFilterState] = useState("");
+  const stageKey = rows.some((row) => String(row.key) === filterStage) ? filterStage : "";
+  const filterOptions = { rows, cellState, stageKey, state: filterState };
+  const shownCards = filterProgressCards(cards, filterOptions);
+  const filterStates = getProgressStageStates(cards, filterOptions);
 
   useEffect(() => {
     function onKey(e) { if (e.key === "Escape") { e.preventDefault(); onClose?.(); } }
@@ -71,7 +80,7 @@ export default function BookProgressBoard({
   const doneCounts = useMemo(
     () =>
       rows.map(
-        (r) => cards.filter((c) => cellState(r, c.entry?.answers ?? {}) === "done").length
+        (r) => cards.filter((c) => cellState(r, c.entry?.answers ?? {}, c) === "done").length
       ),
     [rows, cards, cellState]
   );
@@ -116,6 +125,13 @@ export default function BookProgressBoard({
           </p>
         ) : (
           <>
+            <ProgressStageFilter
+              rows={rows} states={filterStates} labels={labels} stageKey={stageKey}
+              state={stageKey ? filterState : ""} total={cards.length} shown={shownCards.length}
+              onStageChange={(key) => { setFilterStage(key); setFilterState(""); setTip(null); }}
+              onStateChange={(state) => { setFilterState(state); setTip(null); }}
+              onReset={() => { setFilterStage(""); setFilterState(""); setTip(null); }}
+            />
             <div className="progress-legend">
               {states.map((st) => (
                 <span key={st} className="progress-legend-item">
@@ -125,12 +141,24 @@ export default function BookProgressBoard({
               {summary && <span className="progress-legend-sum">{summary}</span>}
             </div>
 
+            {shownCards.length === 0 ? (
+              <p className="progress-stage-empty">조건에 맞는 학생이 없습니다. 필터를 바꾸거나 초기화해 주세요.</p>
+            ) : rows.length === 0 ? (
+              <div className="progress-stage-unassigned-list">
+                {shownCards.map((card) => (
+                  <button type="button" key={card.uid} className="progress-stage-unassigned-student" onClick={() => onOpenStudent?.(card.uid)}>
+                    <strong>{card.studentId ? `${card.studentId} ` : ""}{card.name}</strong>
+                    <span>{card.unassigned ? "모둠 배정 대기" : "확인할 단계가 없습니다"}</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
             <div className="progress-scroll" onScroll={() => setTip(null)}>
-              <div className="progress-grass" style={{ "--students": cards.length }}>
+              <div className="progress-grass" style={{ "--students": shownCards.length }}>
                 {/* 이름 줄 — 세로쓰기. 세로로 구를 때 위에 붙어 있어야
                     어느 칸이 누구인지 잃지 않습니다(sticky). */}
                 <span className="grass-act grass-corner" aria-hidden="true" />
-                {cards.map((c) => (
+                {shownCards.map((c) => (
                   <button
                     key={c.uid}
                     type="button"
@@ -163,16 +191,16 @@ export default function BookProgressBoard({
                         {doneCounts[i]}/{cards.length}
                       </span>
                     </span>
-                    {cards.map((c) => {
+                    {shownCards.map((c) => {
                       const answers = c.entry?.answers ?? {};
-                      const st = cellState(row, answers);
+                      const st = cellState(row, answers, c);
                       const text = cellTip(row, c, answers, i);
                       return (
                         <button
                           key={c.uid}
                           type="button"
                           className={`grass-cell grass-cell--${st}`}
-                          onClick={() => onOpenStudent?.(c.uid)}
+                          onClick={() => onOpenStudent?.(c.uid, row.key)}
                           onMouseEnter={(e) => showTip(e, text)}
                           onMouseLeave={() => setTip(null)}
                           onFocus={(e) => showTip(e, text)}
@@ -185,6 +213,7 @@ export default function BookProgressBoard({
                 ))}
               </div>
             </div>
+            )}
           </>
         )}
 

@@ -36,11 +36,11 @@ import {
   hashtagProgress,
   hashtagSlide,
   hasHashtagEntries,
-  isEntryDone,
-  isEntryStarted,
+  hashtagCellState,
   normalizeHashtagPost,
 } from "@/lib/hashtag";
 import { useEntryCast } from "@/lib/useEntryCast";
+import { useProgressStageFocus } from "@/lib/useProgressStageFocus";
 import { IconLock } from "./StatusIcons";
 import BookStudentRail from "./BookStudentRail";
 import HashtagSlide from "./HashtagSlide";
@@ -59,11 +59,7 @@ const ROWS = Array.from({ length: HASHTAG_COUNT }, (_, i) => ({
 const SLIDE_KEY = "slide";
 
 function cellState(row, post) {
-  if (!post) return "empty";
-  const e = post.tags?.[Number(row.key.slice(1))];
-  if (isEntryDone(e)) return "done";
-  if (isEntryStarted(e)) return "doing";
-  return "empty";
+  return hashtagCellState(Number(row.key.slice(1)), post);
 }
 
 function payloadOf(activity, card) {
@@ -86,6 +82,7 @@ export default function HashtagBoard({
   const [posts, setPosts] = useState([]);
   const [comments, setComments] = useState([]);
   const [openUid, setOpenUid] = useState(null);
+  const stageFocus = useProgressStageFocus(`${activity.id}:${openUid}`);
   const [busy, setBusy] = useState(false);
   const [stageOpen, setStageOpen] = useState(false);
 
@@ -193,8 +190,18 @@ export default function HashtagBoard({
   const openHas = !!(open?.post && hasHashtagEntries(open.post));
   const openLive = open ? cast.isCasting(open.uid, SLIDE_KEY) : false;
 
+  function pickStudent(uid, stageKey) {
+    if (stageKey) {
+      setOpenUid(uid);
+      stageFocus.focusStage(stageKey, `${activity.id}:${uid}`);
+      return;
+    }
+    stageFocus.focusStage(null);
+    setOpenUid((prev) => (prev === uid ? null : uid));
+  }
+
   return (
-    <main className="books-main book-workspace-main">
+    <main className="books-main book-workspace-main" ref={stageFocus.ref}>
       <div className="books-head">
         <div className="books-head-title">
           <h1 className="book-group-title">{activity.title}</h1>
@@ -243,7 +250,7 @@ export default function HashtagBoard({
           <BookStudentRail
             cards={cards}
             pickedUid={openUid}
-            onPick={(u) => setOpenUid((prev) => (prev === u ? null : u))}
+            onPick={pickStudent}
             rows={ROWS}
             cellState={cellState}
             castUid={cast.target?.uid ?? null}
@@ -287,21 +294,21 @@ export default function HashtagBoard({
                     </button>
                   )}
                 </div>
-                {openHas ? (
-                  <>
-                    <HashtagSlide slide={payloadOf(activity, open)} maxCols={2} />
-                    <HashtagComments
-                      activityId={activity.id}
-                      postUid={open.uid}
-                      comments={comments.filter((c) => c.postUid === open.uid)}
-                      user={user}
-                      isTeacher
-                      canWrite={!locked}
-                      closedNote="활동이 잠겨 있어요. 댓글은 읽고 지울 수만 있습니다."
-                    />
-                  </>
-                ) : (
-                  <p className="empty-note">아직 해시태그를 찾기 시작하지 않았어요.</p>
+                <HashtagSlide
+                  slide={payloadOf(activity, open)}
+                  progressPost={open.post ?? {}}
+                  maxCols={2}
+                />
+                {open.post && (
+                  <HashtagComments
+                    activityId={activity.id}
+                    postUid={open.uid}
+                    comments={comments.filter((c) => c.postUid === open.uid)}
+                    user={user}
+                    isTeacher
+                    canWrite={!locked}
+                    closedNote="활동이 잠겨 있어요. 댓글은 읽고 지울 수만 있습니다."
+                  />
                 )}
               </>
             ) : (

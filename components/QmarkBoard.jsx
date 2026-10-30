@@ -19,6 +19,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { subscribeParatextEntries } from "@/lib/store";
 import { useEntryCast } from "@/lib/useEntryCast";
+import { useProgressStageFocus } from "@/lib/useProgressStageFocus";
 import {
   QMARK_MIN_PICKS,
   QMARK_PROMPTS,
@@ -55,6 +56,12 @@ export default function QmarkBoard({
 }) {
   const [entries, setEntries] = useState([]);
   const [openUid, setOpenUid] = useState(null);
+  const stageFocus = useProgressStageFocus(`${activity.id}:${openUid}`);
+
+  function pickStudent(uid, stageKey) {
+    setOpenUid(uid);
+    stageFocus.focusStage(stageKey, `${activity.id}:${uid}`);
+  }
   const [stageOpen, setStageOpen] = useState(false);
   // 한 눈에 보기 — 고른 학생이 쓴 것을 큰 창에서 카드로(읽기만, RAFT와 같은 창)
   const [overviewOpen, setOverviewOpen] = useState(false);
@@ -164,7 +171,7 @@ export default function QmarkBoard({
   }
 
   return (
-    <main className="books-main book-workspace-main">
+    <main className="books-main book-workspace-main" ref={stageFocus.ref}>
       <div className="books-head">
         <div className="books-head-title">
           <h1 className="book-group-title">{activity.title}</h1>
@@ -204,7 +211,7 @@ export default function QmarkBoard({
           <BookStudentRail
             cards={cards}
             pickedUid={openUid}
-            onPick={setOpenUid}
+            onPick={pickStudent}
             rows={stepRows}
             cellState={qmarkCellState}
             castUid={cast.target?.uid ?? null}
@@ -243,10 +250,18 @@ export default function QmarkBoard({
                     const isAsk = r.key === "question";
                     const done = isAsk ? qmarkQuestionDone(openAnswers) : qmarkThoughtDone(openAnswers);
                     const asks = qmarkStartedAsks(openAnswers);
+                    // 진행의 세 단계(궁금증·이유·생각)는 방송의 두 영역과 다릅니다.
+                    // 부분 작성이면 먼저 비어 있는 해당 필드를, 모두 썼으면 첫 필드를 엽니다.
+                    const displayedAsks = asks.length > 0 ? asks : [{ question: "", reason: "" }];
+                    const questionAt = Math.max(0, displayedAsks.findIndex((x) => !x.question.trim()));
+                    const reasonAt = Math.max(0, displayedAsks.findIndex((x) => !x.reason.trim()));
                     const thought = openAnswers.thought.trim();
                     return (
                       <section
                         key={r.key}
+                        data-progress-stage={isAsk ? undefined : "thoughts"}
+                        tabIndex={-1}
+                        aria-label={`${open.name} · ${r.ko}`}
                         className={`entry-region wide${done ? " done" : ""}${live ? " live" : ""}`}
                       >
                         <header className="paratext-card-head">
@@ -263,13 +278,15 @@ export default function QmarkBoard({
                         </header>
                         <div className="entry-region-body">
                           {isAsk ? (
-                            asks.length === 0 ? (
-                              <p className="paratext-read-text empty">아직 쓰지 않았어요</p>
-                            ) : (
                               <ol className="qmark-read-asks">
-                                {asks.map((x, k) => (
+                                {displayedAsks.map((x, k) => (
                                   <li key={k} className="qmark-read-ask">
-                                    <div className="paratext-read-field">
+                                    <div
+                                      className="paratext-read-field"
+                                      data-progress-stage={k === questionAt ? "question" : undefined}
+                                      tabIndex={-1}
+                                      aria-label={`${open.name} · 궁금증 ${k + 1}`}
+                                    >
                                       <span className="paratext-read-label">
                                         {asks.length > 1 ? `궁금증 ${k + 1}` : "궁금증"}
                                       </span>
@@ -277,7 +294,12 @@ export default function QmarkBoard({
                                         {x.question.trim() || "아직 쓰지 않았어요"}
                                       </p>
                                     </div>
-                                    <div className="paratext-read-field">
+                                    <div
+                                      className="paratext-read-field"
+                                      data-progress-stage={k === reasonAt ? "reason" : undefined}
+                                      tabIndex={-1}
+                                      aria-label={`${open.name} · 이유 ${k + 1}`}
+                                    >
                                       <span className="paratext-read-label">이유는</span>
                                       <p className={`paratext-read-text${x.reason.trim() ? "" : " empty"}`}>
                                         {x.reason.trim() || "아직 쓰지 않았어요"}
@@ -286,7 +308,6 @@ export default function QmarkBoard({
                                   </li>
                                 ))}
                               </ol>
-                            )
                           ) : (
                             // 두 칸 — 왼쪽 체크한 물음 · 오른쪽 나의 생각(선생님 요청).
                             // 위 '나의 물음표'의 쌍과 같은 모양이라 두 장이 한 결로 읽힙니다.
@@ -348,7 +369,7 @@ export default function QmarkBoard({
           activityTitle={activity.title}
           cards={cards}
           uid={open.uid}
-          onPick={setOpenUid}
+          onPick={pickStudent}
           onClose={() => setOverviewOpen(false)}
           sectionsOf={(c) =>
             REGIONS.map((r, i) => ({
@@ -365,7 +386,7 @@ export default function QmarkBoard({
         <QmarkProgressBoard
           activity={activity}
           cards={cards}
-          onOpenStudent={(uid) => { setOpenUid(uid); setBoardOpen(false); }}
+          onOpenStudent={(uid, stageKey) => { pickStudent(uid, stageKey); setBoardOpen(false); }}
           onClose={() => setBoardOpen(false)}
         />
       )}

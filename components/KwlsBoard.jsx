@@ -16,6 +16,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { subscribeActivityKwl } from "@/lib/store";
 import { useEntryCast } from "@/lib/useEntryCast";
+import { useProgressStageFocus } from "@/lib/useProgressStageFocus";
 import {
   KWLS_COLUMNS,
   KWLS_COLUMN_COUNT,
@@ -49,6 +50,12 @@ export default function KwlsBoard({
 }) {
   const [entries, setEntries] = useState([]);
   const [openUid, setOpenUid] = useState(null);
+  const stageFocus = useProgressStageFocus(`${activity.id}:${openUid}`);
+
+  function pickStudent(uid, stageKey) {
+    setOpenUid(uid);
+    stageFocus.focusStage(stageKey, `${activity.id}:${uid}`);
+  }
   // 수업 화면 — '수업 시작'을 누르면 열리는 큰 창. 지금 띄우는 것을 교사도
   // 보고, **같은 영역을 학생별로** 넘깁니다(CastStageModal).
   const [stageOpen, setStageOpen] = useState(false);
@@ -171,7 +178,7 @@ export default function KwlsBoard({
   );
 
   return (
-    <main className="books-main book-workspace-main">
+    <main className="books-main book-workspace-main" ref={stageFocus.ref}>
       <div className="books-head">
         {/* 제목 · 돌아가는 길 · 도구 순서 — 닿소리 머리말(BookGroupBoard)과
             같은 차례입니다. 아래 둘째 줄은 딸림 정보(주제어·반)만 두는 자리라
@@ -233,7 +240,7 @@ export default function KwlsBoard({
           <BookStudentRail
             cards={cards}
             pickedUid={openUid}
-            onPick={setOpenUid}
+            onPick={pickStudent}
             rows={stepRows}
             cellState={kwlsCellState}
             castUid={cast.target?.uid ?? null}
@@ -275,6 +282,9 @@ export default function KwlsBoard({
                     return (
                       <section
                         key={r.key}
+                        data-progress-stage={r.key}
+                        tabIndex={-1}
+                        aria-label={`${open.name} · ${r.ko}`}
                         className={`entry-region kwls-region ${r.phase}${text ? " done" : ""}${
                           live ? " live" : ""
                         }`}
@@ -348,7 +358,7 @@ export default function KwlsBoard({
           activityTitle={activity.title}
           cards={cards}
           uid={open.uid}
-          onPick={setOpenUid}
+          onPick={pickStudent}
           onClose={() => setOverviewOpen(false)}
           sectionsOf={(c) =>
             REGIONS.map((r, i) => ({
@@ -365,7 +375,7 @@ export default function KwlsBoard({
         <KwlsProgressBoard
           activity={activity}
           cards={cards}
-          onOpenStudent={(uid) => { setOpenUid(uid); setBoardOpen(false); }}
+          onOpenStudent={(uid, stageKey) => { pickStudent(uid, stageKey); setBoardOpen(false); }}
           onClose={() => setBoardOpen(false)}
         />
       )}

@@ -55,6 +55,7 @@ import {
 import { memberColor, memberLegend } from "@/lib/bookColors";
 import { eunNeun } from "@/lib/korean";
 import { IconLock } from "./StatusIcons";
+import { useProgressStageFocus } from "@/lib/useProgressStageFocus";
 
 export default function ConsonantCanvas({
   activity,
@@ -72,8 +73,12 @@ export default function ConsonantCanvas({
   // 것인지 구분이 어려웠습니다. 이름표가 이미 판 위에 색과 함께 있으니
   // 그것을 그대로 단추로 씁니다.
   onFocusChange = null,
+  // Teacher progress segments can select a student and the exact initial.
+  focusRequest = null,
 }) {
   const [focusUid, setFocusUid] = useState(null);
+  const focusScope = `${activity.id}:${groupId}`;
+  const { ref: stageRef, focusStage } = useProgressStageFocus(focusScope);
   const [words, setWords] = useState([]);
   const [groups, setGroups] = useState([]);
   const [activeIndex, setActiveIndex] = useState(null); // 입력창이 열린 자음 칸
@@ -119,6 +124,11 @@ export default function ConsonantCanvas({
   // 학생이 그대로 남아 있으면 빈 판이 보입니다.
   useEffect(() => { setFocusUid(null); }, [groupId]);
   useEffect(() => { onFocusChange?.(focusUid); }, [focusUid, onFocusChange]);
+  useEffect(() => {
+    if (!isTeacher || mineOnly || !focusRequest) return;
+    setFocusUid(focusRequest.uid ?? null);
+    focusStage(focusRequest.stageKey, focusScope);
+  }, [focusRequest, isTeacher, mineOnly, focusScope, focusStage]);
 
   // 모둠원 이름·색 (개별 활동은 한 판에 한 사람이라 없음)
   //
@@ -233,7 +243,7 @@ export default function ConsonantCanvas({
 
   const Root = embedded ? "div" : "main";
   return (
-    <Root className={embedded ? "canvas-embed" : "canvas-main"}>
+    <Root ref={stageRef} className={embedded ? "canvas-embed" : "canvas-main"}>
       {!embedded && (
         <div className="canvas-head">
           {/* 학생 '내 판'은 제목이 먼저, 그 오른쪽에 '← 활동 목록'(.canvas-head-pair).
@@ -423,6 +433,8 @@ export default function ConsonantCanvas({
           return (
             <div
               key={pos}
+              data-progress-stage={cellKey(slot)}
+              tabIndex={-1}
               className={`consonant-cell${list.length > 0 ? " has-words" : ""}${open ? " open" : ""}${flash?.i === slot ? " flash" : ""}`}
             >
               <div className="consonant-cell-head">
