@@ -22,6 +22,7 @@ import {
 } from "@/lib/store";
 import { useEntryCast } from "@/lib/useEntryCast";
 import { useProgressStageFocus } from "@/lib/useProgressStageFocus";
+import { useActivityAttendance } from "@/lib/useActivityAttendance";
 import {
   RAFT_COLUMNS,
   RAFT_COLUMN_COUNT,
@@ -40,6 +41,7 @@ import CastStageModal from "./CastStageModal";
 import EntryOverviewModal from "./EntryOverviewModal";
 import GroupComposer from "./GroupComposer";
 import GroupFilterRow from "./GroupFilterRow";
+import GroupMemberPill, { GroupMemberStatusLegend } from "./GroupMemberPill";
 import RaftProgressBoard from "./RaftProgressBoard";
 import BookStudentRail from "./BookStudentRail";
 import EntryProgressPanel from "./EntryProgressPanel";
@@ -88,6 +90,7 @@ export default function RaftBoard({
   // 모둠으로 진행하는 활동이면 카드를 모둠으로 좁혀 볼 수 있습니다.
   // 글은 모둠으로 묶여도 학생마다 한 장이라, 모둠은 '보는 차례'만 정합니다.
   const grouped = isGroupedActivity(activity);
+  const attendance = useActivityAttendance(activity, roster, { enabled: grouped, classId });
   const groups = useBookGroups(activity.id, grouped);
   const [pickedGroup, setPickedGroup] = useState(null);
   const [composing, setComposing] = useState(false);
@@ -393,9 +396,8 @@ export default function RaftBoard({
            닿소리 채우기(BookGroupBoard)와 **같은 뼈대·같은 CSS**입니다. */
         <div className="book-workspace">
           {grouped ? (
-            /* 모둠 활동 — 왼쪽은 모둠 카드(선생님 요청). 학생마다의 진행은
-               오른쪽 '학생별 진행'이 말하므로 여기는 '누가 어느 모둠인가'만,
-               이름 알약을 누르면 가운데에 그 학생의 글이 섭니다. */
+            /* 모둠원 알약은 저장된 진행과 활동 시작일 출석을 보여 줍니다.
+               누르면 가운데에 그 학생의 글이 섭니다. */
             <aside className="book-group-rail raft-group-rail" aria-label="모둠">
               {shownRail.map((g) => {
                 const on = g.members.some((c) => c.uid === openUid);
@@ -416,18 +418,15 @@ export default function RaftBoard({
                           const picked = c.uid === openUid;
                           const done = raftDone(c.entry?.answers);
                           const pill = (
-                            <button
+                            <GroupMemberPill
                               key={c.uid}
-                              type="button"
-                              className={`book-rail-chip raft-mate-pill${picked ? " on" : ""}${done ? " done" : ""}`}
+                              member={c}
+                              picked={picked}
+                              done={done}
+                              started={raftStarted(c.entry?.answers)}
+                              absent={attendance.absentUids.has(c.uid)}
                               onClick={() => pickStudent(c.uid)}
-                              aria-pressed={picked}
-                              title={`${c.studentId ? `${c.studentId} ` : ""}${c.name} — ${
-                                done ? "다 썼어요" : raftStarted(c.entry?.answers) ? "쓰는 중" : "아직 시작 전"
-                              }`}
-                            >
-                              {c.name}
-                            </button>
+                            />
                           );
                           if (!pickedGroup) return pill;
                           // 모둠을 골라 좁혀 보는 동안만 이름 아래에 R·A·F·T와 글자 수를
@@ -465,6 +464,7 @@ export default function RaftBoard({
                   </div>
                 );
               })}
+              <GroupMemberStatusLegend attendance={attendance} />
             </aside>
           ) : (
             <BookStudentRail

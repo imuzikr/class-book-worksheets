@@ -32672,20 +32672,59 @@ button.msgr-receipt:hover { color: var(--text-sub); }
 .raft-group-card.on:hover { border-color: var(--primary); }
 .raft-mate-pill {
   border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
   font-family: inherit;
   cursor: pointer;
-  transition: background 0.14s, border-color 0.14s, color 0.14s;
+  transition: background 0.14s, border-color 0.14s, box-shadow 0.14s;
 }
 .raft-mate-pill:hover { border-color: var(--primary); }
-/* 다 쓴 학생 — 이 앱에서 초록은 늘 '됐다' */
-.raft-mate-pill.done { background: #e8f7ed; color: #2f6b47; }
-.book-rail-card.on .raft-mate-pill.done { background: #e8f7ed; }
-/* 지금 가운데에 연 학생 */
+.raft-mate-pill > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+/* 작성·출석 상태는 고른 모둠과 학생에서도 같은 색을 유지합니다. */
+.raft-mate-pill.member-status-done,
+.book-rail-card.on .raft-mate-pill.member-status-done,
+.group-member-status-key.member-status-done { background: #e8f7ed; color: #2f6b47; }
+.raft-mate-pill.member-status-doing,
+.book-rail-card.on .raft-mate-pill.member-status-doing,
+.group-member-status-key.member-status-doing { background: #fff2d5; color: #775113; }
+.raft-mate-pill.member-status-empty,
+.book-rail-card.on .raft-mate-pill.member-status-empty,
+.group-member-status-key.member-status-empty { background: #eef0f3; color: #52606e; }
+.raft-mate-pill.member-status-absent,
+.book-rail-card.on .raft-mate-pill.member-status-absent,
+.group-member-status-key.member-status-absent { background: #fde8eb; color: #963f56; }
+.raft-mate-pill.member-status-unassigned,
+.book-rail-card.on .raft-mate-pill.member-status-unassigned { background: #f2edf9; color: #6b508e; }
+/* 선택은 테두리로만 표시해 상태 색을 덮지 않습니다. */
 .raft-mate-pill.on,
 .book-rail-card.on .raft-mate-pill.on {
-  background: var(--primary);
   border-color: var(--primary);
-  color: #fff;
+  box-shadow: 0 0 0 1px var(--primary);
+}
+.raft-mate-pill:focus-visible {
+  outline: 2px solid var(--primary-dark);
+  outline-offset: 2px;
+}
+.group-member-status-mark { flex-shrink: 0; font-size: 11px; font-weight: 800; }
+.group-member-status-legend { padding: 4px 3px; }
+.group-member-status-keys { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+.group-member-status-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.group-member-attendance-note {
+  margin: 7px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-sub);
 }
 /* 모둠을 골라 좁혀 볼 때 — 이름 알약 아래 R·A·F·T 네 칸과 글자 수.
    칸 색은 학생 카드의 네모와 같은 값(쓴 칸 초록 · 빈 칸 회색)입니다. */

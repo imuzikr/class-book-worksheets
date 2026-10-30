@@ -30,6 +30,7 @@ import {
 } from "@/lib/brainwrite";
 import { useEntryCast } from "@/lib/useEntryCast";
 import { useProgressStageFocus } from "@/lib/useProgressStageFocus";
+import { useActivityAttendance } from "@/lib/useActivityAttendance";
 import CastStageModal from "./CastStageModal";
 import BrainWriteProgressBoard from "./BrainWriteProgressBoard";
 import { useBookGroups } from "@/lib/bookGroups";
@@ -37,6 +38,7 @@ import { safeBookUrl } from "@/lib/paratext";
 import { IconBook, IconLock, IconPeople } from "./StatusIcons";
 import EntryProgressPanel from "./EntryProgressPanel";
 import GroupComposer from "./GroupComposer";
+import GroupMemberPill, { GroupMemberStatusLegend } from "./GroupMemberPill";
 
 export default function BrainWriteBoard({
   activity,
@@ -50,6 +52,7 @@ export default function BrainWriteBoard({
   onToast = null,
 }) {
   const groups = useBookGroups(activity.id, true);
+  const attendance = useActivityAttendance(activity, roster, { classId });
   const live = useMemo(() => groups.filter((g) => !g.retired), [groups]);
   const groupKey = live.map((g) => g.id).join("|");
   const [composing, setComposing] = useState(false);
@@ -249,18 +252,18 @@ export default function BrainWriteBoard({
                         const picked = c.uid === openUid;
                         const done = c.slots.length > 0 && c.slots.every((p) => p.done);
                         return (
-                          <button
+                          <GroupMemberPill
                             key={c.uid}
-                            type="button"
-                            className={`book-rail-chip raft-mate-pill${picked ? " on" : ""}${done ? " done" : ""}`}
+                            member={c}
+                            done={done}
+                            started={c.slots.some((p) => p.done)}
+                            absent={attendance.absentUids.has(c.uid)}
+                            picked={picked}
                             onClick={() => openStudent(c.uid)}
-                            aria-pressed={picked}
-                            title={`${c.studentId ? `${c.studentId} ` : ""}${c.name} — 쓴 칸 ${
+                            detail={`쓴 칸 ${
                               c.slots.filter((p) => p.done).length
                             } / ${c.slots.length}`}
-                          >
-                            {c.name}
-                          </button>
+                          />
                         );
                       })}
                     </span>
@@ -273,18 +276,20 @@ export default function BrainWriteBoard({
                 <span className="book-rail-head"><strong>모둠 배정 대기</strong></span>
                 <span className="book-rail-chips">
                   {cards.filter((c) => !c.group).map((c) => (
-                    <button
+                    <GroupMemberPill
                       key={c.uid}
-                      type="button"
-                      className={`book-rail-chip raft-mate-pill${c.uid === openUid ? " on" : ""}`}
+                      member={c}
+                      unassigned
+                      absent={attendance.absentUids.has(c.uid)}
+                      picked={c.uid === openUid}
                       onClick={() => openStudent(c.uid)}
-                      aria-pressed={c.uid === openUid}
-                      title={`${c.studentId ? `${c.studentId} ` : ""}${c.name} — 모둠 배정 대기`}
-                    >{c.name}</button>
+                      detail="모둠 배정 대기"
+                    />
                   ))}
                 </span>
               </div>
             )}
+            <GroupMemberStatusLegend attendance={attendance} />
           </aside>
 
           <div className="book-workspace-center">
