@@ -32105,7 +32105,7 @@ h4.attendance-seat-help { margin-top: 16px; }
 }
 
 /* ── 행성 궤도 — 바탕 원판은 없습니다(선생님 요청) ──
-   원판은 배경도 테두리도 없는 투명한 자리 틀일 뿐입니다 — 행성 일곱과 가운데 해만
+   원판은 배경도 테두리도 없는 투명한 자리 틀일 뿐입니다 — 행성 여섯과 가운데 해만
    떠 있습니다. 틀은 남겨 둡니다: 행성 자리(%)와 펼칠 때 동그라미에서 자라는
    움직임(scale)이 이 300px 틀을 기준으로 합니다.
    틀은 누름을 받지 않습니다(pointer-events: none) — 행성 사이 빈자리를 누르면 뒤
@@ -32527,6 +32527,14 @@ button.msgr-receipt:hover { color: var(--text-sub); }
     height: min(560px, calc(100dvh - var(--hub-bottom) - 96px));
   }
   .hub-root.is-top .msgr { height: min(560px, calc(100dvh - var(--hub-top) - 84px)); }
+}
+@media (max-width: 760px) {
+  /* 닫힌 수업 노트 손잡이가 바로가기 단추와 펼친 메뉴를 가리지 않게 합니다. */
+  body:has(.hub-root) .cornell-handle:not(.open) { bottom: 152px; }
+  body:has(.hub-disc.is-open) .cornell-handle:not(.open) {
+    visibility: hidden;
+    pointer-events: none;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .hub-disc,

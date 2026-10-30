@@ -4,8 +4,8 @@
 // 떠 있는 동그라미 — 메신저와 자주 여는 기능을 한 손에
 // -------------------------------------------------------------
 // 화면 오른쪽 아래의 작은 동그라미(56px). 누르면 **큰 원으로 펼쳐지며**
-// 기능 다섯 개가 둘레에 섭니다 — 메신저 · 돌발 퀴즈 · 수업 노트 · 내 출석부 ·
-// 과일 바구니(교사는 메신저 · 돌발 퀴즈 · 출석 관리 · 반 관리 · 과일 바구니).
+// 기능 여섯 개가 둘레에 섭니다 — 메신저 · 돌발 퀴즈 · 수업 노트 · 내 출석부 ·
+// 과일 바구니 · 분석 리포트(교사는 수업 노트·내 출석부 대신 출석 관리·반 관리).
 // KWLS 차트는 걷었습니다 — KWLS는 책방의 독서 활동으로만 씁니다.
 //
 // [모양은 행성 궤도]
@@ -25,6 +25,7 @@
 // 메신저만 이 자리에서 창을 엽니다. 나머지는 이미 공부방에 있는 창을
 // 주소로 엽니다(`/books?open=notes|attendance|fruit` — 공부방이 열고
 // 주소를 지웁니다). 같은 창을 여기에 한 벌 더 만들면 두 곳이 어긋납니다.
+// 분석 리포트는 `/dashboard`에서 현재 반·역할에 맞는 통계를 보여 줍니다.
 //
 // [끌어 옮기기 — 교사만]
 // 학생 화면의 동그라미는 늘 기본 자리(오른쪽 아래)에 고정입니다(선생님 요청) —
@@ -61,6 +62,7 @@ import {
   IconBlackboard,
   IconCheck,
   IconQuizMemo,
+  IconReport,
 } from "./StatusIcons";
 import { POPQUIZ_OPEN_EVENT } from "./PopQuizButton";
 
@@ -77,6 +79,7 @@ const ICONS = {
   classes: () => <IconBlackboard size={27} />,
   quiz: () => <IconQuizMemo size={26} />,
   fruit: ({ show }) => <FruitBasketPic show={show} />,
+  report: () => <IconReport size={26} />,
 };
 
 const STUDENT_ITEMS = [
@@ -86,6 +89,7 @@ const STUDENT_ITEMS = [
   { key: "notes", label: "수업 노트", hint: "지난 수업 노트를 넘겨 봐요", href: "/books?open=notes" },
   { key: "attend", label: "내 출석부", hint: "내 출석 기록을 봐요", href: "/books?open=attendance" },
   { key: "fruit", label: "과일 바구니", hint: "과일을 담고 이벤트에 응모해요", href: "/books?open=fruit" },
+  { key: "report", label: "분석 리포트", hint: "나의 독서 활동과 성장 통계를 봐요", href: "/dashboard" },
 ];
 const TEACHER_ITEMS = [
   { key: "msg", label: "메신저", hint: "학생 · 모둠과 대화해요" },
@@ -93,6 +97,7 @@ const TEACHER_ITEMS = [
   { key: "attend", label: "출석 관리", hint: "출석을 시작하고 기록을 봐요", href: "/books?open=attendance" },
   { key: "classes", label: "반 관리", hint: "반 · 참여 코드 · 자리와 모둠", href: "/books?open=classes" },
   { key: "fruit", label: "과일 바구니", hint: "바구니 합계와 이벤트 현황", href: "/books?open=fruit" },
+  { key: "report", label: "분석 리포트", hint: "우리 반 독서 활동과 학생별 통계를 봐요", href: "/dashboard" },
 ];
 
 // 원판 크기(px) — CSS의 `.hub-disc` 폭·높이와 같아야 합니다.
