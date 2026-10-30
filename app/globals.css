@@ -21198,6 +21198,7 @@ button.wall-who-btn.open strong { color: var(--primary-dark); }
   gap: 8px;
   overflow-y: auto;
 }
+.paratext-board .books-head-main { flex-wrap: wrap; }
 .book-rail-card {
   display: flex;
   flex-direction: column;
@@ -33670,4 +33671,7 @@ button.msgr-receipt:hover { color: var(--text-sub); }
   .book-workspace-main .book-workspace-center { flex: 0 0 auto; overflow: visible; }
   .book-workspace-main .book-group-rail { overflow: visible; }
   .book-rail-card--student .dash-progress-num { grid-column: 1 / -1; }
+  /* 모둠·학생을 고르는 두 목록을 답안 위에 함께 두어 학생 전환을 쉽게 합니다. */
+  .paratext-board > .book-workspace > .book-group-progress { order: 1; }
+  .paratext-board > .book-workspace > .book-workspace-center { order: 2; }
 }

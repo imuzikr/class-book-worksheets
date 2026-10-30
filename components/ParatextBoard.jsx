@@ -1,12 +1,10 @@
 "use client";
 
 // =============================================================
-// 곁텍스트 읽기 — 교사 화면 (개인 활동)
+// 곁텍스트 읽기 — 교사 화면
 // -------------------------------------------------------------
-// 두 단계입니다.
-//   1) 학생 목록 — 반 명단대로 한 명당 카드 한 장. 어디까지 썼는지 보입니다.
-//   2) 학생 상세 — 카드를 누르면 그 학생의 여덟 영역이 한 화면에 모두 펼쳐집니다
-//      (모달이 아니라 화면 전체를 씁니다).
+// 개인 활동은 왼쪽 학생 목록, 모둠 활동은 왼쪽 모둠 카드와 오른쪽 모둠원
+// 진행을 사용합니다. 학생을 고르면 가운데에 그 학생의 여덟 영역을 펼칩니다.
 //
 // 각 영역에는 '수업 시작' 버튼이 있어, 그 영역만 학급 전체 화면에 띄웁니다.
 // 방송 중에 다른 영역의 버튼을 누르면 끄지 않아도 그리로 곧바로 전환됩니다
@@ -17,10 +15,13 @@ import { useEffect, useMemo, useState } from "react";
 import { subscribeParatextEntries, composeBookGroups } from "@/lib/store";
 import { useEntryCast } from "@/lib/useEntryCast";
 import { useProgressStageFocus } from "@/lib/useProgressStageFocus";
+import { useActivityAttendance } from "@/lib/useActivityAttendance";
+import { bookGroupRailGroups } from "@/lib/bookGroupRail";
 import GroupComposer from "./GroupComposer";
-import GroupFilterRow from "./GroupFilterRow";
+import BookActivityGroupRail from "./BookActivityGroupRail";
 import ParatextProgressBoard from "./ParatextProgressBoard";
 import BookStudentRail from "./BookStudentRail";
+import EntryProgressPanel from "./EntryProgressPanel";
 import { isGroupedActivity, useBookGroups } from "@/lib/bookGroups";
 import {
   PARATEXT_SECTIONS,
@@ -53,13 +54,10 @@ export default function ParatextBoard({
   const [openUid, setOpenUid] = useState(null);
   const stageFocus = useProgressStageFocus(`${activity.id}:${openUid}`);
 
-  function pickStudent(uid, stageKey) {
-    setOpenUid(uid);
-    stageFocus.focusStage(stageKey, `${activity.id}:${uid}`);
-  }
   // 모둠으로 진행하는 활동이면 카드를 모둠으로 좁혀 볼 수 있습니다.
   // 글은 모둠으로 묶여도 학생마다 한 장이라, 모둠은 '보는 차례'만 정합니다.
   const grouped = isGroupedActivity(activity);
+  const attendance = useActivityAttendance(activity, roster, { enabled: grouped, classId });
   const groups = useBookGroups(activity.id, grouped);
   const [composing, setComposing] = useState(false);
   // '학생이 고르기'는 학생이 스스로 드는 방식이라 교사가 짤 것이 없습니다
@@ -102,35 +100,47 @@ export default function ParatextBoard({
     return [...fromRoster, ...strays];
   }, [roster, entries]);
 
-  // 고른 모둠으로 좁힌 카드 — 방송·통계는 반 전체(cards) 그대로 보고,
-  // 격자에 늘어놓는 것만 좁힙니다.
-  const shownCards = useMemo(() => {
-    if (!pickedGroup) return cards;
-    const g = groups.find((x) => x.id === pickedGroup);
-    if (!g) return cards;
-    const mine = new Set(g.memberUids ?? (g.members ?? []).map((m) => m.uid));
-    return cards.filter((c) => mine.has(c.uid));
-  }, [cards, groups, pickedGroup]);
+  const railGroups = useMemo(() => grouped ? bookGroupRailGroups(groups, cards) : [], [grouped, groups, cards]);
+  const selectedGroup = railGroups.find((g) => g.id === pickedGroup) ?? null;
+  // 통계와 살펴보기는 반 전체, 오른쪽 진행은 선택한 모둠만 보여 줍니다.
+  const shownCards = useMemo(
+    () => grouped ? selectedGroup?.members ?? [] : cards,
+    [grouped, selectedGroup, cards]
+  );
 
-  // 모둠 줄에 적을 '시작한 인원 / 전체' — 이미 받아 둔 것으로 셉니다
-  const groupCounts = useMemo(() => {
-    if (!grouped) return null;
-    const started = new Set(
-      cards.filter((c) => paratextCharCount(c.entry?.answers) > 0).map((c) => c.uid)
-    );
-    const out = {};
-    groups.forEach((g) => {
-      out[g.id] = (g.members ?? []).filter((m) => started.has(m.uid)).length;
-    });
-    return out;
-  }, [grouped, groups, cards]);
+  function pickStudent(uid, stageKey) {
+    if (grouped) {
+      const group = railGroups.find((g) => g.members.some((c) => c.uid === uid));
+      setPickedGroup(group?.id ?? null);
+    }
+    setOpenUid(uid);
+    stageFocus.focusStage(stageKey, `${activity.id}:${uid}`);
+  }
+
+  function pickGroup(groupId) {
+    setPickedGroup(groupId);
+    const group = railGroups.find((g) => g.id === groupId);
+    if (!group?.members.some((c) => c.uid === openUid)) {
+      setOpenUid(null);
+      setOverviewOpen(false);
+    }
+    stageFocus.focusStage(null);
+  }
+
+  // 모둠이 실시간으로 바뀌어도 다른 모둠 학생의 답안을 남겨 두지 않습니다.
+  useEffect(() => {
+    if (grouped && openUid && !shownCards.some((c) => c.uid === openUid)) {
+      setOpenUid(null);
+      setOverviewOpen(false);
+    }
+  }, [grouped, openUid, shownCards]);
 
   const startedCount = cards.filter((c) => paratextCharCount(c.entry?.answers) > 0).length;
   const doneCount = cards.filter(
     (c) => paratextDoneCount(c.entry?.answers) === PARATEXT_SECTION_COUNT
   ).length;
 
-  const open = openUid ? cards.find((c) => c.uid === openUid) ?? null : null;
+  const open = openUid ? shownCards.find((c) => c.uid === openUid) ?? null : null;
 
   // 왼쪽 목록의 네모·오른쪽 패널의 칸이 쓰는 단계 정의 — 전광판과 **같은**
   // 것입니다(lib/paratext.js). 한쪽만 고치면 같은 학생이 두 화면에서 다른
@@ -153,6 +163,8 @@ export default function ParatextBoard({
 
   function castSection(card, index, openStage = true) {
     const s = PARATEXT_SECTIONS[index];
+    // 전체 반 살펴보기·수업 화면에서 다른 모둠 학생으로 넘어가도 선택을 맞춥니다.
+    pickStudent(card.uid);
     // 지금 띄우는 것을 다시 누르면 **수업 화면 창을 엽니다**(끄지 않습니다).
     // 끄는 길은 그 창 오른쪽 아래 '수업 종료' 한 곳뿐입니다 — 같은 일을 하는
     // 단추가 여기저기 있으면 무엇을 눌러야 끝나는지 헷갈립니다(선생님 지적).
@@ -164,9 +176,6 @@ export default function ParatextBoard({
     // **영역만 옮길 때는 창 상태를 안 건드립니다** — 닫아 둔 창이
     // '다음 영역 →'에 되살아나면 닫은 뜻이 없어집니다.
     setStageOpen(openStage);
-    // 뒤의 화면도 따라옵니다 — 창을 닫았을 때 그 학생이 열려 있어야
-    // 방금 본 답을 이어서 읽습니다.
-    setOpenUid(card.uid);
   }
 
   // 창을 닫는 것과 수업을 끝내는 것은 다릅니다 — 끝낼 때만 방송을 끕니다.
@@ -175,8 +184,8 @@ export default function ParatextBoard({
     setStageOpen(false);
   }
 
-  // 학생 축 — **왼쪽 목록에 보이는 차례 그대로**입니다(모둠으로 좁혀 놓았으면
-  // 그 모둠 안에서). 지금 띄우는 학생이 그 목록에 없으면(다른 모둠을 띄운
+  // 학생 축 — 선택한 모둠의 학생 차례입니다(개인 활동은 반 전체).
+  // 지금 띄우는 학생이 그 목록에 없으면(다른 모둠을 띄운
   // 채 좁혔을 때) 반 전체로 되돌아갑니다 — 안 그러면 넘길 곳이 없습니다.
   const castList = useMemo(() => {
     const uid = cast.target?.uid;
@@ -203,10 +212,7 @@ export default function ParatextBoard({
     castSection(castCard, next, stageOpen);
   }
 
-  // 전광판 단추 — 서는 자리가 둘입니다: 모둠 칩이 있으면 그 줄 끝,
-  // 없으면 머리말의 진행 요약 옆. 어느 쪽이든 보여 주는 것은 **반 전체**
-  // 입니다(모둠으로 좁혀 봐도 격자는 반 전체).
-  const chipRow = grouped && groups.length > 0;
+  // 살펴보기는 머리말에서 항상 반 전체를 엽니다.
   const boardBtn = cards.length > 0 && (
     <button
       type="button"
@@ -219,7 +225,7 @@ export default function ParatextBoard({
   );
 
   return (
-    <main className="books-main book-workspace-main" ref={stageFocus.ref}>
+    <main className="books-main book-workspace-main paratext-board" ref={stageFocus.ref}>
       <div className="books-head">
         {/* 제목 · 돌아가는 길 · 도구 순서 — 닿소리 머리말(BookGroupBoard)과
             같은 차례입니다. 화면을 한 단계 되돌리는 버튼은 '무엇을 읽는
@@ -253,8 +259,7 @@ export default function ParatextBoard({
             <span className="paratext-sum">
               시작 {startedCount}명 · 완성 {doneCount}명 / 전체 {cards.length}명
             </span>
-            {/* 칩 줄이 없는 활동에서는 전광판이 여기 섭니다 */}
-            {!chipRow && boardBtn}
+            {boardBtn}
             {/* 잠김 안내도 이 줄에 — 예전엔 머리말 아래 제 줄을 차지했는데,
                 이 줄은 배지 두어 개뿐이라 오른쪽이 비어 있었습니다.
                 '지금 잠겨 있다'는 활동에 붙는 상태라 배지와 같은 성격입니다. */}
@@ -277,40 +282,33 @@ export default function ParatextBoard({
         </div>
       </div>
 
-      {/* 모둠 고르는 줄 — 그 끝(마지막 모둠 뒤)에 전광판을 엽니다.
-          모둠이 없는 활동에서는 이 줄에 전광판 단추만 섭니다.
-          전광판은 **고른 모둠이 아니라 반 전체**를 보여 줍니다(cards). */}
-      {/* 모둠 칩 줄 — 그 끝(마지막 모둠 뒤)에 전광판을 엽니다.
-          칩이 없으면 이 줄을 아예 안 그리고 전광판은 머리말로 갑니다
-          (단추 하나를 세우려고 줄 하나를 쓰지 않게). */}
-      <GroupFilterRow
-        groups={grouped ? groups : []}
-        value={pickedGroup}
-        onChange={setPickedGroup}
-        counts={groupCounts}
-        trailing={chipRow ? boardBtn : null}
-      />
-
       {cards.length === 0 ? (
         <p className="empty-note">
           아직 이 반에 들어온 학생이 없어요. 학생이 반에 들어오면 카드가 생깁니다.
         </p>
       ) : (
-        /* ── 두 칸 — 왼쪽 학생 목록 · 가운데 그 학생의 여덟 영역 ──
-           닿소리 채우기(BookGroupBoard)와 **같은 뼈대·같은 CSS**입니다.
-           오른쪽 '학생별 진행'은 걷었습니다 — 같은 조각 바가 왼쪽 카드에
-           이미 있어, 모둠 활동이어도 두 벌이었습니다(선생님 요청). */
+        /* 모둠 활동은 모둠 카드 · 학생 답안 · 해당 모둠 진행의 세 칸입니다. */
         <div className="book-workspace">
-          <BookStudentRail
-            cards={shownCards}
-            allCards={cards}
-            pickedUid={openUid}
-            onPick={pickStudent}
-            rows={stepRows}
-            cellState={paratextCellState}
-            castUid={cast.target?.uid ?? null}
-            extra={(c) => ` · ${paratextCharCount(c.entry?.answers)}자`}
-          />
+          {grouped ? (
+            <BookActivityGroupRail
+              groups={railGroups}
+              pickedGroupId={selectedGroup?.id ?? null}
+              onPickGroup={pickGroup}
+              isStarted={(c) => paratextCharCount(c.entry?.answers) > 0}
+              isDone={(c) => paratextDoneCount(c.entry?.answers) === PARATEXT_SECTION_COUNT}
+              attendance={attendance}
+            />
+          ) : (
+            <BookStudentRail
+              cards={cards}
+              pickedUid={openUid}
+              onPick={pickStudent}
+              rows={stepRows}
+              cellState={paratextCellState}
+              castUid={cast.target?.uid ?? null}
+              extra={(c) => ` · ${paratextCharCount(c.entry?.answers)}자`}
+            />
+          )}
 
           <div className="book-workspace-center">
             {open ? (
@@ -394,10 +392,26 @@ export default function ParatextBoard({
                 </div>
               </>
             ) : (
-              <p className="empty-note">왼쪽에서 학생을 골라 주세요.</p>
+              <p className="empty-note">
+                {grouped
+                  ? selectedGroup ? "오른쪽에서 학생을 골라 주세요." : "왼쪽에서 모둠을 고른 뒤 학생을 골라 주세요."
+                  : "왼쪽에서 학생을 골라 주세요."}
+              </p>
             )}
           </div>
-
+          {grouped && (
+            <EntryProgressPanel
+              key={selectedGroup?.id ?? "__unpicked"}
+              title={selectedGroup ? `${selectedGroup.name} 진행` : "모둠 학생 진행"}
+              cards={shownCards}
+              rows={stepRows}
+              cellState={paratextCellState}
+              pickedUid={openUid}
+              onPick={pickStudent}
+              extra={(c) => ` · ${paratextCharCount(c.entry?.answers)}자`}
+              emptyText={selectedGroup ? "아직 모둠원이 없어요." : "왼쪽에서 모둠을 골라 주세요."}
+            />
+          )}
         </div>
       )}
 

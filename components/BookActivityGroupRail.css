@@ -1,0 +1,57 @@
+.book-activity-group-rail .book-rail-card {
+  flex-shrink: 0;
+}
+
+.book-activity-group-rail .book-rail-card:focus-visible {
+  outline: 2px solid var(--primary-dark);
+  outline-offset: 2px;
+}
+
+.book-activity-group-rail .book-rail-head strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.book-activity-group-rail .book-group-count {
+  flex-shrink: 0;
+}
+
+.book-activity-group-rail .book-rail-chip {
+  min-width: 0;
+}
+
+.book-activity-group-rail .book-rail-chip > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* A selected group keeps each member's writing and attendance status color. */
+.book-activity-group-rail .book-rail-card .book-rail-chip.member-status-done {
+  background: #e8f7ed;
+  color: #2f6b47;
+}
+
+.book-activity-group-rail .book-rail-card .book-rail-chip.member-status-doing {
+  background: #fff2d5;
+  color: #775113;
+}
+
+.book-activity-group-rail .book-rail-card .book-rail-chip.member-status-empty {
+  background: #eef0f3;
+  color: #52606e;
+}
+
+.book-activity-group-rail .book-rail-card .book-rail-chip.member-status-absent {
+  background: #fde8eb;
+  color: #963f56;
+}
+
+.book-activity-group-rail > .group-member-status-legend {
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .book-activity-group-rail > .group-member-status-legend {
+    flex: 1 0 100%;
+  }
+}
