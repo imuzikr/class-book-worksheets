@@ -293,7 +293,9 @@ export default function ParatextBoard({
             <BookActivityGroupRail
               groups={railGroups}
               pickedGroupId={selectedGroup?.id ?? null}
+              pickedUid={openUid}
               onPickGroup={pickGroup}
+              onPickStudent={pickStudent}
               isStarted={(c) => paratextCharCount(c.entry?.answers) > 0}
               isDone={(c) => paratextDoneCount(c.entry?.answers) === PARATEXT_SECTION_COUNT}
               attendance={attendance}
@@ -394,7 +396,7 @@ export default function ParatextBoard({
             ) : (
               <p className="empty-note">
                 {grouped
-                  ? selectedGroup ? "오른쪽에서 학생을 골라 주세요." : "왼쪽에서 모둠을 고른 뒤 학생을 골라 주세요."
+                  ? selectedGroup ? "왼쪽 학생 이름이나 오른쪽 진행에서 학생을 골라 주세요." : "왼쪽에서 학생 이름이나 모둠을 골라 주세요."
                   : "왼쪽에서 학생을 골라 주세요."}
               </p>
             )}

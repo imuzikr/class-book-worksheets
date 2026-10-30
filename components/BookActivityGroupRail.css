@@ -2,7 +2,36 @@
   flex-shrink: 0;
 }
 
-.book-activity-group-rail .book-rail-card:focus-visible {
+.book-activity-group-card {
+  position: relative;
+  isolation: isolate;
+}
+
+.book-activity-group-select {
+  width: 100%;
+  border: 0;
+  padding: 0;
+  border-radius: inherit;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* 모둠 이름과 카드 여백은 모둠 선택, 그 위의 알약은 학생 선택입니다. */
+.book-activity-group-select::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+}
+
+.book-activity-group-rail .raft-mate-pill { position: relative; z-index: 2; }
+
+.book-activity-group-select:focus-visible { outline: none; }
+.book-activity-group-select:focus-visible::after {
   outline: 2px solid var(--primary-dark);
   outline-offset: 2px;
 }

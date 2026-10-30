@@ -1,16 +1,16 @@
 "use client";
 
-import { groupMemberStatus } from "@/lib/groupMemberStatus";
-import { GroupMemberStatusLegend } from "./GroupMemberPill";
+import GroupMemberPill, { GroupMemberStatusLegend } from "./GroupMemberPill";
 import "./BookActivityGroupRail.css";
 
-const MARKS = { done: "✓", doing: "◐", empty: "–", absent: "×" };
 const EMPTY_ATTENDANCE = { date: null, known: false, absentUids: new Set() };
 
 export default function BookActivityGroupRail({
   groups = [],
   pickedGroupId = null,
+  pickedUid = null,
   onPickGroup,
+  onPickStudent,
   isStarted = () => false,
   isDone = () => false,
   attendance = EMPTY_ATTENDANCE,
@@ -23,48 +23,40 @@ export default function BookActivityGroupRail({
         const picked = group.id === pickedGroupId;
         const started = members.filter(isStarted).length;
         return (
-          <button
+          <div
             key={group.id}
-            type="button"
-            className={`book-rail-card${picked ? " on" : ""}`}
-            onClick={() => onPickGroup?.(group.id)}
-            aria-pressed={picked}
-            aria-label={`${group.name} 학생 ${members.length}명 모둠 선택`}
+            className={`book-rail-card book-activity-group-card${picked ? " on" : ""}`}
           >
-            <span className="book-rail-head">
-              <strong>{group.name}</strong>
-              <span className="book-group-count">시작 {started}/{members.length}</span>
-            </span>
+            <button
+              type="button"
+              className="book-activity-group-select"
+              onClick={() => onPickGroup?.(group.id)}
+              aria-pressed={picked}
+              aria-label={`${group.name} 학생 ${members.length}명 모둠 선택`}
+            >
+              <span className="book-rail-head">
+                <strong>{group.name}</strong>
+                <span className="book-group-count">시작 {started}/{members.length}</span>
+              </span>
+            </button>
             {members.length === 0 ? (
               <span className="book-group-empty">아직 모둠원이 없어요</span>
             ) : (
               <span className="book-rail-chips">
-                {members.map((card) => {
-                  const status = groupMemberStatus({
-                    done: isDone(card),
-                    started: isStarted(card),
-                    absent: attendance.absentUids.has(card.uid),
-                  });
-                  const stateText = status.key === "absent"
-                    ? `${status.label} · ${status.progressLabel}` : status.label;
-                  const description = `${card.name} — ${stateText}`;
-                  return (
-                    <span
-                      key={card.uid}
-                      className={`book-rail-chip group-member-status-key member-status-${status.key}`}
-                      data-member-status={status.key}
-                      data-member-uid={card.uid}
-                      aria-label={description}
-                      title={`${card.studentId ? `${card.studentId} ` : ""}${description}`}
-                    >
-                      <span className="group-member-status-mark" aria-hidden="true">{MARKS[status.key]}</span>
-                      <span>{card.name}</span>
-                    </span>
-                  );
-                })}
+                {members.map((card) => (
+                  <GroupMemberPill
+                    key={card.uid}
+                    member={card}
+                    done={isDone(card)}
+                    started={isStarted(card)}
+                    absent={attendance.absentUids.has(card.uid)}
+                    picked={pickedUid === card.uid}
+                    onClick={() => onPickStudent?.(card.uid)}
+                  />
+                ))}
               </span>
             )}
-          </button>
+          </div>
         );
       })}
       <GroupMemberStatusLegend attendance={attendance} />
