@@ -46,42 +46,55 @@ import {
   reorderFirstLevelChild,
   updateNodeImage,
   nodeHasImage,
-  MINDMAP_IMAGE_W,
+  mindmapNodeSize,
 } from "@/lib/mindmap";
 import { IMAGE_ACCEPT } from "@/lib/image";
 
-const ZOOM_MIN = 0.3;
+const ZOOM_MIN = 0.1;
 const ZOOM_MAX = 2.4;
 // 자리 맞춤(맞춤 보기)에서 노드가 가장자리에 딱 붙지 않도록 두는 여백
 const FIT_PAD = 120;
 
 const clampZoom = (z) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
 
-function textWidth(text, ascii = 7, nonAscii = 13) {
-  return [...String(text ?? "").trim()].reduce((sum, ch) => {
-    return sum + (/[ -~]/.test(ch) ? ascii : nonAscii);
-  }, 0);
-}
+// 선이 노드 상자 뒤에 가려지는 양을 빼고, 보이는 선의 가운데에 라벨을 둡니다.
+// 실제 상자의 높이도 쓰므로 이미지·여러 줄 글자·세로로 뻗는 가지에 맞습니다.
+function edgeLabelMid(a, b, parentNode, childNode, levels, nodeSizes, pointAt = null) {
+  const parentSize = mindmapNodeSize(parentNode, levels?.get(parentNode?.id) ?? 0, nodeSizes);
+  const childSize = mindmapNodeSize(childNode, levels?.get(childNode?.id) ?? 1, nodeSizes);
+  const at = pointAt ?? ((t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }));
+  const contains = (point, center, size) => (
+    Math.abs(point.x - center.x) < size.width / 2 && Math.abs(point.y - center.y) < size.height / 2
+  );
+  let start = 0, end = 1;
+  let lo = 0, hi = 1;
+  for (let i = 0; i < 16; i += 1) {
+    const t = (lo + hi) / 2;
+    if (contains(at(t), a, parentSize)) lo = t;
+    else hi = t;
+  }
+  start = hi;
+  lo = 0; hi = 1;
+  for (let i = 0; i < 16; i += 1) {
+    const t = (lo + hi) / 2;
+    if (contains(at(t), b, childSize)) hi = t;
+    else lo = t;
+  }
+  end = lo;
+  if (start >= end) return at(0.5);
 
-function estimatedNodeHalfWidth(node, level) {
-  const pad = level === 0 ? 36 : 28;
-  const max = level === 0 ? 200 : 168;
-  const min = level === 0 ? 94 : 62;
-  const placeholder = "내용을 적어 주세요";
-  const hasImg = nodeHasImage(node);
-  const raw = node?.text?.trim() || (hasImg ? "" : placeholder);
-  // 이미지가 든 노드는 적어도 그림 폭 + 좌우 여백만큼 넓습니다
-  const floor = hasImg ? MINDMAP_IMAGE_W + pad + 4 : min;
-  return Math.min(max, Math.max(floor, textWidth(raw) + pad)) / 2;
-}
-
-function edgeLabelMid(a, b, parentNode, childNode, levels) {
-  const side = b.x >= a.x ? 1 : -1;
-  const parentLv = levels?.get(parentNode?.id) ?? 0;
-  const childLv = levels?.get(childNode?.id) ?? 1;
-  const parentEdge = a.x + side * estimatedNodeHalfWidth(parentNode, parentLv);
-  const childEdge = b.x - side * estimatedNodeHalfWidth(childNode, childLv);
-  return { x: (parentEdge + childEdge) / 2, y: (a.y + b.y) / 2 };
+  // 굽은 선은 매개변수의 절반과 길이의 절반이 다를 수 있습니다.
+  const points = Array.from({ length: 25 }, (_, i) => at(start + (end - start) * i / 24));
+  const lengths = points.slice(1).map((p, i) => Math.hypot(p.x - points[i].x, p.y - points[i].y));
+  let remaining = lengths.reduce((sum, length) => sum + length, 0) / 2;
+  for (let i = 0; i < lengths.length; i += 1) {
+    if (remaining <= lengths[i]) {
+      const t = lengths[i] ? remaining / lengths[i] : 0;
+      return at(start + (end - start) * (i + t) / 24);
+    }
+    remaining -= lengths[i];
+  }
+  return at((start + end) / 2);
 }
 
 // 두 점을 잇는 곡선 + 그 곡선 위 라벨 자리.
@@ -96,22 +109,19 @@ function cubicAt(a, c1, c2, b, t) {
   };
 }
 
-function edgeGeometry(a, b, layout, parentNode = null, childNode = null, levels = null) {
+function edgeGeometry(a, b, layout, parentNode = null, childNode = null, levels = null, nodeSizes = null) {
   const childLv = levels?.get(childNode?.id) ?? 1;
   if (layout === "tree") {
     const dx = Math.max(30, Math.abs(b.x - a.x) / 2);
     const c1 = { x: a.x + dx, y: a.y };
     const c2 = { x: b.x - dx, y: b.y };
-    const labelMid = edgeLabelMid(a, b, parentNode, childNode, levels);
-    const mid = cubicAt(a, c1, c2, b, 0.5);
     return {
       d: `M ${a.x} ${a.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${b.x} ${b.y}`,
-      mid: { x: labelMid.x, y: mid.y },
+      mid: edgeLabelMid(a, b, parentNode, childNode, levels, nodeSizes, (t) => cubicAt(a, c1, c2, b, t)),
     };
   }
   const dx = b.x - a.x, dy = b.y - a.y;
   const dist = Math.hypot(dx, dy) || 1;
-  const midX = (a.x + b.x) / 2;
   const midY = (a.y + b.y) / 2;
 
   // 거의 수평인 중심 가지는 참고 마인드맵처럼 차분한 수평선으로 둡니다.
@@ -120,16 +130,15 @@ function edgeGeometry(a, b, layout, parentNode = null, childNode = null, levels 
   if (horizontal && nearCenter) {
     return {
       d: `M ${a.x} ${a.y} L ${b.x} ${b.y}`,
-      mid: edgeLabelMid(a, b, parentNode, childNode, levels),
+      mid: edgeLabelMid(a, b, parentNode, childNode, levels, nodeSizes),
     };
   }
 
   const side = b.x >= a.x ? 1 : -1;
-  const labelMid = edgeLabelMid(a, b, parentNode, childNode, levels);
   if (childLv > 1) {
     return {
       d: `M ${a.x} ${a.y} L ${b.x} ${b.y}`,
-      mid: labelMid,
+      mid: edgeLabelMid(a, b, parentNode, childNode, levels, nodeSizes),
     };
   }
 
@@ -146,8 +155,61 @@ function edgeGeometry(a, b, layout, parentNode = null, childNode = null, levels 
   };
   return {
     d: `M ${a.x} ${a.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${b.x} ${b.y}`,
-    mid: labelMid,
+    mid: edgeLabelMid(a, b, parentNode, childNode, levels, nodeSizes, (t) => cubicAt(a, c1, c2, b, t)),
   };
+}
+
+// transform 뒤의 화면 크기(getBoundingClientRect)가 아니라 배율 1의 실제
+// border-box를 잽니다. 위치·선택·확대는 이 크기를 바꾸지 않아 재측정 루프가 없습니다.
+function useNodeMeasurements(nodes, editingId, uploadingId) {
+  const elements = useRef(new Map());
+  const callbacks = useRef(new Map());
+  const observerRef = useRef(null);
+  const [nodeSizes, setNodeSizes] = useState(() => new Map());
+  const measure = useCallback(() => {
+    const next = new Map();
+    for (const [id, element] of elements.current) {
+      const width = element.offsetWidth;
+      const height = element.offsetHeight;
+      if (width > 0 && height > 0) next.set(id, { width, height });
+    }
+    setNodeSizes((previous) => {
+      if (previous.size === next.size && [...next].every(([id, size]) => {
+        const old = previous.get(id);
+        return old?.width === size.width && old?.height === size.height;
+      })) return previous;
+      return next;
+    });
+  }, []);
+  const nodeRef = useCallback((id) => {
+    if (!callbacks.current.has(id)) {
+      callbacks.current.set(id, (element) => {
+        const previous = elements.current.get(id);
+        if (previous) observerRef.current?.unobserve(previous);
+        if (element) {
+          elements.current.set(id, element);
+          observerRef.current?.observe(element);
+        } else {
+          elements.current.delete(id);
+        }
+      });
+    }
+    return callbacks.current.get(id);
+  }, []);
+  useLayoutEffect(() => {
+    measure();
+  }, [nodes, editingId, uploadingId, measure]);
+  useLayoutEffect(() => {
+    if (typeof ResizeObserver === "undefined") return undefined;
+    const observer = new ResizeObserver(measure);
+    observerRef.current = observer;
+    for (const element of elements.current.values()) observer.observe(element);
+    return () => {
+      observer.disconnect();
+      observerRef.current = null;
+    };
+  }, [measure]);
+  return { nodeSizes, nodeRef, nodeElements: elements };
 }
 
 export default function MindmapCanvas({
@@ -181,7 +243,8 @@ export default function MindmapCanvas({
   const mapRef = useRef(map);
   mapRef.current = map;
 
-  const positions = useMemo(() => layoutPositions(map), [map]);
+  const { nodeSizes, nodeRef, nodeElements } = useNodeMeasurements(map.nodes, editingId, uploadingId);
+  const positions = useMemo(() => layoutPositions(map, { nodeSizes }), [map, nodeSizes]);
   const levels = useMemo(() => levelMap(map.nodes), [map.nodes]);
   const previewIds = useMemo(() => {
     if (!dragPreview || map.layout !== "tree") return new Set();
@@ -217,10 +280,10 @@ export default function MindmapCanvas({
         const b = displayPositions.get(n.id);
         if (!a || !b) return null;
         const parent = nodeById(map.nodes, n.parentId);
-        return { node: n, ...edgeGeometry(a, b, map.layout, parent, n, levels) };
+        return { node: n, ...edgeGeometry(a, b, map.layout, parent, n, levels, nodeSizes) };
       })
       .filter(Boolean);
-  }, [map.nodes, map.layout, displayPositions, levels]);
+  }, [map.nodes, map.layout, displayPositions, levels, nodeSizes]);
 
   // 휠 처리기는 한 번만 붙이고 계속 쓰므로, 그 안에서 최신 배율·이동을 읽으려면
   // state를 그대로 잡아 두면 안 됩니다(처음 값에 묶임). 거울용 ref를 둡니다.
@@ -230,6 +293,9 @@ export default function MindmapCanvas({
   panRef.current = pan;
 
   const selected = selectedId ? nodeById(map.nodes, selectedId) : null;
+  const pendingFitRef = useRef(true);
+  const fitPendingRef = useRef(null);
+  const fittedSelectionRef = useRef(null);
 
   useEffect(() => {
     if (editingId) editInputRef.current?.focus();
@@ -247,32 +313,62 @@ export default function MindmapCanvas({
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     for (const n of map.nodes) {
       const p = positions.get(n.id) ?? { x: 0, y: 0 };
-      minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
-      minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+      const size = mindmapNodeSize(n, levels.get(n.id) ?? 1, nodeSizes);
+      minX = Math.min(minX, p.x - size.width / 2); maxX = Math.max(maxX, p.x + size.width / 2);
+      minY = Math.min(minY, p.y - size.height / 2); maxY = Math.max(maxY, p.y + size.height / 2);
     }
     const w = maxX - minX + FIT_PAD * 2;
     const h = maxY - minY + FIT_PAD * 2;
     const next = clampZoom(Math.min(rect.width / w, rect.height / h, 1));
     const cx = (minX + maxX) / 2;
     const cy = (minY + maxY) / 2;
+    const nextPan = { x: -cx * next, y: -cy * next };
+    // 같은 commit의 선택 노드 따라가기 효과도 새 맞춤 좌표를 읽어야 합니다.
+    // state 반영 전의 옛 ref를 읽으면 방금 맞춘 pan을 다시 덮어씁니다.
+    zoomRef.current = next;
+    panRef.current = nextPan;
+    fittedSelectionRef.current = { selectedId, positions };
     setZoom(next);
-    setPan({ x: -cx * next, y: -cy * next });
+    setPan(nextPan);
     return true;
-  }, [map.nodes, positions]);
+  }, [map.nodes, positions, levels, nodeSizes, selectedId]);
 
-  // 처음 열릴 때와 형태가 바뀔 때만 맞춥니다(가지를 더할 때마다 튀지 않도록).
+  // 먼저 실제 노드를 잰 뒤 처음 열릴 때와 형태가 바뀔 때만 맞춥니다.
+  // 편집·이미지 변경으로 크기가 달라져도 전체 판을 다시 맞추지는 않습니다.
   useLayoutEffect(() => {
-    if (fit()) return undefined;
-    const raf = requestAnimationFrame(fit);
-    return () => cancelAnimationFrame(raf);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    pendingFitRef.current = true;
   }, [map.layout, fitKey]);
+  fitPendingRef.current = () => {
+    if (!pendingFitRef.current) return;
+    const measured = map.nodes.every((node) => {
+      const element = nodeElements.current.get(node.id);
+      const size = nodeSizes.get(node.id);
+      return element && size?.width === element.offsetWidth && size?.height === element.offsetHeight;
+    });
+    if (measured && fit()) pendingFitRef.current = false;
+  };
+  useLayoutEffect(() => {
+    fitPendingRef.current?.();
+  }, [map.layout, fitKey, fit]);
+  useLayoutEffect(() => {
+    const stage = stageRef.current;
+    if (!stage || typeof ResizeObserver === "undefined") return undefined;
+    // 접혀 있던 교사·방송 판이 열려 실제 높이를 얻는 경우도 한 번 맞춥니다.
+    const observer = new ResizeObserver(() => fitPendingRef.current?.());
+    observer.observe(stage);
+    return () => observer.disconnect();
+  }, []);
 
   // 고른 노드를 화면 안으로 — 가지를 더하면 새 노드가 부모 바깥쪽에 생겨
   // 판 밖으로 나가는 일이 잦습니다(특히 방사형). 그때마다 전체를 다시 맞추면
   // 그림이 통째로 튀므로, 벗어난 만큼만 살짝 따라갑니다.
   useEffect(() => {
-    if (!selectedId || dragRef.current) return;
+    const fittedSelection = fittedSelectionRef.current;
+    fittedSelectionRef.current = null;
+    // 맞춤은 전체 노드를 보여 주는 의도적인 이동입니다. 낮은 배율에서는
+    // 아래의 화면 여백보다 맞춤 여백이 작아도, 이 맞춤을 다시 밀지 않습니다.
+    if (fittedSelection?.selectedId === selectedId && fittedSelection?.positions === positions) return;
+    if (!selectedId || dragRef.current || pendingFitRef.current) return;
     const stage = stageRef.current;
     const p = positions.get(selectedId);
     if (!stage || !p) return;
@@ -282,8 +378,10 @@ export default function MindmapCanvas({
     const { x: px, y: py } = panRef.current;
     const sx = px + p.x * z; // 판 가운데를 0으로 본 노드의 화면 위치
     const sy = py + p.y * z;
-    const marginX = Math.max(40, rect.width / 2 - 130);
-    const marginY = Math.max(40, rect.height / 2 - 80);
+    const node = nodeById(map.nodes, selectedId);
+    const size = mindmapNodeSize(node, levels.get(selectedId) ?? 1, nodeSizes);
+    const marginX = Math.max(0, rect.width / 2 - size.width * z / 2 - 24);
+    const marginY = Math.max(0, rect.height / 2 - size.height * z / 2 - 24);
     let nx = px;
     let ny = py;
     if (sx > marginX) nx = px - (sx - marginX);
@@ -291,7 +389,7 @@ export default function MindmapCanvas({
     if (sy > marginY) ny = py - (sy - marginY);
     else if (sy < -marginY) ny = py + (-marginY - sy);
     if (nx !== px || ny !== py) setPan({ x: nx, y: ny });
-  }, [selectedId, positions]);
+  }, [selectedId, positions, map.nodes, levels, nodeSizes]);
 
   // ── 휠 확대/축소 — 손가락(커서) 아래 지점을 붙잡은 채로 키웁니다 ──
   // React의 onWheel은 기본이 passive라 preventDefault가 통하지 않아,
@@ -367,10 +465,11 @@ export default function MindmapCanvas({
       id: node.id,
       sx: e.clientX,
       sy: e.clientY,
-      ox: p.x,
-      oy: p.y,
+      // 그리는 배치가 충돌을 피해 옮겨진 경우에도 저장 좌표에 끈 만큼만
+      // 더합니다. 표시 좌표를 저장 좌표로 오인하면 첫 움직임에 가지가 뜁니다.
+      ox: map.layout === "radial" ? (Number.isFinite(node.x) ? node.x : 0) : p.x,
+      oy: map.layout === "radial" ? (Number.isFinite(node.y) ? node.y : 0) : p.y,
       originY: p.y,
-      lockY: map.layout === "radial" && lv > 1,
       moved: false,
     };
     e.currentTarget.setPointerCapture?.(e.pointerId);
@@ -415,7 +514,7 @@ export default function MindmapCanvas({
     } else if (d.kind === "node") {
       if (!d.moved && Math.abs(dx) + Math.abs(dy) < 3) return; // 살짝 눌린 것은 클릭으로
       d.moved = true;
-      onChange(moveSubtreeTo(map, d.id, d.ox + dx / zoom, d.lockY ? d.oy : d.oy + dy / zoom));
+      onChange(moveSubtreeTo(map, d.id, d.ox + dx / zoom, d.oy + dy / zoom));
     } else if (d.kind === "tree-reorder") {
       if (!d.moved && Math.abs(dx) + Math.abs(dy) < 3) return;
       d.moved = true;
@@ -562,6 +661,8 @@ export default function MindmapCanvas({
             return (
               <div
                 key={n.id}
+                ref={nodeRef(n.id)}
+                data-mindmap-node-id={n.id}
                 className={`mm-node${isSel ? " sel" : ""}${lv === 0 ? " root" : ""}${
                   isEditing ? " editing" : ""
                 }${canReorder ? " reorderable" : ""}${isPreviewRoot ? " dragging" : ""}${
