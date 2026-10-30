@@ -4,8 +4,8 @@
 // 떠 있는 동그라미 — 메신저와 자주 여는 기능을 한 손에
 // -------------------------------------------------------------
 // 화면 오른쪽 아래의 작은 동그라미(56px). 누르면 **큰 원으로 펼쳐지며**
-// 기능 여섯 개가 둘레에 섭니다 — 메신저 · 돌발 퀴즈 · 수업 노트 · 내 출석부 ·
-// 과일 바구니 · 분석 리포트(교사는 수업 노트·내 출석부 대신 출석 관리·반 관리).
+// 학생은 메신저 · 돌발 퀴즈 · 내 출석부 · 과일 바구니 · 분석 리포트 다섯 개,
+// 교사는 출석 관리 · 반 관리가 포함된 여섯 개 기능이 둘레에 섭니다.
 // KWLS 차트는 걷었습니다 — KWLS는 책방의 독서 활동으로만 씁니다.
 //
 // [모양은 행성 궤도]
@@ -16,14 +16,14 @@
 // [그림은 앱의 아이콘 그대로]
 // 이모지 대신 이미 그 기능을 가리키는 그림을 씁니다(components/StatusIcons.jsx)
 // — 메신저는 말풍선(IconAnswer — 로고는 가운데 해의 기본 그림), 돌발 퀴즈는
-// 메모지(IconQuizMemo), 수업 노트는 IconRecord, 반 관리는 IconBlackboard,
+// 메모지(IconQuizMemo), 반 관리는 IconBlackboard,
 // 출석은 IconCheck. 과일 바구니는 바구니 창의 그림
 // (`public/fruit-basket.webp`)을 작게 — 원을 펼쳤을 때만 그려 처음 화면에서
 // 그림을 받지 않습니다.
 //
 // [기능은 '그 자리로 데려다 주기']
 // 메신저만 이 자리에서 창을 엽니다. 나머지는 이미 공부방에 있는 창을
-// 주소로 엽니다(`/books?open=notes|attendance|fruit` — 공부방이 열고
+// 주소로 엽니다(`/books?open=attendance|fruit|classes` — 공부방이 열고
 // 주소를 지웁니다). 같은 창을 여기에 한 벌 더 만들면 두 곳이 어긋납니다.
 // 분석 리포트는 `/dashboard`에서 현재 반·역할에 맞는 통계를 보여 줍니다.
 //
@@ -58,7 +58,6 @@ import MessengerWindow from "./MessengerWindow";
 import {
   IconLogo,
   IconAnswer,
-  IconRecord,
   IconBlackboard,
   IconCheck,
   IconQuizMemo,
@@ -74,7 +73,6 @@ const ICONS = {
   // 메신저는 상단바 '질문방'의 말풍선(IconAnswer) — 로고(말풍선 둘)는 가운데 해의
   // 기본 그림이라, 같은 그림을 쓰면 메신저 행성과 해가 구별되지 않았습니다(선생님 요청).
   msg: () => <IconAnswer size={28} />,
-  notes: () => <IconRecord size={26} />,
   attend: () => <IconCheck size={24} className="hub-icon-check" />,
   classes: () => <IconBlackboard size={27} />,
   quiz: () => <IconQuizMemo size={26} />,
@@ -86,7 +84,6 @@ const STUDENT_ITEMS = [
   { key: "msg", label: "메신저", hint: "선생님 · 우리 모둠과 대화해요" },
   // 상단바 메모지는 알림만 — 창은 여기서(PopQuizButton이 이벤트를 받아 엶)
   { key: "quiz", label: "돌발 퀴즈", hint: "퀴즈에 답하고 지난 퀴즈를 봐요", event: POPQUIZ_OPEN_EVENT },
-  { key: "notes", label: "수업 노트", hint: "지난 수업 노트를 넘겨 봐요", href: "/books?open=notes" },
   { key: "attend", label: "내 출석부", hint: "내 출석 기록을 봐요", href: "/books?open=attendance" },
   { key: "fruit", label: "과일 바구니", hint: "과일을 담고 이벤트에 응모해요", href: "/books?open=fruit" },
   { key: "report", label: "분석 리포트", hint: "나의 독서 활동과 성장 통계를 봐요", href: "/dashboard" },

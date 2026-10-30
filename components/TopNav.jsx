@@ -6,7 +6,7 @@
 // 왼쪽: 책봄 로고 ｜ 책방 · 책나눔(반별 활성화 시)
 // 오른쪽: 역할 전환(개발용) ｜ 돌발 퀴즈 ｜ 손들기 ｜ 공지 ｜ 알림 ｜ 사용자 프로필(로그아웃은 그 메뉴 안)
 // =============================================================
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isAdmin, isTeacher } from "@/lib/user";
 import { isFirebaseConfigured } from "@/lib/firebase";
@@ -18,13 +18,10 @@ import {
   subscribeMyMemberships,
   subscribeMyClassRewardCount,
   subscribeBroadcast,
-  subscribeClass,
-  classTaskOf,
   fetchClass,
   stopBroadcast,
   reportPresence,
   PRESENCE_BEAT_MS,
-  NOTING_WINDOW_MS,
 } from "@/lib/store";
 import { getSelectedClassId } from "@/lib/classroom";
 import { useCurrentUser } from "@/lib/useCurrentUser";
@@ -36,7 +33,6 @@ import ClassNoticeButton from "./ClassNoticeButton";
 import RoleSwitcher from "./RoleSwitcher";
 import RoleManagerModal from "./RoleManagerModal";
 import PresentationOverlay from "./PresentationOverlay";
-import CornellNoteDrawer from "./CornellNoteDrawer";
 import RewardCelebration from "./RewardCelebration";
 import FloatingHub from "./FloatingHub";
 import AppMarquee from "./AppMarquee";
@@ -56,17 +52,6 @@ export default function TopNav({ active, growthEnabled = false, readingOpen = fa
   const [membershipsLoaded, setMembershipsLoaded] = useState(false);
   const [sessionClassId, setSessionClassId] = useState(null);
   const [fruitOpen, setFruitOpen] = useState(false); // 과일 뱃지 → 받은 흐름 모달
-  // 수업 노트 서랍이 열려 있는지 — 열리면 발표 화면이 그만큼 좁아집니다
-  // (덮지 않고 밀어냅니다). `wide`는 서랍이 날개를 편 상태(노트 + 활동
-  // 두 칸)로, 그만큼 더 좁아집니다.
-  const [noteOpen, setNoteOpen] = useState(false);
-  const [noteWide, setNoteWide] = useState(false);
-  // 서랍이 이 함수를 effect 의존성으로 들고 있어, 렌더마다 새로 만들면
-  // 그 effect가 매번 돕니다 — 한 번만 만들어 넘깁니다.
-  const handleNoteOpen = useCallback((open, wide) => {
-    setNoteOpen(open);
-    setNoteWide(!!wide);
-  }, []);
 
   // 관리자만 사용자 디렉터리를 구독(역할 관리·승인 대기 표시용)
   useEffect(() => {
@@ -107,9 +92,8 @@ export default function TopNav({ active, growthEnabled = false, readingOpen = fa
   // [답을 기다리는 동안은 알던 반을 붙듭니다]
   // `memberships`는 `[]`로 시작하고, 구독을 다시 걸 때도 잠깐 빕니다. 그 빈
   // 값을 그대로 쓰면 `activeClassId`가 `null`로 떨어지고, 이 값에 걸려 있는
-  // 것들이 함께 사라집니다 — 특히 **수업 노트 서랍**이 언마운트되어 학생이
-  // 쓰던 화면이 없어졌다 다시 나타나고, 아직 자동 저장(2초)이 안 된 글자가
-  // 날아갑니다. 빈 배열은 '반이 없다'가 아니라 '아직 안 왔다'일 수 있습니다
+  // 과일 표시·메신저 등 반에 연결된 기능도 잠깐 사라집니다.
+  // 빈 배열은 '반이 없다'가 아니라 '아직 안 왔다'일 수 있습니다
   // (프로젝트 문서 '첫 화면' 절의 그 함정).
   //
   // **놓는 조건은 '첫 답이 왔는데도 비어 있을 때'**입니다. 붙들기만 하면
@@ -159,18 +143,6 @@ export default function TopNav({ active, growthEnabled = false, readingOpen = fa
   // 가는지'를 보고 보내도록 버튼에 함께 띄웁니다(잘못된 반에 보내는 실수를
   // 줄이는 가장 값싼 방법입니다). 실제 받는 사람은 서버가 다시 정합니다.
   const noticeMemberUids = useClassMembers(broadcastClassId, isFirebaseConfigured && admin);
-  // 지금 보고 있는 반의 문서 하나 — '오늘의 활동'(`task`)이 여기 들어 있습니다.
-  // 교사는 마지막으로 고른 반, 학생은 소속 반.
-  //
-  // **전광판은 이제 여기서 안 읽습니다.** 반마다 따로였던 것을 책 나눔
-  // 전체에 하나로 옮겨(`meta/marquee`), `AppMarquee`가 제 구독을 스스로
-  // 겁니다 — 그래서 이 구독은 `task` 하나만을 위해 남습니다.
-  const [classDoc, setClassDoc] = useState(null);
-  useEffect(() => {
-    if (!broadcastClassId) { setClassDoc(null); return; }
-    return subscribeClass(broadcastClassId, setClassDoc);
-  }, [broadcastClassId]);
-
   const [noticeClassName, setNoticeClassName] = useState("");
   useEffect(() => {
     if (!admin || !broadcastClassId) { setNoticeClassName(""); return; }
@@ -193,23 +165,14 @@ export default function TopNav({ active, growthEnabled = false, readingOpen = fa
   // 실제 수업에서 문제가 되는 '딴짓'은 이 조합으로 잡힙니다.
   // (브라우저는 보이는데 아무것도 안 누르고 있는 경우까지는 알 수 없습니다)
   //
-  // [필기 중 신호]
-  // 위 두 값은 '화면이 보이는가'까지만 압니다 — 켜 두고 아무것도 안 하는
-  // 학생과 열심히 적는 학생이 같아 보입니다. 수업 노트 서랍이 생기면서
-  // '타이핑'이라는 능동 신호가 처음 생겼으므로, 방금 필기했는지를 함께
-  // 올려 교사 전광판에 ✍️로 보여 줍니다. 규칙은 presence에 필드 화이트
-  // 리스트가 없어 이 필드를 더해도 그대로 통과합니다.
   const broadcasting = !!broadcast;
-  const notingRef = useRef(0); // 마지막으로 필기한 시각(ms)
-  const markNoting = useCallback(() => { notingRef.current = Date.now(); }, []);
   useEffect(() => {
     if (!isFirebaseConfigured || admin || !broadcasting || !broadcastClassId || !user?.uid) return;
     const send = () =>
       reportPresence(
         user,
         broadcastClassId,
-        document.visibilityState === "visible" && document.hasFocus(),
-        Date.now() - notingRef.current < NOTING_WINDOW_MS
+        document.visibilityState === "visible" && document.hasFocus()
       );
     send();
     document.addEventListener("visibilitychange", send);
@@ -416,27 +379,7 @@ export default function TopNav({ active, growthEnabled = false, readingOpen = fa
 
     {/* 학생 화면 — 교사가 방송 중이면 화면 전체를 강제로 덮습니다(학생은 닫을 수 없음) */}
     {!admin && broadcast && (
-      <PresentationOverlay broadcast={broadcast} noteOpen={noteOpen} noteWide={noteWide} />
-    )}
-
-    {/* 수업 노트 서랍 — 오버레이의 '형제'이고, 방송 조건 바깥입니다.
-        학생이 스스로 공부하려고 남기는 기록이라 방송 중·일시정지·수업 밖
-        어디서나 같은 자리에서 열려야 합니다. 오버레이 안에 넣으면 선생님이
-        잠깐 멈출 때마다(LessonMode가 그때도 방송 문서를 지웁니다) 함께
-        사라져 쓰던 자리를 잃습니다. */}
-    {!admin && activeClassId && (
-      <CornellNoteDrawer
-        classId={activeClassId}
-        user={user}
-        lessonTitle={broadcast?.lessonTitle ?? ""}
-        boardId={broadcast?.boardId ?? ""}
-        boardTitle={broadcast?.boardTitle ?? ""}
-        onOpenChange={handleNoteOpen}
-        onType={markNoting}
-        /* 선생님이 내보낸 활동 — 위에서 구독해 둔 반 문서에서 그대로
-           읽습니다(이 구독이 곧 이것을 위한 것입니다). */
-        task={classTaskOf(classDoc)}
-      />
+      <PresentationOverlay broadcast={broadcast} />
     )}
 
     {/* 떠 있는 동그라미 — 메신저 + 자주 여는 기능(components/FloatingHub.jsx).

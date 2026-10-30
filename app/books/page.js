@@ -90,7 +90,6 @@ import PageTagline from "@/components/PageTagline";
 import ClassManagerModal from "@/components/ClassManagerModal";
 import SeatGroupSetupModal from "@/components/SeatGroupSetupModal";
 import StudyAttendanceModal from "@/components/StudyAttendanceModal";
-import CornellNoteViewerModal from "@/components/CornellNoteViewerModal";
 import FruitBasketModal from "@/components/FruitBasketModal";
 
 // 활동 종류의 이름 — 목록 카드에 '무엇을 하는 활동인가'를 적는 데 씁니다.
@@ -244,12 +243,11 @@ function BooksPageInner() {
   // 오늘 출석 기록 — 출석 관리 · 학생 '출석하기' · '멋진 순간' 자리표가 봅니다
   const [attendanceRecords, setAttendanceRecords] = useState([]);
   // 책 나눔에는 공부방이 없어, 공부방 머리말에 있던 창들을 여기서 엽니다 —
-  // 반 관리하기 · 자리/모둠 · 출석 · 수업 노트 · 과일 바구니.
+  // 반 관리하기 · 자리/모둠 · 출석 · 과일 바구니.
   // 떠 있는 동그라미(FloatingHub)는 `/books?open=…`으로 엽니다(아래).
   const [classManagerOpen, setClassManagerOpen] = useState(false);
   const [seatSetupOpen, setSeatSetupOpen] = useState(false);
   const [attendanceOpen, setAttendanceOpen] = useState(false);
-  const [noteViewerOpen, setNoteViewerOpen] = useState(false);
   const [fruitBasketOpen, setFruitBasketOpen] = useState(false);
   const [joinCodesMap, setJoinCodesMap] = useState({}); // 교사: classId→{code,expiresAt}
   const [attendanceBusy, setAttendanceBusy] = useState(false);
@@ -395,13 +393,12 @@ function BooksPageInner() {
 
   const attendedToday = !admin && attendanceRecords.some((r) => r.date === todayKey);
 
-  // ── 떠 있는 동그라미에서 온 바로가기 (?open=notes|attendance|fruit|classes) ──
-  // 연 뒤 `open`만 지웁니다(남겨 두면 창을 닫고 새로 고칠 때마다 다시 열립니다).
+  // ── 떠 있는 동그라미에서 온 바로가기 (?open=attendance|fruit|classes) ──
+  // 처리 뒤 `open`만 지웁니다(이전 바로가기 주소도 남겨 두지 않습니다).
   const openParam = searchParams.get("open");
   useEffect(() => {
     if (!openParam) return;
-    if (openParam === "notes" && !admin) setNoteViewerOpen(true);
-    else if (openParam === "attendance") setAttendanceOpen(true);
+    if (openParam === "attendance") setAttendanceOpen(true);
     else if (openParam === "fruit") setFruitBasketOpen(true);
     else if (openParam === "classes" && admin) setClassManagerOpen(true);
     const rest = new URLSearchParams(searchParams.toString());
@@ -1158,16 +1155,6 @@ function BooksPageInner() {
           onStopAttendance={admin ? handleStopAttendance : null}
           onSetAttendance={admin ? handleSetAttendance : null}
           onClose={() => setAttendanceOpen(false)}
-        />
-      )}
-
-      {/* 내 수업 노트 크게 보기 (학생) — 서랍의 '노트 전체 보기'와 같은 창 */}
-      {noteViewerOpen && classId && user && (
-        <CornellNoteViewerModal
-          classId={classId}
-          user={user}
-          className={currentClass?.name ?? ""}
-          onClose={() => setNoteViewerOpen(false)}
         />
       )}
 

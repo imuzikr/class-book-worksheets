@@ -27,7 +27,7 @@ export default function TermsContent() {
         <ul>
           <li>
             &lsquo;서비스&rsquo;란 본 서비스가 제공하는 교육용 웹
-            애플리케이션(책방 독서 활동, KWLS, 수업 노트 등)을 말합니다.
+            애플리케이션(책방 독서 활동, KWLS 등)을 말합니다.
           </li>
           <li>
             &lsquo;이용자&rsquo;란 본 서비스에 접속하여 이 약관에 따라

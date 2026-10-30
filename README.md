@@ -3,8 +3,8 @@
 교실에서 함께 책을 읽고 생각을 나누는 독서 활동판입니다.
 [배움나눔](https://github.com/imuzikr/class-peer-qna)의 책방을 떼어 따로 세운 앱으로,
 닿소리 채우기 · 곁텍스트 읽기 · RAFT 글쓰기 · KWLS · 마인드맵 · 내 생각은요... ·
-여섯 개의 해시태그 · 물음표로 책 읽기 · 가로세로 낱말 퀴즈 아홉 가지 활동과
-반 관리 · 출석 · 과일(참여 격려) · 수업 노트 · 학급 방송을 담고 있습니다.
+여섯 개의 해시태그 · 물음표로 책 읽기 · 가로세로 낱말 퀴즈 · 브레인 라이팅 열 가지 활동과
+반 관리 · 출석 · 과일(참여 격려) · 학급 방송을 담고 있습니다.
 
 > 지금은 Firebase 설정값이 자리표시자라 **데모 모드**로 돕니다.
 > 새 Firebase 프로젝트를 연결하는 차례는 `CLAUDE.md`의 '새 Firebase 프로젝트 연결'을 보세요.
@@ -101,7 +101,7 @@ npm run deploy             # 규칙 시험 → firestore(rules·indexes) + stora
 ```
 users/{uid}                 프로필 (email, realName, displayName, role, requestedRole ...)
 classes/{cId}               반 (+ attendanceOpen, marquee 등)
-  ├ cornellNotes            학생 수업 노트
+  ├ cornellNotes            이전 수업 노트 기록(기존 자료 보존)
   ├ rewards · rewardEvents  과일 누적 · 지급 이력
   ├ fruitBasket · fruitEvents  과일 바구니 · 이벤트 기록
   ├ popQuizzes              돌발 퀴즈

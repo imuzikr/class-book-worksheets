@@ -20,14 +20,7 @@ import EntryCastCard from "./EntryCastCard";
 // 이 화면이 그릴 줄 아는 방송 종류. 새 종류를 추가하면 여기에도 넣어야 합니다.
 const KNOWN_MODES = ["consonant", "entry", "wall", "mindmap", "lesson", "carousel", "single", "hashtag"];
 
-// noteOpen — 학생이 수업 노트 서랍을 열어 두었는지. 열려 있으면 발표 화면을
-// 그만큼 좁힙니다(덮는 게 아니라 밀어냅니다). 서랍은 이 컴포넌트 밖에서
-// TopNav이 형제로 그립니다 — 안에 두면 슬라이드가 넘어갈 때마다 다시
-// 그려져 입력이 끊깁니다.
-// noteWide — 서랍이 **날개를 편** 상태(노트 + 오늘의 활동 두 칸). 그만큼 더
-// 좁아집니다. 가려지는 것은 감수하는 손실입니다 — 필기하면서 답하려고 편
-// 것이라, 그 순간 학생이 보는 주인공은 슬라이드가 아니라 제 칸입니다.
-export default function PresentationOverlay({ broadcast, noteOpen = false, noteWide = false }) {
+export default function PresentationOverlay({ broadcast }) {
   // 교사가 수업 화면 창을 굴리면 같은 비율로 따라 굴립니다(`scroll` 0~1 —
   // lib/data/lessons.js의 setBroadcastScroll). 크기가 달라 픽셀이 아니라 비율입니다.
   const scroll = typeof broadcast?.scroll === "number" ? broadcast.scroll : null;
@@ -43,11 +36,6 @@ export default function PresentationOverlay({ broadcast, noteOpen = false, noteW
     });
     return () => cancelAnimationFrame(raf);
   }, [scroll, scrollKey]);
-  const shrink = noteOpen
-    ? noteWide
-      ? " broadcast-overlay--noted broadcast-overlay--noted2"
-      : " broadcast-overlay--noted"
-    : "";
   // [버전이 어긋났을 때]
   // 학생 브라우저에 이전 배포의 화면이 열린 채로 남아 있으면, 새로 생긴
   // 방송 종류를 못 알아봅니다. 그때 그냥 아래로 흘려보내면 빈 발표 카드가
@@ -56,7 +44,7 @@ export default function PresentationOverlay({ broadcast, noteOpen = false, noteW
   if (!KNOWN_MODES.includes(broadcast.mode ?? "")) {
     return (
       <div
-        className={`broadcast-overlay broadcast-overlay--stale${shrink}`}
+        className={`broadcast-overlay broadcast-overlay--stale`}
         role="alertdialog"
         aria-modal="true"
         aria-label="화면을 불러오지 못했어요"
@@ -90,7 +78,7 @@ export default function PresentationOverlay({ broadcast, noteOpen = false, noteW
     const zoomList = zoomSlot != null ? cells[cellKey(zoomSlot)] ?? [] : null;
     return (
       <div
-        className={`broadcast-overlay broadcast-overlay--consonant${shrink}`}
+        className={`broadcast-overlay broadcast-overlay--consonant`}
         role="alertdialog"
         aria-modal="true"
         aria-label="선생님 집계 화면"
@@ -184,7 +172,7 @@ export default function PresentationOverlay({ broadcast, noteOpen = false, noteW
     const hasVisibleNode = map.nodes.some((n) => n.text?.trim() || n.image);
     return (
       <div
-        className={`broadcast-overlay broadcast-overlay--mindmap${shrink}`}
+        className={`broadcast-overlay broadcast-overlay--mindmap`}
         role="alertdialog"
         aria-modal="true"
         aria-label="선생님이 보여주는 마인드맵"
@@ -225,7 +213,7 @@ export default function PresentationOverlay({ broadcast, noteOpen = false, noteW
     const items = broadcast.items ?? [];
     return (
       <div
-        className={`broadcast-overlay broadcast-overlay--wall${shrink}`}
+        className={`broadcast-overlay broadcast-overlay--wall`}
         role="alertdialog"
         aria-modal="true"
         aria-label="선생님이 보여주는 친구들의 답"
@@ -261,7 +249,7 @@ export default function PresentationOverlay({ broadcast, noteOpen = false, noteW
   if (broadcast.mode === "hashtag") {
     return (
       <div
-        className={`broadcast-overlay broadcast-overlay--hashtag${shrink}`}
+        className={`broadcast-overlay broadcast-overlay--hashtag`}
         role="alertdialog"
         aria-modal="true"
         aria-label="선생님이 보여주는 친구의 해시태그"
@@ -298,7 +286,7 @@ export default function PresentationOverlay({ broadcast, noteOpen = false, noteW
       : chars <= 40 ? "xl" : chars <= 160 ? "lg" : chars <= 450 ? "md" : "sm";
     return (
       <div
-        className={`broadcast-overlay broadcast-overlay--entry${shrink}`}
+        className={`broadcast-overlay broadcast-overlay--entry`}
         role="alertdialog"
         aria-modal="true"
         aria-label="선생님이 보여주는 글"
@@ -423,7 +411,7 @@ function PresentationOverlayBody({ broadcast, shrink = "" }) {
   if (broadcast.mode === "lesson") {
     return (
       <div
-        className={`broadcast-overlay broadcast-overlay--lesson${shrink}`}
+        className={`broadcast-overlay broadcast-overlay--lesson`}
         role="alertdialog"
         aria-modal="true"
         aria-label="선생님 수업 화면"
@@ -460,7 +448,7 @@ function PresentationOverlayBody({ broadcast, shrink = "" }) {
   const hasText = html.replace(/<[^>]*>/g, "").trim().length > 0;
 
   return (
-    <div className={`broadcast-overlay${shrink}`} role="alertdialog" aria-modal="true" aria-label="선생님 발표 화면">
+    <div className={`broadcast-overlay`} role="alertdialog" aria-modal="true" aria-label="선생님 발표 화면">
       <div className="broadcast-bar">
         <span className="broadcast-live-dot" aria-hidden="true" />
         선생님이 화면을 보여주고 있어요
