@@ -2,16 +2,21 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  MINDMAP_VERTICAL_GAP,
   computeTreeLayout,
   addChild,
+  emptyMindmap,
   layoutPositions,
   levelMap,
   mindmapImages,
   mindmapNodeSize,
   moveSubtreeTo,
   normalizeMindmap,
+  normalizeVerticalGap,
   safeNodeImage,
   updateNodeImage,
+  updateNodeText,
+  updateVerticalGap,
   withRadialPositions,
 } from "@/lib/mindmap";
 import { createDemoBookActivities } from "@/lib/demoBookActivities";
@@ -48,6 +53,113 @@ function freezeMap(map) {
   Object.freeze(map.nodes);
   return Object.freeze(map);
 }
+
+test("세로 간격은 숫자만 받아 범위 안에 두고, 옛 기록은 기본 20px로 읽습니다", () => {
+  assert.deepEqual(MINDMAP_VERTICAL_GAP, { min: 12, max: 120, default: 20, step: 4 });
+  for (const invalid of [undefined, null, NaN, Infinity, -Infinity, "64", "", true, {}, []]) {
+    assert.equal(normalizeVerticalGap(invalid), 20);
+    assert.equal(normalizeMindmap({ verticalGap: invalid }).verticalGap, 20);
+  }
+  for (const [raw, expected] of [[-50, 12], [0, 12], [12, 12], [37.5, 37.5], [120, 120], [500, 120]]) {
+    assert.equal(normalizeVerticalGap(raw), expected);
+    assert.equal(normalizeMindmap({ verticalGap: raw }).verticalGap, expected);
+  }
+  assert.equal(emptyMindmap("주제").verticalGap, 20);
+  assert.equal(emptyMindmap("주제", 84).verticalGap, 84);
+  assert.equal(emptyMindmap("주제", Infinity).verticalGap, 20);
+  assert.equal(normalizeMindmap({ verticalGap: 84, nodes: [] }).verticalGap, 84);
+  assert.equal(normalizeMindmap({ nodes: [node("root", null)] }).verticalGap, 20);
+});
+
+test("세로 간격만 고쳐 저장하고 다시 읽어도 원문·좌표·노드 순서는 그대로입니다", () => {
+  const text = "내 생각에  어떤 편향이 있었을까";
+  const map = freezeMap(normalizeMindmap({ layout: "radial", verticalGap: 20, nodes: [
+    node("root", null, { x: 90, y: 40 }),
+    node("a", "root", { x: 330, y: 80, text, image: IMG, edgeLabel: "관계" }),
+    node("b", "a", { x: 410, y: 190, text: "또 다른 생각" }),
+  ] }));
+  const before = JSON.stringify(map);
+  const spaced = updateVerticalGap(map, 84);
+  assert.equal(spaced.verticalGap, 84);
+  assert.equal(spaced.nodes, map.nodes);
+  assert.deepEqual(spaced, { ...map, verticalGap: 84 });
+  const edited = updateNodeText(spaced, "b", text);
+  const restored = normalizeMindmap(JSON.parse(JSON.stringify(edited)));
+  assert.deepEqual(restored, edited);
+  assert.equal(restored.nodes.find((n) => n.id === "a").text, text);
+  assert.equal(restored.nodes.find((n) => n.id === "b").text, text);
+  for (const layout of ["radial", "tree"]) {
+    assertDisjoint(restored.nodes, layoutPositions({ ...restored, layout }));
+  }
+  assert.equal(addChild(restored, "a", "새 가지").verticalGap, 84);
+  assert.equal(updateNodeImage(restored, "b", IMG).verticalGap, 84);
+  assert.equal(moveSubtreeTo(restored, "a", 340, 100).verticalGap, 84);
+  assert.equal(withRadialPositions(restored).verticalGap, 84);
+  assert.equal(updateVerticalGap(map, 900).verticalGap, 120);
+  assert.equal(updateVerticalGap(map, "84").verticalGap, 20);
+  assert.equal(JSON.stringify(map), before);
+});
+
+test("세로 간격 기본값은 두 형태의 기존 배치를 유지하며 rowGap 호출도 보존합니다", () => {
+  const nodes = [node("root", null, { x: 0, y: 0 }),
+    node("a", "root", { x: 240, y: 0 }), node("b", "root", { x: 240, y: 0 })];
+  for (const layout of ["radial", "tree"]) {
+    assert.deepEqual(layoutPositions({ layout, nodes, verticalGap: 20 }), layoutPositions({ layout, nodes }));
+  }
+  const radial = layoutPositions({ layout: "radial", nodes });
+  assert.deepEqual([...radial], [["root", { x: 0, y: 0 }], ["a", { x: 240, y: -31 }], ["b", { x: 240, y: 31 }]]);
+  assert.equal(computeTreeLayout(nodes, { rowGap: 102 }).get("b").y - computeTreeLayout(nodes, { rowGap: 102 }).get("a").y, 102);
+  const explicit = computeTreeLayout(nodes, { rowGap: 102, verticalGap: 44 });
+  assert.equal(explicit.get("b").y - explicit.get("a").y, 42 + 44);
+  assert.deepEqual(computeTreeLayout(nodes, { verticalGap: 20 }), computeTreeLayout(nodes));
+});
+
+test("두 형태 모두 큰 세로 간격을 첫 가지·다층 형제의 실제 테두리 사이에 적용합니다", () => {
+  const nodes = [
+    node("root", null, { x: 0, y: 0 }),
+    node("a", "root", { x: 260, y: 0, image: IMG }),
+    node("b", "root", { x: 260, y: 0, text: "다른 사람의 생각을 듣고 함께 읽으며 배운 점을 나누어요 ".repeat(3) }),
+    node("a1", "a", { x: 330, y: 0, image: IMG }), node("a2", "a", { x: 330, y: 0 }),
+    node("b1", "b", { x: 330, y: 0 }), node("b2", "b", { x: 330, y: 0, image: IMG }),
+    node("a11", "a1", { x: 400, y: 0, image: IMG }), node("a12", "a1", { x: 400, y: 0 }),
+  ];
+  const nodeSizes = new Map([["a1", { width: 168, height: 270 }], ["b2", { width: 168, height: 320 }]]);
+  const levels = levelMap(nodes);
+  for (const layout of ["radial", "tree"]) {
+    const minGaps = [];
+    for (const verticalGap of [20, 100]) {
+      const map = freezeMap({ layout, verticalGap, nodes: [...nodes] });
+      const before = JSON.stringify(map);
+      const positions = layoutPositions(map, { nodeSizes });
+      assertDisjoint(nodes, positions, nodeSizes);
+      const boxes = boxesOf(nodes, positions, nodeSizes);
+      minGaps.push([1, 2, 3].map((depth) => {
+        const peers = boxes.filter((b) => levels.get(b.id) === depth).sort((a, b) => a.top - b.top);
+        const gaps = peers.slice(1).map((b, i) => b.top - peers[i].bottom);
+        assert.ok(gaps.every((gap) => gap >= verticalGap - 0.001), `${layout}, depth ${depth}, gap ${verticalGap}: ${gaps}`);
+        return Math.min(...gaps);
+      }));
+      assert.equal(JSON.stringify(map), before);
+    }
+    minGaps[0].forEach((gap, i) => assert.ok(minGaps[1][i] >= gap + 80 - 0.001,
+      `${layout}, depth ${i + 1}: ${gap} -> ${minGaps[1][i]}`));
+  }
+});
+
+test("여러 뿌리와 부모를 잃은 숲 사이에도 설정한 세로 간격을 둡니다", () => {
+  const nodes = [node("root", null, { x: 0, y: 0 }),
+    node("other", null, { x: 0, y: 0, image: IMG }), node("orphan", "lost", { x: 0, y: 0 })];
+  for (const layout of ["radial", "tree"]) {
+    for (const verticalGap of [12, 76, 120]) {
+      const positions = layoutPositions({ layout, verticalGap, nodes });
+      assertDisjoint(nodes, positions);
+      const boxes = boxesOf(nodes, positions);
+      for (let i = 1; i < boxes.length; i += 1) {
+        assert.equal(boxes[i].top - boxes[i - 1].bottom, verticalGap);
+      }
+    }
+  }
+});
 
 test("이미지 주소는 https와 데모의 이미지 data URL만 받습니다", () => {
   assert.equal(safeNodeImage(IMG), IMG);

@@ -47,6 +47,9 @@ import {
   updateNodeImage,
   nodeHasImage,
   mindmapNodeSize,
+  MINDMAP_VERTICAL_GAP,
+  normalizeVerticalGap,
+  updateVerticalGap,
 } from "@/lib/mindmap";
 import { IMAGE_ACCEPT } from "@/lib/image";
 
@@ -56,6 +59,9 @@ const ZOOM_MAX = 2.4;
 const FIT_PAD = 120;
 
 const clampZoom = (z) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
+// 한글 조합을 맺는 Enter/Escape는 편집 종료 단축키로 쓰지 않습니다.
+// 일부 브라우저는 조합의 마지막 키에 isComposing 대신 keyCode 229를 줍니다.
+const isComposingKey = (event) => event.nativeEvent?.isComposing || event.nativeEvent?.keyCode === 229;
 
 // 선이 노드 상자 뒤에 가려지는 양을 빼고, 보이는 선의 가운데에 라벨을 둡니다.
 // 실제 상자의 높이도 쓰므로 이미지·여러 줄 글자·세로로 뻗는 가지에 맞습니다.
@@ -224,6 +230,7 @@ export default function MindmapCanvas({
   onUploadImage = null,
 }) {
   const readOnly = !onChange;
+  const verticalGap = normalizeVerticalGap(map.verticalGap);
   const stageRef = useRef(null);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -567,6 +574,32 @@ export default function MindmapCanvas({
 
   return (
     <div className={`mm-stage${className ? ` ${className}` : ""}`}>
+      {!readOnly && (
+        <div className="mm-spacing">
+          <label className="mm-spacing-label">
+            <span>세로 간격</span>
+            <input
+              type="range"
+              className="mm-spacing-range"
+              min={MINDMAP_VERTICAL_GAP.min}
+              max={MINDMAP_VERTICAL_GAP.max}
+              step={MINDMAP_VERTICAL_GAP.step}
+              value={verticalGap}
+              aria-valuetext={`${verticalGap}px`}
+              onChange={(e) => onChange(updateVerticalGap(mapRef.current, Number(e.target.value)))}
+            />
+          </label>
+          <output className="mm-spacing-value" aria-hidden="true">{verticalGap}px</output>
+          <button
+            type="button"
+            className="btn-ghost mm-spacing-reset"
+            disabled={verticalGap === MINDMAP_VERTICAL_GAP.default}
+            onClick={() => onChange(updateVerticalGap(mapRef.current, MINDMAP_VERTICAL_GAP.default))}
+          >
+            기본 간격
+          </button>
+        </div>
+      )}
       <div
         ref={stageRef}
         className={`mm-viewport${canDragNodes ? " draggable" : ""}`}
@@ -630,6 +663,8 @@ export default function MindmapCanvas({
                     onClick={(e) => e.stopPropagation()}
                     onChange={(e) => onChange(updateEdgeLabel(map, n.id, e.target.value))}
                     onKeyDown={(e) => {
+                      e.stopPropagation();
+                      if (isComposingKey(e)) return;
                       if (e.key === "Enter" || e.key === "Escape") {
                         e.preventDefault();
                         setEditingEdgeId(null);
@@ -687,6 +722,7 @@ export default function MindmapCanvas({
                 onKeyDown={
                   onSelect
                     ? (e) => {
+                        if (e.target !== e.currentTarget || isComposingKey(e)) return;
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
                           onSelect(n.id);
@@ -735,6 +771,9 @@ export default function MindmapCanvas({
                     onClick={(e) => e.stopPropagation()}
                     onChange={(e) => onChange(updateNodeText(map, n.id, e.target.value))}
                     onKeyDown={(e) => {
+                      // 입력칸의 Space가 노드 선택 키로 올라가면 공백이 사라집니다.
+                      e.stopPropagation();
+                      if (isComposingKey(e)) return;
                       if (e.key === "Enter" || e.key === "Escape") {
                         e.preventDefault();
                         setEditingId(null);

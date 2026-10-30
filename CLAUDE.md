@@ -2419,6 +2419,16 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
   기존 저장 좌표는 그릴 때 안전하게 보정하며, 열람만으로 다시 저장하지
   않습니다. 드래그는 저장 좌표에 마우스 이동량을 더해야 첫 움직임에 튀지
   않습니다. 크기·줄바꿈·겹침 회귀 시험은 `tests/unit/mindmap.test.mjs`입니다.
+- **세로 간격**은 `answers.verticalGap`에 저장합니다(12~120px, 기본 20px).
+  `normalizeVerticalGap`으로 옛 값·잘못된 값을 처리하고 두 배치에 함께
+  적용합니다. `MindmapBoard` 방송 꾸러미와 `PresentationOverlay`에도 이
+  값을 전달해야 학생·교사의 간격이 같아집니다. 편집 가능한 판의 위쪽에만
+  조절 막대와 기본 간격 버튼을 표시합니다.
+- 노드 입력칸의 키 이벤트는 바깥 노드의 선택 단축키로 올리지 않습니다.
+  입력칸에서 누른 Space를 부모가 `preventDefault`하면 띄어쓰기가 사라집니다.
+  바깥 노드는 `target === currentTarget`일 때만 Enter/Space를 처리하고,
+  입력칸은 한글 조합 중 Enter/Escape(`isComposing` 또는 229)로 닫지 않습니다.
+  표시 글자는 `white-space: pre-wrap`으로 저장된 공백을 유지합니다.
 - 넣는 길은 셋입니다 — **고른 노드 모서리의 그림 단추**(`.mm-node-imgbtn`) ·
   **아래 막대의 '이미지 넣기'**(있으면 '바꾸기 · 빼기') · **글자 칸에 그림을
   붙여넣기**.
