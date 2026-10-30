@@ -51,12 +51,12 @@ function Modal({ title, onClose, children, wide = false, busy = false }) {
   </div>;
 }
 
-export default function ReadingHub({ classId, user, isTeacher = false, onDisabled, activities = [], onOpenActivity }) {
+export default function ReadingHub({ classId, user, isTeacher = false, onDisabled, activities = [], onOpenActivity, initialBookId = null, initialTab = "library" }) {
   const [raw, setRaw] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState("library");
+  const [tab, setTab] = useState(["library", "growth", "ranking"].includes(initialTab) ? initialTab : "library");
   const [filter, setFilter] = useState("all");
   const [dialog, setDialog] = useState(null);
   const [confirm, setConfirm] = useState(null);
@@ -65,6 +65,16 @@ export default function ReadingHub({ classId, user, isTeacher = false, onDisable
   const [day, setDay] = useState(() => kstToday());
   const disabledRef = useRef(onDisabled);
   disabledRef.current = onDisabled;
+  const openedLink = useRef(null);
+
+  useEffect(() => {
+    if (!raw || !initialBookId || openedLink.current === initialBookId) return;
+    openedLink.current = initialBookId;
+    if (raw.books?.some((book) => book.id === initialBookId)) {
+      setTab("library");
+      setDialog({ type: "detail", bookId: initialBookId });
+    }
+  }, [raw, initialBookId]);
 
   useEffect(() => {
     setRaw(null); setLoading(true); setError(""); setDialog(null); setConfirm(null);

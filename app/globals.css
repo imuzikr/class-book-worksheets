@@ -33364,6 +33364,15 @@ button.msgr-receipt:hover { color: var(--text-sub); }
   .topbar-book-navigation .topnav-menu .nav-label { font-size: 12px; }
   .topbar-book-navigation .topnav-menu svg { width: 17px; height: 17px; }
 }
+@media (max-width: 430px) {
+  .topbar-book-navigation .topbar-left { gap: 5px; }
+  .topbar-book-navigation .topbar-left .topnav-menu { gap: 4px; }
+  .topbar-book-navigation .topnav-menu > .btn-ghost { padding: 0 6px; gap: 4px; }
+  .topbar-book-navigation .topnav-menu .nav-label { font-size: 11px; }
+  .topbar-book-navigation .topnav-menu > .btn-ghost svg { width: 14px; height: 14px; }
+  .topbar-book-navigation .nav-dashboard svg { display: none; }
+  .topbar-book-navigation .logo > svg { width: 24px; height: 24px; }
+}
 
 /* 원본 독서 활동 업데이트: 질문 · 댓글 · 방송 */
 .notif-dropdown--wide {

@@ -1,5 +1,7 @@
 # 책나눔 성장 기능 추가 안내
 
+역할별 `/dashboard` 대시보드는 `DASHBOARD.md`가 현재 기준입니다. `lib/dashboard.js`가 데모·서버 공통 집계를 담당하고 `/api/dashboard`가 반 권한을 검사합니다. 질문방 자료를 사용하지 않으며, 책나눔 OFF에서도 수업 활동 분석은 유지합니다. 교사에게 개인 서재 정본·다른 반 자료·사적인 독서 감상을 내려주지 마세요. 학기 설정은 `classes`의 `dashboardSemesterStart`/`dashboardSemesterEnd`에 저장합니다.
+
 학생 15명·독서 활동 10종·서재 24권의 데모 자료와 신원 전환은 `DEMO_CLASSROOM.md`를 참고하세요. `lib/demoClassroom.js`, `lib/demoBookActivities.js`, `lib/demoReading.js`가 공유 식별자와 목 데이터의 출처입니다. Firebase 미설정일 때만 사용하며 실제 데이터베이스에 시드하지 않습니다. 학생 전환 시 개인 편집 상태가 섞이지 않도록 `app/books/page.js`의 사용자별 `TopNav` 및 본문 key를 유지하세요.
 
 `READING_GROWTH.md`가 새 개인 서재·경험치·18종 뱃지·반 랭킹의 현재 기준입니다. 반별 `readingEnabled === true`일 때만 활성화하며 기본 꺼짐입니다. 기존 독서 활동은 이 스위치와 무관하게 유지합니다.
@@ -19,8 +21,8 @@
 - **Firebase 프로젝트가 따로입니다.** 계정 · 반 · 기록을 배움나눔과 나누지
   않습니다. 설정값은 아직 자리표시자(`YOUR_...`)라 **데모 모드**로 돕니다.
   실서비스로 바꾸려면 아래 '새 Firebase 프로젝트 연결'.
-- **화면은 `/`(랜딩) · `/books`(책방) · `/privacy` · `/terms` 넷뿐**입니다.
-  질문방(`/board`) · 공부방(`/study`) · 관리자 대시보드(`/admin`) · 학습 리포트
+- **기본 화면은 `/`(랜딩) · `/books`(책방) · `/dashboard` · `/privacy` · `/terms`**입니다.
+  `/dashboard`는 책봄 전용 교사·학생 분석입니다. 질문방(`/board`) · 공부방(`/study`) · 원본 관리자 대시보드(`/admin`) · 학습 리포트
   (`/report`) · 파이썬 실행기 · 수업 관리(수업 모드)는 없습니다. 로고와 로그인 뒤
   첫 화면은 `/books`입니다.
 - **공부방 머리말에 있던 창을 책방에서 엽니다**(`app/books/page.js`):

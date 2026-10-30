@@ -968,6 +968,7 @@ function BooksPageInner() {
           {readingOpen ? (
             <ReadingHub key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin}
               activities={liveActivities} onOpenActivity={goToActivity}
+              initialBookId={searchParams.get("book")} initialTab={searchParams.get("tab") || "library"}
               onDisabled={() => patchBooksQuery({ area: null }, { replace: true })} />
           ) : admin && myClassesAll.length === 0 ? (
             <div className="empty-note books-first-class">

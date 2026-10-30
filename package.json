@@ -12,7 +12,7 @@
     "deploy": "bash scripts/deploy.sh",
     "books:rescue": "node scripts/admin/rescue-activity.mjs",
     "notes:purge-orphans": "node scripts/admin/purge-orphan-cornell-notes.mjs",
-    "test:reading-server": "FIREBASE_ADMIN_PROJECT_ID=demo-reading-api tests/rules/node_modules/.bin/firebase emulators:exec --config tests/server/firebase.json --only auth,firestore --project demo-reading-api 'node --test tests/server/reading.test.mjs'"
+    "test:reading-server": "FIREBASE_ADMIN_PROJECT_ID=demo-reading-api tests/rules/node_modules/.bin/firebase emulators:exec --config tests/server/firebase.json --only auth,firestore --project demo-reading-api 'node --import ./tests/unit/register.mjs --test --test-concurrency=1 tests/server/*.test.mjs'"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.18.0",

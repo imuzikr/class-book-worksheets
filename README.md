@@ -32,6 +32,8 @@ npm run build # 프로덕션 빌드
 
 ## 동작 모드
 
+상단 **대시보드**에서 교사는 반·활동 진행과 독서 흐름을, 학생은 개인 독서 달력·성장·성찰을 확인합니다. 기간·권한·집계 기준은 [DASHBOARD.md](DASHBOARD.md)를 참고하세요.
+
 앱은 `lib/firebase.js`의 설정 유무에 따라 두 모드로 동작합니다.
 
 - **실서비스 모드** (Firebase 설정됨): Firebase Authentication으로
@@ -125,6 +127,7 @@ broadcasts/{cId}            학급 화면 방송
 ```
 app/page.js          랜딩 + 로그인/회원가입(역할 선택)
 app/books/page.js    책방 (활동 목록 → 활동 · 반 관리 · 출석 · 과일 바구니)
+app/dashboard/page.js 교사·학생 대시보드 (활동 현황 · 성찰 · 독서 흐름)
 lib/firebase.js      Firebase 초기화 (config — 지금은 자리표시자)
 lib/auth.js          인증 (구글) + 프로필/역할
 lib/user.js          현재 사용자 캐시 + 역할 헬퍼

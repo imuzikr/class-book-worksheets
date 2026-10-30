@@ -21,6 +21,25 @@ function seed(storage, classes, version = 1) {
   storage.setItem(DEMO_CLASSES_KEY, JSON.stringify({ version, classes }));
 }
 
+test("대시보드 학기 기간도 기존 책나눔 꺼짐 설정과 함께 복원", () => {
+  const storage = memoryStorage();
+  writeDemoClasses([classroom("term", { readingEnabled: false,
+    dashboardSemesterStart: "2026-08-17", dashboardSemesterEnd: "2027-01-08" })], storage);
+  const [restored] = readDemoClasses(storage);
+  assert.equal(restored.dashboardSemesterStart, "2026-08-17");
+  assert.equal(restored.dashboardSemesterEnd, "2027-01-08");
+  assert.equal(restored.readingEnabled, false);
+});
+
+test("손상된 학기 날짜·기간 역전·한 해를 넘는 기간은 복원하지 않음", () => {
+  const storage = memoryStorage();
+  for (const [start, end] of [["2026-02-30", "2026-07-01"], ["2026-08-17", undefined],
+    ["2026-08-17", "2026-07-01"], ["2026-01-01", "2027-01-02"]]) {
+    seed(storage, [classroom("term", { dashboardSemesterStart: start, dashboardSemesterEnd: end })]);
+    assert.equal(readDemoClasses(storage), null);
+  }
+});
+
 test("책나눔 설정은 새 저장소에서 기본 꺼짐이며 값 누락으로 켜지지 않음", () => {
   const storage = memoryStorage();
   assert.equal(DEMO_CLASSES_KEY, "bookbom.demo.classes.v1");

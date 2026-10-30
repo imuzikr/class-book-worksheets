@@ -37,7 +37,9 @@ export async function resolve(specifier, context, next) {
   else if ((specifier.startsWith("./") || specifier.startsWith("../")) && context.parentURL?.startsWith("file:")) {
     base = path.resolve(path.dirname(fileURLToPath(context.parentURL)), specifier);
   }
-  if (base) {
+  // Preserve the package's own ESM/CommonJS format for vendor internals. The
+  // server emulator suite also uses this resolver for our extensionless helpers.
+  if (base && !base.split(path.sep).includes("node_modules")) {
     const f = findFile(base);
     // 앱 코드의 .js는 ESM 문법인데 package.json에 "type": "module"이 없어,
     // 형식을 못 박아 줘야 Node가 CommonJS로 읽다 멈추지 않습니다.
