@@ -11,10 +11,10 @@ export async function GET(request) {
   try {
     const principal = await readingPrincipal(request);
     const query = request.nextUrl.searchParams;
-    if (["uid", "userId", "studentUid"].some((key) => query.has(key))) {
+    if (["uid", "userId"].some((key) => query.has(key))) {
       throw new ReadingHttpError("다른 학생을 지정해 조회할 수 없습니다.", 400, "dashboard/invalid-target");
     }
-    const options = Object.fromEntries(["classId", "activityId", "period", "start", "end"].map((key) => [key, query.get(key)]));
+    const options = Object.fromEntries(["classId", "activityId", "period", "start", "end", "view", "studentUid"].map((key) => [key, query.get(key)]));
     return NextResponse.json(await getDashboard(principal, options), { headers });
   } catch (error) {
     const failure = readingErrorResponse(error);

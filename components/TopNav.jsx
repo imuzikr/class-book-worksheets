@@ -42,7 +42,7 @@ import FloatingHub from "./FloatingHub";
 import AppMarquee from "./AppMarquee";
 import { useRewardCelebration } from "@/lib/useRewardCelebration";
 import { useClassMembers } from "@/lib/useClassRoster";
-import { IconLogo, IconBook, IconReport } from "./StatusIcons";
+import { IconLogo, IconBook } from "./StatusIcons";
 
 export default function TopNav({ active, growthEnabled = false, readingOpen = false, onStudyExport = null }) {
   const router = useRouter();
@@ -283,12 +283,6 @@ export default function TopNav({ active, growthEnabled = false, readingOpen = fa
             onClick={() => go("/books?area=reading")} title="책나눔">
             <IconBook size={20} /> <span className="nav-label">책나눔</span>
           </button>}
-          <button type="button"
-            className={`btn-ghost nav-dashboard ${active === "dashboard" ? "nav-active" : ""}`}
-            aria-current={active === "dashboard" ? "page" : undefined}
-            onClick={() => go("/dashboard")} title="대시보드">
-            <IconReport size={20} /> <span className="nav-label">대시보드</span>
-          </button>
         </nav>
       </div>
 

@@ -97,7 +97,7 @@ const TEACHER_ITEMS = [
   { key: "attend", label: "출석 관리", hint: "출석을 시작하고 기록을 봐요", href: "/books?open=attendance" },
   { key: "classes", label: "반 관리", hint: "반 · 참여 코드 · 자리와 모둠", href: "/books?open=classes" },
   { key: "fruit", label: "과일 바구니", hint: "바구니 합계와 이벤트 현황", href: "/books?open=fruit" },
-  { key: "report", label: "분석 리포트", hint: "우리 반 독서 활동과 학생별 통계를 봐요", href: "/dashboard" },
+  { key: "report", label: "분석 리포트", hint: "개인·학급·전체 독서 분석을 봐요", href: "/dashboard" },
 ];
 
 // 원판 크기(px) — CSS의 `.hub-disc` 폭·높이와 같아야 합니다.

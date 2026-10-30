@@ -2,7 +2,7 @@
 
 교사 화면의 단계별 원문 이동·학생 필터·브레인라이팅 미배정 표시는 `TEACHER_MONITORING.md`를 참고하세요. 조각과 필터는 같은 저장 상태 기준을 사용하며, 모둠 완성·개인 기여·실시간 접속을 혼합하지 않습니다.
 
-역할별 `/dashboard` 대시보드는 `DASHBOARD.md`가 현재 기준입니다. `lib/dashboard.js`가 데모·서버 공통 집계를 담당하고 `/api/dashboard`가 반 권한을 검사합니다. 질문방 자료를 사용하지 않으며, 책나눔 OFF에서도 수업 활동 분석은 유지합니다. 교사에게 개인 서재 정본·다른 반 자료·사적인 독서 감상을 내려주지 마세요. 학기 설정은 `classes`의 `dashboardSemesterStart`/`dashboardSemesterEnd`에 저장합니다.
+플로팅 메뉴의 분석 리포트(`/dashboard`)는 `DASHBOARD.md`가 현재 기준입니다. 상단 대시보드 버튼은 없으며, 학생은 개인 화면, 교사는 개인별·학급별·전체 탭과 왼쪽 사용자 목록을 사용합니다. `lib/dashboard.js`와 `lib/dashboardReports.js`가 공통 집계를 담당하고 `/api/dashboard`가 반·학생 조회 권한을 검사합니다. 질문방 자료를 사용하지 않으며, 책나눔 OFF에서도 수업 활동 분석은 유지합니다. 교사에게 개인 서재 정본·권한 없는 반 자료·사적인 독서 감상을 내려주지 마세요. 전체 분석은 조회 가능한 운영 반만 합산하고 개인별 분석은 선택 반의 현재 학생만 허용합니다. 학기 설정은 `classes`의 `dashboardSemesterStart`/`dashboardSemesterEnd`에 저장합니다.
 
 학생 15명·독서 활동 10종·서재 24권의 데모 자료와 신원 전환은 `DEMO_CLASSROOM.md`를 참고하세요. `lib/demoClassroom.js`, `lib/demoBookActivities.js`, `lib/demoReading.js`가 공유 식별자와 목 데이터의 출처입니다. Firebase 미설정일 때만 사용하며 실제 데이터베이스에 시드하지 않습니다. 학생 전환 시 개인 편집 상태가 섞이지 않도록 `app/books/page.js`의 사용자별 `TopNav` 및 본문 key를 유지하세요.
 

@@ -110,6 +110,9 @@ test("dashboard access follows actual class ownership and membership", async () 
 
 test("teacher progress uses the complete current student roster and deduplicates KWLS", async () => {
   const data = await getDashboard(principal("teacher"), options());
+  assert.equal(data.reportView, "class");
+  assert.deepEqual(data.roster.map((student) => student.uid).sort(), [ids.alice, ids.bob, ids.quiet].sort());
+  assert.ok(data.roster.every((student) => Object.keys(student).every((key) => ["uid", "name", "studentId", "emoji"].includes(key))));
   assert.equal(data.activity.eligible, 3);
   assert.equal(data.activity.rows.length, 3);
   assert.equal(data.activity.started, 1);
@@ -121,6 +124,106 @@ test("teacher progress uses the complete current student roster and deduplicates
   assert.equal(data.reflections.counts.learned, 1);
   assert.ok(data.activity.rows.every((row) => ![ids.teacher, ids.former].includes(row.uid)));
   assert.ok(data.activities.every((activity) => ![acts.other, acts.deleted].includes(activity.id)));
+});
+
+test("teacher personal reports follow the current student roster and include all class activities", async () => {
+  const data = await getDashboard(principal("teacher"), options({ view: "personal", studentUid: ids.alice }));
+  assert.equal(data.reportView, "personal");
+  assert.equal(data.view, "student");
+  assert.equal(data.subject.uid, ids.alice);
+  assert.equal(data.subject.name, "김독서");
+  assert.deepEqual(data.roster.map((student) => student.uid), [ids.alice]);
+  assert.deepEqual(data.studentActivities.map((activity) => activity.id).sort(), [acts.kwls, acts.raft].sort());
+  assert.match(data.studentActivities.find((activity) => activity.id === acts.raft).preview, /학생 본인의 RAFT 글/);
+  assert.ok(data.activity.rows.every((row) => row.uid === ids.alice));
+  assert.ok(data.reflections.records.every((row) => row.uid === ids.alice));
+  assert.equal(data.reading.summary.pages, 30);
+  assert.equal(data.reading.summary.completed, 1);
+  assert.equal(data.reading.personal, null);
+  assert.deepEqual(data.reading.dayRecords, []);
+  const serialized = JSON.stringify(data);
+  for (const marker of privateMarkers) assert.equal(serialized.includes(marker), false, marker);
+  assert.equal(serialized.includes("다른 학생의 RAFT 글은 본인 화면에 나오면 안 됨"), false);
+  assert.equal(serialized.includes("다른 반 성찰 원문"), false);
+  assert.equal((await getDashboard(principal("admin"), options({ view: "personal", studentUid: ids.alice }))).subject.uid, ids.alice);
+  for (const studentUid of [ids.outsider, ids.former, ids.teacher, "dash-no-profile"]) {
+    await assert.rejects(() => getDashboard(principal("teacher"), options({ view: "personal", studentUid })), (error) => error.status === 403);
+  }
+  await assert.rejects(() => getDashboard(principal("otherTeacher"), options({ view: "personal", studentUid: ids.alice })), (error) => error.status === 403);
+  for (const actor of ["alice", "bob"]) {
+    for (const studentUid of [ids.alice, ids.bob]) {
+      await assert.rejects(() => getDashboard(principal(actor), options({ view: "personal", studentUid })), (error) => [400, 403].includes(error.status));
+    }
+  }
+});
+
+test("overall reports aggregate every authorized active class and deduplicate students", async () => {
+  const scope = options({ view: "overall", activityId: null });
+  const data = await getDashboard(principal("teacher"), scope);
+  assert.equal(data.reportView, "overall");
+  assert.equal(data.view, "teacher");
+  assert.deepEqual(data.classes.map((row) => row.classId).sort(), [classes.own, classes.off].sort());
+  assert.equal(data.summary.classes, 2);
+  assert.equal(data.summary.students, 3);
+  assert.equal(data.summary.memberships, 4);
+  assert.equal(data.summary.activityCount, 3);
+  assert.equal(data.summary.reading.pages, 42);
+  assert.equal(data.summary.reading.readers, 2);
+  assert.equal(data.summary.reading.enabledClasses, 1);
+  assert.equal(data.summary.selectedActivity.scope, "selected-per-class");
+  assert.equal(data.students.find((student) => student.uid === ids.alice).classes.length, 2);
+  const admin = await getDashboard(principal("admin"), scope);
+  assert.deepEqual(admin.classes.map((row) => row.classId).sort(), [classes.own, classes.off, classes.other].sort());
+  assert.equal(admin.summary.students, 4);
+  assert.equal(admin.summary.reading.pages, 82);
+  assert.equal(admin.summary.reading.readers, 2);
+  for (const marker of privateMarkers) assert.equal(JSON.stringify(data).includes(marker), false, marker);
+  for (const marker of privateMarkers.filter((marker) => marker !== "PRIVATE_OTHER_CLASS_BOOK")) assert.equal(JSON.stringify(admin).includes(marker), false, marker);
+  for (const actor of ["alice", "bob", "outsider"]) {
+    await assert.rejects(() => getDashboard(principal(actor), scope), (error) => error.status === 403);
+  }
+  await assert.rejects(() => getDashboard(principal("otherTeacher"), scope), (error) => error.status === 403);
+  const other = await getDashboard(principal("otherTeacher"), { ...scope, classId: null });
+  assert.deepEqual(other.classes.map((row) => row.classId), [classes.other]);
+  for (const extra of [{ studentUid: ids.alice }, { activityId: acts.kwls }, { view: "unknown" }]) {
+    await assert.rejects(() => getDashboard(principal("teacher"), { ...scope, ...extra }), (error) => error.status === 400);
+  }
+});
+
+test("overall reports reuse shared reading sources and fail if any authorized class fails", async () => {
+  const touched = [];
+  const observed = new Proxy(db, {
+    get(target, key) {
+      if (key === "doc") return (path) => { touched.push(path); return target.doc(path); };
+      const value = Reflect.get(target, key);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
+  const scope = options({ view: "overall", activityId: null });
+  await getDashboard({ ...principal("admin"), db: observed }, scope);
+  assert.equal(touched.filter((path) => path === `users/${ids.alice}/reading/main`).length, 1);
+  const unavailable = new Error("A class source is unavailable");
+  const failing = new Proxy(db, {
+    get(target, key) {
+      if (key === "collection") return (path) => {
+        const collection = target.collection(path);
+        if (path !== "bookActivities") return collection;
+        return new Proxy(collection, {
+          get(reference, name) {
+            if (name === "where") return (...args) => {
+              if (args[0] === "classId" && args[2] === classes.off) throw unavailable;
+              return reference.where(...args);
+            };
+            const value = Reflect.get(reference, name);
+            return typeof value === "function" ? value.bind(reference) : value;
+          },
+        });
+      };
+      const value = Reflect.get(target, key);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
+  await assert.rejects(() => getDashboard({ ...principal("teacher"), db: failing }, scope), (error) => error === unavailable);
 });
 
 test("teacher reading totals remain class scoped and never expose personal source records", async () => {
@@ -217,6 +320,11 @@ test("semester settings are owner/admin-only and do not activate the growth feat
   assert.equal(data.period.end, input.end);
   assert.equal(data.class.semesterStart, input.start);
   assert.equal(data.reading, null);
+  const overall = await getDashboard(principal("teacher"), options({ classId: classes.off, activityId: null, view: "overall", period: "semester" }));
+  assert.equal(overall.period.key, "semester");
+  assert.equal(overall.period.start, input.start);
+  assert.equal(overall.period.end, input.end);
+  assert.deepEqual(overall.semesterAnchor, { id: classes.off, name: "성장 기능을 쓰지 않는 반" });
   await saveDashboardSemester(principal("admin"), { ...input, start: day(29) });
   assert.equal((await db.doc(`classes/${classes.off}`).get()).data().dashboardSemesterStart, day(29));
   for (const invalid of [{ start: "bad-date" }, { start: today, end: day(1) }, { start: day(400) }]) {

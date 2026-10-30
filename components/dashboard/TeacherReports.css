@@ -1,0 +1,98 @@
+.bb-report-document {
+  min-width: 0;
+  width: 100%;
+  color: var(--text, #3d3d3a);
+}
+
+.bb-report-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  margin-bottom: 22px;
+  padding: 20px 22px;
+  border: 1px solid var(--border, #e8e5dd);
+  border-radius: 14px;
+  background: var(--card-bg, #fff);
+}
+
+.bb-report-heading > div { min-width: 0; }
+.bb-report-eyebrow { display: block; margin-bottom: 5px; color: var(--primary-dark, #a65e44); font-size: 10px; font-weight: 600; line-height: 1.6; }
+.bb-report-heading h2 { margin: 0; color: var(--text, #3d3d3a); font-size: clamp(18px, 2vw, 23px); line-height: 1.5; overflow-wrap: anywhere; }
+.bb-report-heading p { margin: 6px 0 0; color: #73736a; font-size: 11px; line-height: 1.8; overflow-wrap: anywhere; }
+.bb-report-heading-tag { max-width: 100%; padding: 5px 10px; border-radius: 20px; background: var(--primary-light, #f8ece5); color: var(--primary-dark, #a65e44); font-size: 11px; line-height: 1.7; overflow-wrap: anywhere; }
+.bb-report-student-number { display: inline-block; margin-right: 9px; color: #8b7a6e; font-variant-numeric: tabular-nums; }
+.bb-report-current-note,
+.bb-report-period-note { margin: 0 0 12px; color: #77776d; font-size: 11px; line-height: 1.8; }
+
+.bb-report-reading-grid,
+.bb-report-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 22px; min-width: 0; }
+.bb-report-reading-grid > *,
+.bb-report-detail-grid > * { min-width: 0; }
+.bb-report-reading-facts { display: flex; flex-wrap: wrap; gap: 9px 18px; margin-bottom: 20px; color: #77776c; font-size: 11px; line-height: 1.7; }
+.bb-report-reading-facts strong { margin-left: 4px; color: #83674f; font-size: 13px; font-weight: 600; }
+
+.bb-report-books { max-height: 320px; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-width: thin; }
+.bb-report-books ul { list-style: none; padding: 0; margin: 0; }
+.bb-report-books li { display: flex; align-items: center; gap: 10px; padding: 13px 0; border-bottom: 1px solid var(--border, #e8e5dd); }
+.bb-report-books li:first-child { padding-top: 0; }
+.bb-report-books li:last-child { border-bottom: 0; padding-bottom: 0; }
+.bb-report-book-icon { display: inline-flex; justify-content: center; align-items: center; flex: 0 0 30px; width: 30px; height: 39px; border-radius: 3px 7px 7px 3px; background: #f5eee3; color: #aa8b65; font-size: 23px; }
+.bb-report-books li > div { flex: 1; min-width: 0; }
+.bb-report-books h3 { margin: 0; color: var(--text, #3d3d3a); font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; }
+.bb-report-books p { margin: 3px 0 0; color: #808074; font-size: 10px; line-height: 1.7; overflow-wrap: anywhere; }
+.bb-report-book-pages { flex-shrink: 0; color: #858071; font-size: 10px; font-variant-numeric: tabular-nums; }
+.bb-report-book-pages strong { margin-right: 3px; color: #8a684d; font-size: 13px; font-weight: 600; }
+
+.bb-report-class-table-scroll { border-color: var(--border, #e8e5dd); }
+.bb-report-class-table { min-width: 760px; }
+.bb-report-class-table thead th { background: #f8f5ee; color: #827565; }
+.bb-report-class-table th,
+.bb-report-class-table td { border-bottom-color: #eee9df; }
+.bb-report-class-table tbody tr:hover { background: #fcfaf6; }
+.bb-report-class-table tbody th { max-width: 190px; white-space: normal; }
+.bb-report-class-table td { font-variant-numeric: tabular-nums; }
+.bb-report-class-button { display: inline-block; border: 0; padding: 4px 0; color: var(--primary-dark, #a65e44); background: transparent; font: inherit; font-weight: 600; text-align: left; line-height: 1.7; overflow-wrap: anywhere; cursor: pointer; }
+.bb-report-class-button:hover { text-decoration: underline; text-underline-offset: 3px; }
+.bb-report-latest-activity { min-width: 160px; max-width: 260px; }
+.bb-report-latest-activity > span { display: block; color: #9b826a; font-size: 9px; line-height: 1.7; }
+.bb-report-latest-activity strong { display: block; color: var(--text, #3d3d3a); font-size: 12px; font-weight: 500; line-height: 1.8; overflow-wrap: anywhere; }
+.bb-report-latest-activity small { display: block; color: #858578; font-size: 10px; line-height: 1.7; }
+.bb-report-muted { color: #8a8a7d; font-size: 11px; }
+.bb-report-class-button:focus-visible,
+.bb-report-class-table-scroll:focus-visible { outline: 2px solid var(--primary-dark, #a65e44); outline-offset: 3px; }
+
+.bb-report-document .bb-dash-metric { border-color: var(--border, #e8e5dd); background: var(--card-bg, #fff); }
+.bb-report-document .bb-dash-metric > span { color: #797263; }
+.bb-report-document .bb-dash-metric > strong { color: #88674d; }
+.bb-report-document .bb-dash-section { border-color: var(--border, #e8e5dd); background: var(--card-bg, #fff); }
+.bb-report-document .bb-dash-section-head h2 { color: var(--text, #3d3d3a); }
+.bb-report-document .bb-dash-weekly figcaption { color: #847562; }
+.bb-report-document .bb-dash-bar-track { background: #f8f3ea; }
+.bb-report-document .bb-dash-bar-track i { background: linear-gradient(#d4ba95, #b79066); }
+.bb-report-document .bb-dash-bar-col,
+.bb-report-document .bb-dash-bar-col > span:first-child { color: #907454; }
+.bb-report-document .bb-dash-text-link { color: var(--primary-dark, #a65e44); }
+
+@media (max-width: 1100px) {
+  .bb-report-reading-grid,
+  .bb-report-detail-grid { grid-template-columns: minmax(0, 1fr); gap: 0; }
+}
+
+@media (max-width: 620px) {
+  .bb-report-heading { gap: 10px; margin-bottom: 16px; padding: 16px; }
+  .bb-report-heading p { font-size: 10px; }
+  .bb-report-current-note,
+  .bb-report-period-note { font-size: 10px; }
+  .bb-report-document .bb-dash-metric { padding: 14px 12px; }
+  .bb-report-document .bb-dash-metric > strong { font-size: 28px; }
+}
+
+@media (max-width: 380px) {
+  .bb-report-heading { padding: 14px 12px; }
+  .bb-report-book-icon { display: none; }
+  .bb-report-reading-facts { gap: 7px 12px; }
+  .bb-report-document .bb-dash-metric > span { font-size: 10px; }
+  .bb-report-document .bb-dash-metric > strong { font-size: 25px; }
+}
