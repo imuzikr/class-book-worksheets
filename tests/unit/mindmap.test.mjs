@@ -6,6 +6,7 @@ import {
   computeTreeLayout,
   addChild,
   emptyMindmap,
+  getNodeVerticalOffset,
   layoutPositions,
   levelMap,
   mindmapImages,
@@ -14,6 +15,8 @@ import {
   normalizeMindmap,
   normalizeVerticalGap,
   safeNodeImage,
+  setNodeVerticalOffset,
+  settleNodeVerticalPositions,
   updateNodeImage,
   updateNodeText,
   updateVerticalGap,
@@ -53,6 +56,273 @@ function freezeMap(map) {
   Object.freeze(map.nodes);
   return Object.freeze(map);
 }
+
+test("세로 끌기는 두 형태의 모든 깊이에서 해당 가지를 정확히 옮기고 나머지 자리는 유지합니다", () => {
+  const nodes = [node("root", null, { x: 0, y: 0 }), node("p", "root", { x: 260, y: 0 }),
+    node("a", "p", { x: 430, y: 80 }), node("b", "p", { x: 430, y: 190 }),
+    node("a1", "a", { x: 600, y: 10 }), node("a2", "a", { x: 600, y: 80 })];
+  const cases = [["p", 40, ["p", "a", "b", "a1", "a2"]],
+    ["a", -40, ["a", "a1", "a2"]], ["a1", -40, ["a1"]], ["b", 40, ["b"]]];
+  for (const layout of ["radial", "tree"]) {
+    const map = freezeMap(normalizeMindmap({ layout, nodes }));
+    const before = layoutPositions(map);
+    for (const [id, delta, moving] of cases) {
+      const moved = setNodeVerticalOffset(map, id, delta);
+      const after = layoutPositions(moved);
+      for (const n of nodes) {
+        assert.equal(after.get(n.id).x, before.get(n.id).x, `${layout}: ${n.id} keeps its column`);
+        assert.equal(after.get(n.id).y - before.get(n.id).y, moving.includes(n.id) ? delta : 0,
+          `${layout}: moving ${id} changes only its branch (${n.id})`);
+        if (n.id !== id) assert.equal(moved.nodes.find((next) => next.id === n.id), map.nodes.find((old) => old.id === n.id));
+      }
+      assertDisjoint(moved.nodes, after);
+    }
+  }
+});
+
+test("하위 가지가 다른 열의 빈 공간으로 이동하면 겹치지 않는 부모와 이웃 가지를 밀지 않습니다", () => {
+  const nodes = [node("root", null, { x: 0, y: 0 }),
+    node("a", "root", { x: 260, y: 0 }), node("a1", "a", { x: 430, y: 0 }),
+    node("b", "root", { x: 260, y: 62 })];
+  for (const layout of ["radial", "tree"]) {
+    const map = normalizeMindmap({ layout, nodes });
+    const before = layoutPositions(map);
+    const moved = setNodeVerticalOffset(map, "a1", 60);
+    const after = layoutPositions(moved);
+    assert.equal(after.get("a1").y, before.get("a1").y + 60);
+    assert.equal(after.get("a1").x, before.get("a1").x);
+    for (const id of ["root", "a", "b"]) assert.deepEqual(after.get(id), before.get(id));
+    assertDisjoint(nodes, after);
+  }
+});
+
+test("여러 뿌리 사이에도 다른 열의 하위 가지만 이동하면 겹치지 않는 다음 나무는 그대로 둡니다", () => {
+  const nodes = [node("root", null, { x: 0, y: 0 }),
+    node("a", "root", { x: 260, y: 0 }), node("other", null, { x: 2000, y: 0 })];
+  for (const layout of ["radial", "tree"]) {
+    const map = normalizeMindmap({ layout, nodes });
+    const before = layoutPositions(map);
+    const after = layoutPositions(setNodeVerticalOffset(map, "a", 1000));
+    assert.equal(after.get("a").y, before.get("a").y + 1000);
+    for (const id of ["root", "other"]) assert.deepEqual(after.get(id), before.get(id));
+    assertDisjoint(nodes, after);
+  }
+});
+
+test("조상과 자식의 세로 이동량은 더해지며 확대 배율과 드래그 중간 횟수에 좌우되지 않습니다", () => {
+  const nodes = [node("root", null, { x: 0, y: 0 }), node("p", "root", { x: 260, y: 0 }),
+    node("a", "p", { x: 430, y: 0 }), node("leaf", "a", { x: 600, y: 0 })];
+  for (const layout of ["radial", "tree"]) {
+    const map = normalizeMindmap({ layout, nodes });
+    const before = layoutPositions(map);
+    let moved = setNodeVerticalOffset(map, "p", 80);
+    moved = setNodeVerticalOffset(moved, "a", -25);
+    moved = setNodeVerticalOffset(moved, "leaf", -12.5);
+    const after = layoutPositions(moved);
+    for (const [id, delta] of [["root", 0], ["p", 80], ["a", 55], ["leaf", 42.5]]) {
+      assert.equal(after.get(id).y - before.get(id).y, delta);
+      assert.equal(after.get(id).x, before.get(id).x);
+    }
+    for (const zoom of [0.5, 1, 1.75, 2]) {
+      const startOffset = getNodeVerticalOffset(moved, "leaf");
+      const screenDy = 40 * zoom;
+      const direct = setNodeVerticalOffset(moved, "leaf", startOffset + screenDy / zoom);
+      let intermediate = moved;
+      for (const fraction of [0.1, 0.25, 0.5, 1]) {
+        intermediate = setNodeVerticalOffset(intermediate, "leaf", startOffset + screenDy * fraction / zoom);
+      }
+      assert.deepEqual(layoutPositions(intermediate), layoutPositions(direct));
+      assert.equal(layoutPositions(direct).get("leaf").y - after.get("leaf").y, 40);
+    }
+    if (layout === "tree") assert.deepEqual(computeTreeLayout(moved.nodes), after);
+  }
+});
+
+test("큰 옛 세로 여백도 한 쌍씩 12px까지 줄이고 겹칠 때만 이웃을 밀며 위아래 순서를 바꿀 수 있습니다", () => {
+  for (const layout of ["radial", "tree"]) {
+    for (const deep of [false, true]) {
+      const parentId = deep ? "p" : "root";
+      const nodes = [node("root", null, { x: 0, y: 0 }),
+        ...(deep ? [node("p", "root", { x: 260, y: 0 })] : []),
+        node("a", parentId, { x: 440, y: 0 }), node("b", parentId, { x: 440, y: 0 })];
+      const map = normalizeMindmap({ layout, verticalGap: 72, nodes });
+      const before = layoutPositions(map);
+      assert.equal(before.get("b").y - before.get("a").y, 42 + 72);
+      const tightened = setNodeVerticalOffset(map, "a", 60);
+      const tightPositions = layoutPositions(tightened);
+      assert.equal(tightPositions.get("a").y - before.get("a").y, 60);
+      assert.equal(tightPositions.get("b").y, before.get("b").y);
+      assert.equal(tightPositions.get("b").y - tightPositions.get("a").y, 42 + 12);
+      assert.equal(tightened.verticalGap, 72);
+      const collision = setNodeVerticalOffset(map, "a", 80);
+      const collisionPositions = layoutPositions(collision);
+      assert.equal(collisionPositions.get("b").y - collisionPositions.get("a").y, 42 + 12);
+      assertDisjoint(nodes, collisionPositions);
+      const crossed = setNodeVerticalOffset(map, "a", 200);
+      const crossedPositions = layoutPositions(crossed);
+      assert.equal(crossedPositions.get("a").y - before.get("a").y, 200);
+      assert.equal(crossedPositions.get("b").y, before.get("b").y);
+      assert.ok(crossedPositions.get("a").y > crossedPositions.get("b").y);
+      assert.equal(crossedPositions.get("a").x, crossedPositions.get("b").x);
+      assertDisjoint(nodes, crossedPositions);
+      assert.deepEqual(layoutPositions(setNodeVerticalOffset(tightened, "a", 0)), before);
+    }
+  }
+});
+
+test("충돌 보정 뒤 손을 놓으면 다음 끌기는 보이는 자리에서 즉시 움직이고 다른 형태와 원문은 그대로입니다", () => {
+  const nodeSizes = new Map([["root", { width: 100, height: 48 }],
+    ["a", { width: 100, height: 42 }], ["b", { width: 100, height: 42 }]]);
+  for (const layout of ["radial", "tree"]) {
+    const field = layout === "tree" ? "treeOffsetY" : "radialOffsetY";
+    const other = layout === "tree" ? "radialOffsetY" : "treeOffsetY";
+    const map = freezeMap(normalizeMindmap({ layout, verticalGap: 20, nodes: [
+      node("root", null, { x: 0, y: 0, image: IMG }),
+      node("a", "root", { x: 260, y: 0, text: "내  생각", edgeLabel: "관계", [other]: 37 }),
+      node("b", "root", { x: 260, y: 0, text: "다른  생각", [other]: -14 }),
+    ] }));
+    // 아래 노드를 위로 끌어 최소 간격에 막힌 뒤 아래로 다시 끕니다.
+    const collision = setNodeVerticalOffset(map, "b", -20);
+    const actual = layoutPositions(collision, { nodeSizes });
+    const settled = settleNodeVerticalPositions(collision, { nodeSizes });
+    assert.deepEqual(layoutPositions(settled, { nodeSizes }), actual);
+    assert.equal(getNodeVerticalOffset(settled, "b"), -8);
+    assert.equal(settleNodeVerticalPositions(settled, { nodeSizes }), settled);
+    const next = setNodeVerticalOffset(settled, "b", getNodeVerticalOffset(settled, "b") + 5);
+    const nextPositions = layoutPositions(next, { nodeSizes });
+    assert.equal(nextPositions.get("b").y, actual.get("b").y + 5);
+    assert.deepEqual(nextPositions.get("a"), actual.get("a"));
+    assert.deepEqual(layoutPositions(setNodeVerticalOffset(next, "b", getNodeVerticalOffset(next, "b") - 5), { nodeSizes }), actual);
+    assert.equal(settled.nodes[0], collision.nodes[0]);
+    assert.equal(settled.nodes[1], collision.nodes[1]);
+    for (let i = 0; i < settled.nodes.length; i += 1) {
+      assert.deepEqual({ ...settled.nodes[i], [field]: collision.nodes[i][field] }, collision.nodes[i]);
+    }
+    // 위 노드를 아래로 끌어 이웃이 밀렸을 때도 그 이웃의 보이는 자리를 저장합니다.
+    const peerCollision = setNodeVerticalOffset(map, "a", 20);
+    const peerActual = layoutPositions(peerCollision, { nodeSizes });
+    const peerSettled = settleNodeVerticalPositions(peerCollision, { nodeSizes });
+    assert.deepEqual(layoutPositions(peerSettled, { nodeSizes }), peerActual);
+    assert.equal(getNodeVerticalOffset(peerSettled, "b"), 12);
+    for (const [id, delta] of [["a", -5], ["b", 5]]) {
+      const moved = setNodeVerticalOffset(peerSettled, id, getNodeVerticalOffset(peerSettled, id) + delta);
+      const positions = layoutPositions(moved, { nodeSizes });
+      assert.equal(positions.get(id).y, peerActual.get(id).y + delta);
+      const peer = id === "a" ? "b" : "a";
+      assert.deepEqual(positions.get(peer), peerActual.get(peer));
+    }
+    assert.deepEqual(normalizeMindmap(JSON.parse(JSON.stringify(peerSettled))), peerSettled);
+  }
+});
+
+test("세로 위치 확정은 끊어진 부모·순환 관계·큰 이동 값에서도 화면을 바꾸지 않습니다", () => {
+  for (const layout of ["radial", "tree"]) {
+    const field = layout === "tree" ? "treeOffsetY" : "radialOffsetY";
+    const map = normalizeMindmap({ layout, nodes: [node("root", null, { x: 0, y: 0 }),
+      node("a", "root", { x: 260, y: 0, [field]: 68 }),
+      node("other", null, { x: 260, y: 0 }), node("orphan", "missing", { [field]: NaN }),
+      node("cycle-a", "cycle-b", { [field]: 1e308 }), node("cycle-b", "cycle-a", { [field]: -40 })] });
+    const before = layoutPositions(map);
+    const settled = settleNodeVerticalPositions(map);
+    assert.deepEqual(layoutPositions(settled), before);
+    assertDisjoint(settled.nodes, before);
+    for (const n of settled.nodes) assert.ok(Number.isFinite(n[field]));
+  }
+});
+
+test("각 형태의 세로 이동만 해당 노드에 저장하고 다시 열어도 원문·그림·관계·자리를 보존합니다", () => {
+  const map = freezeMap(normalizeMindmap({ layout: "radial", verticalGap: 72, nodes: [
+    node("root", null, { x: 90, y: 40, text: "우리의 주제" }),
+    node("a", "root", { x: 330, y: 80, text: "내 생각에  어떤 편향이 있었을까", image: IMG, edgeLabel: "내가 적은 관계" }),
+    node("b", "a", { x: 500, y: 190, text: "또 다른  생각" }),
+  ] }));
+  const radial = setNodeVerticalOffset(map, "a", 37.5);
+  assert.deepEqual(radial.nodes[1], { ...map.nodes[1], radialOffsetY: 37.5 });
+  assert.equal(radial.nodes[0], map.nodes[0]);
+  assert.equal(radial.nodes[2], map.nodes[2]);
+  const edited = setNodeVerticalOffset({ ...radial, layout: "tree" }, "a", -63.25);
+  assert.equal(getNodeVerticalOffset(edited, "a"), -63.25);
+  assert.equal(getNodeVerticalOffset({ ...edited, layout: "radial" }, edited.nodes[1]), 37.5);
+  const restored = normalizeMindmap(JSON.parse(JSON.stringify(edited)));
+  assert.deepEqual(restored, edited);
+  for (const layout of ["radial", "tree"]) {
+    assert.deepEqual(layoutPositions({ ...restored, layout }), layoutPositions({ ...edited, layout }));
+    assertDisjoint(restored.nodes, layoutPositions({ ...restored, layout }));
+  }
+  assert.equal(setNodeVerticalOffset(map, "missing", 40), map);
+  assert.equal(setNodeVerticalOffset(map, "root", 40), map);
+  assert.equal(map.nodes[1].radialOffsetY, 0);
+});
+
+test("방사형의 좌우 가지는 독립적으로 움직이고 큰 글·그림이 있는 하위 가지도 충돌을 피합니다", () => {
+  const nodes = [node("root", null, { x: 0, y: 0 }),
+    node("right", "root", { x: 260, y: 0 }), node("left", "root", { x: -260, y: 0 }),
+    node("a", "right", { x: 430, y: 0, image: IMG }), node("b", "right", { x: 430, y: 100 }),
+    node("a1", "a", { x: 600, y: 0, text: "친구의 생각을 듣고 새로 알게 된 것을 함께 나누어요 ".repeat(4) }),
+    node("a2", "a", { x: 600, y: 100 }), node("left1", "left", { x: -430, y: 0, image: IMG })];
+  const nodeSizes = new Map([["a1", { width: 168, height: 270 }], ["b", { width: 168, height: 320 }]]);
+  const map = normalizeMindmap({ layout: "radial", nodes });
+  const before = layoutPositions(map, { nodeSizes });
+  const moved = setNodeVerticalOffset(map, "right", 40);
+  const after = layoutPositions(moved, { nodeSizes });
+  for (const id of ["root", "left", "left1"]) assert.deepEqual(after.get(id), before.get(id));
+  for (const id of ["right", "a", "b", "a1", "a2"]) {
+    assert.equal(after.get(id).y - before.get(id).y, 40);
+    assert.equal(after.get(id).x, before.get(id).x);
+  }
+  for (const layout of ["radial", "tree"]) {
+    let colliding = { ...map, layout };
+    colliding = setNodeVerticalOffset(colliding, "a", 80);
+    colliding = setNodeVerticalOffset(colliding, "a1", 160);
+    colliding = setNodeVerticalOffset(colliding, "b", -110);
+    assertDisjoint(nodes, layoutPositions(colliding, { nodeSizes }), nodeSizes);
+  }
+});
+
+test("오래된 하위 y 좌표의 큰 간격은 되살리지 않으며 새 세로 이동은 연속적으로 반영합니다", () => {
+  const nodes = [node("root", null, { x: 0, y: 0 }), node("p", "root", { x: 260, y: 0 }),
+    node("a", "p", { x: 330, y: -10000 }), node("b", "p", { x: 330, y: 10000 })];
+  for (const layout of ["radial", "tree"]) {
+    const map = normalizeMindmap({ layout, nodes });
+    const before = layoutPositions(map);
+    assert.equal(before.get("b").y - before.get("a").y, 62);
+    for (const delta of [-0.25, -10, -40]) {
+      const after = layoutPositions(setNodeVerticalOffset(map, "a", delta));
+      assert.equal(after.get("a").y - before.get("a").y, delta);
+      assert.deepEqual(after.get("b"), before.get("b"));
+      assertDisjoint(nodes, after);
+    }
+  }
+});
+
+test("좌표 없는 옛 기록에 방사형 기준점을 채워도 저장한 세로 이동을 두 번 적용하지 않습니다", () => {
+  const map = normalizeMindmap({ layout: "tree", nodes: [node("root", null),
+    node("p", "root", { radialOffsetY: 40 }), node("a", "p", { radialOffsetY: -25 }), node("b", "p")] });
+  const radial = { ...map, layout: "radial" };
+  const before = layoutPositions(radial);
+  const repaired = withRadialPositions(radial);
+  assert.deepEqual(layoutPositions(repaired), before);
+  assert.equal(getNodeVerticalOffset(repaired, "p"), 40);
+  assert.equal(getNodeVerticalOffset(repaired, "a"), -25);
+  assert.equal(withRadialPositions(repaired), repaired);
+});
+
+test("없거나 잘못된 세로 이동 값과 끊어진 옛 기록도 유한한 자리에 안전하게 그립니다", () => {
+  for (const invalid of [undefined, null, NaN, Infinity, -Infinity, "40", true, {}, []]) {
+    const map = normalizeMindmap({ nodes: [node("root", null),
+      node("a", "root", { radialOffsetY: invalid, treeOffsetY: invalid })] });
+    assert.equal(getNodeVerticalOffset(map, "a"), 0);
+    assert.equal(getNodeVerticalOffset({ ...map, layout: "tree" }, "a"), 0);
+    assert.equal(getNodeVerticalOffset(map, "missing"), 0);
+    assert.equal(setNodeVerticalOffset(map, "a", invalid).nodes[1].radialOffsetY, 0);
+  }
+  for (const layout of ["radial", "tree"]) {
+    const map = normalizeMindmap({ layout, nodes: [node("root", null), node("a", "root", { radialOffsetY: 1e308, treeOffsetY: 1e308 }),
+      node("a1", "a", { radialOffsetY: 1e308, treeOffsetY: 1e308 }), node("orphan", "missing"),
+      node("cycle-a", "cycle-b", { radialOffsetY: -90, treeOffsetY: -90 }), node("cycle-b", "cycle-a")] });
+    assertDisjoint(map.nodes, layoutPositions(map));
+  }
+});
 
 test("세로 간격은 숫자만 받아 범위 안에 두고, 옛 기록은 기본 20px로 읽습니다", () => {
   assert.deepEqual(MINDMAP_VERTICAL_GAP, { min: 12, max: 120, default: 20, step: 4 });

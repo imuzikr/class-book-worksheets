@@ -42,14 +42,12 @@ import {
   removeNode,
   updateNodeText,
   updateEdgeLabel,
-  moveSubtreeTo,
-  reorderFirstLevelChild,
+  getNodeVerticalOffset,
+  setNodeVerticalOffset,
+  settleNodeVerticalPositions,
   updateNodeImage,
   nodeHasImage,
   mindmapNodeSize,
-  MINDMAP_VERTICAL_GAP,
-  normalizeVerticalGap,
-  updateVerticalGap,
 } from "@/lib/mindmap";
 import { IMAGE_ACCEPT } from "@/lib/image";
 
@@ -230,14 +228,13 @@ export default function MindmapCanvas({
   onUploadImage = null,
 }) {
   const readOnly = !onChange;
-  const verticalGap = normalizeVerticalGap(map.verticalGap);
   const stageRef = useRef(null);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   // 지금 내용을 고치는 중인 노드/선 — 우클릭(노드)·클릭(선)으로 들어갑니다.
   const [editingId, setEditingId] = useState(null);
   const [editingEdgeId, setEditingEdgeId] = useState(null);
-  const [dragPreview, setDragPreview] = useState(null);
+  const [draggingId, setDraggingId] = useState(null);
   const editInputRef = useRef(null);
   const edgeInputRef = useRef(null);
   const fileRef = useRef(null);
@@ -253,44 +250,21 @@ export default function MindmapCanvas({
   const { nodeSizes, nodeRef, nodeElements } = useNodeMeasurements(map.nodes, editingId, uploadingId);
   const positions = useMemo(() => layoutPositions(map, { nodeSizes }), [map, nodeSizes]);
   const levels = useMemo(() => levelMap(map.nodes), [map.nodes]);
-  const previewIds = useMemo(() => {
-    if (!dragPreview || map.layout !== "tree") return new Set();
-    return subtreeIds(map.nodes, dragPreview.id);
-  }, [dragPreview, map.layout, map.nodes]);
-  const displayPositions = useMemo(() => {
-    if (!dragPreview || previewIds.size === 0) return positions;
-    const next = new Map(positions);
-    for (const id of previewIds) {
-      const p = positions.get(id);
-      if (p) next.set(id, { x: p.x, y: p.y + dragPreview.dy });
-    }
-    return next;
-  }, [dragPreview, positions, previewIds]);
-  const dropGuideY = useMemo(() => {
-    if (!dragPreview || map.layout !== "tree") return null;
-    const dropY = dragPreview.originY + dragPreview.dy;
-    const firstLevel = map.nodes
-      .filter((n) => (levels.get(n.id) ?? 0) === 1)
-      .map((n) => ({ id: n.id, y: positions.get(n.id)?.y ?? 0 }))
-      .sort((a, b) => a.y - b.y);
-    const others = firstLevel.filter(({ id }) => id !== dragPreview.id);
-    if (others.length === 0) return dropY;
-    const insertBefore = others.find(({ y }) => dropY < y);
-    if (insertBefore) return insertBefore.y - 31;
-    return others[others.length - 1].y + 31;
-  }, [dragPreview, levels, map.layout, map.nodes, positions]);
+  const draggedIds = useMemo(() => (
+    draggingId ? subtreeIds(map.nodes, draggingId) : new Set()
+  ), [draggingId, map.nodes]);
   const edges = useMemo(() => {
     return map.nodes
       .filter((n) => n.parentId !== null)
       .map((n) => {
-        const a = displayPositions.get(n.parentId);
-        const b = displayPositions.get(n.id);
+        const a = positions.get(n.parentId);
+        const b = positions.get(n.id);
         if (!a || !b) return null;
         const parent = nodeById(map.nodes, n.parentId);
         return { node: n, ...edgeGeometry(a, b, map.layout, parent, n, levels, nodeSizes) };
       })
       .filter(Boolean);
-  }, [map.nodes, map.layout, displayPositions, levels, nodeSizes]);
+  }, [map.nodes, map.layout, positions, levels, nodeSizes]);
 
   // 휠 처리기는 한 번만 붙이고 계속 쓰므로, 그 안에서 최신 배율·이동을 읽으려면
   // state를 그대로 잡아 두면 안 됩니다(처음 값에 묶임). 거울용 ref를 둡니다.
@@ -303,6 +277,7 @@ export default function MindmapCanvas({
   const pendingFitRef = useRef(true);
   const fitPendingRef = useRef(null);
   const fittedSelectionRef = useRef(null);
+  const draggedSelectionRef = useRef(null);
 
   useEffect(() => {
     if (editingId) editInputRef.current?.focus();
@@ -376,6 +351,14 @@ export default function MindmapCanvas({
     // 아래의 화면 여백보다 맞춤 여백이 작아도, 이 맞춤을 다시 밀지 않습니다.
     if (fittedSelection?.selectedId === selectedId && fittedSelection?.positions === positions) return;
     if (!selectedId || dragRef.current || pendingFitRef.current) return;
+    // 직접 옮긴 자리에서는 손을 뗀 뒤에도 판을 밀지 않습니다. 다음 선택이나
+    // 내용 변경으로 위치가 달라졌을 때부터 다시 화면 안으로 따라갑니다.
+    const draggedSelection = draggedSelectionRef.current;
+    if (draggedSelection) {
+      const p = positions.get(selectedId);
+      if (draggedSelection.id === selectedId && p?.x === draggedSelection.x && p?.y === draggedSelection.y) return;
+      draggedSelectionRef.current = null;
+    }
     const stage = stageRef.current;
     const p = positions.get(selectedId);
     if (!stage || !p) return;
@@ -406,6 +389,7 @@ export default function MindmapCanvas({
     if (!stage) return;
     function onWheel(e) {
       e.preventDefault();
+      if (dragRef.current?.kind === "node") return;
       const rect = stage.getBoundingClientRect();
       const sx = e.clientX - rect.left - rect.width / 2;
       const sy = e.clientY - rect.top - rect.height / 2;
@@ -444,11 +428,11 @@ export default function MindmapCanvas({
     setEditingId(null);
     setEditingEdgeId(null);
     if (onSelect) onSelect(null);
-    dragRef.current = { kind: "pan", sx: e.clientX, sy: e.clientY, ox: pan.x, oy: pan.y };
+    dragRef.current = { kind: "pan", pointerId: e.pointerId, sx: e.clientX, sy: e.clientY, ox: pan.x, oy: pan.y };
     e.currentTarget.setPointerCapture?.(e.pointerId);
   }
 
-  // ── 노드 끌기(방사형 위치 조정, 계층형 1단계 순서 조정) / 선택 ──
+  // ── 노드 끌기 / 선택 — 각 가지의 세로 간격을 직접 조정합니다 ──
   function onNodePointerDown(e, node) {
     if (e.target.tagName === "INPUT") return; // 편집 입력칸 안의 클릭은 그대로 둡니다
     if (e.target.closest?.(".mm-node-imgbtn")) return; // 노드 위 '이미지' 단추
@@ -463,20 +447,22 @@ export default function MindmapCanvas({
     if (e.button !== 0 || e.ctrlKey) return;
     if (readOnly || editingId === node.id) return;
     const lv = levels.get(node.id) ?? 0;
-    if (map.layout === "tree" && lv !== 1) return;
+    if (lv === 0) return;
     if (map.layout !== "radial" && map.layout !== "tree") return;
     e.stopPropagation();
     const p = positions.get(node.id) ?? { x: 0, y: 0 };
     dragRef.current = {
-      kind: map.layout === "tree" ? "tree-reorder" : "node",
+      kind: "node",
+      pointerId: e.pointerId,
       id: node.id,
+      layout: map.layout,
+      level: lv,
       sx: e.clientX,
       sy: e.clientY,
-      // 그리는 배치가 충돌을 피해 옮겨진 경우에도 저장 좌표에 끈 만큼만
-      // 더합니다. 표시 좌표를 저장 좌표로 오인하면 첫 움직임에 가지가 뜁니다.
-      ox: map.layout === "radial" ? (Number.isFinite(node.x) ? node.x : 0) : p.x,
-      oy: map.layout === "radial" ? (Number.isFinite(node.y) ? node.y : 0) : p.y,
+      zoom: zoomRef.current,
+      originX: p.x,
       originY: p.y,
+      startOffset: getNodeVerticalOffset(map, node),
       moved: false,
     };
     e.currentTarget.setPointerCapture?.(e.pointerId);
@@ -513,36 +499,52 @@ export default function MindmapCanvas({
 
   function onPointerMove(e) {
     const d = dragRef.current;
-    if (!d) return;
+    if (!d || d.pointerId !== e.pointerId) return;
     const dx = e.clientX - d.sx;
     const dy = e.clientY - d.sy;
     if (d.kind === "pan") {
       setPan({ x: d.ox + dx, y: d.oy + dy });
     } else if (d.kind === "node") {
+      const currentMap = mapRef.current;
+      if (readOnly || currentMap.layout !== d.layout || !nodeById(currentMap.nodes, d.id)) {
+        onPointerUp(e);
+        return;
+      }
       if (!d.moved && Math.abs(dx) + Math.abs(dy) < 3) return; // 살짝 눌린 것은 클릭으로
       d.moved = true;
-      onChange(moveSubtreeTo(map, d.id, d.ox + dx / zoom, d.oy + dy / zoom));
-    } else if (d.kind === "tree-reorder") {
-      if (!d.moved && Math.abs(dx) + Math.abs(dy) < 3) return;
-      d.moved = true;
-      setDragPreview({ id: d.id, dy: dy / zoom, originY: d.originY });
+      setDraggingId(d.id);
+      // 자동 배치의 저장 y는 표시 자리와 다를 수 있습니다. 기존 보정량에
+      // 포인터가 움직인 만큼만 더하고, 항상 최신 판에 적용해 업로드·글자를 지킵니다.
+      let next = setNodeVerticalOffset(currentMap, d.id, d.startOffset + dy / d.zoom);
+      if (d.layout === "radial" && d.level === 1) {
+        next = {
+          ...next,
+          nodes: next.nodes.map((node) => node.id === d.id ? { ...node, x: d.originX + dx / d.zoom } : node),
+        };
+      }
+      mapRef.current = next;
+      onChange(next);
     }
   }
 
   function onPointerUp(e) {
     const d = dragRef.current;
-    if (d?.kind === "tree-reorder" && d.moved) {
-      const dropY = d.oy + (e ? (e.clientY - d.sy) / zoom : 0);
-      const firstLevel = map.nodes
-        .filter((n) => (levels.get(n.id) ?? 0) === 1)
-        .map((n) => ({ node: n, y: positions.get(n.id)?.y ?? 0 }))
-        .sort((a, b) => a.y - b.y);
-      const others = firstLevel.filter(({ node }) => node.id !== d.id);
-      const targetIndex = others.findIndex(({ y }) => dropY < y);
-      onChange(reorderFirstLevelChild(map, d.id, targetIndex === -1 ? others.length : targetIndex));
+    if (!d || (e && d.pointerId !== e.pointerId)) return;
+    if (d.kind === "node" && d.moved) {
+      if (!readOnly && mapRef.current.layout === d.layout) {
+        // 충돌 보정 뒤 화면에 놓인 자리를 다음 끌기의 기준으로 저장합니다.
+        // 그래야 이웃에 닿았던 가지도 다음에는 움직인 만큼 바로 따라옵니다.
+        const settled = settleNodeVerticalPositions(mapRef.current, { nodeSizes });
+        if (settled !== mapRef.current) {
+          mapRef.current = settled;
+          onChange(settled);
+        }
+      }
+      const p = layoutPositions(mapRef.current, { nodeSizes }).get(d.id);
+      if (p) draggedSelectionRef.current = { id: d.id, ...p };
     }
     dragRef.current = null;
-    setDragPreview(null);
+    setDraggingId(null);
   }
 
   async function attachImage(nodeId, file) {
@@ -570,43 +572,18 @@ export default function MindmapCanvas({
     fileRef.current?.click();
   }
 
-  const canDragNodes = !readOnly && map.layout === "radial";
+  const canDragNodes = !readOnly && (map.layout === "radial" || map.layout === "tree");
 
   return (
     <div className={`mm-stage${className ? ` ${className}` : ""}`}>
-      {!readOnly && (
-        <div className="mm-spacing">
-          <label className="mm-spacing-label">
-            <span>세로 간격</span>
-            <input
-              type="range"
-              className="mm-spacing-range"
-              min={MINDMAP_VERTICAL_GAP.min}
-              max={MINDMAP_VERTICAL_GAP.max}
-              step={MINDMAP_VERTICAL_GAP.step}
-              value={verticalGap}
-              aria-valuetext={`${verticalGap}px`}
-              onChange={(e) => onChange(updateVerticalGap(mapRef.current, Number(e.target.value)))}
-            />
-          </label>
-          <output className="mm-spacing-value" aria-hidden="true">{verticalGap}px</output>
-          <button
-            type="button"
-            className="btn-ghost mm-spacing-reset"
-            disabled={verticalGap === MINDMAP_VERTICAL_GAP.default}
-            onClick={() => onChange(updateVerticalGap(mapRef.current, MINDMAP_VERTICAL_GAP.default))}
-          >
-            기본 간격
-          </button>
-        </div>
-      )}
       <div
         ref={stageRef}
-        className={`mm-viewport${canDragNodes ? " draggable" : ""}`}
+        className="mm-viewport"
         onPointerDown={onStagePointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
+        onLostPointerCapture={onPointerUp}
       >
         <div
           className="mm-world"
@@ -618,7 +595,7 @@ export default function MindmapCanvas({
           <svg className="mm-edges" viewBox="-3000 -3000 6000 6000" aria-hidden="true">
             {edges.map(({ node: n, d }) => {
               const lv = levels.get(n.id) ?? 1;
-              const isPreviewEdge = previewIds.has(n.id);
+              const isDraggedEdge = draggedIds.has(n.id);
               return (
                 <g key={n.id}>
                   {!readOnly && (
@@ -630,7 +607,7 @@ export default function MindmapCanvas({
                     />
                   )}
                   <path
-                    className={`mm-edge${isPreviewEdge ? " dragging" : ""}`}
+                    className={`mm-edge${isDraggedEdge ? " dragging" : ""}`}
                     d={d}
                     stroke={levelStyle(lv).border}
                     strokeWidth={Math.max(1.6, 3.2 - lv * 0.4)}
@@ -680,17 +657,15 @@ export default function MindmapCanvas({
             );
           })}
 
-          {dropGuideY !== null && <div className="mm-drop-guide" style={{ top: dropGuideY }} />}
-
           {map.nodes.map((n) => {
-            const p = displayPositions.get(n.id) ?? { x: 0, y: 0 };
+            const p = positions.get(n.id) ?? { x: 0, y: 0 };
             const lv = levels.get(n.id) ?? 0;
             const s = levelStyle(lv);
             const isSel = selectedId === n.id;
             const isEditing = editingId === n.id;
-            const isPreviewRoot = dragPreview?.id === n.id;
-            const isPreviewChild = !isPreviewRoot && previewIds.has(n.id);
-            const canReorder = !readOnly && map.layout === "tree" && lv === 1;
+            const isDraggedRoot = draggingId === n.id;
+            const isDraggedChild = !isDraggedRoot && draggedIds.has(n.id);
+            const canDrag = canDragNodes && lv > 0 && !isEditing;
             const hasImg = nodeHasImage(n);
             const isUploading = uploadingId === n.id;
             return (
@@ -700,10 +675,10 @@ export default function MindmapCanvas({
                 data-mindmap-node-id={n.id}
                 className={`mm-node${isSel ? " sel" : ""}${lv === 0 ? " root" : ""}${
                   isEditing ? " editing" : ""
-                }${canReorder ? " reorderable" : ""}${isPreviewRoot ? " dragging" : ""}${
+                }${canDrag ? " draggable" : ""}${isDraggedRoot ? " dragging" : ""}${
                   hasImg || isUploading ? " has-img" : ""
                 }${
-                  isPreviewChild ? " drag-child" : ""
+                  isDraggedChild ? " drag-child" : ""
                 }`}
                 style={{
                   left: p.x,
@@ -711,7 +686,7 @@ export default function MindmapCanvas({
                   background: s.bg,
                   borderColor: isSel ? "var(--primary)" : s.border,
                   color: s.text,
-                  ...(isPreviewRoot || isPreviewChild ? { zIndex: 5 } : {}),
+                  ...(isDraggedRoot || isDraggedChild ? { zIndex: 5 } : {}),
                   ...(isEditing ? { width: lv === 0 ? 200 : 168 } : {}),
                 }}
                 onPointerDown={(e) => onNodePointerDown(e, n)}
@@ -857,18 +832,18 @@ export default function MindmapCanvas({
             {imageError ? (
               <span className="mm-bar-hint mm-bar-error" role="alert">{imageError}</span>
             ) : (
-              canImage && (
-                <span className="mm-bar-hint">
-                  글자는 마우스 오른쪽 버튼으로, 그림은 ‘이미지 넣기’로 붙여요. 글자와 그림 중 하나만 있어도 돼요.
-                </span>
-              )
+              <span className="mm-bar-hint">
+                {canDragNodes && "가지를 위아래로 끌어 원하는 간격으로 놓아요. 딸린 가지도 함께 움직여요. "}
+                글자는 마우스 오른쪽 버튼으로 고쳐요.
+                {canImage && " 그림은 ‘이미지 넣기’로 붙여요. 글자와 그림 중 하나만 있어도 돼요."}
+              </span>
             )}
             </>
           ) : (
             <span className="mm-bar-hint">
               노드를 더블클릭하면 가지가 생기고, 마우스 오른쪽 버튼을 누르면 내용을 고칠 수 있어요.
               선을 클릭하면 선 위에 글자를 넣을 수 있어요.
-              {map.layout === "radial" && " 노드를 끌어 자리를 옮길 수도 있어요."}
+              {canDragNodes && " 가지를 위아래로 끌어 원하는 간격으로 놓을 수 있어요. 딸린 가지도 함께 움직여요."}
               {canImage && " 노드를 누르면 모서리에 생기는 그림 단추로 이미지도 넣을 수 있어요."}
             </span>
           )}

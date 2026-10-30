@@ -179,7 +179,7 @@ export default function PresentationOverlay({ broadcast, noteOpen = false, noteW
       broadcast.topic
     );
     const mapSignature = map.nodes
-      .map((n) => `${n.id}:${n.parentId ?? ""}:${n.text}:${n.edgeLabel ?? ""}:${n.x ?? ""}:${n.y ?? ""}:${n.image ? n.image.length : 0}`)
+      .map((n) => `${n.id}:${n.parentId ?? ""}:${n.text}:${n.edgeLabel ?? ""}:${n.x ?? ""}:${n.y ?? ""}:${n.radialOffsetY ?? 0}:${n.treeOffsetY ?? 0}:${n.image ? n.image.length : 0}`)
       .join("|");
     const hasVisibleNode = map.nodes.some((n) => n.text?.trim() || n.image);
     return (

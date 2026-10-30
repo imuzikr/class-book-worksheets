@@ -342,6 +342,8 @@ function buildPayload(activity, card) {
       // Firestore는 undefined를 저장하지 못해 빈 자리는 null로 맞춥니다
       x: Number.isFinite(n.x) ? n.x : null,
       y: Number.isFinite(n.y) ? n.y : null,
+      radialOffsetY: Number.isFinite(n.radialOffsetY) ? n.radialOffsetY : 0,
+      treeOffsetY: Number.isFinite(n.treeOffsetY) ? n.treeOffsetY : 0,
     })),
   };
 }
