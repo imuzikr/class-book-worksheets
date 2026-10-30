@@ -51,6 +51,23 @@
   text-align: left;
   cursor: pointer;
 }
+/* 학생 선택 단추의 누르는 영역을 카드 전체로 넓힙니다. 단계 단추는
+   그 위에 두어 조각을 누르면 해당 답안으로 바로 이동할 수 있습니다. */
+.book-rail-card--selectable { position: relative; isolation: isolate; }
+.book-rail-card--selectable > .book-rail-select { border-radius: inherit; }
+.book-rail-card--selectable > .book-rail-select::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+}
+.book-rail-card--selectable .progress-stage-button { position: relative; z-index: 2; }
+.book-rail-card--selectable > .book-rail-select:focus-visible { outline: none; }
+.book-rail-card--selectable > .book-rail-select:focus-visible::after {
+  outline: 2px solid var(--primary-dark);
+  outline-offset: 2px;
+}
 .progress-stage-name-button {
   border: 0;
   padding: 0;

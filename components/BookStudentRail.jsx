@@ -83,7 +83,7 @@ export default function BookStudentRail({
         return (
           <div
             key={c.uid}
-            className={`book-rail-card book-rail-card--student${on ? " on" : ""}`}
+            className={`book-rail-card book-rail-card--student book-rail-card--selectable${on ? " on" : ""}`}
           >
             <button type="button" className="book-rail-select" onClick={() => onPick?.(c.uid)} aria-pressed={on} aria-label={`${c.name} 화면 열기`}>
             <span className="book-rail-progress">
