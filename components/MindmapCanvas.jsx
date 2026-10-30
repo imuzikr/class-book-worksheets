@@ -13,9 +13,9 @@
 // 로 옮깁니다. 판(.mm-world)을 판 가운데에 놓고 transform으로 한 번에
 // 옮기고 키우므로, 노드마다 따로 계산할 필요가 없습니다.
 //
-// 선(엣지)은 노드 뒤에 깔린 SVG 한 장에 그립니다. 노드 배경이 불투명해서
-// 선을 노드 '가운데에서 가운데로' 그어도 겹치는 부분은 노드에 가려집니다
-// — 덕분에 노드의 정확한 크기를 몰라도 선이 깔끔하게 붙습니다.
+// 선(엣지)은 노드 뒤에 깔린 SVG 한 장에 그립니다. 실제 노드 너비로
+// 양쪽 측면 중앙을 연결하고, 수평으로 시작하고 끝나는 완만한 곡선을 씁니다.
+// 왼쪽 가지의 자식은 오른쪽 면, 오른쪽 가지의 자식은 왼쪽 면에 연결됩니다.
 //
 // [편집 동작]
 //   · 노드를 더블클릭 → 그 노드의 자식 노드를 만들고 바로 편집 상태로
@@ -50,6 +50,7 @@ import {
   mindmapNodeSize,
 } from "@/lib/mindmap";
 import { IMAGE_ACCEPT } from "@/lib/image";
+import { mindmapEdgeGeometry } from "@/lib/mindmapEdges";
 
 const ZOOM_MIN = 0.1;
 const ZOOM_MAX = 2.4;
@@ -60,108 +61,6 @@ const clampZoom = (z) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
 // 한글 조합을 맺는 Enter/Escape는 편집 종료 단축키로 쓰지 않습니다.
 // 일부 브라우저는 조합의 마지막 키에 isComposing 대신 keyCode 229를 줍니다.
 const isComposingKey = (event) => event.nativeEvent?.isComposing || event.nativeEvent?.keyCode === 229;
-
-// 선이 노드 상자 뒤에 가려지는 양을 빼고, 보이는 선의 가운데에 라벨을 둡니다.
-// 실제 상자의 높이도 쓰므로 이미지·여러 줄 글자·세로로 뻗는 가지에 맞습니다.
-function edgeLabelMid(a, b, parentNode, childNode, levels, nodeSizes, pointAt = null) {
-  const parentSize = mindmapNodeSize(parentNode, levels?.get(parentNode?.id) ?? 0, nodeSizes);
-  const childSize = mindmapNodeSize(childNode, levels?.get(childNode?.id) ?? 1, nodeSizes);
-  const at = pointAt ?? ((t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }));
-  const contains = (point, center, size) => (
-    Math.abs(point.x - center.x) < size.width / 2 && Math.abs(point.y - center.y) < size.height / 2
-  );
-  let start = 0, end = 1;
-  let lo = 0, hi = 1;
-  for (let i = 0; i < 16; i += 1) {
-    const t = (lo + hi) / 2;
-    if (contains(at(t), a, parentSize)) lo = t;
-    else hi = t;
-  }
-  start = hi;
-  lo = 0; hi = 1;
-  for (let i = 0; i < 16; i += 1) {
-    const t = (lo + hi) / 2;
-    if (contains(at(t), b, childSize)) hi = t;
-    else lo = t;
-  }
-  end = lo;
-  if (start >= end) return at(0.5);
-
-  // 굽은 선은 매개변수의 절반과 길이의 절반이 다를 수 있습니다.
-  const points = Array.from({ length: 25 }, (_, i) => at(start + (end - start) * i / 24));
-  const lengths = points.slice(1).map((p, i) => Math.hypot(p.x - points[i].x, p.y - points[i].y));
-  let remaining = lengths.reduce((sum, length) => sum + length, 0) / 2;
-  for (let i = 0; i < lengths.length; i += 1) {
-    if (remaining <= lengths[i]) {
-      const t = lengths[i] ? remaining / lengths[i] : 0;
-      return at(start + (end - start) * (i + t) / 24);
-    }
-    remaining -= lengths[i];
-  }
-  return at((start + end) / 2);
-}
-
-// 두 점을 잇는 곡선 + 그 곡선 위 라벨 자리.
-// 방사형은 두 제어점을 둔 cubic 곡선으로 노드 위치마다 휘어짐을 다르게 만들고,
-// 계층형은 가로로 흐르는 삼차 베지어입니다.
-// 라벨 자리는 실제 곡선 위의 점이라, 라벨이 선에서 떨어져 보이지 않습니다.
-function cubicAt(a, c1, c2, b, t) {
-  const mt = 1 - t;
-  return {
-    x: mt ** 3 * a.x + 3 * mt ** 2 * t * c1.x + 3 * mt * t ** 2 * c2.x + t ** 3 * b.x,
-    y: mt ** 3 * a.y + 3 * mt ** 2 * t * c1.y + 3 * mt * t ** 2 * c2.y + t ** 3 * b.y,
-  };
-}
-
-function edgeGeometry(a, b, layout, parentNode = null, childNode = null, levels = null, nodeSizes = null) {
-  const childLv = levels?.get(childNode?.id) ?? 1;
-  if (layout === "tree") {
-    const dx = Math.max(30, Math.abs(b.x - a.x) / 2);
-    const c1 = { x: a.x + dx, y: a.y };
-    const c2 = { x: b.x - dx, y: b.y };
-    return {
-      d: `M ${a.x} ${a.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${b.x} ${b.y}`,
-      mid: edgeLabelMid(a, b, parentNode, childNode, levels, nodeSizes, (t) => cubicAt(a, c1, c2, b, t)),
-    };
-  }
-  const dx = b.x - a.x, dy = b.y - a.y;
-  const dist = Math.hypot(dx, dy) || 1;
-  const midY = (a.y + b.y) / 2;
-
-  // 거의 수평인 중심 가지는 참고 마인드맵처럼 차분한 수평선으로 둡니다.
-  const horizontal = Math.abs(dy) <= Math.max(10, Math.abs(dx) * 0.08);
-  const nearCenter = Math.abs(midY) < 28;
-  if (horizontal && nearCenter) {
-    return {
-      d: `M ${a.x} ${a.y} L ${b.x} ${b.y}`,
-      mid: edgeLabelMid(a, b, parentNode, childNode, levels, nodeSizes),
-    };
-  }
-
-  const side = b.x >= a.x ? 1 : -1;
-  if (childLv > 1) {
-    return {
-      d: `M ${a.x} ${a.y} L ${b.x} ${b.y}`,
-      mid: edgeLabelMid(a, b, parentNode, childNode, levels, nodeSizes),
-    };
-  }
-
-  const handleBase = Math.min(Math.max(Math.abs(dx) * 0.42 + Math.abs(dy) * 0.18, 54), dist * 0.72);
-  const startHandle = Math.min(handleBase, 240);
-  const endHandle = Math.min(Math.max(Math.abs(dx) * 0.38 + Math.abs(dy) * 0.12, 48), 220);
-  const c1 = {
-    x: a.x + side * startHandle,
-    y: a.y,
-  };
-  const c2 = {
-    x: b.x - side * endHandle,
-    y: b.y,
-  };
-  return {
-    d: `M ${a.x} ${a.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${b.x} ${b.y}`,
-    mid: edgeLabelMid(a, b, parentNode, childNode, levels, nodeSizes, (t) => cubicAt(a, c1, c2, b, t)),
-  };
-}
 
 // transform 뒤의 화면 크기(getBoundingClientRect)가 아니라 배율 1의 실제
 // border-box를 잽니다. 위치·선택·확대는 이 크기를 바꾸지 않아 재측정 루프가 없습니다.
@@ -261,7 +160,14 @@ export default function MindmapCanvas({
         const b = positions.get(n.id);
         if (!a || !b) return null;
         const parent = nodeById(map.nodes, n.parentId);
-        return { node: n, ...edgeGeometry(a, b, map.layout, parent, n, levels, nodeSizes) };
+        return {
+          node: n,
+          ...mindmapEdgeGeometry(a, b, {
+            layout: map.layout,
+            parentSize: mindmapNodeSize(parent, levels.get(parent?.id) ?? 0, nodeSizes),
+            childSize: mindmapNodeSize(n, levels.get(n.id) ?? 1, nodeSizes),
+          }),
+        };
       })
       .filter(Boolean);
   }, [map.nodes, map.layout, positions, levels, nodeSizes]);
@@ -608,6 +514,8 @@ export default function MindmapCanvas({
                   )}
                   <path
                     className={`mm-edge${isDraggedEdge ? " dragging" : ""}`}
+                    data-mindmap-edge-id={n.id}
+                    data-mindmap-parent-id={n.parentId}
                     d={d}
                     stroke={levelStyle(lv).border}
                     strokeWidth={Math.max(1.6, 3.2 - lv * 0.4)}
@@ -627,6 +535,7 @@ export default function MindmapCanvas({
               <div
                 key={`el-${n.id}`}
                 className={`mm-edge-label${hasLabel ? "" : " empty"}${isEditing ? " editing" : ""}`}
+                data-mindmap-edge-label-id={n.id}
                 style={{ left: mid.x, top: mid.y }}
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => startEdgeEdit(e, n.id)}
