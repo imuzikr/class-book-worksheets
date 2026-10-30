@@ -48,7 +48,10 @@ import {
   subscribeMyStudyAttendance,
   subscribeMyClassRewardCount,
 } from "@/lib/store";
-import { isAdmin, isTeacher, getCurrentUser } from "@/lib/user";
+import { isAdmin, isTeacher, getCurrentUser, setRoleOverride } from "@/lib/user";
+import { isFirebaseConfigured } from "@/lib/firebase";
+import { DEMO_CLASS_ID } from "@/lib/demoClassroom";
+import "@/components/demo-classroom.css";
 import { getSelectedClassId, setSelectedClassId } from "@/lib/classroom";
 import { useCurrentUser } from "@/lib/useCurrentUser";
 import { useClassRoster } from "@/lib/useClassRoster";
@@ -652,7 +655,7 @@ function BooksPageInner() {
   if (!admin && user && !membershipsLoaded) {
     return (
       <div className="board-shell">
-        <TopNav active="books" />
+        <TopNav key={myUid} active="books" />
         <div className="auth-gate auth-gate--inline" role="status" aria-live="polite">
           <span className="auth-gate-spinner" aria-hidden="true" />
           <span className="sr-only">반 정보를 불러오는 중</span>
@@ -666,7 +669,7 @@ function BooksPageInner() {
   if (!admin && user && membershipIds.length === 0) {
     return (
       <div className="board-shell">
-        <TopNav active="books" />
+        <TopNav key={myUid} active="books" />
         <ClassEntry />
       </div>
     );
@@ -674,10 +677,20 @@ function BooksPageInner() {
 
   return (
     <div className="board-shell">
-      <TopNav active="books" growthEnabled={growthEnabled} readingOpen={readingOpen} />
+      <TopNav key={myUid} active="books" growthEnabled={growthEnabled} readingOpen={readingOpen} />
+      {!isFirebaseConfigured && <aside className="demo-classroom-notice" aria-label="체험 데이터 안내">
+        <div><strong>책봄 체험반 · 학생 15명</strong><span>10가지 독서 활동과 학생별 서재 1~2권이 준비되어 있어요. 상단에서 체험 학생을 골라 볼 수 있어요.</span>
+          <small>모두 가상의 기록입니다. 활동·독서 기록을 수정한 내용은 새로고침하면 샘플로 돌아가고, 반 설정은 유지됩니다.</small></div>
+        <button type="button" className="btn-ghost" onClick={() => {
+          setRoleOverride("admin");
+          setTeacherClassId(DEMO_CLASS_ID);
+          setSelectedClassId(DEMO_CLASS_ID);
+          goToList();
+        }}>교사로 체험반 열기</button>
+      </aside>}
 
       {/* 본문 + 오른쪽 '멋진 순간' 패널 */}
-      <div className="books-body">
+      <div className="books-body" key={`${classId}:${myUid}`}>
       {/* 여섯 개의 해시태그 — 교사는 두 칸(학생 목록·슬라이드, '수업 시작'으로
           방송), 학생은 제 해시태그 */}
       {isHashtag && admin ? (
@@ -898,6 +911,7 @@ function BooksPageInner() {
               {admin && myClasses.length > 0 && (
                 <select
                   className="study-class-select"
+                  aria-label="반 고르기"
                   value={classId ?? ""}
                   onChange={(e) => {
                     setTeacherClassId(e.target.value);
@@ -913,6 +927,7 @@ function BooksPageInner() {
               {!admin && membershipIds.length > 1 ? (
                 <select
                   className="study-class-select"
+                  aria-label="반 고르기"
                   value={classId ?? ""}
                   onChange={(e) => setSelectedClassId(e.target.value)}
                 >

@@ -78,10 +78,10 @@ export default function TopNav({ active, growthEnabled = false, readingOpen = fa
   //
   // `membershipsLoaded`는 **이번 구독의 첫 답이 왔는가**입니다. 구독을 다시
   // 걸 때마다 거짓으로 되돌립니다 — 아래에서 '아직 안 왔다'와 '정말 반이
-  // 없다'를 가르는 데 씁니다. 물어볼 것이 없는 쪽(교사·비로그인·데모)은
+  // 없다'를 가르는 데 씁니다. 물어볼 것이 없는 쪽(교사·비로그인)은
   // 곧바로 참입니다.
   useEffect(() => {
-    if (!isFirebaseConfigured || admin || !user?.uid) {
+    if (admin || !user?.uid) {
       setMemberships([]);
       setMembershipsLoaded(true);
       return;
@@ -126,7 +126,7 @@ export default function TopNav({ active, growthEnabled = false, readingOpen = fa
   else if (membershipsLoaded) lastClassIdRef.current = null;
   const activeClassId = resolvedClassId ?? lastClassIdRef.current;
   useEffect(() => {
-    if (!isFirebaseConfigured || admin || !activeClassId || !user?.uid) {
+    if (admin || !activeClassId || !user?.uid) {
       setFruitTotal(0);
       return;
     }

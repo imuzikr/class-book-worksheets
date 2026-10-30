@@ -1,0 +1,28 @@
+.demo-role-preview {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  max-width: 260px;
+}
+.demo-role-preview > .role-switch { display: inline-flex; flex-shrink: 0; }
+.demo-role-preview .role-switch button { padding: 5px 8px; white-space: nowrap; }
+.demo-role-preview .role-switch button.active { color: #704b39; background: #f8e5da; }
+.demo-student-select {
+  width: 132px;
+  max-width: 100%;
+  min-height: 32px;
+  padding: 4px 7px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--card-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+}
+.demo-preview-error { flex-basis: 100%; max-width: 250px; font-size: 11px; color: #9b362d; }
+@media (max-width: 760px) {
+  .topbar .user-area:has(> .demo-role-preview) { flex-wrap: wrap; }
+  .demo-role-preview { flex-basis: 100%; max-width: none; justify-content: flex-end; }
+  .demo-role-preview .role-switch button { min-height: 32px; }
+}

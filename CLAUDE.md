@@ -1,5 +1,7 @@
 # 책나눔 성장 기능 추가 안내
 
+학생 15명·독서 활동 10종·서재 24권의 데모 자료와 신원 전환은 `DEMO_CLASSROOM.md`를 참고하세요. `lib/demoClassroom.js`, `lib/demoBookActivities.js`, `lib/demoReading.js`가 공유 식별자와 목 데이터의 출처입니다. Firebase 미설정일 때만 사용하며 실제 데이터베이스에 시드하지 않습니다. 학생 전환 시 개인 편집 상태가 섞이지 않도록 `app/books/page.js`의 사용자별 `TopNav` 및 본문 key를 유지하세요.
+
 `READING_GROWTH.md`가 새 개인 서재·경험치·18종 뱃지·반 랭킹의 현재 기준입니다. 반별 `readingEnabled === true`일 때만 활성화하며 기본 꺼짐입니다. 기존 독서 활동은 이 스위치와 무관하게 유지합니다.
 새 영역은 Next.js Node API와 Firebase Admin SDK에서 인증·반 권한·보상 트랜잭션을 검증합니다. 기존 문서의 “서버 함수 없음”은 Cloud Functions/App Check를 추가하지 않는다는 뜻이며, 새 성장 기능에는 Vercel 서버 API 및 서버 전용 Admin 인증 설정이 필요합니다. 클라이언트에서 경험치·랭킹 정본에 직접 접근하지 마세요. 데모/서버는 `lib/reading.js`의 같은 계산·검증 로직을 사용합니다.
 
