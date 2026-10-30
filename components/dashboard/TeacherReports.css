@@ -26,8 +26,33 @@
 .bb-report-current-note,
 .bb-report-period-note { margin: 0 0 12px; color: #77776d; font-size: 11px; line-height: 1.8; }
 
-.bb-report-reading-grid,
-.bb-report-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 22px; min-width: 0; }
+.bb-report-reading-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 22px; min-width: 0; }
+
+.bb-report-activity-list { min-width: 0; border-top: 1px solid var(--border, #e8e5dd); }
+.bb-report-activity-row { min-width: 0; border-bottom: 1px solid var(--border, #e8e5dd); }
+.bb-report-activity-summary {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 13px 2px;
+  list-style: none;
+  cursor: pointer;
+}
+.bb-report-activity-summary::-webkit-details-marker { display: none; }
+.bb-report-activity-summary:hover { background: #fcfaf6; }
+.bb-report-activity-summary:focus-visible { outline: 2px solid var(--primary-dark, #a65e44); outline-offset: 2px; border-radius: 4px; }
+.bb-report-activity-summary > .bb-dash-type { min-width: 0; max-width: 100%; justify-self: start; white-space: normal; overflow-wrap: anywhere; }
+.bb-report-activity-title { min-width: 0; color: var(--text, #3d3d3a); font-size: 13px; font-weight: 600; line-height: 1.7; overflow-wrap: anywhere; }
+.bb-report-activity-indicators { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 6px; min-width: 0; max-width: 100%; }
+.bb-report-activity-indicators .bb-dash-state { white-space: normal; text-align: center; }
+.bb-report-activity-lock { color: var(--text-sub, #77776d); font-size: 10px; }
+.bb-report-activity-chevron { width: 7px; height: 7px; margin: 0 5px 3px 4px; border-right: 1.5px solid #9b826a; border-bottom: 1.5px solid #9b826a; transform: rotate(45deg); flex-shrink: 0; }
+.bb-report-activity-row[open] .bb-report-activity-chevron { transform: rotate(225deg); margin-bottom: -3px; }
+.bb-report-activity-body { min-width: 0; padding: 0 2px 17px 146px; }
+.bb-report-activity-preview { margin: 0 0 12px; color: #69766e; font-size: 12px; line-height: 1.9; white-space: pre-wrap; overflow-wrap: anywhere; }
+.bb-report-activity-empty { margin: 0 0 12px; color: var(--text-sub, #77776d); font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; }
 .bb-report-reading-grid > *,
 .bb-report-detail-grid > * { min-width: 0; }
 .bb-report-reading-facts { display: flex; flex-wrap: wrap; gap: 9px 18px; margin-bottom: 20px; color: #77776c; font-size: 11px; line-height: 1.7; }
@@ -76,11 +101,15 @@
 .bb-report-document .bb-dash-text-link { color: var(--primary-dark, #a65e44); }
 
 @media (max-width: 1100px) {
-  .bb-report-reading-grid,
-  .bb-report-detail-grid { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .bb-report-reading-grid { grid-template-columns: minmax(0, 1fr); gap: 0; }
 }
 
 @media (max-width: 620px) {
+  .bb-report-activity-summary { grid-template-columns: minmax(0, 1fr) auto; gap: 7px 10px; padding: 12px 2px; }
+  .bb-report-activity-summary > .bb-dash-type { grid-column: 1; grid-row: 1; }
+  .bb-report-activity-title { grid-column: 1 / -1; grid-row: 2; font-size: 12px; }
+  .bb-report-activity-indicators { grid-column: 2; grid-row: 1; }
+  .bb-report-activity-body { padding: 0 2px 16px; }
   .bb-report-heading { gap: 10px; margin-bottom: 16px; padding: 16px; }
   .bb-report-heading p { font-size: 10px; }
   .bb-report-current-note,
