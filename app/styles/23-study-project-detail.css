@@ -213,11 +213,6 @@
 }
 .study-project-panel .study-setting-row--acts { align-items: center; }
 .study-project-panel .study-setting-row--acts > span { padding-top: 0; }
-.study-act-chip-count {
-  margin-left: 5px;
-  font-weight: 800;
-  opacity: 0.75;
-}
 .study-project-delete-confirm {
   display: inline-flex;
   align-items: center;
@@ -333,30 +328,6 @@
 }
 .study-seat-empty.mine .study-seat-empty-note { color: var(--primary-dark); }
 
-/* ── 프로젝트 만들기 폼 — 활동 목록 ── */
-.project-form-acts {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
-}
-.project-form-acts-head {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.project-form-acts-head > span {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text);
-}
-.project-form-acts-head small {
-  font-size: 11.5px;
-  color: var(--text-sub);
-}
-
 /* 교사 설정 패널 */
 .study-settings {
   margin: 0 14px 10px;
@@ -387,54 +358,6 @@
   flex-shrink: 0;
   white-space: nowrap;
   padding-top: 5px;
-}
-.study-act-chips {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-start;
-  gap: 5px;
-  min-width: 0;
-}
-/* 아이콘 없이 배경색만으로 열림/잠김을 구분합니다 */
-.study-act-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 5px 10px;
-  border-radius: 999px;
-  font-family: inherit;
-  font-size: 11.5px;
-  font-weight: 700;
-  line-height: 1;
-  cursor: pointer;
-  /* 열림 — 학생이 지금 쓸 수 있는 활동 */
-  background: var(--primary-light);
-  border: 1px solid var(--apricot-300);
-  color: var(--primary-dark, #c15a2a);
-}
-/* 잠김 — 아직 열어 주지 않음 */
-.study-act-chip.locked {
-  background: var(--neutral);
-  border-color: var(--border);
-  color: var(--text-sub);
-}
-/* 활동 추가 — 둥근 모서리를 가진 정사각형, 가운데에 + 기호만 */
-.study-act-chip--add {
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  border-radius: 8px;
-  display: grid;
-  place-items: center;
-  font-size: 15px;
-  line-height: 1;
-  background: #fff;
-  border: 1px dashed var(--border);
-  color: var(--text-sub);
-}
-.study-act-chip--add:hover {
-  border-color: var(--primary);
-  border-style: solid;
-  color: var(--primary-dark, #c15a2a);
 }
 
 .study-column-empty {
@@ -696,43 +619,6 @@
 }
 
 /* ── 모둠 활동 보드 ─────────────────────────────────────────── */
-/* 보드 생성: 활동 유형 선택(개별/모둠) */
-.board-acttype-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-.board-acttype-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 3px;
-  padding: 11px 14px;
-  border: 1.5px solid var(--border);
-  border-radius: 10px;
-  background: #fff;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
-  cursor: pointer;
-  text-align: left;
-  transition: border-color 0.15s, background 0.15s;
-}
-/* 단추가 세로 flex라, 아이콘 + 글자를 한 줄로 묶으려면 감싸는 칸이 필요합니다 */
-.board-acttype-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-.board-acttype-btn small {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--text-sub);
-}
-.board-acttype-btn.active {
-  border-color: var(--primary);
-  background: var(--primary-light);
-}
 
 /* 모둠 구성 버튼(보드 패널) */
 .study-sort-btn--group {
