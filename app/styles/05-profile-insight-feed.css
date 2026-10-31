@@ -129,12 +129,7 @@
 }
 
 /* 아이콘 + 글자 버튼 세로 중앙 정렬 일괄 (아이콘이 글자 기준선보다 내려가던 문제) */
-.status-toggle,
-.study-code-btn,
-.joincode-regen,
-.study-form-title-pen,
-.notice-author,
-.kwl-entry-edit-btn {
+.joincode-regen {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -151,7 +146,6 @@
 }
 /* 인라인 SVG 아이콘 기본 정렬 보정 */
 .btn-ghost svg,
-.status-toggle svg,
 .study-chip svg {
   flex-shrink: 0;
 }

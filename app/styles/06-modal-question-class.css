@@ -653,13 +653,6 @@
   gap: 8px;
 }
 
-.attach-image-grid-thumb {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
 /* ===================== 이미지 확대(라이트박스) ===================== */
 .zoomable-img {
   cursor: zoom-in;
