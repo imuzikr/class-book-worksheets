@@ -135,16 +135,6 @@
   cursor: default;
 }
 
-/* 발표 모드·전광판은 성격이 다른 도구(수업 진행)라 줄 오른쪽 끝으로
-   밀어 두어, 왼쪽의 상태·설정 버튼과 눈으로 갈라 놓습니다. */
-.study-project-live-tools {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: auto;
-  flex-shrink: 0;
-}
-
 /* ── 활동 모아보기 — 반 전체의 답을 한 화면에 ── */
 /* 폭은 늘 네 열입니다(한 열 = 260px 최소폭 + 12px 사이 여백 + 좌우 안여백).
    높이는 내용만큼 늘다가 88vh에서 멈추고 그때부터 카드 영역이 안에서

@@ -242,19 +242,6 @@
 .reward-sub { white-space: nowrap; }
 .reward-seat-att b { font-weight: 800; color: var(--text); }
 
-/* 전체 화면의 학생 고르개 — 날짜 이동 왼쪽 */
-.kwlfs-who-select {
-  height: 28px;
-  max-width: 168px;
-  padding: 0 6px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: #fff;
-  font-family: inherit;
-  font-size: 12.5px;
-  color: var(--text);
-}
-
 /* ══════════════════════════════════════════════════════════════
    수업 중 활동 내보내기 — 교사 줄 · 학생 서랍의 활동 탭
    ══════════════════════════════════════════════════════════════ */
