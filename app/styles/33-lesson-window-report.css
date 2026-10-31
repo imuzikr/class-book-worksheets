@@ -1,25 +1,4 @@
 
-/* ===== 수업 관리 창 — 수업 · 프로젝트 탭 ============================
-   탭은 제목 바로 옆(.modal-head가 space-between이라 margin-right:auto로
-   왼쪽에 붙입니다 — 안 그러면 제목과 × 사이 한가운데 떠 있습니다). */
-.modal-lesson .modal-head { align-items: center; }
-/* 탭은 **같은 크기**입니다 — 격자 한 줄에 칸마다 1fr이라 가장 긴 이름의 폭으로
-   모두 맞춰집니다. 탭이 늘어도(책방 독서 활동이 같은 길로 올 예정) CSS를 안
-   고치고 같은 크기로 섭니다. 글자·여백도 기본 알약(12.5px · 5/12)보다 한 단계
-   크게 — 이 창에서 가장 먼저 고르는 자리입니다. */
-.lesson-mgr-tabs {
-  margin-right: auto;
-  display: inline-grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 1fr;
-}
-.lesson-mgr-tabs .dash-view-tab {
-  min-width: 84px;
-  padding: 8px 18px;
-  font-size: 14px;
-  text-align: center;
-}
-
 /* ===== 머리말 줄 스크롤 막대 ==========================================
    양쪽 패널이 열려 가운데가 좁아지면 이 줄들은 접히지 않고 가로로 밀립니다
    (접히면 아래 격자가 통째로 내려가 화면이 출렁입니다). 예전에는 막대를
@@ -139,225 +118,20 @@
    줄기가 '손든 횟수' 하나뿐이라 막대는 모두 같은 색입니다. 사람마다 색을
    주면 색이 곧 순위가 되어, 한 명이 앞지를 때마다 판이 다시 칠해집니다. */
 
-/* 발표 모드 자리표 안의 '궁금한 순간' — 공부방 패널의 제목(17px 세리프)을
-   그대로 두면 이웃한 '🪑 자리표'(13px)보다 커져, 곁딸린 칸이 본 제목을
-   누릅니다. 이 화면에서는 이웃에 맞춥니다. */
-.lesson-seat-panel .reward-tally {
-  margin-top: 14px;
-  padding-top: 12px;
-}
-.lesson-seat-panel .reward-tally .reward-title {
-  /* 이웃한 '🪑 자리표'도 세리프입니다(h2 전역 규칙) — inherit로 두면 혼자
-     본문 글꼴이 되어 나란히 놓았을 때 어긋납니다. 재 보고 맞췄습니다. */
-  font-family: var(--font-serif);
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text);
-}
-.lesson-seat-panel .reward-tally-toggle { padding: 0; }
-.lesson-seat-panel .reward-tally-body { padding: 0; }
-/* 탭 안에 끼워 넣은 모습 — 제목 줄과 접기가 없으므로 위쪽 여백·구분선도
-   필요 없습니다(탭 줄이 이미 경계 노릇을 합니다). */
-.lesson-seat-panel .reward-tally--embedded {
-  margin-top: 0;
-  padding-top: 0;
-  border-top: none;
-  height: 100%;
-}
-/* 목록은 스스로 구르지 않습니다 — 구르는 것은 탭 자리(.lesson-seat-body)
-   하나뿐입니다. 상자 안에 상자가 구르면 어느 쪽을 굴리는지 헷갈리고,
-   320px 상자에 갇히면 명단 절반이 가려집니다. */
-.lesson-seat-panel .reward-tally--embedded .reward-tally-body {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-.lesson-seat-panel .reward-tally--embedded .reward-tally-list {
-  max-height: none;
-  overflow: visible;
-}
-
-/* ── 쏠림 — 과일이 누구에게 갔나 (반 전체 과일 흐름 패널의 머리) ──
-   학생이 아니라 교사의 관찰을 재는 칸입니다. 격자 위에 두어, 판을 읽기
-   전에 '몇 명에게 갔나'를 먼저 보게 합니다. */
-.skew {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 0 0 16px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--border);
-}
-
-/* ── 언제 주나 — 과일을 수업 어느 대목에 주는가 ──
-   쏠림이 '누구에게'라면 이쪽은 '언제'. 셋은 순서가 있는 값이라 한 가지 색의
-   진하기만 씁니다(다른 색을 섞으면 앞·가운데·뒤의 차례가 안 읽힙니다). */
-.rtime {
-  margin: 0 0 16px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--border);
-}
-.rtime-lead {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 4px 8px;
-  margin: 0 0 8px;
-  font-size: 12.5px;
-  color: var(--text-sub);
-}
+/* 아래 세 규칙은 '-title' 꼬리를 동적으로 만드는 코드 패턴과 이름이 겹쳐
+   자동 정리에서 제외해 둔 것입니다(실제 사용처는 확인되지 않음). */
 .rtime-title { font-size: 13px; font-weight: 800; color: var(--text); }
 
-/* ── 변화 — 앞 4주 → 최근 4주 (반 전체 과일 흐름 패널) ── */
-.rdelta {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin: 0 0 16px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--border);
-}
-.rdelta-lead {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 0;
-  font-size: 13px;
-  color: var(--text-sub);
-}
-.rdelta-lead strong { color: var(--dark); }
 .rdelta-head-title {
   font-weight: 800;
   color: var(--dark);
   margin-right: 4px;
 }
-.rdelta-diff {
-  font-style: normal;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-}
-.rdelta-diff.up { color: var(--primary-dark); }
-.rdelta-diff.down { color: var(--danger); }
-/* 계열이 둘이라 범례가 필요합니다 */
-.rdelta-legend {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: auto;
-  font-size: 11.5px;
-}
-.rdelta-key {
-  display: inline-block;
-  width: 14px;
-  height: 9px;
-  border-radius: 2px;
-  margin-left: 8px;
-}
-/* 두 계열을 밝기로만 가르면 색을 못 가리는 눈에서 겹칩니다(측정 1.30:1).
-   앞 4주는 세로 눈금, 최근 4주는 막대 — 모양으로 갈립니다(목록과 같은 모양). */
-.rdelta-key.before {
-  width: 2px;
-  height: 12px;
-  border-radius: 1px;
-  background: var(--text);
-}
-.rdelta-key.after { background: var(--primary-dark); }
-
-.rdelta-groups {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 8px 24px;
-}
-.rdelta-group { display: flex; flex-direction: column; gap: 4px; }
 .rdelta-group-title {
   margin: 0;
   font-size: 11.5px;
   font-weight: 800;
   letter-spacing: 0.03em;
-  color: var(--text-sub);
-}
-.rdelta-list {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.rdelta-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12.5px;
-}
-.rdelta-name {
-  flex: 0 0 58px;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-/* 한 줄 안에 **최근 4주 막대 + 앞 4주 눈금**을 겹쳐 그립니다. 높이를 못
-   박아 앞 4주에 받은 학생이든 아니든 줄이 같은 두께입니다 — 한때 두 막대를
-   위아래로 쌓아, 앞 4주 값이 있는 학생만 줄이 두꺼워지고 채운 막대가 이름
-   줄 아래로 처져 보였습니다(실제 신고). */
-.rdelta-bars {
-  position: relative;
-  flex: 1;
-  min-width: 40px;
-  height: 14px;
-}
-.rdelta-after {
-  position: absolute;
-  left: 0;
-  top: 4px;
-  height: 6px;
-  /* 값이 있는데 너무 짧아 안 보이는 것만 막습니다(0이면 아예 안 그림). */
-  min-width: 3px;
-  border-radius: 0 3px 3px 0;
-  background: var(--primary-dark);
-}
-/* 앞 4주 — 막대보다 위아래로 4px씩 길어 막대 위에서도 빈 바탕에서도
-   끝이 보입니다. 가운데가 그 값의 자리라 폭의 반만큼 왼쪽으로 당깁니다. */
-.rdelta-before {
-  position: absolute;
-  top: 0;
-  width: 2px;
-  height: 14px;
-  margin-left: -1px;
-  border-radius: 1px;
-  background: var(--text);
-}
-/* 줄어든 학생 — 막대 끝에서 앞 4주 눈금까지 잇는 옅은 점선 */
-.rdelta-gap {
-  position: absolute;
-  top: 6px;
-  height: 0;
-  border-top: 2px dotted var(--text-faint);
-}
-/* 결석이 잦아 견주기 어려운 학생 — 숫자를 그대로 읽지 말라는 표시입니다 */
-.rdelta-thin {
-  flex-shrink: 0;
-  padding: 1px 6px;
-  border-radius: 999px;
-  font-size: 10.5px;
-  font-weight: 700;
-  color: var(--text-sub);
-  background: var(--neutral);
-}
-.rdelta-val {
-  flex: 0 0 26px;
-  text-align: right;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-.rdelta-val.up { color: var(--primary-dark); }
-.rdelta-val.down { color: var(--danger); }
-.rdelta-more,
-.rdelta-same {
-  margin: 0;
-  font-size: 11.5px;
   color: var(--text-sub);
 }
 
