@@ -91,3 +91,80 @@ describe("uploads 밖은 전부 차단", () => {
   it("읽기", () => assertFails(getBytes(ref(st(asTeacher(env, "t1")), "other/x.jpg"))));
   it("쓰기", () => assertFails(uploadBytes(ref(st(asStudent(env, "stu1")), "stu1/x.jpg"), img(), jpeg)));
 });
+
+// =============================================================
+// 반 폴더 uploads/{classId}/{uid}/{file} — 이미지 보안 2단계
+//   c1: 담당 t1, 학생 stu1·stu2 / c2: 담당 t2, 학생 other / arch: 보관된 반(담당 t1, 학생 stu1)
+// =============================================================
+describe("반 폴더 uploads/{classId}/{uid}/{file}", () => {
+  const CF = "uploads/c1/stu1/1_photo.jpg";
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, "classes", "c1"), { createdBy: "t1", name: "1반" });
+      await setDoc(doc(db, "classes", "c2"), { createdBy: "t2", name: "2반" });
+      await setDoc(doc(db, "classes", "arch"), { createdBy: "t1", name: "옛 반", archived: true });
+      for (const [u, c] of [["stu1", "c1"], ["stu2", "c1"], ["other", "c2"], ["stu1", "arch"]]) {
+        await setDoc(doc(db, "memberships", `${u}_${c}`), { uid: u, classId: c });
+      }
+      await setDoc(doc(db, "users", "docAdmin"), { role: "admin" });
+      await uploadBytes(ref(ctx.storage(), CF), img(), jpeg);
+      await uploadBytes(ref(ctx.storage(), "uploads/arch/stu1/old.jpg"), img(), jpeg);
+    });
+  });
+
+  describe("읽기(get)", () => {
+    it("본인", () => assertSucceeds(getBytes(ref(st(asStudent(env, "stu1")), CF))));
+    it("같은 반 학생", () => assertSucceeds(getBytes(ref(st(asStudent(env, "stu2")), CF))));
+    it("같은 반 학생 메타데이터", () => assertSucceeds(getMetadata(ref(st(asStudent(env, "stu2")), CF))));
+    it("다른 반 학생은 실패", () => assertFails(getBytes(ref(st(asStudent(env, "other")), CF))));
+    it("어느 반에도 없는 학생은 실패", () => assertFails(getBytes(ref(st(asStudent(env, "nobody")), CF))));
+    it("담당 교사", () => assertSucceeds(getBytes(ref(st(asTeacher(env, "t1")), CF))));
+    it("다른 반 교사는 실패", () => assertFails(getBytes(ref(st(asTeacher(env, "t2")), CF))));
+    it("관리자(클레임)", () => assertSucceeds(getBytes(ref(st(asAdmin(env, "a1")), CF))));
+    it("관리자(users 문서 role)", () => assertSucceeds(getBytes(ref(st(asStudent(env, "docAdmin")), CF))));
+    it("교사 클레임 없이 createdBy만 같은 학생 계정은 실패", async () => {
+      await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), "classes", "c3"), { createdBy: "stuX" }));
+      await env.withSecurityRulesDisabled((ctx) => uploadBytes(ref(ctx.storage(), "uploads/c3/stuY/a.jpg"), img(), jpeg));
+      await assertFails(getBytes(ref(st(asStudent(env, "stuX")), "uploads/c3/stuY/a.jpg")));
+    });
+    it("비로그인은 실패", () => assertFails(getBytes(ref(st(env.unauthenticatedContext()), CF))));
+    it("보관된 반: 소속 학생도 실패", () => assertFails(getBytes(ref(st(asStudent(env, "stu1")), "uploads/arch/stu1/old.jpg"))));
+    it("보관된 반: 담당 교사는 읽기 가능", () => assertSucceeds(getBytes(ref(st(asTeacher(env, "t1")), "uploads/arch/stu1/old.jpg"))));
+    it("없는 반은 실패", () => assertFails(getBytes(ref(st(asStudent(env, "stu1")), "uploads/zzz/stu1/a.jpg"))));
+  });
+
+  describe("목록(list) — 막힘", () => {
+    it("같은 반 학생도 학생 폴더 목록 실패", () => assertFails(listAll(ref(st(asStudent(env, "stu2")), "uploads/c1/stu1"))));
+    it("담당 교사도 실패", () => assertFails(listAll(ref(st(asTeacher(env, "t1")), "uploads/c1/stu1"))));
+    it("관리자도 실패", () => assertFails(listAll(ref(st(asAdmin(env, "a1")), "uploads/c1/stu1"))));
+    // 주의: uploads/{classId} 한 단계 목록은 옛 규칙 uploads/{userId}/{fileName}의
+    // read(로그인한 누구나)에 걸립니다 — 학생 uid 하위 폴더 이름이 보입니다. 7단계에서 옛 규칙과 함께 닫습니다.
+    it("현재: uploads/c1 목록은 옛 규칙 때문에 다른 반 학생도 통과", () =>
+      assertSucceeds(listAll(ref(st(asStudent(env, "other")), "uploads/c1"))));
+  });
+
+  describe("쓰기(create)", () => {
+    const P = "uploads/c1/stu1/2.jpg";
+    it("본인·소속 반·이미지", () => assertSucceeds(uploadBytes(ref(st(asStudent(env, "stu1")), P), img(), jpeg)));
+    it("png·webp도 통과", () => assertSucceeds(uploadBytes(ref(st(asStudent(env, "stu1")), "uploads/c1/stu1/3.webp"), img(), { contentType: "image/webp" })));
+    it("남의 uid 폴더는 실패(같은 반이어도)", () => assertFails(uploadBytes(ref(st(asStudent(env, "stu2")), P), img(), jpeg)));
+    it("소속 아닌 반에 본인 폴더도 실패", () => assertFails(uploadBytes(ref(st(asStudent(env, "other")), "uploads/c1/other/a.jpg"), img(), jpeg)));
+    it("보관된 반은 실패", () => assertFails(uploadBytes(ref(st(asStudent(env, "stu1")), "uploads/arch/stu1/new.jpg"), img(), jpeg)));
+    it("이미지가 아니면 실패(PDF)", () => assertFails(uploadBytes(ref(st(asStudent(env, "stu1")), "uploads/c1/stu1/a.pdf"), img(), { contentType: "application/pdf" })));
+    it("이미지가 아니면 실패(텍스트)", () => assertFails(uploadBytes(ref(st(asStudent(env, "stu1")), "uploads/c1/stu1/a.txt"), img(), { contentType: "text/plain" })));
+    it("6MB 이상 실패", () => assertFails(uploadBytes(ref(st(asStudent(env, "stu1")), "uploads/c1/stu1/big.jpg"), img(6 * 1024 * 1024), jpeg)));
+    it("덮어쓰기 실패", () => assertFails(uploadBytes(ref(st(asStudent(env, "stu1")), CF), img(), jpeg)));
+    it("담당 교사도 학생 폴더엔 실패", () => assertFails(uploadBytes(ref(st(asTeacher(env, "t1")), P), img(), jpeg)));
+    it("비로그인 실패", () => assertFails(uploadBytes(ref(st(env.unauthenticatedContext()), "uploads/c1/anon/a.jpg"), img(), jpeg)));
+  });
+
+  describe("지우기", () => {
+    it("본인", () => assertSucceeds(deleteObject(ref(st(asStudent(env, "stu1")), CF))));
+    it("같은 반 친구는 실패", () => assertFails(deleteObject(ref(st(asStudent(env, "stu2")), CF))));
+    it("담당 교사", () => assertSucceeds(deleteObject(ref(st(asTeacher(env, "t1")), CF))));
+    it("다른 반 교사는 실패", () => assertFails(deleteObject(ref(st(asTeacher(env, "t2")), CF))));
+    it("관리자", () => assertSucceeds(deleteObject(ref(st(asAdmin(env, "a1")), CF))));
+    it("비로그인 실패", () => assertFails(deleteObject(ref(st(env.unauthenticatedContext()), CF))));
+  });
+});

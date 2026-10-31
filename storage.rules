@@ -67,6 +67,47 @@ service firebase.storage {
       allow delete: if request.auth != null && (request.auth.uid == userId || isTeacher());
     }
 
+    // ── 반 폴더 (이미지 보안 2단계) ─────────────────────────────
+    // uploads/{classId}/{userId}/{fileName} — 같은 반 학생·그 반 담당 교사·관리자만.
+    // 판정은 firestore.rules의 isClassMember·ownsClass·isAdmin과 같습니다.
+    //  · 반 소속 : memberships/{uid}_{classId} 문서가 있고, 반이 보관되지 않음
+    //  · 담당 교사: 교사 역할 + classes/{classId}.createdBy == 내 uid
+    //  · 관리자  : role == 'admin' (클레임 또는 users 문서)
+    // 다른 반 교사는 볼 수 없습니다(정책). 목록 보기(list)와 덮어쓰기는 막습니다.
+    function signedIn() { return request.auth != null; }
+    function role() {
+      return claimRole() != '' ? claimRole()
+        : (firestore.exists(/databases/(default)/documents/users/$(request.auth.uid)) ? docRole() : 'student');
+    }
+    function isAdmin() { return signedIn() && role() == 'admin'; }
+    function classDoc(classId) {
+      return firestore.get(/databases/(default)/documents/classes/$(classId)).data;
+    }
+    function ownsClass(classId) {
+      // 교사가 아니면 단락되어 classes 문서를 읽지 않습니다(학생 비용 없음)
+      return signedIn() && (role() == 'teacher' || role() == 'admin')
+             && classDoc(classId).get('createdBy', '') == request.auth.uid;
+    }
+    function isClassMember(classId) {
+      return signedIn()
+             && firestore.exists(/databases/(default)/documents/memberships/$(request.auth.uid + '_' + classId))
+             && classDoc(classId).get('archived', false) != true;
+    }
+
+    match /uploads/{classId}/{userId}/{fileName} {
+      allow get: if isClassMember(classId) || ownsClass(classId) || isAdmin();
+      allow list: if false;
+      // 새 파일만(덮어쓰기 금지) · 본인 폴더 · 그 반 소속 · 이미지 6MB 미만
+      allow create: if signedIn()
+                    && resource == null   // 에뮬레이터 실측: 덮어쓰기도 create로 판정돼 명시합니다
+                    && request.auth.uid == userId
+                    && request.resource.contentType.matches('image/.*')
+                    && request.resource.size < 6 * 1024 * 1024
+                    && isClassMember(classId);
+      allow update: if false;
+      allow delete: if signedIn() && (request.auth.uid == userId || ownsClass(classId) || isAdmin());
+    }
+
     // 그 외 경로는 전부 거부 (기본 차단)
     match /{allPaths=**} {
       allow read, write: if false;
