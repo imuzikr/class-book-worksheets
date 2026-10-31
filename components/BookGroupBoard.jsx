@@ -33,13 +33,9 @@ import { CELL_COUNT, CONSONANT_LABELS, cellKey } from "@/lib/consonants";
 import { barTint, memberLegend, rowColor } from "@/lib/bookColors";
 import GroupComposer from "./GroupComposer";
 import ConsonantCanvas from "./ConsonantCanvas";
-import ProgressStageFilter from "./ProgressStageFilter";
 import "./BookActivityGroupRail.css";
+import "./ProgressStageFilter.css";
 import { IconPeople, IconLock } from "./StatusIcons";
-import { filterProgressCards, getProgressStageStates } from "@/lib/progressStageFilter";
-
-const CONSONANT_STEPS = CONSONANT_LABELS.map((label, index) => ({ key: cellKey(index), label, index }));
-const consonantProgressState = (row, _answers, card) => (card.cellCounts?.[row.index] ?? 0) > 0 ? "done" : "empty";
 
 export default function BookGroupBoard({
   activity,
@@ -525,8 +521,6 @@ function GroupProgress({
   onPickStage = null,
 }) {
   const [wordsByGroup, setWordsByGroup] = useState({});
-  const [filterStage, setFilterStage] = useState("");
-  const [filterState, setFilterState] = useState("");
 
   // 판이 바뀌면 각 판의 낱말을 각각 구독합니다(전체 집계 화면과 같은 방식).
   const idsKey = useMemo(
@@ -567,11 +561,6 @@ function GroupProgress({
     return colorByRow ? out.map((m, i) => ({ ...m, color: rowColor(i) })) : out;
   }, [groups, wordsByGroup, colorByRow]);
 
-  useEffect(() => { setFilterStage(""); setFilterState(""); }, [activity.id, idsKey]);
-  const filterOptions = { rows: CONSONANT_STEPS, cellState: consonantProgressState, stageKey: filterStage, state: filterState };
-  const shownRows = filterProgressCards(rows, filterOptions);
-  const filterStates = getProgressStageStates(rows, filterOptions);
-
   // 학번은 판에 저장된 members가 아니라 반 명단에서 찾습니다 — 예전에 만든
   // 판에는 학번이 없고, 명단 쪽이 늘 최신입니다.
   const sidOf = useMemo(() => {
@@ -603,12 +592,6 @@ function GroupProgress({
           </b>
         )}
       </h3>
-      {rows.length > 0 && <ProgressStageFilter
-        rows={CONSONANT_STEPS} states={filterStates} stageKey={filterStage} state={filterState}
-        onStageChange={(key) => { setFilterStage(key); setFilterState(""); }}
-        onStateChange={setFilterState} total={rows.length} shown={shownRows.length}
-        onReset={() => { setFilterStage(""); setFilterState(""); }}
-      />}
       {attendanceKnown && (
         <p className="book-progress-legend">
           {activityDate} 출석 기준 · 결석 {absentCount}명
@@ -618,8 +601,7 @@ function GroupProgress({
         <p className="dash-side-empty">아직 참여한 학생이 없어요.</p>
       ) : (
         <ul className="dash-progress-list">
-          {shownRows.length === 0 && <li className="dash-side-empty">선택한 단계와 상태에 해당하는 학생이 없어요.</li>}
-          {shownRows.map((m) => {
+          {rows.map((m) => {
             const absent = absentUids.has(m.uid);
             return (
               <li
