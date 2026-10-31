@@ -77,6 +77,8 @@ import {
   CHAT_NOTICE_LIMIT,
 } from "@/lib/messenger";
 import { dateKeyOf, todayDateKey, dateKeyLabel } from "@/lib/dates";
+import SecureHtml from "./SecureHtml";
+import { UploadClassProvider } from "@/lib/uploadClass";
 
 // 쓰는 칸의 서식 — 에디터의 전부에서 체크 줄만 뺌(말은 못 고쳐 켜고 끌 수 없음).
 // 모듈 상수라 렌더마다 새 배열이 생기지 않습니다.
@@ -166,7 +168,16 @@ function Avatar({ text, group = false }) {
   );
 }
 
-export default function MessengerWindow({
+// 이미지 보안 4단계 — 이 화면의 서식 편집기에 붙여 넣는 그림은 이 반 폴더로 올립니다.
+export default function MessengerWindow(props) {
+  return (
+    <UploadClassProvider classId={props.classId}>
+      <MessengerWindowBody {...props} />
+    </UploadClassProvider>
+  );
+}
+
+function MessengerWindowBody({
   classId,
   user,
   isTeacher,
@@ -697,11 +708,11 @@ export default function MessengerWindow({
                       </button>
                     )}
                     {m.html ? (
-                      <div
+                      <SecureHtml
                         data-mid={m.id}
                         className="msgr-bubble msgr-bubble--rich"
                         // 저장할 때 정화했지만 남이 쓴 값이라 그릴 때 한 번 더 거릅니다
-                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(m.html) }}
+                        html={sanitizeHtml(m.html)}
                       />
                     ) : (
                       <div className="msgr-bubble" data-mid={m.id}>

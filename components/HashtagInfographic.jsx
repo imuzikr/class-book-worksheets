@@ -24,6 +24,7 @@ import {
   sourceKindLabel,
 } from "@/lib/hashtag";
 import { ROW_COLORS } from "@/lib/bookColors";
+import SecureImage from "./SecureImage";
 
 function colorVars(i) {
   const c = ROW_COLORS[i % ROW_COLORS.length];
@@ -72,7 +73,7 @@ export default function HashtagInfographic({ slide }) {
         </div>
         {s.image.url && (
           <figure className="htg-figure">
-            <img src={s.image.url} alt={s.image.caption || "대표 이미지"} />
+            <SecureImage src={s.image.url} alt={s.image.caption || "대표 이미지"} />
             {s.image.caption && <figcaption>{s.image.caption}</figcaption>}
           </figure>
         )}

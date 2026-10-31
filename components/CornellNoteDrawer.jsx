@@ -52,6 +52,7 @@ import {
 import CornellNoteViewerModal from "./CornellNoteViewerModal";
 import { richHtml, stripHtml } from "@/lib/html";
 import { IconRecord } from "./StatusIcons";
+import { UploadClassProvider } from "@/lib/uploadClass";
 
 const SAVE_DELAY = 2000; // ms — 이만큼 입력이 없으면 저장
 const OPEN_KEY = "cornell-drawer-open";
@@ -74,7 +75,16 @@ const NOTE_TOOLS = [
   "codeBlock",
 ];
 
-export default function CornellNoteDrawer({
+// 이미지 보안 4단계 — 이 화면의 서식 편집기에 붙여 넣는 그림은 이 반 폴더로 올립니다.
+export default function CornellNoteDrawer(props) {
+  return (
+    <UploadClassProvider classId={props.classId}>
+      <CornellNoteDrawerBody {...props} />
+    </UploadClassProvider>
+  );
+}
+
+function CornellNoteDrawerBody({
   classId,
   user,
   lessonTitle = "",

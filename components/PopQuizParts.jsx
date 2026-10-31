@@ -9,6 +9,7 @@
 import { sanitizeHtml } from "@/lib/html";
 import { quizKindLabel, quizThread, splitQuizDesc } from "@/lib/popQuiz";
 import { formatTime } from "@/lib/store";
+import SecureHtml from "./SecureHtml";
 
 // 물음 — 설명의 ``` 은 코드 블록으로(lib/popQuiz.js의 splitQuizDesc).
 export function PopQuizQuestion({ quiz, compact = false }) {
@@ -63,9 +64,9 @@ export function PopQuizAnswerBody({ answer }) {
     );
   }
   return (
-    <div
+    <SecureHtml
       className="pq-answer pq-answer--text study-card-content"
-      dangerouslySetInnerHTML={{ __html: sanitizeHtml(answer.text ?? "") }}
+      html={sanitizeHtml(answer.text ?? "")}
     />
   );
 }

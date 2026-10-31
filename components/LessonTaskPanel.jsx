@@ -79,6 +79,7 @@ import RichTextEditor from "./RichTextEditor";
 import PyCellModal from "./PyCellModal";
 import { exampleOf } from "@/lib/activityExamples";
 import { tidyCellsHtml } from "@/lib/pyCells";
+import SecureHtml from "./SecureHtml";
 
 const SAVE_DELAY = 1500;
 
@@ -354,9 +355,9 @@ export default function LessonTaskPanel({ task, user, onType }) {
 
       {/* 잠겼거나 모둠이면 읽기만 — 지금까지 쓴 것은 그대로 보입니다. */}
       {!canWrite && written && (
-        <div
+        <SecureHtml
           className="study-card-content ltask-read"
-          dangerouslySetInnerHTML={{ __html: sanitizeHtml(mine) }}
+          html={sanitizeHtml(mine)}
         />
       )}
 
@@ -421,9 +422,9 @@ export default function LessonTaskPanel({ task, user, onType }) {
               {open && cellMode && (
                 <div className="ltask-cells">
                   {text && (stripHtml(text).trim() || htmlHasImage(text)) ? (
-                    <div
+                    <SecureHtml
                       className="study-card-content ltask-cells-peek"
-                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(tidyCellsHtml(text)) }}
+                      html={sanitizeHtml(tidyCellsHtml(text))}
                     />
                   ) : exampleOf(board, acts[i]) ? (
                     <div className="study-mycard-example ltask-cells-peek" aria-label="선생님 예시 코드">

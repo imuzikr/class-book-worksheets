@@ -16,6 +16,8 @@ import WordCloud from "./WordCloud";
 import HashtagSlide from "./HashtagSlide";
 import { IconGroup } from "./StatusIcons";
 import EntryCastCard from "./EntryCastCard";
+import SecureHtml from "./SecureHtml";
+import SecureImage from "./SecureImage";
 
 // 이 화면이 그릴 줄 아는 방송 종류. 새 종류를 추가하면 여기에도 넣어야 합니다.
 const KNOWN_MODES = ["consonant", "entry", "wall", "mindmap", "lesson", "carousel", "single", "hashtag"];
@@ -417,7 +419,7 @@ function PresentationOverlayBody({ broadcast, shrink = "" }) {
         aria-label="선생님 수업 화면"
       >
         {broadcast.imageUrl ? (
-          <img
+          <SecureImage
             className="broadcast-slide-img"
             src={broadcast.imageUrl}
             alt={`슬라이드 ${(broadcast.slideIndex ?? 0) + 1}`}
@@ -471,9 +473,9 @@ function PresentationOverlayBody({ broadcast, shrink = "" }) {
           </div>
           {broadcast.title && <h2 className="present-slide-title">{broadcast.title}</h2>}
           {hasText ? (
-            <div
+            <SecureHtml
               className="present-slide-content study-card-body"
-              dangerouslySetInnerHTML={{ __html: html }}
+              html={html}
             />
           ) : (
             <p className="present-empty">아직 작성한 내용이 없어요.</p>

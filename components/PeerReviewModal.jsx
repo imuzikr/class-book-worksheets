@@ -20,6 +20,7 @@ import { savePeerReview, deletePeerReview, peerReviewId, subscribeMateEntry } fr
 import { richHtml, stripHtml } from "@/lib/html";
 import { MEMBER_COLORS } from "@/lib/bookColors";
 import { IconLock } from "./StatusIcons";
+import SecureHtml from "./SecureHtml";
 
 const HINTS = [
   { key: "감상", text: "어떤 점이 좋았나요? 인상 깊은 대목은?" },
@@ -190,9 +191,9 @@ export default function PeerReviewModal({
                     <IconLock size={15} /> 지금은 {showWork ? "감상 쓰기" : "동료 평가"}가 잠겨 있어요. 선생님이 열어 주면 쓸 수 있고, 쓴 것은 그대로 남아 있습니다.
                   </p>
                   {existing ? (
-                    <div
+                    <SecureHtml
                       className="peer-read"
-                      dangerouslySetInnerHTML={{ __html: richHtml(existing.html) }}
+                      html={richHtml(existing.html)}
                     />
                   ) : (
                     <p className="empty-note">이 친구에게는 아직 쓰지 않았어요.</p>
@@ -268,7 +269,7 @@ export function PeerReviewList({ reviews = [], title = "친구들이 남긴 한 
         {reviews.map((r) => (
           <article key={r.id ?? peerReviewId(r.toUid, r.fromUid)} className="peer-card">
             <header>{r.fromName || "친구"}</header>
-            <div dangerouslySetInnerHTML={{ __html: richHtml(r.html) }} />
+            <SecureHtml html={richHtml(r.html)} />
           </article>
         ))}
       </div>
@@ -314,7 +315,7 @@ export function PeerReviewRow({ reviews = [], mates = [], slots: given = null })
             <article key={s.uid || i} className={`peer-card${s.review ? "" : " is-empty"}`}>
               <header>{s.name}</header>
               {s.review ? (
-                <div dangerouslySetInnerHTML={{ __html: richHtml(s.review.html) }} />
+                <SecureHtml html={richHtml(s.review.html)} />
               ) : (
                 <p className="eov-peer-wait">아직 남기지 않았어요</p>
               )}

@@ -26,6 +26,8 @@
 // =============================================================
 import { useEffect, useMemo, useRef, useState } from "react";
 import { uploadImage } from "@/lib/storageUpload";
+import { hydrateSecureImages, releaseSecureImages, serializeSecureHtml } from "@/lib/secureImage";
+import { useUploadClassId } from "@/lib/uploadClass";
 import { escapeHtml, CHECK_ITEM_SELECTOR, hitCheckBox } from "@/lib/html";
 
 // ───── 툴바 아이콘 (선 스타일 SVG) ─────
@@ -172,6 +174,14 @@ export default function RichTextEditor({
   children, // 툴바에 끼워 넣을 추가 도구 (첨부, 그리기 등)
 }) {
   const ref = useRef(null);
+  // 이미지 보안 4단계 — 그림은 지금 화면의 반 폴더로 올립니다(UploadClassProvider)
+  const uploadClassId = useUploadClassId();
+  // 편집기 안에서 내려받아 보여 주는 반 폴더 그림 — 닫힐 때 돌려줍니다
+  const heldImagesRef = useRef([]);
+  useEffect(() => {
+    const held = heldImagesRef.current;
+    return () => releaseSecureImages(held);
+  }, []);
   const [active, setActive] = useState({}); // 현재 커서 위치의 서식 상태
 
   // 배열을 그대로 deps에 두면 부모가 다시 그릴 때마다 새 배열이라 매번
@@ -184,7 +194,8 @@ export default function RichTextEditor({
   useEffect(() => {
     if (initialHtml && ref.current && !ref.current.innerHTML) {
       ref.current.innerHTML = initialHtml;
-      onChange(initialHtml);
+      hydrateSecureImages(ref.current, heldImagesRef.current);
+      onChange(serializeSecureHtml(ref.current));
     }
     if (autoFocus) ref.current?.focus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -210,7 +221,7 @@ export default function RichTextEditor({
   function exec(command) {
     ref.current?.focus();
     document.execCommand(command, false, null);
-    onChange(ref.current.innerHTML);
+    onChange(serializeSecureHtml(ref.current));
   }
 
   // ── 체크 줄 ─────────────────────────────────────────────────
@@ -236,7 +247,7 @@ export default function RichTextEditor({
       if (allCheck) li.classList.remove("check", "done");
       else li.classList.add("check");
     });
-    onChange(ref.current.innerHTML);
+    onChange(serializeSecureHtml(ref.current));
   }
 
   // ul.checklist(옛 모양) → 그 안의 li마다 check 표시로
@@ -269,7 +280,7 @@ export default function RichTextEditor({
     if (!hitCheckBox(li, e.clientX)) return; // 글자를 누른 것 — 커서만 옮깁니다
     e.preventDefault();
     li.classList.toggle("done");
-    onChange(ref.current.innerHTML);
+    onChange(serializeSecureHtml(ref.current));
   }
 
   function insertCodeBlock() {
@@ -300,7 +311,7 @@ export default function RichTextEditor({
         s2.addRange(r);
       }
     }
-    onChange(ref.current.innerHTML);
+    onChange(serializeSecureHtml(ref.current));
   }
 
   // 방금 넣은 코드 블록 — insertHTML 뒤 커서가 블록 **밖**에 설 수도 있어
@@ -311,11 +322,12 @@ export default function RichTextEditor({
   }
 
   function handleInput() {
-    onChange(ref.current.innerHTML);
+    onChange(serializeSecureHtml(ref.current));
   }
 
   // 본문에 이미지를 붙여넣으면 data URL이 문서에 박혀(1MB 한도·피드 부하) 문제이므로,
-  // Storage에 업로드하고 그 URL로 <img>를 삽입합니다. (데모 모드는 data URL 유지)
+  // Storage 반 폴더에 업로드하고 그 경로 표식(storage:…)으로 <img>를 삽입합니다.
+  // (데모 모드는 data URL 유지)
   async function handlePaste(e) {
     const items = e.clipboardData?.items;
     if (!items) return;
@@ -325,12 +337,16 @@ export default function RichTextEditor({
         const file = it.getAsFile();
         if (!file) return;
         try {
-          const url = await uploadImage(file);
+          const url = await uploadImage(file, { classId: uploadClassId });
           ref.current?.focus();
           document.execCommand("insertHTML", false, `<img src="${url}" alt="">`);
-          onChange(ref.current.innerHTML);
-        } catch {
-          alert("이미지 업로드에 실패했어요. 잠시 후 다시 시도해 주세요.");
+          // 반 폴더 그림(storage:…)은 권한을 확인하며 내려받아 채웁니다
+          hydrateSecureImages(ref.current, heldImagesRef.current);
+          onChange(serializeSecureHtml(ref.current));
+        } catch (err) {
+          alert(err?.code === "upload/no-class"
+            ? "이 화면에서는 그림을 붙여 넣을 수 없어요. 반 화면에서 다시 시도해 주세요."
+            : "이미지 업로드에 실패했어요. 잠시 후 다시 시도해 주세요.");
         }
         return;
       }
@@ -399,7 +415,7 @@ export default function RichTextEditor({
     // 잡을 것 없이 정확하고, Ctrl+Z 한 번으로 되돌아옵니다.
     document.execCommand("delete", false, null);
     document.execCommand("insertUnorderedList", false, null);
-    onChange(ref.current.innerHTML);
+    onChange(serializeSecureHtml(ref.current));
     return true;
   }
 
@@ -573,7 +589,7 @@ export default function RichTextEditor({
     r.collapse(true);
     sel.removeAllRanges();
     sel.addRange(r);
-    onChange(ref.current.innerHTML);
+    onChange(serializeSecureHtml(ref.current));
   }
 
   // 이번 지우기로 코드 블록이 비게 되는가.
@@ -609,7 +625,7 @@ export default function RichTextEditor({
     r.collapse(true);
     sel.removeAllRanges();
     sel.addRange(r);
-    onChange(ref.current.innerHTML);
+    onChange(serializeSecureHtml(ref.current));
   }
 
   function handleKeyDown(e) {
@@ -632,7 +648,7 @@ export default function RichTextEditor({
         if (e.key === "Enter") preNewline(pre);
         else if (e.shiftKey) preOutdent(pre);
         else document.execCommand("insertText", false, PY_INDENT);
-        onChange(ref.current.innerHTML);
+        onChange(serializeSecureHtml(ref.current));
         return;
       }
     }

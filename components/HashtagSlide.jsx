@@ -24,6 +24,7 @@ import {
   normalizeHashtagSlide,
   normalizeHashtagPost,
 } from "@/lib/hashtag";
+import SecureImage from "./SecureImage";
 
 export default function HashtagSlide({ slide, variant = "page", maxCols = 3, progressPost }) {
   // 교사의 단계 바로가기는 빈 칸도 원래 번호대로 남겨야 합니다. 방송과
@@ -69,7 +70,7 @@ export default function HashtagSlide({ slide, variant = "page", maxCols = 3, pro
         </div>
         {s.image.url && (
           <figure className="hts-figure">
-            <img src={s.image.url} alt={s.image.caption || "대표 이미지"} />
+            <SecureImage src={s.image.url} alt={s.image.caption || "대표 이미지"} />
             {s.image.caption && <figcaption>{s.image.caption}</figcaption>}
           </figure>
         )}

@@ -66,6 +66,7 @@ import HashtagComments from "./HashtagComments";
 import ConfirmModal from "./ConfirmModal";
 import WordCloud from "./WordCloud";
 import { IconLock } from "./StatusIcons";
+import SecureImage from "./SecureImage";
 
 const SAVE_DELAY = 900; // ms — 이만큼 입력이 없으면 저장
 
@@ -193,7 +194,7 @@ export default function HashtagForm({ activity, user, onBack }) {
     setImgError("");
     const old = post.image.url;
     try {
-      const url = await uploadImage(file, { maxWidth: 1280, quality: 0.8 });
+      const url = await uploadImage(file, { classId: activity?.classId, maxWidth: 1280, quality: 0.8 });
       setImage({ url });
       if (old && old !== url) deleteUploadedFile(old);
     } catch (e) {
@@ -519,7 +520,7 @@ export default function HashtagForm({ activity, user, onBack }) {
               <div className="ht-image">
                 <div className={`ht-image-box${post.image.url ? " has" : ""}`}>
                   {post.image.url ? (
-                    <img src={post.image.url} alt={post.image.caption || "대표 이미지"} />
+                    <SecureImage src={post.image.url} alt={post.image.caption || "대표 이미지"} />
                   ) : (
                     <span>{imgBusy ? "올리는 중…" : "이미지 없음"}</span>
                   )}

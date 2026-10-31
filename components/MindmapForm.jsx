@@ -122,7 +122,7 @@ export default function MindmapForm({ activity, user, onBack }) {
 
   // 노드 이미지 — 판에는 120×90으로 그리지만 확대(최대 240%)·방송 화면에서
   // 커지므로 폭 640px까지 남깁니다.
-  const uploadNodeImage = (file) => uploadImage(file, { maxWidth: 640, quality: 0.8 });
+  const uploadNodeImage = (file) => uploadImage(file, { classId: activity?.classId, maxWidth: 640, quality: 0.8 });
 
   function pickLayout(key) {
     if (key === map.layout) return;

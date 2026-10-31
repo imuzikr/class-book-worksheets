@@ -36,6 +36,7 @@ import { PyCodeInput } from "./PyCellEditor";
 import PyLineText from "./PyLineText";
 import { PopQuizQuestion, PopQuizStatus, PopQuizThread } from "./PopQuizParts";
 import { IconQuizMemo } from "./StatusIcons";
+import { UploadClassProvider } from "@/lib/uploadClass";
 
 const TEXT_TOOLS = ["bold", "underline", "insertUnorderedList", "insertOrderedList", "codeBlock"];
 
@@ -54,7 +55,16 @@ function writeDraft(quizId, uid, v) {
   } catch { /* 저장소가 막힌 브라우저 — 창을 닫으면 쓰던 글만 사라짐 */ }
 }
 
-export default function PopQuizStudentModal({ classId, user, quiz, answer, onClose }) {
+// 이미지 보안 4단계 — 이 화면의 서식 편집기에 붙여 넣는 그림은 이 반 폴더로 올립니다.
+export default function PopQuizStudentModal(props) {
+  return (
+    <UploadClassProvider classId={props.classId}>
+      <PopQuizStudentModalBody {...props} />
+    </UploadClassProvider>
+  );
+}
+
+function PopQuizStudentModalBody({ classId, user, quiz, answer, onClose }) {
   const uid = user?.uid;
   const open = !!quiz?.open;
   const editable = canSubmitQuiz(quiz, answer);
