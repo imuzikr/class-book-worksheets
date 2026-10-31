@@ -3,15 +3,23 @@ rules_version = '2';
 // =============================================================
 // Firebase Storage 보안 규칙 — class-book-worksheets (책 나눔)
 // -------------------------------------------------------------
-// 첨부 이미지/파일 저장소. 경로: uploads/{uid}/{파일명}
-//  · 읽기 : 로그인한 사용자 (교실 내 공유)
-//  · 쓰기 : 본인 uid 폴더에만 + 용량/타입 제한
-//  · 삭제 : 본인 또는 교사/관리자
-//    (교사가 학생 게시물을 삭제할 때 첨부 파일도 함께 정리하려면
-//     본인 아닌 파일도 지울 수 있어야 합니다. firestore.rules와 동일한
-//     역할 판정 — role 커스텀 클레임 하나)
+// 그림 저장소. 학생·교사 그림은 **반 폴더**에만 올립니다(이미지 보안 1~5단계).
+//   uploads/{classId}/{uid}/{파일명}
+//  · 읽기(get): 같은 반 학생 · 그 반 담당 교사(classes.createdBy) · 관리자
+//               — 다른 반 교사·학생은 못 봅니다. 목록(list)은 아무도 못 봅니다.
+//  · 올리기   : 본인 uid 폴더 · 그 반 소속(또는 담당 교사) · 이미지 6MB 미만 · 덮어쓰기 금지
+//  · 지우기   : 본인 · 담당 교사 · 관리자
+// Firestore 문서에는 다운로드 URL 대신 "storage:uploads/…" 경로만 저장하고,
+// 화면(SecureImage/SecureHtml)이 권한을 확인하며 내려받아 보여 줍니다.
+//
+// 옛 개인 폴더 uploads/{uid}/{파일명}는 닫혔습니다(5단계) — 새로 올릴 수 없고
+// 목록도 못 봅니다. 앱에 이 폴더로 올리는 코드(수업 자료 PDF 포함)는 없습니다.
+//
+// 이 규칙은 반 소속·역할을 Firestore(memberships·classes·users)에서 읽습니다.
 // 배포:  Firebase 콘솔 → Storage → 규칙 탭에 붙여넣고 게시
 //        (또는 firebase deploy --only storage)
+//        처음 게시할 때 "Firestore 접근 권한" 연결을 물으면 허용해야 합니다
+//        — 거부하면 반 폴더 그림이 전부 막힙니다.
 // =============================================================
 service firebase.storage {
   match /b/{bucket}/o {
@@ -20,54 +28,24 @@ service firebase.storage {
     function docRole() {
       return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.get('role', 'student');
     }
-    function isTeacher() {
-      return request.auth != null && (
-        claimRole() == 'teacher' || claimRole() == 'admin'
-        || docRole() == 'teacher' || docRole() == 'admin'
-      );
-    }
 
+    // ── 옛 개인 폴더 (이미지 보안 5단계에서 닫음) ─────────────────
+    // uploads/{userId}/{fileName}. 그림은 이제 반 폴더만 씁니다.
+    //  · 쓰기: 전부 거부 — 앱에 이 폴더로 올리는 곳이 없습니다(수업 자료
+    //          업로드 코드도 정리 커밋 cb4d752에서 걷혔습니다).
+    //  · list: 거부 — 이 match가 uploads/{classId} 한 단계 목록에도 걸려
+    //          반 폴더의 학생 uid가 드러나던 틈을 막습니다.
+    //  · get : 로그인 사용자(저장된 파일이 없어 사실상 쓰이지 않음)
+    //  · 지우기: 본인 또는 관리자(남은 파일 정리용)
     match /uploads/{userId}/{fileName} {
-      // 로그인하면 읽기 가능 (다운로드 URL은 토큰 기반이라 공유 목적엔 충분)
-      allow read: if request.auth != null;
-
-      // 본인 폴더에만 업로드 + 용량/타입 제한.
-      //  · 이미지  : 6MB
-      //  · 문서    : 20MB — PDF·프레젠테이션·문서·엑셀. 수업 자료로 나눠 주는
-      //              PDF와 PPTX는 1MB로는 어림도 없어 따로 칸을 뒀습니다.
-      //  · 그 밖의 작은 파일: 1MB (텍스트/코드·CSV). 실행파일·영상·오디오 등 차단.
-      //    (.py 등은 브라우저가 octet-stream으로 올리기도 해서 함께 허용)
-      allow write: if request.auth != null
-                   && request.auth.uid == userId
-                   && (
-                        (request.resource.contentType.matches('image/.*')
-                          && request.resource.size < 6 * 1024 * 1024)
-                        || (
-                          request.resource.size < 20 * 1024 * 1024
-                          && (
-                            request.resource.contentType == 'application/pdf'
-                            || request.resource.contentType == 'application/vnd.ms-excel'
-                            || request.resource.contentType == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-                            || request.resource.contentType == 'application/vnd.ms-powerpoint'
-                            || request.resource.contentType == 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
-                            || request.resource.contentType == 'application/msword'
-                            || request.resource.contentType == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-                          )
-                        )
-                        || (
-                          request.resource.size < 1 * 1024 * 1024
-                          && (
-                            request.resource.contentType.matches('text/.*')
-                            || request.resource.contentType == 'application/octet-stream'
-                          )
-                        )
-                      );
-
-      // 삭제는 본인 또는 교사/관리자(게시물 삭제 시 첨부 파일 정리 목적)
-      allow delete: if request.auth != null && (request.auth.uid == userId || isTeacher());
+      allow get: if request.auth != null;
+      allow list: if false;
+      allow create, update: if false;
+      allow delete: if request.auth != null
+                    && (request.auth.uid == userId || isAdmin());
     }
 
-    // ── 반 폴더 (이미지 보안 2단계) ─────────────────────────────
+    // ── 반 폴더 (이미지 보안 2·4단계) ─────────────────────────────
     // uploads/{classId}/{userId}/{fileName} — 같은 반 학생·그 반 담당 교사·관리자만.
     // 판정은 firestore.rules의 isClassMember·ownsClass·isAdmin과 같습니다.
     //  · 반 소속 : memberships/{uid}_{classId} 문서가 있고, 반이 보관되지 않음
