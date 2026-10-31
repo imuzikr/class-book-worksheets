@@ -1,11 +1,4 @@
 
-/* ── 프로젝트 상세 — 개인 카드 그리드 ── */
-.study-project-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 12px;
-  align-content: start;
-}
 
 /* 카드 */
 

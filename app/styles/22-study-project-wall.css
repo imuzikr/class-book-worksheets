@@ -5,113 +5,8 @@
    study-cols-wrap이 overflow:hidden인 세로 플렉스라, 아래 두 화면이
    각각 남은 높이를 채우고 스스로 세로 스크롤합니다(제목 줄은 고정).
    ============================================================= */
-.study-project-dash,
-.study-project-view {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  scrollbar-gutter: stable;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding-bottom: 24px;
-}
-
-/* ── 대시보드 맨 위 — 왼쪽 프로젝트 목록 · 오른쪽 '＋ 프로젝트 가져오기' ──
-   둘이 같은 높이에서 시작합니다(align-items: start). 안내 문구 줄은 걷었습니다.
-   768px 아래에서는 단추가 목록 위로 올라가 한 줄을 차지합니다. */
-.study-project-dash-top {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
-  align-items: start;
-}
-.study-project-dash-top.has-import {
-  grid-template-columns: minmax(0, 1fr) auto;
-}
-.study-project-dash-top > .empty-note { margin: 0; }
-.study-project-import { white-space: nowrap; }
-@media (max-width: 768px) {
-  .study-project-dash-top.has-import { grid-template-columns: minmax(0, 1fr); }
-  .study-project-dash-top .study-project-import { order: -1; justify-self: end; }
-}
-
-/* ── 수업 자료(선생님 보드) — 프로젝트 그리드 위에 넓은 한 줄 ── */
-.study-notice-card {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  width: 100%;
-  padding: 14px 16px;
-  background: #fffbf0;
-  border: 1px solid #e8d9b8;
-  border-radius: var(--radius);
-  font-family: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
-}
-.study-notice-card:hover {
-  border-color: var(--primary);
-  background: #fff7e6;
-}
-.study-notice-icon {
-  font-size: 20px;
-  flex-shrink: 0;
-}
-.study-notice-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.study-notice-main strong {
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--dark);
-}
-.study-notice-desc {
-  font-size: 12.5px;
-  color: var(--text-sub);
-}
-.study-notice-count {
-  flex-shrink: 0;
-  padding: 4px 11px;
-  border-radius: 999px;
-  background: #fff;
-  border: 1px solid #e8d9b8;
-  font-size: 12px;
-  font-weight: 800;
-  color: var(--primary-dark);
-}
 
 /* ── 프로젝트 카드 그리드 ── */
-.study-project-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  grid-auto-rows: 1fr;
-  gap: 14px;
-}
-.study-project-card {
-  display: flex;
-  /* 세로로 쌓습니다 — 아래에 '편집' 줄(.study-project-actions)이 붙기
-     때문입니다. 여는 단추가 `flex: 1`이라 학생 카드(그 줄이 없는 카드)의
-     모습은 가로였을 때와 그대로입니다. */
-  flex-direction: column;
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-soft);
-  overflow: hidden;
-  transition: border-color 0.15s, transform 0.15s, opacity 0.15s;
-}
-/* 끌어서 순서 바꾸기 — 잡은 카드는 흐리게, 놓을 자리는 테두리로 표시 */
-.study-project-card.dragging { opacity: 0.45; }
-.study-project-card.drag-over {
-  border-color: var(--primary);
-  transform: translateY(-2px);
-}
 .study-project-open {
   flex: 1;
   min-width: 0;
@@ -128,69 +23,7 @@
   transition: background 0.15s;
 }
 .study-project-open:hover { background: var(--primary-light); }
-/* 카드 아래 '편집' 줄 (교사만) — 책방 활동 카드의 같은 줄
-   (`.book-activity-actions`)과 **같은 모양**입니다: 여는 단추 아래에 선으로
-   갈라 오른쪽 끝에 답니다. 카드 전체가 '열기' 버튼이라 그 안에 단추를 둘 수
-   없어(버튼 안의 버튼) 형제로 세웁니다. */
-.study-project-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
-  padding: 8px 12px;
-  border-top: 1px solid var(--border);
-  background: var(--bg-deep);
-}
-.study-project-actions .btn-ghost { padding: 4px 10px; font-size: 12px; }
 
-/* ── 프로젝트 편집 창 (StudyProjectEditModal) ──
-   만들기 창은 빈 칸에 placeholder로 무슨 칸인지 말하지만, 여기는 값이 이미
-   차 있는 자리라 placeholder가 안 보입니다 — 이름표를 답니다. */
-.study-edit-field {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-.study-edit-label {
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--text-sub);
-}
-/* 이름표 옆 딸림글 — 읽을 것이 아니라 참고할 것이라 한 단계 옅게 */
-.study-edit-label small {
-  margin-left: 6px;
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--text-faint);
-}
-.study-edit-note {
-  margin: 0;
-  font-size: 12px;
-  color: var(--text-faint);
-  line-height: 1.5;
-}
-/* 편집 창의 삭제 줄 — 선으로 갈라 저장·취소와 떨어뜨립니다 */
-.study-edit-danger {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
-}
-.study-edit-danger .study-trash-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-.study-edit-danger > span {
-  font-size: 12px;
-  color: var(--text-faint);
-}
-.study-project-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
 .study-project-title {
   width: 100%;
   min-height: calc(16px * 1.4 * 2);
@@ -200,17 +33,6 @@
   color: var(--text);
   word-break: keep-all;
   overflow-wrap: anywhere;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-/* 안내는 2줄까지 — 카드 높이가 프로젝트마다 들쭉날쭉해지지 않게 자리를 고정 */
-.study-project-desc {
-  font-size: 12.5px;
-  line-height: 1.5;
-  color: var(--text-sub);
-  min-height: calc(12.5px * 1.5 * 2);
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -271,73 +93,6 @@
   border-color: var(--border);
   color: var(--text-sub);
 }
-.study-project-badge.lock {
-  background: #f6e7e3;
-  border-color: #e6c3b8;
-  color: #a4553a;
-}
-
-/* ── 프로젝트 상세 — 머리말 ── */
-.study-project-head {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  flex-wrap: wrap;
-  flex-shrink: 0;
-}
-/* 제목 뒤의 '프로젝트 목록으로' — 21px 세리프 제목과 같은 줄에 섭니다.
-   4px/12px으로 두었더니 제목 옆에서 납작한 띠처럼 보였습니다(제목 줄은
-   28px인데 버튼은 22px). 세로 여백을 키워 제목 줄 높이에 맞춥니다. */
-.study-project-back {
-  flex-shrink: 0;
-  padding: 6px 14px;
-  font-size: 13px;
-  font-weight: 700;
-  border-radius: 999px;
-}
-/* 뒤로 가기 · 제목 · (학생) 배지 / (교사) 도구를 한 줄에 */
-.study-project-head-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-/* 자리가 모자랄 때 줄어드는 쪽은 제목뿐입니다 — 좁은 화면에서 제목이
-   버티면 오른쪽 도구(발표·전광판·설정)가 화면 밖으로 밀려나 누를 수
-   없게 됩니다(실제로 390px에서 그랬습니다). 그래서 제목만 flex-grow를
-   갖고, 뒤로 가기와 도구는 제 폭을 지킵니다. */
-.study-project-head-main h2 {
-  /* 늘어나지는 않고 줄어들기만 합니다 — 늘어나게 두면 제목 상자가 남는
-     자리를 다 차지해, 바로 뒤에 붙어야 할 '프로젝트 목록' 버튼이 글자와
-     한참 떨어진 오른쪽 끝으로 밀립니다. */
-  flex: 0 1 auto;
-  min-width: 60px;
-  font-family: var(--font-serif);
-  font-size: 21px;
-  color: var(--dark);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-/* 배지·도구 묶음 — 남는 자리를 밀어내 오른쪽 끝에 붙습니다.
-   학생 배지는 여러 개라 좁아지면 줄바꿈으로 접히게 두지만, 교사 도구는
-   크기가 정해진 버튼 세 개라 줄어들 수 없습니다. 그때 이 상자가 내용보다
-   작아지면 버튼이 상자 밖(제목 위)으로 삐져나오므로, 도구가 들어 있는
-   경우에만 줄어들지 않게 못박습니다. */
-.study-project-head-badges {
-  flex: 0 1 auto;
-  min-width: 0;
-  margin-left: auto;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-}
-.study-project-head-badges:has(.study-project-live-tools) {
-  flex: 0 0 auto;
-}
 
 /* ── 상태 전환 — 토글 하나 대신 상태마다 버튼을 따로 ──
    예전엔 버튼 하나를 눌러 상태를 뒤집는 방식이라, 지금 보이는 글자가
@@ -389,26 +144,6 @@
   margin-left: auto;
   flex-shrink: 0;
 }
-
-/* 활동별 진척도 줄의 '모아보기' — 그 활동의 답을 한 화면에 */
-.study-board-act-wall {
-  flex-shrink: 0;
-  padding: 2px 8px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: #fff;
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-sub);
-  cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
-}
-.study-board-act-wall:hover:not(:disabled) {
-  border-color: var(--primary);
-  color: var(--primary-dark);
-}
-.study-board-act-wall:disabled { opacity: 0.4; cursor: default; }
 
 /* ── 활동 모아보기 — 반 전체의 답을 한 화면에 ── */
 /* 폭은 늘 네 열입니다(한 열 = 260px 최소폭 + 12px 사이 여백 + 좌우 안여백).
@@ -753,46 +488,3 @@ button.wall-who-btn.open strong { color: var(--primary-dark); }
   color: #f0ece4;
 }
 
-/* ── 보드 설정 — 톱니바퀴 버튼과 펼침 패널 ──
-   설정 버튼을 다시 둔 이유: 상태·관리 버튼을 모두 머리말 한 줄에 늘어놓으니
-   제목보다 줄이 길어져, 정작 무슨 프로젝트인지가 묻혔습니다. 교사 머리말에는
-   도구(발표·전광판·설정)만 남기고, 상태 배지와 설정은 이 패널 안으로
-   들어갔습니다. 버튼 모양은 예전 그대로 — 배경 없는 동그란 톱니바퀴. */
-.study-board-panel {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 18px 28px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--bg-deep);
-  flex-shrink: 0;
-}
-.study-board-section {
-  flex: 1;
-  min-width: 280px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-/* 왼쪽 칸 — 현황과 설정을 세로로 쌓습니다. 활동(오른쪽)은 칩 줄과 목록이
-   세로로 길어, 예전처럼 현황 아래에 두면 설정이 한참 밀려 내려가 같은
-   패널 안에서 또 스크롤해야 했습니다. */
-.study-board-col {
-  flex: 1 1 340px;
-  min-width: 300px;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-/* 오른쪽 칸 — 활동. 칩 이름이 길어 왼쪽보다 조금 더 넓게 잡습니다. */
-.study-board-acts-col {
-  flex: 1 1 380px;
-  min-width: 300px;
-}
-.study-board-section-title {
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  color: var(--text-sub);
-}
