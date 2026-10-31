@@ -308,13 +308,6 @@
   min-height: 38px;
 }
 
-.student-edit-emoji-btn.readonly {
-  cursor: default;
-  border-style: solid;
-  border-color: var(--border);
-  pointer-events: none;
-}
-
 /* ── 반 편성 (StudentEditModal) ────────────────────────────────
    위 프로필 칸들과 성격이 다릅니다 — 누르는 즉시 저장되므로 '저장/취소'
    줄 위에 선으로 갈라 둡니다. 아래 '탈퇴 처리'와 같은 방식의 구분선이라,
