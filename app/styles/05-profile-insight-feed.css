@@ -136,17 +136,8 @@
   gap: 5px;
   line-height: 1;
 }
-/* 공부방 설정 칩 — '복제·삭제'는 전체 폭을 유지하므로 inline-flex가 아닌 flex */
-.study-chip {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  line-height: 1.1;
-}
 /* 인라인 SVG 아이콘 기본 정렬 보정 */
-.btn-ghost svg,
-.study-chip svg {
+.btn-ghost svg {
   flex-shrink: 0;
 }
 

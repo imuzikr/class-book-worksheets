@@ -96,36 +96,6 @@
   margin-top: 12px;
 }
 
-.study-chip {
-  border: 1px solid var(--border);
-  background: #fff;
-  border-radius: 999px;
-  padding: 4px 10px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text);
-  cursor: pointer;
-}
-
-.study-chip:hover {
-  background: var(--primary-light);
-}
-
-.study-chip.open {
-  background: var(--primary-light);
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
-.study-chip.ghost {
-  color: var(--text-sub);
-}
-
-.study-chip.danger {
-  color: #c0392b;
-  border-color: #e6b8b2;
-}
-
 /* 관련 질문 아코디언 */
 .study-related {
   margin-top: 10px;

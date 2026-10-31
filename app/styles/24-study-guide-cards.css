@@ -1,35 +1,3 @@
-/* '안내' 배지 — 교사가 깔아 둔 예시·자료 카드. 학생 카드 격자에서 이름
-   ('선생님')만으로는 '선생님이 카드를 냈다'로 읽혀 실제로 오류 신고가
-   있었습니다. 집계에서 빠지는 것과 **화면에서 그렇게 보이는 것은 별개**라
-   한 글자 자리를 내어 적어 둡니다.
-   눈에 띄되 튀지 않게 연한 회색 알약입니다 — 상태를 말하는 자리가 아니라
-   '이건 학생 것이 아니다'만 알리는 이름표라, 살구색(강조)을 쓰지 않습니다.
-   시각(`.study-card-time`) 왼쪽에 서므로 `flex-shrink: 0`으로 붙들어
-   둡니다(이름이 길 때 이 배지부터 찌그러지지 않게). */
-.study-card-guide {
-  flex-shrink: 0;
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: var(--neutral);
-  color: var(--text-sub);
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1.45;
-}
-.study-card-meta-group {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  line-height: 1.35;
-}
-.study-card-meta-group strong { font-size: 14px; color: var(--text); }
-.study-card-meta-members {
-  font-size: 11.5px;
-  color: var(--text-sub);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 
 /* 모둠 구성 모달 */
 .modal.modal-group-composer {
@@ -159,7 +127,6 @@
   background: var(--primary-light);
   color: var(--primary);
 }
-.gc-slot-check { font-size: 15px; }
 .gc-size-btn {
   display: flex;
   align-items: baseline;
@@ -401,39 +368,6 @@
 }
 .study-column-desc--editable:hover {
   background: var(--primary-light);
-}
-
-/* 공부중 전광판 열기 — 프로젝트 머리말 세 단추 중 맨 앞의 알약.
-   카드 화면의 같은 단추(.study-progress-btn)와 같은 모양이고, 높이만
-   옆 원형 단추(▶ · ⚙, 26px)에 맞춥니다. 모바일은 .study-chip의
-   min-height 34px가 이깁니다(옆 단추들도 34px). */
-.study-project-live-tools .study-chip.study-progress-btn {
-  height: 26px;
-  padding: 0 10px;
-  flex-shrink: 0;
-}
-
-/* + 토글 버튼 — 열릴 때 45° 회전해서 × 형태 */
-.study-panel-toggle {
-  width: 26px;
-  height: 26px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  display: grid;
-  place-items: center;
-  border-radius: 6px;
-  transition: transform 0.25s ease, background 0.15s;
-}
-.study-panel-toggle:hover {
-  background: rgba(0, 0, 0, 0.06);
-}
-/* 열려 있음을 색으로 — 예전 '+' 아이콘용 45° 회전은 톱니바퀴엔 어색해
-   작은 각도만 돌리고 색으로 상태를 알립니다. */
-.study-panel-toggle.open {
-  transform: rotate(30deg);
-  color: var(--primary-dark);
 }
 
 .activity-dash-no {
