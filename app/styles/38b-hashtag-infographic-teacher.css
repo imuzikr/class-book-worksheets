@@ -1,0 +1,368 @@
+/* ── 인포그래픽 장표 — 친구 해시태그 보기(HashtagInfographic) ──
+   칠판 슬라이드(.hts)와 같은 자료를 포스터 한 장으로 그립니다. 접두사를
+   따로(.htg) 둔 까닭: 슬라이드는 방송·교사 화면·수업 화면 창이 함께 쓰는
+   뼈대라, 여기 모양이 그리로 새면 칠판 글자 크기 규칙과 부딪힙니다.
+   카드·칩의 색은 컴포넌트가 줄 차례로 넘깁니다(--c-bg · --c-bd · --c-tx,
+   lib/bookColors.js의 ROW_COLORS). 좁은 자리에서 접는 기준은 창이 아니라
+   이 장표의 폭입니다(@container). */
+.htg {
+  container-type: inline-size;
+  max-width: 1100px;
+  margin: 0 auto;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 12px 32px rgba(58, 49, 46, 0.08);
+  overflow: hidden;
+  color: var(--text);
+}
+.htg-head {
+  display: flex;
+  gap: 24px;
+  align-items: stretch;
+  padding: 28px 32px 24px;
+  background:
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--primary) 22%, transparent) 0, transparent 55%),
+    var(--primary-light);
+  border-bottom: 1px solid color-mix(in srgb, var(--primary) 25%, #fff);
+}
+.htg-head-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.htg-kicker {
+  margin: 0 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--primary-dark);
+}
+.htg-hash {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 14px;
+}
+.htg-title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.3;
+  color: var(--dark);
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+.htg-meta { margin: 10px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-size: 13.5px; color: var(--text-sub); }
+.htg-kind {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--dark);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+.htg-author { font-weight: 600; color: var(--text); }
+.htg-writer { display: inline-flex; align-items: baseline; gap: 5px; font-weight: 800; color: var(--dark); }
+.htg-writer em { font-style: normal; font-size: 11.5px; font-weight: 700; color: var(--text-sub); }
+.htg-stats {
+  margin: auto 0 0;
+  padding-top: 18px;
+  display: flex;
+  gap: 10px;
+}
+.htg-stats > div {
+  flex: 0 0 auto;
+  min-width: 96px;
+  padding: 8px 14px 9px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, #fff);
+}
+.htg-stats dt { font-size: 11.5px; font-weight: 700; color: var(--text-sub); }
+.htg-stats dd {
+  margin: 1px 0 0;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--primary-dark);
+  font-variant-numeric: tabular-nums;
+}
+.htg-figure { flex: 0 0 auto; width: 260px; margin: 0; display: flex; flex-direction: column; }
+.htg-figure img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 160px;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 3px solid #fff;
+  box-shadow: 0 4px 14px rgba(58, 49, 46, 0.12);
+}
+.htg-figure figcaption { margin-top: 6px; font-size: 12px; color: var(--text-sub); text-align: center; }
+.htg-empty { margin: 0; padding: 28px 32px; font-size: 14px; color: var(--text-faint); }
+
+/* 리본 — 찾은 태그를 한 줄로. 칩과 아래 카드가 같은 색·같은 번호입니다. */
+.htg-ribbon {
+  list-style: none;
+  margin: 0;
+  padding: 16px 32px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-bottom: 1px dashed var(--border);
+}
+.htg-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 12px 5px;
+  border-radius: 999px;
+  background: var(--c-bg);
+  border: 1px solid var(--c-bd);
+  color: var(--c-tx);
+  font-size: 14.5px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+.htg-chip b { font-size: 11px; font-weight: 800; opacity: 0.7; font-variant-numeric: tabular-nums; }
+
+.htg-grid {
+  list-style: none;
+  margin: 0;
+  padding: 20px 32px 24px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.htg-grid.one { grid-template-columns: minmax(0, 1fr); }
+/* 카드가 홀수면 마지막 한 장이 줄을 다 씁니다 — 오른쪽 아래가 비면 장표가
+   덜 끝난 것처럼 보입니다. */
+.htg-grid > .htg-card:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.htg-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px 16px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--c-bg) 40%, #fff);
+  border: 1px solid color-mix(in srgb, var(--c-bd) 45%, #fff);
+  min-width: 0;
+}
+.htg-card-head { display: flex; align-items: center; gap: 10px; }
+.htg-no {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--c-bd);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.htg-card-tag { margin: 0; font-size: 19px; font-weight: 800; color: var(--c-tx); overflow-wrap: anywhere; }
+.htg-card-tag.empty { color: var(--text-faint); }
+.htg-insight {
+  margin: 0;
+  padding: 10px 12px 11px;
+  border-radius: 10px;
+  background: #fff;
+  font-size: 14.5px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.htg-insight b {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--c-tx);
+}
+.htg-blank { margin: 0; font-size: 13px; font-style: italic; color: var(--text-faint); }
+.htg-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 32px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-deep);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-sub);
+}
+.htg-foot-mark { color: var(--primary-dark); letter-spacing: 0.02em; }
+@container (max-width: 720px) {
+  .htg-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@container (max-width: 600px) {
+  .htg-head { flex-direction: column; padding: 22px 18px 18px; }
+  .htg-title { font-size: 24px; }
+  .htg-figure { width: 100%; }
+  .htg-stats > div { flex: 1 1 0; min-width: 0; }
+  .htg-ribbon, .htg-grid { padding-left: 18px; padding-right: 18px; }
+  .htg-foot { padding-left: 18px; padding-right: 18px; }
+}
+
+/* ── 댓글 ── */
+.htc {
+  margin-top: 18px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px 18px;
+}
+.htc-head { margin: 0 0 10px; font-size: 15px; font-weight: 800; color: var(--dark); }
+.htc-head b { color: var(--primary-dark); margin-left: 2px; }
+.htc-empty, .htc-closed { margin: 0; font-size: 13px; color: var(--text-sub); }
+.htc-closed { margin-top: 10px; }
+.htc-list { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.htc-item {
+  padding: 10px 12px;
+  border-radius: var(--radius-btn);
+  background: var(--bg);
+  border: 1px solid transparent;
+}
+.htc-item.teacher { background: #fff8f2; }
+.htc-item.fresh { border-color: #f0cdb8; }
+.htc-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; margin-bottom: 4px; }
+.htc-kind, .htc-kind-btn {
+  font-size: 11.5px;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 2px 9px;
+  line-height: 1.5;
+}
+.htc-kind--like { background: #fdecef; color: #b8475f; }
+.htc-kind--ask { background: #eaf2fd; color: #3f6fa8; }
+.htc-kind--suggest { background: #e8f7ed; color: #2f7a4b; }
+.htc-who { font-size: 13px; color: var(--dark); }
+.htc-when { font-size: 12px; color: var(--text-faint); }
+.htc-new { font-size: 11px; font-weight: 800; color: #c04a3f; }
+.htc-del {
+  margin-left: auto;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+.htc-del:hover { color: var(--danger); }
+.htc-text { margin: 0; font-size: 14px; line-height: 1.65; white-space: pre-wrap; color: var(--text); }
+.htc-form { display: flex; flex-direction: column; gap: 8px; }
+.htc-kinds { display: flex; gap: 6px; }
+.htc-kind-btn {
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  padding: 5px 12px;
+  font-size: 12.5px;
+  opacity: 0.55;
+}
+.htc-kind-btn.on { opacity: 1; border-color: currentColor; }
+.htc-form textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-btn);
+  padding: 9px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.6;
+  resize: vertical;
+}
+.htc-form-foot { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+.htc-count { font-size: 12px; color: var(--text-faint); }
+
+/* ── 친구 보고서 ── */
+.ht-friends { display: flex; flex-direction: column; gap: 18px; }
+.ht-cloud h3, .ht-teacher-cloud h3 { margin: 0 0 8px; font-size: 15px; font-weight: 800; color: var(--dark); }
+/* 학생의 '친구 해시태그' 구름 — 화면 높이를 따라 키웁니다. 260px 띠에 가둬
+   두었을 때는 낱말 몇 개가 그 띠를 꽉 채워 위아래가 잘린 듯 답답했고, 정작
+   아래 절반은 비어 있었습니다(선생님 지적 — 교사 화면 구름과 같은 문제).
+   **`flex: none`이 있어야 height가 듣습니다** — `.cloud-box`의 `flex: 1`은
+   기준 폭 0이라, 높이가 정해지지 않은 부모 안에서는 height를 버리고
+   min-height로 내려앉았습니다(실측 260 → 240px). 폼 페이지는 통째로 구르는
+   자리라 '남는 높이'가 따로 없어 창 높이(vh)로 잡고, 아래 친구 목록이 한참
+   밀리지 않게 천장을 둡니다. */
+.ht-cloud .cloud-box { flex: none; min-height: 0; height: clamp(300px, 56vh, 580px); }
+.ht-friend-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+.ht-friend-card {
+  width: 100%;
+  height: 100%;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card-bg);
+  font-family: inherit;
+}
+.ht-friend-card:hover { border-color: var(--primary); }
+.ht-friend-card strong { font-family: var(--font-serif); font-size: 16px; line-height: 1.4; color: var(--dark); }
+.ht-friend-who { font-size: 12.5px; color: var(--text-sub); }
+.ht-friend-tags { display: flex; flex-wrap: wrap; gap: 4px 8px; }
+.ht-friend-tags em { font-style: normal; font-size: 12px; font-weight: 700; color: var(--primary-dark); }
+.ht-friend-meta { margin-top: auto; display: flex; gap: 10px; font-size: 12px; color: var(--text-sub); }
+.ht-friend-meta b { color: var(--primary-dark); }
+.ht-friend-meta b.full { color: #2f7a4b; }
+.ht-friend-back { margin-bottom: 12px; }
+
+/* ── 교사 화면 ── */
+.ht-publish.on { background: var(--primary); color: #fff; border-color: var(--primary); }
+/* 반의 해시태그 구름은 가운데 칸의 남는 높이를 다 씁니다 — 낱말이 몇 개뿐이어도
+   판은 줄지 않습니다. 높이를 못 박았을 때(240px)는 판 아래가 통째로 비어
+   구름이 화면 위쪽 띠에 갇혀 보였습니다. 판이 커지면 lib/wordCloud.js가 글자도
+   함께 키우므로(천장 96px) 따로 손댈 것이 없습니다. */
+.ht-teacher-cloud {
+  margin-top: 14px;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.ht-teacher-cloud .cloud-box { min-height: 260px; }
+
+@media (max-width: 768px) {
+  .ht-grid2 { grid-template-columns: 1fr; }
+  .ht-image { flex-direction: column; }
+  .ht-image-box { flex: none; width: 100%; }
+  .ht-entries { grid-template-columns: 1fr; }
+  .hts--page { padding: 18px 16px 20px; }
+  .hts-head { flex-direction: column; }
+  .hts-figure { width: 100%; max-width: 320px; }
+  .ht-sec { padding: 14px 14px 16px; }
+}
+.ht-pub-on { background: #e8f7ed !important; color: #2f7a4b !important; }
+.ht-card-new {
+  align-self: flex-start;
+  font-size: 12px;
+  font-weight: 800;
+  color: #fff;
+  background: #c04a3f;
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+/* 가운데 칸이 좁을 때(양옆 패널이 다 선 교사 화면) — 화면 폭이 아니라
+   칸 폭으로 접습니다(.book-workspace-center가 container-type: inline-size). */
+@container (max-width: 640px) {
+  .ht-teacher-center .hts--page { padding: 18px 16px 20px; }
+  .ht-teacher-center .hts-grid { grid-template-columns: 1fr; }
+  .ht-teacher-center .htc { padding: 14px 14px 16px; }
+}
