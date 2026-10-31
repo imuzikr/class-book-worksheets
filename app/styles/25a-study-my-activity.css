@@ -294,44 +294,6 @@
   text-align: center;
 }
 
-/* 삭제 확인 인라인 */
-.study-delete-confirm {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  flex: 1;
-}
-
-.study-delete-warn {
-  font-size: 13px;
-  color: #c0392b;
-  font-weight: 600;
-  flex: 1;
-  min-width: 0;
-}
-
-/* 카드 하단 삭제 확인 버튼 — 저장 버튼과 동일 크기(btn-primary), 색만 다르게 */
-.study-foot-danger {
-  background: var(--danger);
-}
-.study-foot-danger:hover {
-  background: #a83a30;
-}
-.study-foot-ghost {
-  background: var(--bg);
-  color: var(--text-sub);
-  border: 1px solid var(--border);
-}
-.study-foot-ghost:hover {
-  background: var(--neutral);
-}
-
-/* 관련 질문(모달 내 버전) */
-.study-related-modal {
-  margin-top: 4px;
-}
-
 /* modal-study-card 너비 */
 .modal-study-card {
   max-width: 640px;
@@ -348,45 +310,4 @@
   width: 90vw;
   height: 86vh;
   max-height: 86vh;
-}
-.study-card-modal-body.study-slide-mode {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 12px 40px 24px;
-}
-.study-slide-mode .study-card-title-input {
-  font-family: var(--font-serif);
-  font-size: 30px;
-  font-weight: 800;
-  text-align: center;
-  margin-bottom: 24px;
-}
-.study-slide-mode .study-card-read-title {
-  font-family: var(--font-serif);
-  font-size: 32px;
-  text-align: center;
-  margin-bottom: 24px;
-}
-.study-slide-mode .study-card-body,
-.study-slide-mode .rte-full .rte-area {
-  font-size: 21px;
-  line-height: 1.9;
-}
-.study-card-expand-btn {
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: #fff;
-  color: var(--text-sub);
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-.study-card-expand-btn:hover {
-  background: var(--primary-light);
-  color: var(--primary);
 }
