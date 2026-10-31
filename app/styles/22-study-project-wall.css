@@ -6,23 +6,6 @@
    각각 남은 높이를 채우고 스스로 세로 스크롤합니다(제목 줄은 고정).
    ============================================================= */
 
-/* ── 배지 (대시보드 카드 · 프로젝트 머리말 공용) ── */
-.study-project-badge {
-  background: var(--primary-light);
-  border: 1px solid var(--apricot-300);
-  color: var(--primary-dark);
-}
-.study-project-badge.group {
-  background: #efe7fa;
-  border-color: #cdbceb;
-  color: #6b4fa3;
-}
-.study-project-badge.soft {
-  background: var(--neutral);
-  border-color: var(--border);
-  color: var(--text-sub);
-}
-
 /* ── 활동 모아보기 — 반 전체의 답을 한 화면에 ── */
 
 /* 학생 화면 — 모아보기 방송 */
