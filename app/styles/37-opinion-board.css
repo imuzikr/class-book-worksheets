@@ -130,7 +130,7 @@
   text-align: center;
   color: var(--text);
 }
-.attendance-seat--present { background: #e8f7ed; border-color: #8fcea3; }
+.attendance-seat--present { background: var(--green-50); border-color: #8fcea3; }
 .attendance-seat strong { max-width: 100%; font-size: 14px; overflow-wrap: anywhere; }
 .attendance-seat-number,
 /* 찍힌 시각은 **고정폭 숫자**로 — 밀리초까지 적으면 자리마다 글자 폭이

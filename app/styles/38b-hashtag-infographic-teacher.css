@@ -243,7 +243,7 @@
 }
 .htc-kind--like { background: #fdecef; color: #b8475f; }
 .htc-kind--ask { background: #eaf2fd; color: #3f6fa8; }
-.htc-kind--suggest { background: #e8f7ed; color: #2f7a4b; }
+.htc-kind--suggest { background: var(--green-50); color: var(--green-700); }
 .htc-who { font-size: 13px; color: var(--dark); }
 .htc-when { font-size: 12px; color: var(--text-faint); }
 .htc-new { font-size: 11px; font-weight: 800; color: var(--danger); }
@@ -321,7 +321,7 @@
 .ht-friend-tags em { font-style: normal; font-size: 12px; font-weight: 700; color: var(--primary-dark); }
 .ht-friend-meta { margin-top: auto; display: flex; gap: 10px; font-size: 12px; color: var(--text-sub); }
 .ht-friend-meta b { color: var(--primary-dark); }
-.ht-friend-meta b.full { color: #2f7a4b; }
+.ht-friend-meta b.full { color: var(--green-700); }
 .ht-friend-back { margin-bottom: 12px; }
 
 /* ── 교사 화면 ── */
@@ -349,7 +349,7 @@
   .hts-figure { width: 100%; max-width: 320px; }
   .ht-sec { padding: 14px 14px 16px; }
 }
-.ht-pub-on { background: #e8f7ed !important; color: #2f7a4b !important; }
+.ht-pub-on { background: var(--green-50) !important; color: var(--green-700) !important; }
 .ht-card-new {
   align-self: flex-start;
   font-size: 12px;

@@ -412,7 +412,7 @@
 .admin-stat.tone-answer.is-active,
 .admin-stat.tone-done.is-active {
   background: #eef5ef;
-  box-shadow: 0 0 0 2px #5c9e68;
+  box-shadow: 0 0 0 2px var(--green-500);
 }
 
 .admin-stat.tone-moments.is-active {
@@ -447,7 +447,7 @@
 
 .admin-stat.tone-answer,
 .admin-stat.tone-done {
-  border-top: 3px solid #5c9e68;
+  border-top: 3px solid var(--green-500);
 }
 
 .admin-stat.tone-metoo {
@@ -606,7 +606,7 @@
 }
 
 .daily-answer {
-  background: #5c9e68;
+  background: var(--green-500);
 }
 
 .daily-bar small {
@@ -644,7 +644,7 @@
 }
 
 .legend-answer {
-  background: #5c9e68;
+  background: var(--green-500);
 }
 
 .legend-neutral {

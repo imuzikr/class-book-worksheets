@@ -427,7 +427,7 @@
 /* 다 준 뒤 잠깐 — 이 앱에서 초록은 늘 '됐다' */
 .reward-group-award.done,
 .reward-group-award.done:disabled,
-.reward-group-award.done:hover:not(:disabled) { background: #e8f7ed; color: #2f6b47; opacity: 1; }
+.reward-group-award.done:hover:not(:disabled) { background: var(--green-50); color: #2f6b47; opacity: 1; }
 .reward-group-members {
   flex: 1;
   min-width: 0;

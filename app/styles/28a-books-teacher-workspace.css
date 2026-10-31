@@ -460,7 +460,7 @@
   height: 7px;
   margin-left: -3.5px;
   border-radius: 999px;
-  background: #e05a2f;
+  background: var(--coral-600);
 }
 /* 이 격자는 모달이 아니라 대시보드 안이라 `.progress-scroll`의 68vh 제한이
    필요 없습니다 — 남는 높이를 그대로 씁니다. */

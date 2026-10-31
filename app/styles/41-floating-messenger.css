@@ -157,7 +157,7 @@
 .hub-item:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
 .hub-item .hub-item-badge { top: -2px; right: -2px; }
 /* 출석 — 체크 하나(currentColor)라 '됐다'의 초록으로 */
-.hub-icon-check { color: #3f704b; }
+.hub-icon-check { color: var(--green-olive); }
 /* 과일 바구니 — 바구니 창의 그림을 작게(흰 바탕을 원판에 녹임) */
 .hub-basket-pic {
   display: block;
@@ -271,7 +271,7 @@
   flex-shrink: 0;
   border-radius: 50%;
   background: #e8f3ea;
-  color: #3f704b;
+  color: var(--green-olive);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -691,7 +691,7 @@ button.msgr-receipt:hover { color: var(--text-sub); }
 /* 작성·출석 상태는 고른 모둠과 학생에서도 같은 색을 유지합니다. */
 .raft-mate-pill.member-status-done,
 .book-rail-card.on .raft-mate-pill.member-status-done,
-.group-member-status-key.member-status-done { background: #e8f7ed; color: #2f6b47; }
+.group-member-status-key.member-status-done { background: var(--green-50); color: #2f6b47; }
 .raft-mate-pill.member-status-doing,
 .book-rail-card.on .raft-mate-pill.member-status-doing,
 .group-member-status-key.member-status-doing { background: #fff2d5; color: #775113; }

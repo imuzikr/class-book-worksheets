@@ -152,10 +152,10 @@
 .cornell-read-given {
   flex-shrink: 0;
   padding: 3px 9px;
-  border: 1px solid #a6d8b6;
+  border: 1px solid var(--green-200);
   border-radius: 999px;
-  background: #e8f7ed;
-  color: #2f6b45;
+  background: var(--green-50);
+  color: var(--green-800);
   font-size: 11.5px;
   font-weight: 800;
   white-space: nowrap;
@@ -720,7 +720,7 @@
   height: 7px;
   margin: -3.5px 0 0 -3.5px;
   border-radius: 999px;
-  background: #e05a2f;
+  background: var(--coral-600);
   box-shadow: 0 0 0 2px #fff;
 }
 

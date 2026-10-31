@@ -630,7 +630,7 @@
   transition: border-color 0.15s, background 0.15s;
 }
 .activity-dash-card:hover { border-color: var(--primary); }
-.activity-dash-card.done { border-color: #8cc79f; }
+.activity-dash-card.done { border-color: var(--green-300); }
 .activity-dash-card.empty { background: var(--bg-deep); }
 .activity-dash-card.locked { background: var(--neutral); border-style: dashed; cursor: default; }
 .activity-dash-card-head {

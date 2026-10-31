@@ -8,23 +8,23 @@
   align-items: center;
   gap: 1px;
   padding: 6px 2px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--on-dark-12);
   border-radius: 8px;
   background: rgba(0, 0, 0, 0.18);
 }
-.tkwl-count b { font-size: 11px; font-weight: 800; color: #e8956c; }
+.tkwl-count b { font-size: 11px; font-weight: 800; color: var(--coral-400); }
 .tkwl-count em { font-style: normal; font-size: 15px; font-weight: 800; color: #fff; }
 .tkwl-count--total {
   flex: 0 0 auto;
   border: none;
   background: none;
   font-size: 11.5px;
-  color: #8f8d84;
+  color: var(--gray-550);
 }
 .tkwl-notstarted {
   font-size: 11.5px;
   line-height: 1.6;
-  color: #9a988e;
+  color: var(--gray-500);
 }
 .tkwl-notstarted > span {
   display: block;
@@ -40,7 +40,7 @@
 }
 .tkwl-wants li {
   padding: 8px 9px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--on-dark-12);
   border-radius: 8px;
   background: rgba(0, 0, 0, 0.18);
 }
@@ -58,19 +58,19 @@
   gap: 8px;
   margin-top: 5px;
 }
-.tkwl-want-who { font-size: 11px; font-weight: 700; color: #8f8d84; }
+.tkwl-want-who { font-size: 11px; font-weight: 700; color: var(--gray-550); }
 .tkwl-cast {
   padding: 3px 9px;
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 999px;
   background: none;
-  color: #c5c4bc;
+  color: var(--gray-300);
   font-family: inherit;
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
 }
-.tkwl-cast:hover { border-color: var(--primary); color: #e8956c; }
+.tkwl-cast:hover { border-color: var(--primary); color: var(--coral-400); }
 .tkwl-cast.on {
   background: var(--primary);
   border-color: var(--primary);
@@ -101,7 +101,7 @@
   text-align: center;
   font-size: 10.5px;
   font-weight: 800;
-  color: #8f8d84;
+  color: var(--gray-550);
 }
 /* 스크롤은 패널 하나만 — 패널 안에 스크롤 영역을 여럿 두니 막대가
    겹쳐 보이고, 어느 걸 굴려야 할지도 헷갈렸습니다. 격자는 길이대로
@@ -127,15 +127,15 @@
 .tkwl-row-name em {
   font-style: normal;
   font-size: 10px;
-  color: #8f8d84;
+  color: var(--gray-550);
   font-variant-numeric: tabular-nums;
 }
 .tkwl-cell {
   width: 20px;
   height: 18px;
   border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--on-dark-12);
+  background: var(--on-dark-06);
   padding: 0;
   cursor: pointer;
   transition: transform 0.1s;
@@ -210,12 +210,12 @@
 .tkwl-pop-head button {
   border: none;
   background: none;
-  color: #8f8d84;
+  color: var(--gray-550);
   font-size: 16px;
   line-height: 1;
   cursor: pointer;
 }
-.tkwl-pop-label { font-size: 11px; font-weight: 800; color: #e8956c; }
+.tkwl-pop-label { font-size: 11px; font-weight: 800; color: var(--coral-400); }
 .tkwl-pop-text {
   font-size: 12.5px;
   line-height: 1.65;
@@ -224,7 +224,7 @@
   max-height: 160px;
   overflow-y: auto;
 }
-.tkwl-pop-text.empty { color: #8f8d84; }
+.tkwl-pop-text.empty { color: var(--gray-550); }
 
 .kwl-panel {
   width: 300px;
@@ -251,7 +251,7 @@
   flex-direction: column;
   gap: 2px;
   padding-bottom: 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--on-dark-10);
 }
 
 .kwl-panel-title {
@@ -260,7 +260,7 @@
   font-weight: 600;
   letter-spacing: 1px;
   text-transform: uppercase;
-  color: #c5c4bc;
+  color: var(--gray-300);
 }
 
 .kwl-panel-date {
@@ -286,7 +286,7 @@
   gap: 8px;
   font-size: 14px;
   font-weight: 600;
-  color: #87867f;
+  color: var(--gray-600);
   letter-spacing: 0.3px;
 }
 
@@ -321,14 +321,14 @@
    '어느' 칸이 비었는지 알 수 없어 윤곽만 남겨 둡니다. */
 .kwl-badge--off {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid var(--on-dark-16);
   color: rgba(255, 255, 255, 0.28);
 }
 
 .kwl-textarea {
   width: 100%;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--on-dark-06);
+  border: 1px solid var(--on-dark-10);
   border-radius: 8px;
   color: #e8e8e4;
   font-size: 14px;
@@ -339,7 +339,7 @@
   box-sizing: border-box;
 }
 
-.kwl-textarea::placeholder { color: #9a988e; }
+.kwl-textarea::placeholder { color: var(--gray-500); }
 
 .kwl-textarea:focus {
   outline: none;
@@ -350,7 +350,7 @@
 .kwl-ask-btn {
   background: none;
   border: none;
-  color: #e8956c;
+  color: var(--coral-400);
   font-size: 10px;
   font-weight: 600;
   cursor: pointer;
@@ -375,8 +375,8 @@
 
 /* 오늘 이미 작성한 경우 — 입력 폼 대신 안내 문구 */
 .kwl-already-done {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--on-dark-06);
+  border: 1px solid var(--on-dark-12);
   border-radius: 10px;
   padding: 12px 14px;
   font-size: 13px;
@@ -390,7 +390,7 @@
 
 /* 교사: 학생 W 모아보기 */
 .kwl-all-w {
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--on-dark-10);
   padding-top: 10px;
   margin-top: 4px;
 }
@@ -402,14 +402,14 @@
   width: 100%;
   background: none;
   border: none;
-  color: #87867f;
+  color: var(--gray-600);
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
   padding: 0;
   gap: 4px;
 }
-.kwl-all-w-toggle:hover { color: #c5c4bc; }
+.kwl-all-w-toggle:hover { color: var(--gray-300); }
 
 .kwl-chevron { font-size: 9px; opacity: 0.7; }
 
@@ -437,7 +437,7 @@
 
 .kwl-all-w-text {
   font-size: 12px;
-  color: #c5c4bc;
+  color: var(--gray-300);
   margin: 0;
   line-height: 1.45;
 }
@@ -446,7 +446,7 @@
 .kwl-tabs {
   display: flex;
   gap: 4px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--on-dark-10);
   padding-bottom: 10px;
   margin-bottom: 2px;
 }
@@ -464,7 +464,7 @@
   transition: background 0.12s, color 0.12s;
 }
 .kwl-tab:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--on-dark-08);
   color: #fff;
 }
 .kwl-tab.active {
@@ -486,7 +486,7 @@
    (LEVEL_COLORS) 대신 kwl-badge-l(#2e6b3e)~tkwl-cell.on.after(#7fb98a)
    사이를 잇는 어두운 배경용 다섯 단계를 씁니다. */
 .kwls-hm {
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid var(--on-dark-10);
   padding-bottom: 12px;
   margin-bottom: 10px;
 }
@@ -501,7 +501,7 @@
   margin: 0;
   font-size: 12.5px;
   font-weight: 700;
-  color: #c5c4bc;
+  color: var(--gray-300);
   display: flex;
   align-items: baseline;
   gap: 6px;
@@ -509,9 +509,9 @@
 .kwls-hm-head h4 small {
   font-size: 10.5px;
   font-weight: 400;
-  color: #87867f;
+  color: var(--gray-600);
 }
-.kwls-hm-stat { font-size: 11px; color: #87867f; }
+.kwls-hm-stat { font-size: 11px; color: var(--gray-600); }
 .kwls-hm-stat b { color: #7fb98a; font-weight: 700; }
 
 .kwls-hm-grid { display: flex; gap: 4px; }
@@ -560,7 +560,7 @@
   border: none;
   padding: 0;
   border-radius: 2px;
-  background: rgba(255,255,255,0.06);
+  background: var(--on-dark-06);
 }
 .kwls-hm-cell:not(:disabled) { cursor: pointer; }
 .kwls-hm-cell.lv1 { background: #2e6b3e; }
@@ -584,7 +584,7 @@
   width: 10px;
   height: 10px;
   border-radius: 2px;
-  background: rgba(255,255,255,0.06);
+  background: var(--on-dark-06);
 }
 .kwls-hm-swatch.lv1 { background: #2e6b3e; }
 .kwls-hm-swatch.lv2 { background: #3f8a52; }
@@ -675,14 +675,14 @@
   width: 100%;
   background: none;
   border: none;
-  color: #c5c4bc;
+  color: var(--gray-300);
   font-size: 12px;
   font-weight: 600;
   padding: 8px 10px;
   cursor: pointer;
   text-align: left;
 }
-.kwl-history-toggle:hover { background: rgba(255,255,255,0.06); }
+.kwl-history-toggle:hover { background: var(--on-dark-06); }
 
 .kwl-history-toggle-inner {
   display: flex;
@@ -711,7 +711,7 @@
 .kwl-history-preview {
   font-size: 11px;
   font-weight: 400;
-  color: #87867f;
+  color: var(--gray-600);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -732,7 +732,7 @@
 
 .kwl-history-row p {
   font-size: 12px;
-  color: #87867f;
+  color: var(--gray-600);
   margin: 0;
   flex: 1;
   min-width: 0;

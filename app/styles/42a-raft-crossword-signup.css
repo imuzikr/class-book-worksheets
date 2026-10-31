@@ -30,7 +30,7 @@
   line-height: 16px;
   text-align: center;
 }
-.raft-mate-mark.done { background: #8cc79f; color: #fff; }
+.raft-mate-mark.done { background: var(--green-300); color: #fff; }
 .raft-mate-chars {
   font-size: 11px;
   color: var(--text-sub);
@@ -128,8 +128,8 @@
   color: inherit;
 }
 .eov-nav-chip.done {
-  background: #e8f7ed;
-  border-color: #a6d8b6;
+  background: var(--green-50);
+  border-color: var(--green-200);
   color: #2f6b47;
 }
 .eov-nav-chip:hover { border-color: var(--primary); }
@@ -176,8 +176,8 @@
   scroll-margin-top: 12px;
 }
 .eov-card.wide { grid-column: 1 / -1; }
-.eov-card.done { border-color: #a6d8b6; }
-.eov-card.done .paratext-letter { background: #3d8a72; }
+.eov-card.done { border-color: var(--green-200); }
+.eov-card.done .paratext-letter { background: var(--teal-600); }
 .eov-card.empty { background: #fcfbf8; }
 .eov-card-head { display: flex; align-items: center; gap: 10px; }
 .eov-state {
@@ -191,7 +191,7 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
-.eov-state.done { background: #e8f7ed; color: #2f6b47; }
+.eov-state.done { background: var(--green-50); color: #2f6b47; }
 .eov-prompt {
   margin: 0;
   font-size: 12.5px;

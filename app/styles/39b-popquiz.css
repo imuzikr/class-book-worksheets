@@ -31,7 +31,7 @@
   width: 9px;
   height: 9px;
   border-radius: 999px;
-  background: #e05a2f;
+  background: var(--coral-600);
   box-shadow: 0 0 0 2px #fff;
 }
 .pq-btn-dot.is-green { background: #2f9e5a; }
@@ -45,7 +45,7 @@
 .study-chip.pq-card-btn,
 .study-chip.study-progress-btn {
   background: var(--primary-light);
-  border-color: #efc19a;
+  border-color: var(--apricot-300);
   color: var(--primary-dark);
 }
 .study-chip.pq-card-btn:hover,
@@ -122,7 +122,7 @@
   margin-bottom: 3px;
   font-size: 11.5px;
   font-weight: 800;
-  color: #2f7a4b;
+  color: var(--green-700);
 }
 .pq-answer-out pre {
   margin: 0;
@@ -148,8 +148,8 @@
   white-space: nowrap;
 }
 .pq-status--sent { background: #fff4d6; color: #8a6200; }
-.pq-status--returned { background: #e8f7ed; color: #2f7a4b; }
-.pq-status--done { background: #e8f7ed; color: #2f7a4b; }
+.pq-status--returned { background: var(--green-50); color: var(--green-700); }
+.pq-status--done { background: var(--green-50); color: var(--green-700); }
 .pq-status--none { background: var(--neutral); color: var(--text-sub); }
 .pq-empty { margin: 0; padding: 16px 0; font-size: 13.5px; color: var(--text-sub); text-align: center; }
 .pq-caret { flex-shrink: 0; color: var(--text-sub); transition: transform 0.15s; }
@@ -180,9 +180,9 @@
 /* 반송 — 맨 위에 선생님 한 마디(있으면). 초록 불과 같은 색 계열. */
 .pq-returned-note {
   padding: 10px 14px;
-  border: 1px solid #a6d8b6;
+  border: 1px solid var(--green-200);
   border-radius: 10px;
-  background: #e8f7ed;
+  background: var(--green-50);
   color: #22603b;
   font-size: 13.5px;
   line-height: 1.6;
@@ -235,11 +235,11 @@
 .pq-msg-meta { display: flex; justify-content: space-between; gap: 10px; font-size: 11.5px; font-weight: 700; color: var(--text-faint); }
 .pq-msg-note { margin: 0; font-size: 13.5px; line-height: 1.6; color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; }
 /* 선생님 말은 연한 초록(반송 알림과 같은 계열) */
-.pq-msg--teacher { background: #e8f7ed; border-color: #a6d8b6; }
+.pq-msg--teacher { background: var(--green-50); border-color: var(--green-200); }
 /* 내 말은 오른쪽 · 살구빛 */
 .pq-thread--student .pq-msg--student,
 .pq-thread--teacher .pq-msg--teacher { align-self: flex-end; }
-.pq-thread--student .pq-msg--student { background: var(--primary-light); border-color: #efc19a; }
+.pq-thread--student .pq-msg--student { background: var(--primary-light); border-color: var(--apricot-300); }
 .pq-thread--teacher .pq-msg--student,
 .pq-thread--student .pq-msg--teacher { align-self: flex-start; }
 /* 지난 차례의 답은 한 단계 옅게 — 지금 답이 눈에 먼저 들어오게 */
@@ -388,7 +388,7 @@
 .pq-new-btn,
 .pq-close-btn {
   padding: 6px 12px;
-  border: 1px solid #efc19a;
+  border: 1px solid var(--apricot-300);
   border-radius: 999px;
   background: var(--primary-light);
   color: var(--primary-dark);
@@ -440,7 +440,7 @@
 .pq-review-no { font-family: var(--font-mono); font-size: 12px; color: var(--text-sub); }
 .pq-review-time,
 .pq-review-note { margin: 0; font-size: 12px; color: var(--text-faint); overflow-wrap: anywhere; }
-.pq-review-done { margin: 0; padding: 8px 10px; border-radius: 8px; background: #e8f7ed; color: #22603b; font-size: 13px; font-weight: 700; }
+.pq-review-done { margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--green-50); color: #22603b; font-size: 13px; font-weight: 700; }
 .pq-return-note { font-family: inherit; font-size: 13.5px; }
 .pq-review-btns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .pq-review-wait { margin: 0; font-size: 12.5px; color: var(--text-sub); }
