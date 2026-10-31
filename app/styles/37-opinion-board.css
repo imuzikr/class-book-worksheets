@@ -184,81 +184,6 @@ h4.attendance-seat-help { margin-top: 16px; }
   .study-attendance-export { margin-left: 0; }
 }
 
-/* ── 프로젝트 연계 두 단추 (ProjectLinkOptions) — 만들기 창 · 편집 창 공용 ──
-   키워드 · 파이썬 실행기. 두 창이 같은 조각이라 규칙도 한 벌입니다.
-   한 줄에 반씩 선 누름 단추이고, 꺼짐은 연한 살구 · 켜짐은 살구로 채웁니다
-   (활동 유형 두 단추 `.board-acttype-btn`과 같은 격자). */
-.project-links {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.project-link-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-.project-link-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 3px;
-  min-width: 0;
-  padding: 11px 14px;
-  border: 1.5px solid #f0d5c6;
-  border-radius: 10px;
-  background: var(--primary-light);
-  color: var(--text);
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.12s, border-color 0.12s, color 0.12s;
-}
-.project-link-btn strong {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 14px;
-  font-weight: 700;
-}
-.project-link-btn small {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--text-sub);
-  line-height: 1.4;
-  word-break: keep-all;
-}
-.project-link-btn:hover:not(:disabled) {
-  border-color: var(--primary);
-}
-.project-link-btn.on {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
-}
-.project-link-btn.on small {
-  color: rgba(255, 255, 255, 0.88);
-}
-.project-link-btn.on:hover {
-  background: var(--primary-dark);
-  border-color: var(--primary-dark);
-}
-.project-link-btn:disabled {
-  background: var(--bg);
-  border-color: var(--border);
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-.project-link-chips {
-  padding: 0;
-}
-/* 만들기 창의 '연계하기' 칸 — 아래 '활동' 칸과 같은 머리·가름선 */
-.project-form-links {
-  gap: 8px;
-}
-@media (max-width: 480px) {
-  .project-link-grid { grid-template-columns: 1fr; }
-}
-
 /* 셀 창(PyCellModal)의 제목은 입력칸이 아니라 글자입니다 — 학생이 활동
    이름을 고칠 일이 없습니다(선생님 요청). */
 .study-act-modal-title.study-act-modal-title--view {
@@ -281,57 +206,6 @@ h4.attendance-seat-help { margin-top: 16px; }
   width: 100%;
   max-width: 900px;
   margin: 0 auto;
-}
-
-/* ── 프로젝트 원본 편집 (StudyTemplateEditModal) ──
-   '수업 관리' 창(배경 z 100) 위에, 되묻는 창(200) 아래에 섭니다. */
-.tpl-edit-backdrop {
-  z-index: 150;
-}
-/* 고친 것이 어디까지 닿는지 — 창 맨 위 한 줄 */
-.tpl-edit-scope {
-  margin: 0;
-  padding: 8px 12px;
-  border-radius: 8px;
-  background: var(--bg);
-  font-size: 12.5px;
-  line-height: 1.5;
-  color: var(--text-sub);
-  word-break: keep-all;
-}
-
-/* ── 프로젝트 가져오기 (StudyProjectImportModal) ──
-   줄 모양은 수업 관리 프로젝트 탭과 같은 .lesson-row · .tpl-row. 여기만의
-   것은 안내 한 줄 · 빈 상태 · 맨 아래 만들기 단추뿐입니다. */
-.tpl-import-modal {
-  width: 640px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.tpl-import-hint {
-  margin: 0;
-  font-size: 12.5px;
-  line-height: 1.5;
-  color: var(--text-sub);
-  word-break: keep-all;
-}
-.tpl-import-create {
-  width: 100%;
-}
-.tpl-import-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 12px;
-  padding: 24px 8px 8px;
-  text-align: center;
-}
-.tpl-import-empty p {
-  margin: 0;
-  font-size: 13.5px;
-  color: var(--text-sub);
-  word-break: keep-all;
 }
 
 .py-project-actdel--gap {
@@ -692,14 +566,6 @@ h4.attendance-seat-help { margin-top: 16px; }
 .opinion-modal-tools { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
 .opinion-modal-remove { color: #b42318; }
 
-/* ── 닉네임 칸 — 익명(nick) 활동에서 글마다 ── */
-.opinion-nick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-bottom: 10px; }
-.opinion-nick > span { flex-shrink: 0; font-size: 13px; font-weight: 700; color: var(--text-sub); }
-.opinion-nick input { flex: 1 1 180px; min-width: 0; max-width: 280px; padding: 7px 11px; font-size: 14px; }
-.opinion-nick em { flex-basis: 100%; font-style: normal; font-size: 12px; color: var(--text-faint); }
-.opinion-modal .opinion-nick > span,
-.opinion-modal .opinion-nick em { color: var(--note-ink); }
-
 /* ── 목록형 — 영역마다 한 칸, 글이 올린 차례대로 쌓임 ── */
 .opinion-list-body {
   display: grid;
@@ -759,24 +625,6 @@ h4.attendance-seat-help { margin-top: 16px; }
 }
 .opinion-zone-input { position: relative; display: flex; }
 .opinion-zone-input input { flex: 1; min-width: 0; padding-right: 32px; }
-.opinion-zone-del {
-  position: absolute;
-  top: 50%;
-  right: 6px;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  transform: translateY(-50%);
-  border: none;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--text-sub);
-  font-size: 16px;
-  line-height: 1;
-  cursor: pointer;
-}
-.opinion-zone-del:hover { background: var(--bg-deep); color: var(--text); }
-.opinion-zone-more { justify-self: start; }
 /* 만들기 창은 고른 개수(2~4)가 한 줄에 같은 폭으로 — 판의 영역 차례와 같게 */
 .opinion-zone-inputs--row { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
 

@@ -602,7 +602,6 @@ body:has(.confirm-backdrop) .cornell-handle {
 }
 .cornell-read-edit:disabled { opacity: 0.5; cursor: default; }
 
-
 /* ===== 체크 줄 (수업 메모) ===========================================
    표시가 목록(<ul>)이 아니라 **줄(<li>)**에 붙습니다 — 한 목록 안에서
    글머리 기호 줄과 체크 줄을 섞어 쓸 수 있어야 하기 때문입니다.
@@ -663,25 +662,6 @@ ul.checklist > li.done {
 
 /* ===== 공부 기록 모달 — 누가기록 · 수업 노트 · 선생님 메모 ===== */
 
-/* 수업 노트 탭 — 날짜 한 줄 + 학생 격자 */
-.cornell-mgr-bar { align-items: center; }
-.cornell-mgr-date {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  min-width: 0;
-}
-.cornell-mgr-date input[type="date"] {
-  width: auto;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-btn);
-  padding: 5px 8px;
-  font-family: inherit;
-  font-size: 13px;
-  color: var(--text);
-  background: #fff;
-}
 .cornell-read-step {
   width: 28px;
   height: 28px;

@@ -63,12 +63,6 @@
   color: var(--primary-dark);
 }
 .cornell-read-pdf:disabled { opacity: 0.45; cursor: default; }
-.cornell-read-lesson {
-  margin-bottom: 8px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text);
-}
 /* 덮개는 `CornellNoteSheet` 안에 있어 **교사·학생 화면에 다 걸립니다**
    (교사 열람 · 노트 크게 보기 · 리포트 · 서랍의 노트). */
 .cornell-hl-wrap { position: relative; }
@@ -84,67 +78,6 @@
    손 모양도 hover 색도 없습니다(눌러 볼 것이 없는데 눌러 보게 됩니다). */
 .cornell-hl.is-editable { cursor: pointer; }
 .cornell-hl.is-editable:hover { background: #ffcf5c; }
-
-.cornell-read-feedback {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 12px;
-}
-/* 이름표 줄 — 왼쪽에 '선생님 한 마디', 오른쪽 끝에 과일 단추.
-   `align-items: flex-start`인 것은 왼쪽이 두 줄(제목 + 딸림글)이라 가운데로
-   맞추면 과일이 두 줄 한가운데에 떠 제목과 어긋나 보이기 때문입니다. */
-.cornell-read-fbhead {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-}
-.cornell-read-award { font-size: 17px; }
-/* 과일을 준 뒤 단추 자리에 남는 표시 — 누를 수 없는 알약입니다.
-   초록은 이 앱에서 늘 '됐다'는 뜻이라, 기록 관리 수업 노트 탭의 '과일 준
-   카드'(`.notes-mgr-card.awarded`)와 **같은 값**을 씁니다. 두 화면이 같은
-   사실을 말하는데 색이 다르면 한쪽을 보고 다른 쪽을 오해합니다. */
-.cornell-read-given {
-  flex-shrink: 0;
-  padding: 3px 9px;
-  border: 1px solid var(--green-200);
-  border-radius: 999px;
-  background: var(--green-50);
-  color: var(--green-800);
-  font-size: 11.5px;
-  font-weight: 800;
-  white-space: nowrap;
-  cursor: default;
-}
-.cornell-read-feedback label { display: flex; flex-direction: column; gap: 1px; }
-.cornell-read-feedback label b { font-size: 12.5px; font-weight: 800; color: var(--dark); }
-.cornell-read-feedback label em {
-  font-size: 11px;
-  font-style: normal;
-  color: var(--text-sub);
-}
-.cornell-read-feedback textarea {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-btn);
-  padding: 8px 10px;
-  font-family: inherit;
-  font-size: 13.5px;
-  line-height: 1.6;
-  color: var(--text);
-  resize: vertical;
-}
-.cornell-read-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  /* 쓰는 칸 아래선과 단추가 붙어 보여 한 칸 띄웁니다 — 단추가 칸의
-     일부처럼 보이면 '이걸 눌러야 저장된다'가 흐려집니다. */
-  margin-top: 6px;
-  padding-bottom: 2px;
-}
-.cornell-read-hint { font-size: 12px; color: var(--text-sub); }
 
 /* 좁은 화면 — 코넬 2단은 세로로 눕힙니다(단서 칸이 200px면 글이 못 들어갑니다) */
 @media (max-width: 768px) {
@@ -166,8 +99,6 @@
   }
   .cornell-sheet-cue::before { content: "단서 · 핵심 질문"; }
   .cornell-sheet-notes::before { content: "필기"; }
-  .cornell-mgr-bar { align-items: stretch; }
-  .cornell-mgr-date { flex-wrap: wrap; }
 }
 
 /* ===== 수업 노트 — 선생님 한 마디가 도착했다는 표시 ===== */
