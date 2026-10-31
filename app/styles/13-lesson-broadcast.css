@@ -103,28 +103,6 @@
   color: rgba(255, 255, 255, 0.8);
 }
 
-/* 아이콘 자체는 이모지라 어두운 바탕에서도 그대로 보입니다. 문제는 hover
-   배경(--neutral, 밝은 회색)뿐이라 그것만 반투명 흰색으로 바꿉니다. */
-.lesson-hand-chip:hover {
-  background: var(--on-dark-16);
-}
-/* 손들기 — 확성기·종과 **같은 아이콘 단추**입니다. 처음에는 알약(테두리 +
-   배경 + 옆에 숫자)으로 두었는데, 이모지가 12.5px로 그려져 18px인 옆
-   둘보다 확연히 작고 알약 때문에 혼자 튀었습니다. 셋을 같은 값으로
-   맞추고, 숫자는 종의 안 읽은 개수와 같은 뱃지로 올립니다. */
-.lesson-hand-chip {
-  position: relative;
-  flex-shrink: 0;
-  padding: 5px;
-  border: none;
-  border-radius: var(--radius-btn);
-  background: none;
-  font-family: inherit;
-  font-size: 18px;
-  line-height: 1;
-  cursor: pointer;
-  transition: background 0.15s;
-}
 /* 손든 학생 수 — 종의 .notif-badge와 같은 자리·같은 크기입니다. 색만
    과일색으로 두어 '알림(빨강)'과 '손들기'가 한눈에 갈립니다.
    0명일 때는 아예 그리지 않습니다(뱃지가 늘 붙어 있으면 신호가 아닙니다). */
