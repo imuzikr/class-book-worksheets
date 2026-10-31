@@ -1,0 +1,735 @@
+/* '안내' 배지 — 교사가 깔아 둔 예시·자료 카드. 학생 카드 격자에서 이름
+   ('선생님')만으로는 '선생님이 카드를 냈다'로 읽혀 실제로 오류 신고가
+   있었습니다. 집계에서 빠지는 것과 **화면에서 그렇게 보이는 것은 별개**라
+   한 글자 자리를 내어 적어 둡니다.
+   눈에 띄되 튀지 않게 연한 회색 알약입니다 — 상태를 말하는 자리가 아니라
+   '이건 학생 것이 아니다'만 알리는 이름표라, 살구색(강조)을 쓰지 않습니다.
+   시각(`.study-card-time`) 왼쪽에 서므로 `flex-shrink: 0`으로 붙들어
+   둡니다(이름이 길 때 이 배지부터 찌그러지지 않게). */
+.study-card-guide {
+  flex-shrink: 0;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--neutral);
+  color: var(--text-sub);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+.study-card-meta-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.35;
+}
+.study-card-meta-group strong { font-size: 14px; color: var(--text); }
+.study-card-meta-members {
+  font-size: 11.5px;
+  color: var(--text-sub);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 모둠 구성 모달 */
+.modal.modal-group-composer {
+  max-width: 860px;
+  width: 92vw;
+  /* 높이 고정 — 탭·모둠 수가 바뀌어도 모달 크기가 변하지 않고 모둠
+     그리드만 내부에서 스크롤(자동/직접 구성 동일하게 동작) */
+  height: min(90vh, 780px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.gc-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.gc-tab {
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-sub);
+  cursor: pointer;
+}
+.gc-tab.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+.gc-total {
+  margin-left: auto;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-sub);
+}
+.gc-tabs--mode {
+  margin-bottom: 10px;
+}
+.gc-tabs--sub {
+  margin-bottom: 12px;
+}
+.gc-mode-note {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-sub);
+}
+.gc-mode-note strong {
+  color: var(--text);
+}
+.gc-groups--preview {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 8px;
+}
+.gc-group-name--readonly {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  color: var(--text);
+}
+
+/* 본문: 왼쪽 설정(세로) + 오른쪽 미리보기 */
+.gc-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 230px 1fr;
+  gap: 14px;
+  overflow: hidden;
+}
+.gc-controls {
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-right: 4px;
+}
+.gc-section {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card-bg);
+  padding: 12px;
+}
+.gc-section-title {
+  display: flex;
+  flex-direction: column;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--dark);
+  margin-bottom: 9px;
+}
+.gc-section-title small {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-sub);
+  margin-top: 2px;
+}
+/* 모둠 수 슬롯 목록 (세로 버튼) */
+.gc-slot-list,
+.gc-size-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.gc-slot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #fff;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-sub);
+  cursor: pointer;
+  text-align: left;
+}
+.gc-slot.on {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
+}
+.gc-slot-check { font-size: 15px; }
+.gc-size-btn {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #fff;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text);
+  cursor: pointer;
+}
+.gc-size-btn small { font-size: 11.5px; font-weight: 600; color: var(--text-sub); }
+.gc-size-btn:hover:not(:disabled) { background: var(--primary-light); border-color: var(--primary); }
+.gc-size-btn:disabled { opacity: 0.5; cursor: default; }
+.gc-assign-btn { width: 100%; margin-top: 10px; padding: 9px; font-size: 13.5px; }
+
+.gc-empty {
+  padding: 26px 10px;
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--text-sub);
+}
+/* 미배정 학생 명단 — 탭과 모둠 구성 영역 사이 가로 띠 (드롭하면 배정 해제) */
+.gc-roster {
+  flex-shrink: 0;
+  border: 1.5px dashed var(--border);
+  border-radius: 12px;
+  padding: 8px 12px;
+  background: #fff;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.gc-roster.drag-over {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+.gc-pool-label {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-sub);
+}
+/* 학생 명단 — 20~30명도 담기도록 가로로 감싸고, 넘치면 스크롤 */
+.gc-pool-chips {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  max-height: 84px;
+  overflow-y: auto;
+}
+/* 모둠원 영역도 카드 안에서 스크롤(고정 높이 카드) */
+.gc-group .gc-group-members {
+  overflow-y: auto;
+}
+.gc-chip {
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: grab;
+  transition: background 0.15s, border-color 0.15s;
+}
+.gc-chip:hover {
+  background: var(--primary-light);
+  border-color: var(--primary);
+}
+.gc-chip--member.leader {
+  border-color: #e0b93c;
+  background: #fdf6e0;
+}
+.gc-groups {
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  /* 카드 높이는 고정 — 모둠 수가 바뀌어도 카드 크기가 변하지 않고
+     행이 늘면 스크롤. (2열 × 3행이 처음부터 제 크기로 채워짐) */
+  grid-auto-rows: 208px;
+  gap: 12px;
+  padding-bottom: 2px;
+}
+.gc-group {
+  display: flex;
+  flex-direction: column;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  padding: 12px 14px;
+  cursor: pointer;
+  overflow: hidden;
+}
+.gc-group.active {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+.gc-group.drag-over {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+.gc-group-pick {
+  font-size: 14px;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+/* 큰 카드에서 모둠원 영역이 남는 공간을 차지하도록 */
+.gc-group .gc-group-members {
+  flex: 1;
+  align-content: flex-start;
+}
+.gc-group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.gc-group-name {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 9px;
+  font-size: 13.5px;
+  font-weight: 700;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.gc-group-count {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--primary);
+}
+.gc-group-members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-height: 30px;
+  margin-bottom: 8px;
+}
+.gc-group-empty {
+  font-size: 12px;
+  color: var(--text-sub);
+  padding: 4px 2px;
+}
+.gc-leader-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-sub);
+}
+.gc-leader-row select {
+  flex: 1;
+  width: auto;
+  padding: 6px 9px;
+  font-size: 13px;
+  border-radius: 8px;
+}
+.gc-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 14px;
+  margin-top: 6px;
+  border-top: 1px solid var(--border);
+}
+.gc-foot-note {
+  margin-right: auto;
+  font-size: 12px;
+  color: var(--text-sub);
+}
+
+.study-sort-btn {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 10px;
+  border-radius: var(--radius-btn);
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text-sub);
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+/* 학번 — 따뜻한 세이지 그린 */
+.study-sort-btn--studentid {
+  background: #EBF4F1;
+  color: #3B7A6A;
+  border-color: #B0CECA;
+}
+.study-sort-btn--studentid:hover,
+.study-sort-btn--studentid.active {
+  background: #5A9E8A;
+  color: #fff;
+  border-color: #5A9E8A;
+}
+
+/* 제출 — 프라이머리 오렌지 */
+.study-sort-btn--time {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  border-color: #EDCBB8;
+}
+.study-sort-btn--time:hover,
+.study-sort-btn--time.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+/* 확인 — 공부중 전광판 열기(정렬 버튼이 아니라 눌러도 파란 안내 톤 고정) */
+.study-sort-btn--check {
+  background: #EEF2FF;
+  color: #4338CA;
+  border-color: #C7D2FE;
+}
+.study-sort-btn--check:hover {
+  background: #4F46E5;
+  color: #fff;
+  border-color: #4F46E5;
+}
+
+
+/* 설명 더블 클릭으로 편집 — 제목과 같은 방식(단일 클릭은 안내만, 더블 클릭이 편집) */
+.study-column-desc--editable {
+  cursor: text;
+}
+.study-column-desc--editable:hover {
+  background: var(--primary-light);
+}
+
+/* 다른 반으로 복제 모달 */
+.modal.modal-duplicate {
+  max-width: 380px;
+}
+.duplicate-class-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+.duplicate-class-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-btn);
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.1s, background 0.1s;
+}
+.duplicate-class-row:hover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+.duplicate-class-row strong {
+  flex: 1;
+}
+.duplicate-class-go {
+  font-size: 12px;
+  color: var(--primary-dark);
+  font-weight: 600;
+}
+
+/* 공부중 전광판 열기 — 프로젝트 머리말 세 단추 중 맨 앞의 알약.
+   카드 화면의 같은 단추(.study-progress-btn)와 같은 모양이고, 높이만
+   옆 원형 단추(▶ · ⚙, 26px)에 맞춥니다. 모바일은 .study-chip의
+   min-height 34px가 이깁니다(옆 단추들도 34px). */
+.study-project-live-tools .study-chip.study-progress-btn {
+  height: 26px;
+  padding: 0 10px;
+  flex-shrink: 0;
+}
+
+/* + 토글 버튼 — 열릴 때 45° 회전해서 × 형태 */
+.study-panel-toggle {
+  width: 26px;
+  height: 26px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  transition: transform 0.25s ease, background 0.15s;
+}
+.study-panel-toggle:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+/* 열려 있음을 색으로 — 예전 '+' 아이콘용 45° 회전은 톱니바퀴엔 어색해
+   작은 각도만 돌리고 색으로 상태를 알립니다. */
+.study-panel-toggle.open {
+  transform: rotate(30deg);
+  color: var(--primary-dark);
+}
+
+/* 활동 설정 모달 */
+.study-activity-modal {
+  background: #fff;
+  border-radius: 14px;
+  padding: 20px;
+  width: 460px;
+  max-width: 94vw;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+}
+.study-activity-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.study-activity-modal-head h3 {
+  font-size: 16px;
+  font-weight: 700;
+}
+.study-activity-hint {
+  font-size: 13px;
+  color: var(--text-sub);
+  margin: -4px 0 0;
+}
+.study-activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.study-activity-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.study-activity-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary);
+  white-space: nowrap;
+  min-width: 48px;
+}
+.study-activity-input {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  color: var(--dark);
+  background: var(--bg);
+}
+.study-activity-input:focus {
+  border-color: var(--primary);
+}
+.study-activity-del {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-sub);
+  padding: 4px 6px;
+  border-radius: 4px;
+  line-height: 1;
+}
+.study-activity-del:hover {
+  background: var(--border);
+  color: var(--dark);
+}
+.study-activity-add {
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 13px;
+  color: var(--text-sub);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.15s, color 0.15s;
+}
+.study-activity-add:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.study-activity-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+/* 활동 폼 — 모달 바디가 외부 스크롤 담당, 섹션은 콘텐츠에 맞게 자동 늘어남 */
+.study-card-modal-body.activity-mode {
+  overflow-y: auto;
+  padding-bottom: 24px;
+}
+
+/* 제출 인정 기준 안내 — 활동 대시보드 맨 위 한 줄 */
+.activity-form-hint {
+  flex-shrink: 0;
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #fff7e8;
+  border: 1px solid #f0dcb4;
+  color: #8a6127;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+/* 잠긴 활동 안내(대시보드·개별 활동 모달 공용) */
+.activity-form-locked-note {
+  font-size: 13.5px;
+  color: var(--text-sub);
+}
+
+/* ── 활동 대시보드 — 활동 하나가 카드 한 장, 눌러서 그 활동만 크게
+   쓰는 모달을 엽니다(책방 곁텍스트 읽기와 같은 방식) ── */
+.activity-dash-status {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+.activity-dash-progress {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--primary-dark);
+  background: var(--primary-light);
+  border-radius: var(--radius-btn);
+  padding: 5px 11px;
+  line-height: 1;
+}
+.activity-dash-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 12px;
+  padding: 2px 2px 10px;
+}
+.activity-dash-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  min-height: 118px;
+  text-align: left;
+  padding: 13px 14px 14px;
+  background: var(--card-bg, #fff);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.activity-dash-card:hover { border-color: var(--primary); }
+.activity-dash-card.done { border-color: #8cc79f; }
+.activity-dash-card.empty { background: var(--bg-deep); }
+.activity-dash-card.locked { background: var(--neutral); border-style: dashed; cursor: default; }
+.activity-dash-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.activity-dash-no {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--primary-dark, #c15a2a);
+  background: var(--primary-light);
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+.activity-dash-lock {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-sub);
+}
+.activity-dash-count {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-sub);
+}
+.activity-dash-count.ok { color: #2f7d54; }
+.activity-dash-title {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: var(--text);
+}
+.activity-dash-preview {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-sub);
+}
+.activity-dash-preview.empty { font-style: italic; }
+
+/* ── 활동 하나를 크게 쓰는 모달 ── */
+.activity-write-modal {
+  max-width: min(94vw, 720px);
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.activity-write-modal .modal-head h3 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.activity-write-no {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--primary-dark, #c15a2a);
+}
+.activity-write-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: -6px 0 12px;
+}
+.activity-write-step {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--text-sub);
+}
+.activity-write-title-static {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text-sub);
+  margin: 0 0 8px;
+}
+.activity-write-body {
+  font-size: 14px;
+}
+.activity-write-editor .rte-full .rte-area {
+  min-height: 220px;
+  max-height: none;
+  overflow-y: visible;
+  height: auto;
+}
+.activity-write-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}

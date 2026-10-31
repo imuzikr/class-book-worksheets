@@ -1,0 +1,709 @@
+
+/* ===================== 참여 전광판 ===================== */
+/* 전광판 + 누가기록 패널을 담는 껍데기 — position:relative일 뿐 flex가
+   아니므로, 절대 위치로 뺀 패널은 이 껍데기의 크기(=전광판 크기)에
+   영향을 주지 않습니다. 그래야 패널이 열려도 전광판이 제자리에 그대로
+   있고, 패널만 그 오른쪽에 겹쳐 나타납니다(전광판이 옆으로 밀리며
+   함께 다시 가운데 정렬되던 것과 달리, 이번엔 전광판이 고정된 채
+   패널만 슬라이딩합니다). */
+.attend-shell {
+  position: relative;
+  max-width: 100%;
+  max-height: 100%;
+}
+.attend-backdrop {
+  padding: 16px;
+}
+.attend-modal {
+  width: min(760px, 94vw);
+  max-width: 100%;
+  padding: 20px;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  scrollbar-gutter: stable both-edges;
+}
+.attend-modal .modal-head {
+  margin-bottom: 8px;
+}
+
+/* 누가기록 슬라이드 패널 — 전광판은 그대로 두고 그 오른쪽에 겹쳐서
+   미끄러져 나옵니다(전광판 크기와 무관하게 위치를 잡도록 절대 위치). */
+.attend-notes-panel {
+  position: absolute;
+  top: 0;
+  left: 100%;
+  margin-left: 14px;
+  width: min(340px, 94vw);
+  background: #fff;
+  border-radius: 20px;
+  padding: 20px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-soft);
+  animation: attend-notes-in 0.22s ease-out;
+}
+@keyframes attend-notes-in {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+/* 전광판(760px)이 가운데 있을 때 그 오른쪽에 패널(340px + 여백 14px)이
+   온전히 들어가려면 화면이 1468px은 돼야 합니다. 그보다 좁으면 패널이
+   화면 밖으로 잘리므로 화면 오른쪽 끝에 붙여 항상 다 보이게 합니다
+   — 전광판 오른쪽 끝을 조금 덮지만, 잘려서 못 읽는 것보다 낫습니다.
+   (전광판을 왼쪽으로 밀어 자리를 만들던 예전 방식은, 누가기록을 열 때마다
+   전광판이 통째로 움직여 어지러웠습니다 — 전광판은 이제 고정입니다) */
+@media (max-width: 1480px) {
+  .attend-notes-panel {
+    position: fixed;
+    left: auto;
+    right: 12px;
+    /* 전광판도 화면 가운데에 놓이므로 패널도 세로 가운데로 맞춥니다 */
+    top: 50%;
+    transform: translateY(-50%);
+    margin-left: 0;
+    /* 전광판 위에 겹치므로 떠 있는 느낌이 나도록 그림자를 진하게 */
+    box-shadow: 0 10px 34px rgba(46, 36, 26, 0.26);
+    animation: attend-notes-in-fixed 0.22s ease-out;
+  }
+}
+@keyframes attend-notes-in-fixed {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(-24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+}
+.attend-notes-panel .modal-head h3 {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 17px;
+}
+/* 움직임을 줄이도록 설정한 사용자에게는 슬라이드 없이 바로 보여 줍니다 */
+@media (prefers-reduced-motion: reduce) {
+  .attend-notes-panel {
+    animation: none;
+  }
+}
+.attend-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-sub);
+}
+.attend-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.attend-chip {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+.attend-chip--on { background: #d7f0dd; border-color: #8fcea3; }
+.attend-chip--away { background: #ffe2c9; border-color: #f0b483; }
+.attend-chip--off { background: #ececea; }
+.attend-chip--absent { background: #f3d8d8; border-color: #dc9b9b; }
+.attend-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.attend-view-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+.attend-mode-tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  background: var(--neutral);
+  border-radius: var(--radius-btn);
+}
+.attend-mode-tabs button {
+  padding: 7px 11px;
+  border: 0;
+  border-radius: calc(var(--radius-btn) - 2px);
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-sub);
+  cursor: pointer;
+}
+.attend-mode-tabs button.active {
+  color: var(--text);
+  background: #fff;
+  box-shadow: var(--shadow-soft);
+}
+.attend-mode-tabs button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.attend-help {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-sub);
+}
+
+/* 교실 자리 — 가로 6칸 × 세로 5줄 고정. 학생이 적으면 남는 자리는 빈 책상.
+   align-items:start — 도구 줄이 붙어 키가 커진 칸에 맞춰 빈 자리(사각형
+   그대로)까지 늘어나 찌그러지지 않도록 각 칸을 위쪽에 붙입니다. */
+.attend-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+/* 카드(정사각형) + 도구 줄을 위아래로 묶는 칸 — 실제 그리드 아이템 */
+.attend-desk-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.attend-desk {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  text-align: center;
+  overflow: hidden;
+}
+.attend-desk--on {
+  background: #d7f0dd;
+  border-color: #8fcea3;
+}
+.attend-desk--away {
+  background: #ffe2c9;
+  border-color: #f0b483;
+}
+.attend-desk--off {
+  background: #ececea;
+  color: var(--text-sub);
+}
+.attend-desk--absent {
+  background: #f3d8d8;
+  color: #7f2b2b;
+}
+/* 빈 자리 — 테두리만 옅게 남겨 '자리는 있으나 학생이 없음'을 표시 */
+.attend-desk--empty {
+  background: transparent;
+  border-style: dashed;
+  border-color: #e2e0da;
+}
+.attend-desk-no {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.75;
+}
+.attend-desk-name {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.25;
+  word-break: keep-all;
+}
+.attend-desk-name em {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 800;
+}
+.attend-desk-group {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-sub);
+}
+
+/* 교사는 카드를 눌러 과일 주기·누가기록을 고릅니다 */
+.attend-desk--clickable {
+  cursor: pointer;
+  transition: box-shadow 0.12s, transform 0.12s;
+}
+.attend-desk--clickable:hover {
+  box-shadow: 0 0 0 2px var(--primary);
+  transform: translateY(-1px);
+}
+.attend-desk--clickable:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(217, 119, 87, 0.45);
+}
+/* 지금까지 받은 과일 수 — 카드 안 작은 뱃지 */
+.attend-desk-fruit {
+  margin-top: 2px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--text-sub);
+}
+/* 누가기록 패널이 열려 있는 학생 카드를 표시 */
+.attend-desk--noting {
+  box-shadow: 0 0 0 2px var(--primary) inset;
+}
+
+/* ── 손들기(언제든 질문하기) — 자리에서 바로 눈에 띄게 ── */
+.attend-desk {
+  position: relative; /* 손 아이콘·필기 중 아이콘의 기준 */
+}
+/* 손든 학생은 오른쪽 위 손바닥(.attend-desk-hand)만으로 표시합니다 —
+   자리표(.attend-seat--raised)와 같은 이유로 테두리 강조는 뺐습니다. */
+/* 카드가 overflow:hidden이라 밖으로 내밀면 잘립니다 — 안쪽 모서리에 둡니다 */
+.attend-desk-hand {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  font-size: 18px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
+  animation: attend-hand-wave 1.6s ease-in-out infinite;
+}
+@keyframes attend-hand-wave {
+  0%, 100% { transform: rotate(-9deg); }
+  50%      { transform: rotate(9deg); }
+}
+/* 수업 노트에 필기 중 — 손들기(오른쪽 위) 맞은편인 왼쪽 위에 둡니다 */
+.attend-desk-noting {
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  font-size: 15px;
+  line-height: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .attend-desk-hand,
+  .attend-seat-hand {
+    animation: none;
+  }
+}
+.attend-legend-item--hand {
+  font-weight: 800;
+  color: var(--primary-dark);
+}
+
+/* ── 자리를 누르면 그 옆에 뜨는 과일/누가기록 창 ──
+   **모달이 아니라 팝오버입니다**(궁금한 순간의 `.tally-pop`과 같은 성격) —
+   뒤를 덮지 않고, 누른 자리 옆에 붙고, 바깥을 누르거나 Esc·×로 닫힙니다.
+   자리표를 덮지 않아야 다음에 누를 학생이 화면에 그대로 남습니다.
+
+   `position: fixed`가 핵심입니다: 자리표가 구르는 패널 안에 있을 때
+   (수업 중 자리표·'멋진 순간') 절대 배치로 넣으면 잘립니다. 자리는
+   컴포넌트가 인라인으로 줍니다(`lib/popover.js`).
+   z-index는 전광판·손들기 자리 확인이 **모달 안**이라 그 위로 올립니다. */
+.attend-tools-pop {
+  position: fixed;
+  z-index: 320;
+  width: 300px;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(46, 36, 26, 0.16);
+  /* 과일 흐름을 펼치면 아래로 자랍니다 — 화면 밖으로 나가는 대신 안에서
+     구르게 합니다(높이는 컴포넌트가 인라인으로 정합니다). */
+  overflow-y: auto;
+}
+.attend-tools-pop-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.attend-tools-pop-head strong {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 14.5px;
+  color: var(--dark);
+}
+.attend-tools-pop-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 학번은 줄어들지 않습니다 — 이름이 길면 이름만 접힙니다 */
+.attend-tools-pop-head .attend-tools-no {
+  flex-shrink: 0;
+}
+/* 창이 작아 모달 머리줄만 한 여백을 둘 자리가 없습니다 */
+.attend-tools-pop-head .btn-close {
+  flex-shrink: 0;
+  margin: -2px -4px 0 0;
+}
+/* 안쪽 상자를 겹치지 않습니다 — 이미 테두리 있는 작은 창이라 상자 안에
+   상자가 되면 가로 폭이 두 겹 여백만큼 줄어듭니다. 과일 흐름 아래의
+   실선(`.attend-tools-section .rwtrend`)은 그대로 살려 둡니다. */
+.attend-tools-pop .attend-tools-section {
+  padding: 0;
+  border: none;
+  background: none;
+}
+.attend-tools-no {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-sub);
+}
+/* 과일 칸과 누가기록 칸 — grid-auto-rows: 1fr로 두 칸 높이를 같게 맞춥니다
+   (내용이 많은 과일 칸에 맞춰 누가기록 칸도 같이 늘어납니다) */
+/* 예전에는 grid-auto-rows: 1fr로 두 칸 높이를 억지로 맞췄습니다. 과일 칸에
+   펼쳤다 접는 '과일 받은 흐름'이 들어오면서 그 방식을 버렸습니다 — 흐름을
+   펼치면 그 높이에 맞춰 누가기록 버튼까지 같이 늘어나 화면 절반짜리 버튼이
+   됩니다. 이제 각 칸은 제 내용만큼만 차지하고, 누가기록 버튼은 자기
+   min-height(46px)로 충분한 크기를 지킵니다. */
+.attend-tools-cards {
+  margin-top: 4px;
+  display: grid;
+  gap: 12px;
+  grid-auto-rows: auto;
+}
+.attend-tools-section {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+}
+.attend-tools-award {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.attend-award-btn {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-btn);
+  background: #fff;
+  font-family: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, transform 0.1s;
+}
+.attend-award-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+/* 빼기·주기 버튼은 '과일 -1 / 과일 +1' 한 쌍이라 폭·높이를 똑같이 둡니다 */
+.attend-award-btn--minus,
+.attend-award-btn--plus {
+  flex: 1;
+  height: 44px;
+  font-size: 16px;
+}
+.attend-award-btn--minus {
+  color: var(--text-sub);
+}
+.attend-award-btn--plus {
+  background: var(--primary-light);
+  border-color: #edcbb8;
+  color: var(--primary-dark);
+}
+.attend-award-btn span {
+  font-family: var(--font-mono);
+}
+.attend-award-btn:hover:not(:disabled) {
+  border-color: var(--primary);
+  transform: translateY(-1px);
+}
+.attend-award-btn--plus:hover:not(:disabled) {
+  background: #f3d9cb;
+}
+.attend-tools-maxed {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--danger);
+}
+.attend-tools-notes {
+  /* 아이콘 + 글자를 한 줄 가운데로. 그냥 두면 SVG가 글자의 **기준선**에
+     앉아 아래로 반쯤 내려가고, 글자만 위로 뜬 것처럼 보입니다. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-btn);
+  background: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.attend-tools-notes:hover {
+  background: var(--primary-light);
+  border-color: var(--primary);
+}
+.attend-group-view {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  max-height: 68vh;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+/* 모둠 구분은 왼쪽 색 띠 하나로만 — 예전엔 카드 테두리 전체를 원색으로
+   두르고 제목도 그 색으로 칠해서, 카드 안 참여 상태 색(초록/주황/빨강)과
+   겹쳐 알록달록해 보였습니다. 섹션당 색은 여기 한 번이면 충분합니다. */
+.attend-group-section {
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--group-color);
+  border-radius: 10px;
+  background: var(--card-bg, #fff);
+  padding: 12px;
+}
+.attend-group-section h4 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 10px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 800;
+}
+/* 제목 앞 작은 점으로만 모둠 색을 다시 짚어 줍니다(글자색까지 칠하지 않음) */
+.attend-group-section h4::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--group-color);
+}
+.attend-group-members {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.attend-group-members .attend-desk {
+  aspect-ratio: auto;
+  min-height: 56px;
+}
+.attend-group-members .attend-desk-wrap {
+  align-items: stretch;
+}
+/* 모둠별 보기 안에서는 섹션 자체가 모둠을 나타내므로, 카드마다 모둠 색
+   테두리를 겹쳐 칠하지 않고 참여 상태 색(배경)만으로 보여 줍니다.
+   (테두리까지 모둠 원색으로 칠하면, 예를 들어 결석=분홍 배경에 모둠색=
+   파랑 테두리가 겹쳐 오히려 상태를 읽기 어려웠습니다) */
+.attend-group-members .attend-desk[style*="--group-color"] {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* 수업 준비 — 자리 배정 / 모둠 설정 */
+.seat-setup-modal {
+  /* .modal 기본(max-width:640px)이 그대로 남아 있으면 아래 width가
+     묵살돼 자리 칸이 실제로는 훨씬 좁게 눌려 이름 글자가 세로로
+     쪼개져 보였습니다 — max-width도 함께 풀어 줍니다. */
+  width: min(1180px, 96vw);
+  max-width: none;
+  max-height: 94vh;
+  overflow-y: auto;
+}
+/* 탭 묶음 + '학생 보기 / 선생님 보기' 한 줄 */
+.seat-setup-tabrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.seat-setup-tabrow .seat-setup-tabs { margin-bottom: 0; }
+.seat-setup-tabrow .reward-seat-flip { margin-left: auto; }
+
+/* 선생님 보기는 자리 **차례**를 거꾸로 세워 그립니다(lib/seats.js의
+   `seatOrder`). 예전에는 격자를 `rotate(180deg)`로 돌리고 칸마다 도로 180도
+   돌려 세웠는데, 돌린 층의 글자를 브라우저가 흐리게 그렸습니다 — 격자 크기가
+   소수점 픽셀인 반은 늘, 나머지 반도 마우스를 얹어 칸이 움직이는 동안(실제
+   신고). **자리표에 transform 회전을 되살리지 마세요.** */
+
+.seat-setup-tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  margin-bottom: 14px;
+  background: var(--neutral);
+  border-radius: var(--radius-btn);
+}
+.seat-setup-tabs button,
+.group-setup-toolbar button {
+  padding: 8px 12px;
+  border: 0;
+  border-radius: calc(var(--radius-btn) - 2px);
+  background: transparent;
+  font-family: inherit;
+  font-weight: 800;
+  color: var(--text-sub);
+  cursor: pointer;
+}
+.seat-setup-tabs button.active,
+.group-setup-toolbar button.active {
+  color: var(--text);
+  background: #fff;
+  box-shadow: var(--shadow-soft);
+}
+.seat-setup-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  gap: 14px;
+}
+.seat-setup-grid {
+  display: grid;
+  /* 실제 교실 책상 배치(한 줄 6명·총 5줄)에 맞춰 6열로 표시합니다. */
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+.seat-slot {
+  /* 정사각형이면 한 줄 6칸 × 5줄이 세로로 740px을 넘어 창에 스크롤 막대가
+     생겼습니다. 칸 안에 드는 것은 자리 번호 · 학번 · 이름 세 줄뿐이라
+     3:2면 넉넉합니다(실측: 창 높이 956 → 781px, 스크롤 사라짐). */
+  aspect-ratio: 3 / 2;
+  min-height: 74px;
+  min-width: 0;
+  padding: 8px 4px;
+  border: 1px dashed #d8d5ce;
+  border-radius: 9px;
+  background: #faf9f5;
+  font-family: inherit;
+  color: var(--text-sub);
+  cursor: pointer;
+  overflow: hidden;
+}
+.seat-slot.filled {
+  border-style: solid;
+  background: #fff;
+  color: var(--text);
+}
+.seat-slot-no {
+  display: block;
+  font-size: 10px;
+  font-weight: 800;
+  opacity: 0.55;
+}
+.seat-slot-name {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: calc(100% - 14px);
+  gap: 2px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.15;
+  min-width: 0;
+  width: 100%;
+}
+/* 칸이 좁아도 글자가 세로로 쪼개지지 않고, 넘치면 말줄임표로 잘립니다 */
+.seat-slot-name-text {
+  display: block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.seat-slot-name em,
+.seat-student-chip em {
+  font-style: normal;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  white-space: nowrap;
+  opacity: 0.7;
+}
+.seat-slot-empty,
+.seat-empty-note {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-sub);
+}
+.seat-pool,
+.group-unassigned {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  background: #fff;
+}
+.seat-pool strong,
+.group-unassigned strong {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.seat-pool-list,
+.group-setup-members,
+.group-unassigned {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.seat-student-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-btn);
+  background: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: grab;
+}
+.seat-student-chip.active {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+.seat-setup-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+.group-setup-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.group-setup-toolbar span {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-sub);
+}
+.group-unassigned {
+  margin-bottom: 12px;
+}
+.group-setup-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}

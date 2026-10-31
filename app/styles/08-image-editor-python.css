@@ -1,0 +1,937 @@
+
+
+/* ===================== 이미지 첨부 ===================== */
+.attach-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.attach-label {
+  display: inline-block;
+}
+
+.attach-preview {
+  max-height: 180px;
+  max-width: 100%;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  object-fit: contain;
+  align-self: flex-start;
+}
+
+/* 카드 본문: 텍스트(왼쪽) + 섬네일(오른쪽) */
+.card-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.card-main {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 첨부/그리기 이미지 섬네일 묶음 — 오른쪽 끝에서부터 순서대로 채워지고,
+   삽입한 이미지·그림이 모두 보이도록 오른쪽 정렬로 줄바꿈합니다. */
+.card-thumbs {
+  flex-shrink: 0;
+  max-width: 45%;
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: row-reverse;
+  justify-content: flex-start;
+  align-content: flex-start;
+  gap: 6px;
+}
+.card-thumb {
+  width: 60px;
+  height: 60px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  object-fit: cover;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+/* ===================== 질문 상태 토글 (궁금해요/해결됐어요) ===================== */
+.status-toggle {
+  margin-left: auto;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 800;
+  border: 1.5px solid transparent;
+  transition: transform 0.12s, box-shadow 0.12s;
+  flex-shrink: 0;
+}
+
+.status-toggle:hover {
+  transform: scale(1.06);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+}
+
+.status-toggle.open {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  border-color: #ecbfa9;
+}
+
+.status-toggle.resolved {
+  background: #e9f0e6;
+  color: #3d7a4a;
+  border-color: #b3d0b4;
+}
+
+.status-toggle.disabled,
+.status-toggle:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* 글쓴이가 아닌 사람에게는 상태만 보여 주는 배지 — 버튼처럼 보이지 않게
+   (display/gap은 위쪽 공용 .status-toggle 규칙이 이미 처리) */
+.status-toggle.readonly {
+  cursor: default;
+}
+.status-toggle.readonly:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* 카드의 상태 표시 — 클릭 불가(상태 변경은 상세 모달의 인사이트 흐름에서만) */
+.status-badge {
+  margin-left: auto;
+  padding: 2px 0;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  flex-shrink: 0;
+  cursor: default;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #3A312E;
+}
+
+/* 해결된 질문 카드는 왼쪽에 초록 띠 표시 */
+.question-card.is-resolved {
+  border-left: 4px solid #5c9e68;
+}
+
+/* 상세 모달 안의 토글: 오른쪽 위 닫기(×) 버튼과 겹치지 않게 여백 확보 */
+.qa-status {
+  margin-right: 22px;
+}
+
+/* ===================== 나도 궁금해요 버튼 ===================== */
+/* 카드 오른쪽 아래 + 상세 모달 왼쪽 하단에서 사용.
+   1인 1회 — 누르면 채워진(on) 상태가 되고 다시 누르면 취소됩니다. */
+.metoo-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1.5px solid #ecbfa9;
+  background: var(--primary-light);
+  color: #3A312E;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+  transition: transform 0.12s, background 0.15s, box-shadow 0.12s;
+}
+
+.metoo-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 3px 10px rgba(46, 36, 26, 0.12);
+}
+
+/* 내 질문 — 누를 수 없음(개수만 표시) */
+.metoo-btn.is-self {
+  opacity: 0.5;
+  cursor: default;
+}
+.metoo-btn.is-self:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* 내가 이미 누른 상태 — 테라코타로 채움 */
+.metoo-btn.on {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.metoo-count {
+  min-width: 22px;
+  text-align: center;
+  background: #fff;
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.metoo-btn.on .metoo-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+/* ===================== 그리기 캔버스 ===================== */
+.modal-canvas {
+  max-width: 880px;
+}
+
+.canvas-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.color-row {
+  display: flex;
+  gap: 8px;
+}
+
+.color-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+.color-swatch.active {
+  box-shadow: 0 0 0 3px var(--primary);
+}
+
+.tool-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tool-active {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary-dark);
+  font-weight: 700;
+}
+
+.draw-canvas {
+  width: 100%;
+  border: 1.5px dashed var(--border);
+  border-radius: 10px;
+  background: #fff;
+  cursor: crosshair;
+  touch-action: none; /* 터치로 그릴 때 화면 스크롤 방지 */
+  display: block;
+}
+
+.canvas-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* ===================== 서식 입력 에디터 (RichTextEditor) ===================== */
+/* 둥근 박스 안에 툴바가 내장된 형태.
+   variant=full → 툴바가 위 / variant=chat → 툴바가 아래 + 전송 버튼 */
+.rte {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.rte:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(217, 119, 87, 0.16);
+}
+
+/* 도구가 줄보다 많으면 **줄어들지 않고 옆으로 구릅니다** — 아이콘을 쭈그려
+   알아보기 어렵게 만드는 것보다 낫습니다(상단바 이동 메뉴와 같은 방식).
+   단추마다 `flex-shrink: 0`이 있어야 이 구르기가 실제로 걸립니다. */
+.rte-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.rte-toolbar::-webkit-scrollbar {
+  display: none;
+}
+
+.rte-full .rte-toolbar {
+  border-bottom: 1px solid var(--border);
+}
+
+.rte-chat .rte-toolbar {
+  border-top: 1px solid var(--border);
+}
+/* 툴바를 위로 올린 채팅 에디터(toolbarTop) — 가르는 선도 따라 넘어갑니다.
+   안 그러면 툴바 위에 선이 그어져 창 머리와 붙어 보입니다. */
+.rte-chat.rte-toolbar-top .rte-toolbar {
+  border-top: none;
+  border-bottom: 1px solid var(--border);
+}
+
+/* 툴바 아이콘 버튼 */
+.rte-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: none;
+  border-radius: 8px;
+  color: var(--text-sub);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.rte-tool:hover {
+  background: var(--neutral);
+  color: var(--text);
+}
+
+/* 커서 위치에 해당 서식이 켜져 있으면 강조 */
+.rte-tool.active {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+}
+
+.rte-glyph {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.rte-serif {
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+code.rte-code-glyph {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: -0.5px;
+  font-weight: 700;
+  font-style: normal;
+  text-decoration: none;
+}
+
+.rte-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+  margin: 0 6px;
+  flex-shrink: 0;
+}
+
+/* 전송 버튼 — 박스 **바깥 아래**의 제 줄, 오른쪽 끝.
+   한때 채팅 툴바 오른쪽 끝에 있었는데, 그 줄에 도구가 아홉이라 좁은 칸
+   (질문 모달 오른쪽 390px 남짓)에서 줄을 넘겨 **버튼이 세로로 잘렸습니다**
+   (실제 신고). 줄을 따로 두면 폭에 안 걸리고 글자도 달 수 있습니다. */
+.rte-sendrow {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+  flex-shrink: 0;
+}
+/* 모둠 메모 칸은 제 `gap`(10px)이 이미 줄 사이를 벌려 둡니다 — 거기서는
+   위 여백을 풀어야 이 줄만 위아래 간격이 다르게 벌어지지 않습니다. */
+.gmemo-thread-pane > .rte-sendrow {
+  margin-top: 0;
+}
+
+.rte-send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 10px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.rte-send:hover {
+  background: var(--primary-dark);
+}
+
+.rte-send:disabled {
+  background: #d9d6cb;
+  cursor: default;
+}
+
+/* 글 입력 영역 (박스 내부라 자체 테두리 없음) */
+.rte-area {
+  border: none;
+  outline: none;
+  padding: 12px 14px;
+  font-size: 14px;
+  line-height: 1.7;
+  overflow-y: auto;
+}
+
+.rte-full .rte-area {
+  min-height: 130px;
+  max-height: 320px;
+}
+
+.rte-chat .rte-area {
+  min-height: 42px;
+  max-height: 140px;
+}
+
+.rte-sm .rte-area {
+  min-height: 70px;
+}
+
+/* 비어 있을 때 회색 안내 문구 표시 */
+.rte-area:empty::before {
+  content: attr(data-placeholder);
+  color: #a8a69d;
+  pointer-events: none;
+}
+
+/* 코드 블록 — 어두운 배경에 진짜 코드처럼 표시 */
+/* `.study-card-content`·`.study-card-body`가 여기 빠져 있어, 공부방 카드에
+   넣은 코드만 밋밋한 글로 나왔습니다 — 에디터에서는 검은 블록이던 것이
+   저장하고 보면 평범한 글이 되니 '서식이 안 먹는다'로 보입니다. */
+.rte-area pre,
+.qa-content pre,
+.chat-bubble pre,
+.msgr-bubble pre,
+.notice-item pre,
+.study-card-content pre,
+.study-card-body pre {
+  background: var(--dark);
+  color: #ede9e0;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 12px 14px;
+  border-radius: 10px;
+  overflow-x: auto;
+  white-space: pre;
+  margin: 6px 0;
+}
+
+pre code {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* 코드 셀의 **결과**(lib/pyCells.js의 `pre.py-result`) — 읽는 자리에서.
+   코드와 같은 검은 블록이면 어디까지가 코드고 어디부터가 출력인지 안
+   갈려서, 옅은 바탕 + 왼쪽 선으로 '프로그램이 낸 말'임을 보입니다.
+   '실행 결과' 이름은 **코드 셀 바로 뒤일 때만** CSS가 그립니다 — 옛
+   '결과 붙이기'는 `<p>실행 결과</p>` 줄을 글로 넣어 두어, 거기까지 달면
+   이름이 두 번 섭니다. 출력은 길어도 접어 보이게(pre-wrap) 둡니다. */
+.rte-area pre.py-result,
+.study-card-content pre.py-result,
+.study-card-body pre.py-result {
+  background: var(--bg-deep);
+  color: var(--text);
+  border-left: 3px solid #a6d8b6;
+  border-radius: 0 10px 10px 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.rte-area pre.py-code + pre.py-result,
+.study-card-content pre.py-code + pre.py-result,
+.study-card-body pre.py-code + pre.py-result {
+  margin-top: -2px;
+}
+.rte-area pre.py-code + pre.py-result::before,
+.study-card-content pre.py-code + pre.py-result::before,
+.study-card-body pre.py-code + pre.py-result::before {
+  content: "실행 결과";
+  display: block;
+  margin-bottom: 2px;
+  font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-sub);
+}
+
+/* 파이썬 연계 활동의 **글 셀**(lib/pyCells.js의 `div.py-text`) — 읽는 자리에서.
+   코드(검은 블록)와 결과(옅은 바탕 + 초록 선) 사이에서 글만 맨바닥에 흘러,
+   어디까지가 한 셀인지 안 보였습니다. 흰 바탕 + 옅은 테두리 + 살구빛 왼쪽
+   선으로 '학생이 쓴 글' 한 덩이를 보입니다 — 결과의 초록 선과 색으로 갈립니다.
+   둘레(모서리·여백·위아래 간격)는 코드·결과 블록과 같은 값입니다. */
+.study-card-content .py-text,
+.study-card-body .py-text {
+  margin: 6px 0;
+  padding: 10px 14px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--primary);
+  border-radius: 0 10px 10px 0;
+  overflow-wrap: anywhere;
+}
+.study-card-content .py-text > :first-child,
+.study-card-body .py-text > :first-child { margin-top: 0; }
+.study-card-content .py-text > :last-child,
+.study-card-body .py-text > :last-child { margin-bottom: 0; }
+
+/* 글머리 기호 들여쓰기 (에디터·말풍선·본문·공지 공통) */
+.rte-area ul,
+.rte-area ol,
+.chat-bubble ul,
+.chat-bubble ol,
+.msgr-bubble ul,
+.msgr-bubble ol,
+.qa-content ul,
+.qa-content ol,
+.notice-item ul,
+.notice-item ol,
+.study-card-content ul,
+.study-card-content ol,
+.study-card-body ul,
+.study-card-body ol {
+  padding-left: 20px;
+  margin: 4px 0;
+}
+
+/* ===================== 채팅 입력 영역 ===================== */
+.chat-compose {
+  background: #fff;
+  border-top: 1px solid var(--border);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-attach-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.chat-attach-preview img {
+  max-height: 64px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+/* 말풍선 안 첨부 이미지 */
+.chat-image {
+  display: block;
+  max-width: 100%;
+  border-radius: 8px;
+  margin-top: 6px;
+}
+
+/* ===================== 파이썬 실행 패널 ===================== */
+.py-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 440px;
+  max-width: 92vw;
+  background: #fff;
+  border-left: 1px solid var(--border);
+  box-shadow: -12px 0 40px rgba(46, 36, 26, 0.15);
+  display: flex;
+  flex-direction: column;
+  padding: 18px;
+  gap: 10px;
+  z-index: 105; /* 모달(100) 위, peek(110) 아래 */
+  transform: translateX(105%);
+  /* 처음 열릴 때의 미끄러짐(transform)과 **2단이 여닫힐 때의 폭**을 같은
+     길이·같은 곡선으로 굴립니다 — 한 서랍이 두 가지 속도로 움직이면 2단이
+     따로 노는 것처럼 보입니다. 끄는 중에는 `.dragging`이 이걸 통째로 끕니다. */
+  transition: transform 0.25s ease, width 0.25s ease;
+}
+
+.py-panel.open {
+  transform: translateX(0);
+}
+
+/* 드래그 중에는 슬라이드 애니메이션을 꺼서 즉시 따라오게 */
+.py-panel.dragging {
+  transition: none;
+}
+
+/* 2단 — 프로젝트 연계.
+   **화면을 덮지 않습니다.** 서랍이 프로젝트 칸 너비(--py-link-w)만큼 한 칸
+   더 열릴 뿐입니다 — 폭은 컴포넌트가 인라인으로 줍니다(1단 폭 + 그만큼).
+   예전에는 여기서 100vw로 벌려 화면을 통째로 덮었는데, 그건 없앤 '전체
+   화면'이 하던 일이라 2단이 그것을 물려받을 이유가 없습니다. */
+.py-main {
+  display: flex;
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+  /* 폭이 벌어지는 동안 프로젝트 칸이 **가려졌다 드러납니다**. 이게 없으면
+     칸이 처음부터 제자리에 있고 대신 에디터가 짜부라졌다 돌아와, 여는
+     내내 코드가 출렁입니다. */
+  overflow: hidden;
+}
+
+/* 2단이 여닫히는 동안 에디터·입출력 칸이 제 폭을 지킵니다 — `flex: 1`만
+   두면 전환 중에는 아직 좁은 패널을 프로젝트 칸(안 줄어듦)과 나눠 가지느라
+   그만큼 줄어듭니다. `--py-body-w`는 컴포넌트가 인라인으로 줍니다. */
+.py-panel.linked .py-body {
+  min-width: var(--py-body-w, 0);
+}
+
+/* 프로젝트 연계 칸 — 세 칸 중 가장 오른쪽, 폭은 고정입니다.
+   `flex: 1`로 두면 창이 넓어질수록 고르개 두 개가 덩그러니 늘어나고,
+   정작 넓어야 할 에디터가 그만큼 줄어듭니다. */
+.py-project {
+  flex: 0 0 300px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 16px;
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+}
+.py-project-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.py-project-head h4 {
+  margin: 0;
+  font-size: 14px;
+}
+.py-project-scope {
+  font-style: normal;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+/* 프로젝트·활동 고르개 두 개를 한 줄에 나란히 */
+.py-project-picks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.py-project-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0; /* 없으면 긴 이름이 칸을 밀어 두 칸이 안 맞습니다 */
+}
+.py-project-label {
+  font-size: 12px;
+  color: var(--text-sub);
+}
+.py-project-select,
+.py-project-input {
+  width: 100%;
+  padding: 7px 9px;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+}
+.py-project-make {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+.py-project-make button {
+  flex: 1 1 0;
+  font-size: 12px;
+  padding: 6px 8px;
+}
+.py-project-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+}
+.py-project-form-actions {
+  display: grid; /* 모달 아래 두 단추와 같은 규칙 — 정확히 반씩 */
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.py-project-form-actions button { width: 100%; font-size: 12.5px; padding: 6px 8px; }
+
+.py-project-where {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 13px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+}
+.py-project-where strong,
+.py-project-where span { overflow-wrap: anywhere; }
+.py-project-where span { color: var(--text-sub); font-size: 12.5px; }
+.py-project-lock {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+  font-style: normal;
+  font-size: 12px;
+  color: var(--text-sub);
+}
+
+.py-project-send { margin-top: 4px; }
+.py-project-why { margin: 0; font-size: 12px; color: var(--text-faint); }
+.py-project-note { margin: 0; font-size: 12.5px; }
+.py-project-note--ok { color: #3f704b; }
+.py-project-note--err { color: #b8474b; }
+.py-project-hint {
+  margin: auto 0 0; /* 칸 맨 아래로 */
+  padding-top: 10px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-faint);
+}
+
+/* 좁은 화면에서는 세 칸이 세로로 풀립니다(1024px 밑에서 300px을 떼면
+   에디터가 못 씁니다). 그때는 프로젝트 칸이 맨 아래에 옵니다. */
+@media (max-width: 1024px) {
+  .py-main { flex-direction: column; overflow: visible; }
+  /* 세로로 풀리면 지킬 폭이 없습니다 — 그대로 두면 가로로 넘칩니다. */
+  .py-panel.linked .py-body { min-width: 0; }
+  .py-project {
+    flex: 0 0 auto;
+    padding-left: 0;
+    padding-top: 12px;
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
+}
+
+/* 왼쪽 가장자리 크기 조절 핸들 */
+.py-resizer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 7px;
+  cursor: ew-resize;
+  z-index: 1;
+}
+
+.py-resizer:hover {
+  background: linear-gradient(
+    to right,
+    rgba(217, 119, 87, 0.35),
+    transparent
+  );
+}
+
+.py-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.py-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.py-copy-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+.py-copy-btn:hover {
+  background: var(--neutral);
+}
+
+/* 예시 코드 — 빈 칸에 옅게 뜨는 안내입니다(실제 내용이 아니라, 한 글자만
+   쳐도 저절로 사라집니다). CodeMirror의 placeholder 자리에 줄마다 <div>로
+   쌓아 넣으므로, 여기서는 편집기 글자와 같은 줄 높이만 맞춰 줍니다. */
+.py-sample {
+  color: var(--text-faint);
+  white-space: pre;
+}
+.py-sample > div { line-height: 1.4; }
+
+/* 본문 배치: 보통은 세로, 전체 화면은 좌우 분할 */
+.py-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+  /* flex 항목의 기본값 `min-width: auto`는 **내용보다 좁아지기를 거부**합니다.
+     세로로 쌓기만 하던 때는 부모가 열이라 티가 안 났는데, `.py-main`으로
+     감싸 가로줄이 되자 이 칸이 부모보다 13px 넓어져 잘렸습니다(실측
+     403 대 416). 0으로 풀어 두면 부모 폭을 그대로 따릅니다. */
+  min-width: 0;
+}
+
+.py-right {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+}
+
+.py-head h3 {
+  font-size: 17px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.py-btn-active {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary-dark);
+}
+
+/* CodeMirror 에디터 */
+.py-editor {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.py-editor .cm-editor {
+  height: 240px;
+  font-size: 13.5px;
+}
+
+.py-editor .cm-editor.cm-focused {
+  outline: 2px solid var(--primary);
+}
+
+.py-editor .cm-scroller {
+  font-family: var(--font-mono);
+  line-height: 1.6;
+}
+
+.py-editor .cm-gutters {
+  background: var(--bg-deep);
+  color: #a8a69d;
+  border-right: 1px solid var(--border);
+}
+
+/* 실행기의 입력값 칸 — 고정폭 글꼴.
+   **`.py-code`로 되돌리지 마세요** — 그 이름은 카드에 저장되는 코드 셀
+   (`pre.py-code`, lib/pyCells.js)이 씁니다. 여기 규칙(min-height 200px ·
+   밝은 바탕)이 그대로 새어 카드의 코드 셀이 전부 커다란 흰 상자가 됩니다. */
+.py-mono {
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+  line-height: 1.6;
+  min-height: 200px;
+  resize: vertical;
+  background: var(--bg);
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.py-label {
+  font-size: 13px;
+  color: var(--text-sub);
+  margin-bottom: -4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.py-stdin {
+  min-height: 56px;
+}
+
+.py-actions {
+  display: flex;
+  flex-wrap: wrap; /* 공간이 부족하면 버튼 단위로만 줄바꿈(글자는 안 깨짐) */
+  align-items: center;
+  gap: 8px;
+}
+/* 세 단추의 **높이를 하나로**. 저마다 세로 padding으로 정하고 있었고
+   '질문 만들기'에는 아이콘까지 들어 있어, 나란히 선 셋의 높이가 다
+   달랐습니다(실행 33 · 질문 만들기 36 · 출력 지우기 29px).
+   높이를 못 박고 안쪽 정렬은 inline-flex가 맡습니다. */
+.py-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 34px;
+  padding: 0 12px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.py-run-hint {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.85;
+  margin-left: 2px;
+}
+
+/* 실행 결과 (터미널 느낌의 어두운 영역) */
+.py-output {
+  flex: 1;
+  min-height: 120px;
+  overflow-y: auto;
+  background: var(--dark);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.py-line {
+  display: block;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: #dcd9ce;
+}
+
+.py-line.err {
+  color: #ff9b8a;
+}
+
+.py-line.result {
+  color: #e8a87c;
+}
+
+.py-line.info {
+  color: #87867f;
+}

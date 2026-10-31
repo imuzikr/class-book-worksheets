@@ -53,7 +53,7 @@
     (학생 한 명의 기록을 적고 보는 자리 — `StudentNotesModal`).
   - 그 바람에 아무도 안 부르게 된 `StudyActivityWall` · `StudyProgressBoard` ·
     `KwlSemesterHeatmap` · `UploadProgress`도 지웠습니다. 자료층 함수와
-    `globals.css`의 해당 클래스는 남아 있습니다(위 '자료층' 항목과 같은 까닭).
+    `app/styles/`의 해당 클래스는 남아 있습니다(위 '자료층' 항목과 같은 까닭).
 - 알림 벨은 반 공지만 받습니다(질문 답변 · 모둠 메모로 옮겨 갈 화면이 없음).
 - **자료층(`lib/data/*`) · 규칙(`firestore.rules`)은 통째로 가져왔습니다.** 질문 ·
   공부방 프로젝트 · 수업 자료 같은 컬렉션의 함수와 규칙이 남아 있지만 화면이 부르지
@@ -69,7 +69,7 @@
 
 - **프레임워크**: Next.js 15.5 App Router, React 19 (Client Components)
 - **DB**: Firebase Firestore (실서비스) / 브라우저 인메모리 Mock (데모 모드)
-- **스타일**: 단일 CSS 파일 `app/globals.css` (CSS Variables + Flexbox)
+- **스타일**: `app/globals.css`는 입구일 뿐이고, 실제 규칙은 `app/styles/`의 42개 파일(01~42 번호 순)에 있습니다. globals.css의 `@import` 순서가 곧 적용 순서이니 바꾸지 마세요. 옮기기·정리 뒤에는 `npm run css:fingerprint`로 빌드 CSS가 그대로인지(SAME) 확인합니다. (CSS Variables + Flexbox)
 - **배포**: Vercel (앱) · Firebase (규칙 · 색인 · 함수 · Storage 규칙)
 
 ## 실행
@@ -2069,7 +2069,7 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
   여기 든 것은 이름·학번·이모지뿐이고 그건 이미 급우끼리 열려 있습니다.
   모둠을 짜는 것은 그대로 교사만.
 - **CSS 접두사는 `gmemo-`**입니다. `.memo-list`·`.memo-item`은 이미
-  **교사의 수업 메모**가 쓰고 있어(globals.css 1350줄 언저리) 같은 이름을
+  **교사의 수업 메모**가 쓰고 있어(app/styles/03-teacher-memo-notice.css) 같은 이름을
   아래에서 다시 쓰면 이쪽이 이겨 교사 화면이 함께 흔들립니다. 주인이 반대인
   두 '메모'라 이름도 갈라 둡니다.
 
@@ -3968,7 +3968,7 @@ CodeMirror가 아니라 그냥 글자 칸(contentEditable)이라, 손대지 않�
     (`castContent` — **칸을 먼저 나눈 뒤** 셀로 풀고 다시 묶습니다. 카드
     전체를 통째로 풀면 활동 구역 표식이 사라집니다). 새 읽는 자리를 만들면
     여기에도 함께 거세요 — 안 그러면 그 화면에서만 결과가 두 번 섭니다.
-- 읽는 자리의 모양(`globals.css`의 `pre.py-result`): 코드는 검은 블록, 결과는
+- 읽는 자리의 모양(`app/styles/08-image-editor-python.css`의 `pre.py-result`): 코드는 검은 블록, 결과는
   **옅은 바탕 + 초록 왼쪽 선**, '실행 결과' 이름은 **코드 셀 바로 뒤일 때만**
   CSS가 그립니다(옛 '결과 붙이기'는 `<p>실행 결과</p>` 글줄을 넣어 두어,
   거기까지 달면 이름이 두 번 섭니다). 대상은 `.study-card-content` ·
@@ -5492,7 +5492,7 @@ CodeMirror가 아니라 그냥 글자 칸(contentEditable)이라, 손대지 않�
 ### 저장된 글의 서식은 `.study-card-content`에도 걸어야 합니다
 
 - 코드 블록(어두운 `pre`)과 글머리 기호 들여쓰기(`ul`/`ol`)는 한 규칙에
-  **선택자를 늘어놓아** 정합니다(globals.css 4410줄 언저리). 여기에
+  **선택자를 늘어놓아** 정합니다(app/styles/07-joincode-detail-attach.css). 여기에
   `.rte-area`(에디터) · `.qa-content` · `.chat-bubble` · `.notice-item`만
   들어 있고 **공부방 카드가 빠져 있었습니다** — 에디터에서는 검은 코드
   블록이던 것이 저장하고 보면 밋밋한 글이 되고 목록도 들여쓰기가 풀려,
@@ -5532,7 +5532,7 @@ CodeMirror가 아니라 그냥 글자 칸(contentEditable)이라, 손대지 않�
 `--text-faint`(#a09f96)**. 안내는 읽을 것이 아니라 참고할 것이라 살짝 보이면
 됩니다. `--text-faint`가 바닥입니다(`--bg-deep` 위에서 대비 2.4:1).
 
-- **입력칸의 예시 글(placeholder)은 `globals.css` 맨 위 한 곳**에서 정합니다
+- **입력칸의 예시 글(placeholder)은 `app/styles/01-base-landing-footer.css` 맨 위 한 곳**에서 정합니다
   (`input::placeholder, textarea::placeholder`). 정해 두지 않으면 브라우저
   기본색(크롬 #757575쯤)이라 본문만큼 짙어, 학생이 '이미 쓰여 있는 글'로
   읽습니다. `opacity: 1`을 함께 두세요 — 파이어폭스는 기본 opacity가 0.54라
@@ -5573,7 +5573,7 @@ CodeMirror가 아니라 그냥 글자 칸(contentEditable)이라, 손대지 않�
 - 프로젝트 배지(`.study-project-badge` — 개별·모둠·활동 n개·함께 보기·보기
   전용) · 책방 활동 카드의 상태 배지(`.book-activity-state`) · 진행 대시보드의
   잠김/열림(`.progress-act-state`) 셋은 **같은 것을 말하는 알약**이라,
-  글자 크기·여백·모서리를 `globals.css` 위쪽 한 규칙에서 함께 정합니다
+  글자 크기·여백·모서리를 `app/styles/01-base-landing-footer.css` 위쪽 한 규칙에서 함께 정합니다
   (색만 저마다의 규칙에 남습니다). 한쪽만 키우면 같은 뜻이 화면마다 다른
   크기로 보입니다.
 - **13px / padding 4px 11px / 높이 28px.** 11.5px였는데, 카드에서 가장 먼저
