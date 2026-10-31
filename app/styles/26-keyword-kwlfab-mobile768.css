@@ -307,10 +307,6 @@
 
   /* 참여 보상 패널은 모바일에서 숨김(교사 관리용, 데스크톱 전용) */
   .reward-panel { display: none; }
-  /* 모바일에선 패널이 position: fixed로 떠오르므로 슬롯은 폭을 벌리지
-     않습니다(벌리면 본문이 밀린 채 빈 칸만 생깁니다) */
-  .study-kwl-slot.open { width: 0; }
-  .study-kwl-slot { overflow: visible; }
 
   .kwl-fab {
     display: flex;

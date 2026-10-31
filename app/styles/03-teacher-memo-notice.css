@@ -1,10 +1,5 @@
 
 /* ===== 선생님 메모 (교사) ===== */
-/* 고칠 때는 메모 한 건 안에 들어가므로 조금 좁게 */
-.memo-item .notes-date-row {
-  margin-bottom: 8px;
-  font-size: 11.5px;
-}
 /* ── 진도 칸 (주제 · 페이지) ────────────────────────────────
    수업 메모는 진도만 적는 자리가 아니라, 두 칸을 늘 띄우지 않고 이 토글로
    켤 때만 내놓습니다. 켠 상태는 localStorage에 기억합니다. */
@@ -174,7 +169,6 @@
   border-radius: 999px;
   padding: 1px 7px;
 }
-
 
 /* 달력 격자는 출석부의 것을 그대로 씁니다(.study-attendance-calendar).
    패널이 좁아 칸만 낮춥니다. **건수(.study-cal-count)는 안 그립니다** —
