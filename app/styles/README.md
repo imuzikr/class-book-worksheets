@@ -21,7 +21,7 @@
 | 공통 창(모달) · 질문 · 반 관리 | 06-modal-question-class, 07-joincode-detail-attach |
 | 서식 입력 에디터 · 채팅 입력 | 08a-image-editor-richtext-chat |
 | 파이썬 실행 패널 | 08b-python-panel, 36-lesson-material-pycell |
-| 관리자 대시보드 · 학생 보고서 | 09-admin-dashboard, 10-student-report |
+| 관리자 대시보드 · 학생 보고서 | 09-admin-dashboard |
 | 공부방 | 12-study-room, 20~25번, 31-study-activity-panel |
 | 수업 중계 · 수업 준비 | 13-lesson-broadcast, 14a-activity-view-lesson-prep, 16·17번, 33-lesson-window-report |
 | 공부중 · 읽는중 전광판(잔디) | 14b-studying-board |
