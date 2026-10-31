@@ -352,11 +352,6 @@ code.rte-code-glyph {
   margin-top: 8px;
   flex-shrink: 0;
 }
-/* 모둠 메모 칸은 제 `gap`(10px)이 이미 줄 사이를 벌려 둡니다 — 거기서는
-   위 여백을 풀어야 이 줄만 위아래 간격이 다르게 벌어지지 않습니다. */
-.gmemo-thread-pane > .rte-sendrow {
-  margin-top: 0;
-}
 
 .rte-send {
   display: inline-flex;

@@ -35,7 +35,6 @@
   box-shadow: 0 0 0 2px #fff;
 }
 .pq-btn-dot.is-green { background: #2f9e5a; }
-.lesson-nav-tools .pq-btn-dot { box-shadow: 0 0 0 2px var(--dark); }
 @media (prefers-reduced-motion: reduce) {
   .pq-btn { transition: none; }
 }

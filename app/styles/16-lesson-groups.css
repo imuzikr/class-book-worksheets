@@ -74,20 +74,6 @@
     width: 94vw;
     padding: 16px;
   }
-  /* 공지·알림 팝업 — 좁은 화면에서는 머리말이 두 줄로 접혀 도구가 가운데로
-     옵니다. 팝업을 아이콘에 붙여 두면 320px 상자가 화면 왼쪽 밖으로
-     밀려납니다(실측: 375px에서 왼쪽 -77px). 감싸개의 position을 풀어
-     기준을 머리말로 옮기고, 그 아래에 가로로 꽉 채웁니다.
-     (뱃지는 버튼에 붙어 있어 이 변경과 무관합니다) */
-  .lesson-nav-tools .notice-wrap,
-  .lesson-nav-tools .notif-wrap { position: static; }
-  .lesson-nav-tools .notice-pop,
-  .lesson-nav-tools .notif-dropdown {
-    top: calc(100% + 6px);
-    left: 12px;
-    right: 12px;
-    width: auto;
-  }
 }
 
 /* 해설 카드 — 높이는 옆의 슬라이드 카드가 정합니다.
