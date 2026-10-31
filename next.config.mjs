@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 
 // 새 Firebase 프로젝트 id — lib/firebase.js · .firebaserc와 같은 값
-const FIREBASE_PROJECT_ID = "YOUR_PROJECT_ID";
+const FIREBASE_PROJECT_ID = "book-sheets-19fd2";
 const FIREBASE_APP_HOST = `https://${FIREBASE_PROJECT_ID}.firebaseapp.com`;
 // 자리표시자인 동안(데모 모드)은 CSP에 넣지 않습니다 — 밑줄이 든 주소라 브라우저가 경고합니다.
 const FIREBASE_FRAME = FIREBASE_PROJECT_ID.startsWith("YOUR_") ? "" : ` ${FIREBASE_APP_HOST}`;
