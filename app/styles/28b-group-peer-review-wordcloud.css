@@ -535,7 +535,7 @@ span.cloud-word { cursor: default; }
   font-weight: 800;
   margin-left: 6px;
 }
-.book-cnt.ok { color: #3d8a72; }
+.book-cnt.ok { color: var(--teal-600); }
 .book-cnt.bad { color: var(--danger); }
 
 /* 모둠 대시보드 — 이 활동이 어느 반 것인지 (book-group-topic과 같은 크기) */

@@ -65,7 +65,7 @@
   font-weight: 700;
   white-space: nowrap;
 }
-.xw-badge.done { background: #e8f7ed; color: #2f7a45; }
+.xw-badge.done { background: var(--green-50); color: #2f7a45; }
 .xw-empty { margin: 0; font-size: 13px; color: var(--text-faint); line-height: 1.6; }
 
 /* 낱말 고르기 칩 */
@@ -157,7 +157,7 @@
 .xw-cell--void { border: none; background: transparent; cursor: default; }
 .xw-cell.sel { background: #fff4e8; border-color: var(--primary); }
 .xw-cell.mine { box-shadow: inset 0 0 0 2px var(--primary-light); }
-.xw-cell.right { background: #e8f7ed; border-color: #a6d8b6; }
+.xw-cell.right { background: var(--green-50); border-color: var(--green-200); }
 .xw-cell.wrong { background: #fdecea; border-color: #e6a29a; }
 .xw-num {
   position: absolute;
@@ -206,7 +206,7 @@
 .xw-cell.cur { box-shadow: inset 0 0 0 2.5px var(--primary); background: #ffe9d6; }
 /* 네모가 맞힌 칸 · 열쇠 칸에 서면 테두리만 — 바탕은 그 칸의 색(초록 · 베이지)을
    지켜야 '맞혔다'가 그대로 보입니다. */
-.xw-cell.right.cur { background: #e8f7ed; }
+.xw-cell.right.cur { background: var(--green-50); }
 .xw-cell.key.cur { background: #fbf0dc; }
 .xw-cell.typing .xw-ch { color: var(--primary-dark); }
 .xw-cell.filled .xw-ch { color: var(--text); }
@@ -316,7 +316,7 @@
   margin-right: 6px;
   padding: 0 7px;
   border-radius: 999px;
-  background: #e8f7ed;
+  background: var(--green-50);
   color: #2f7a45;
   font-size: 11px;
   font-weight: 700;
@@ -423,7 +423,7 @@
 }
 .xwg-swatch:first-child { margin-left: 0; }
 .xwg-swatch.key { background: #fbf0dc; border-color: #d9b77a; }
-.xwg-swatch.right { background: #e8f7ed; border-color: #a6d8b6; }
+.xwg-swatch.right { background: var(--green-50); border-color: var(--green-200); }
 .xwg-swatch.filled { background: #e9e6e1; border-color: #d5cfc5; }
 .xwg-legend { font-size: 12px; }
 
@@ -438,7 +438,7 @@
   border-radius: 10px;
   background: var(--bg);
 }
-.xwg-words > li.done { border-color: #a6d8b6; background: #f3faf5; }
+.xwg-words > li.done { border-color: var(--green-200); background: #f3faf5; }
 .xwg-word-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .xwg-word-head strong { font-size: 15px; color: var(--text); }
 .xwg-word-head .xw-badge { margin-left: auto; height: 22px; }
@@ -533,7 +533,7 @@
   color: var(--text-sub);
 }
 .xwg-stu--done { background: #f3faf5; }
-.xwg-stu--done .xwg-stu-state { background: #e8f7ed; color: #2f7a45; }
+.xwg-stu--done .xwg-stu-state { background: var(--green-50); color: #2f7a45; }
 .xwg-stu--doing .xwg-stu-state { background: #fdf0dc; color: #8a5a12; }
 .xwg-stu--free { opacity: 0.6; }
 

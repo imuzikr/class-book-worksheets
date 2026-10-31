@@ -362,7 +362,7 @@
 /* 활동의 두 상태 — '편집'(학생이 쓸 수 있음) / '잠김'(읽기만).
    기본값을 '편집' 쪽 색으로 두어, 회색인 '잠김'과 한눈에 갈립니다. */
 .progress-act-state {
-  border: 1px solid #efc19a;
+  border: 1px solid var(--apricot-300);
   color: var(--primary-dark);
   background: var(--primary-light);
   white-space: nowrap;
@@ -402,12 +402,12 @@
 /* 10자 이상 씀 */
 .progress-mark--done {
   background: #d8efdf;
-  border: 1px solid #a6d8b6;
+  border: 1px solid var(--green-200);
 }
 /* 열려 있는데 아직 덜 씀 */
 .progress-mark--open {
   background: #fbe3d0;
-  border: 1px solid #efc19a;
+  border: 1px solid var(--apricot-300);
 }
 /* 오늘 결석이라 못 씀 */
 .progress-mark--absent {

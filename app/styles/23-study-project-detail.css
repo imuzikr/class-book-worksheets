@@ -114,7 +114,7 @@
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: #a6d8b6;
+  background: var(--green-200);
 }
 .study-board-act-count {
   flex-shrink: 0;
@@ -408,7 +408,7 @@
   cursor: pointer;
   /* 열림 — 학생이 지금 쓸 수 있는 활동 */
   background: var(--primary-light);
-  border: 1px solid #efc19a;
+  border: 1px solid var(--apricot-300);
   color: var(--primary-dark, #c15a2a);
 }
 /* 잠김 — 아직 열어 주지 않음 */
@@ -466,7 +466,7 @@
 
 /* 반응 합계가 가장 많은 카드 — 테두리·은은한 광채로 눈에 띄게 강조 */
 .study-card-top {
-  border: 2px solid #5c9e68;
+  border: 2px solid var(--green-500);
   box-shadow: 0 0 0 3px rgba(92, 158, 104, 0.16), 0 4px 14px rgba(46, 36, 26, 0.1);
 }
 .study-card-top:hover {
@@ -770,7 +770,7 @@
    (출석 자리의 배경색 #e8f7ed는 막대 바탕(--border)과 거의 구분이 안 돼
     같은 계열에서 한 단계 진한 테두리 쪽 값을 씁니다) */
 .study-card-progress-seg.on {
-  background: #a6d8b6;
+  background: var(--green-200);
 }
 .study-card-progress-chars {
   font-size: 10.5px;

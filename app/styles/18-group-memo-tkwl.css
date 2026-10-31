@@ -695,7 +695,7 @@
   flex-direction: column;
   gap: 8px;
   padding-bottom: 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--on-dark-10);
 }
 .tkwl-date {
   display: flex;
@@ -709,31 +709,31 @@
 .tkwl-date button {
   width: 24px;
   height: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid var(--on-dark-16);
   border-radius: 6px;
   background: none;
-  color: #c5c4bc;
+  color: var(--gray-300);
   font-size: 14px;
   line-height: 1;
   cursor: pointer;
 }
-.tkwl-date button:hover { border-color: var(--primary); color: #e8956c; }
+.tkwl-date button:hover { border-color: var(--primary); color: var(--coral-400); }
 .tkwl-head-actions { display: flex; gap: 6px; }
 .tkwl-today,
 .tkwl-full {
   flex: 1;
   padding: 5px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid var(--on-dark-16);
   border-radius: 8px;
   background: none;
-  color: #c5c4bc;
+  color: var(--gray-300);
   font-family: inherit;
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
 }
 .tkwl-today:hover,
-.tkwl-full:hover { border-color: var(--primary); color: #e8956c; }
+.tkwl-full:hover { border-color: var(--primary); color: var(--coral-400); }
 
 .tkwl-section { display: flex; flex-direction: column; gap: 8px; }
 .tkwl-title {
@@ -743,7 +743,7 @@
   gap: 8px;
   font-size: 12px;
   font-weight: 800;
-  color: #c5c4bc;
+  color: var(--gray-300);
   letter-spacing: 0.4px;
 }
 /* 좁은 패널에서 훑기 어려운 W·S를 큰 화면으로 옮겨 고르는 버튼 */
@@ -756,12 +756,12 @@
   font-family: inherit;
   font-size: 11px;
   font-weight: 700;
-  color: #c5c4bc;
+  color: var(--gray-300);
   cursor: pointer;
 }
-.tkwl-wall-btn:hover:not(:disabled) { border-color: var(--primary); color: #e8956c; }
+.tkwl-wall-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--coral-400); }
 .tkwl-wall-btn:disabled { opacity: 0.4; cursor: default; }
-.tkwl-title small { font-weight: 600; color: #8f8d84; margin-left: 4px; }
+.tkwl-title small { font-weight: 600; color: var(--gray-550); margin-left: 4px; }
 /* 묶음 머리를 눌러 접었다 펼칩니다 — KWLS가 쌓이면 목록이 길어집니다 */
 .tkwl-fold {
   display: flex;
@@ -784,11 +784,11 @@
   display: inline-block;
   font-size: 13px;
   line-height: 1;
-  color: #8f8d84;
+  color: var(--gray-550);
   transition: transform 0.15s;
 }
 .tkwl-fold-caret.open { transform: rotate(90deg); }
 @media (prefers-reduced-motion: reduce) {
   .tkwl-fold-caret { transition: none; }
 }
-.tkwl-empty { font-size: 12.5px; color: #8f8d84; line-height: 1.6; }
+.tkwl-empty { font-size: 12.5px; color: var(--gray-550); line-height: 1.6; }

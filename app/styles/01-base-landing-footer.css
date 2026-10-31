@@ -27,6 +27,33 @@
   --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", "Noto Serif KR",
     Batang, serif;
   --font-mono: "Consolas", "D2Coding", "SF Mono", "Courier New", monospace;
+  /* ── 이름만 붙인 색(4-2) — 값은 예전에 직접 적던 그대로입니다. ──
+     비슷해 보여도 값이 다른 색은 일부러 따로 둡니다(합치면 화면이 바뀜). */
+  /* 초록 — 정답·완료·제출 */
+  --green-50: #e8f7ed;
+  --green-200: #a6d8b6;
+  --green-300: #8cc79f;
+  --green-500: #5c9e68;
+  --green-700: #2f7a4b;
+  --green-750: #26734a;
+  --green-800: #2f6b45;
+  --green-olive: #3f704b;
+  --teal-600: #3d8a72;
+  /* 주황·코럴·살구 */
+  --apricot-300: #efc19a;
+  --coral-400: #e8956c;
+  --coral-600: #e05a2f;
+  /* 회색 글자·선 */
+  --gray-300: #c5c4bc;
+  --gray-500: #9a988e;
+  --gray-550: #8f8d84;
+  --gray-600: #87867f;
+  /* 어두운 칠판 위의 반투명 흰색 */
+  --on-dark-06: rgba(255, 255, 255, 0.06);
+  --on-dark-08: rgba(255, 255, 255, 0.08);
+  --on-dark-10: rgba(255, 255, 255, 0.1);
+  --on-dark-12: rgba(255, 255, 255, 0.12);
+  --on-dark-16: rgba(255, 255, 255, 0.16);
 }
 
 * {
@@ -478,7 +505,7 @@ html[data-auth-pending] .site-footer {
   width: 50px;
   height: 50px;
   border-radius: 13px;
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--on-dark-12);
   display: grid;
   place-items: center;
   flex-shrink: 0;

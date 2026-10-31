@@ -32,7 +32,7 @@
 /* ── 사이드바 내 인사이트 섹션 ── */
 .reflect-sidebar-section {
   margin-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--on-dark-10);
   padding-top: 12px;
 }
 
@@ -43,7 +43,7 @@
   width: 100%;
   background: none;
   border: none;
-  color: #87867f;
+  color: var(--gray-600);
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 500;
@@ -53,11 +53,11 @@
   cursor: pointer;
   text-align: left;
 }
-.reflect-sidebar-toggle:hover { color: #c5c4bc; }
+.reflect-sidebar-toggle:hover { color: var(--gray-300); }
 
 .reflect-sidebar-count {
-  background: rgba(255, 255, 255, 0.12);
-  color: #c5c4bc;
+  background: var(--on-dark-12);
+  color: var(--gray-300);
   border-radius: 999px;
   font-size: 11px;
   padding: 1px 6px;
@@ -94,14 +94,14 @@
   transition: background 0.12s;
 }
 .reflect-sidebar-item:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--on-dark-08);
 }
 
 .reflect-sidebar-kw {
   display: inline-block;
   font-size: 10px;
   font-weight: 600;
-  color: #e8956c;
+  color: var(--coral-400);
   letter-spacing: 0.3px;
   margin-bottom: 3px;
 }
@@ -118,7 +118,7 @@
 
 .reflect-sidebar-learned {
   font-size: 11px;
-  color: #87867f;
+  color: var(--gray-600);
   margin: 0 0 4px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -601,7 +601,7 @@
     right: 10px;
     width: 28px;
     height: 28px;
-    background: rgba(255,255,255,0.12);
+    background: var(--on-dark-12);
     border: none;
     border-radius: 50%;
     color: var(--sidebar-text);

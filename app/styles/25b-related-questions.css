@@ -166,7 +166,7 @@
   align-items: center;
 }
 .mini-status.open { color: var(--primary); }
-.mini-status.done { color: #5c9e68; }
+.mini-status.done { color: var(--green-500); }
 
 .study-related-title {
   font-size: 13px;
