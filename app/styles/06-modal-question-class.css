@@ -351,36 +351,6 @@
   margin-bottom: 18px;
 }
 
-.answer-list h4 {
-  font-size: 14px;
-  margin-bottom: 10px;
-  color: var(--primary-dark);
-}
-
-.answer-item {
-  background: var(--bg);
-  border-radius: 10px;
-  padding: 12px 14px;
-  margin-bottom: 8px;
-}
-
-.answer-item .card-meta {
-  margin-bottom: 6px;
-}
-
-.answer-item p {
-  font-size: 14px;
-  line-height: 1.7;
-  white-space: pre-wrap;
-}
-
-.answer-form {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 14px;
-}
-
 .form-grid {
   display: flex;
   flex-direction: column;
@@ -589,31 +559,6 @@
   gap: 8px;
 }
 
-/* 첨부 업로드 진행률 바 */
-.upload-progress {
-  position: relative;
-  height: 22px;
-  margin: 8px 0;
-  border-radius: 6px;
-  background: var(--neutral);
-  overflow: hidden;
-}
-.upload-progress-bar {
-  height: 100%;
-  background: var(--primary);
-  border-radius: 6px;
-  transition: width 0.15s ease;
-}
-.upload-progress-label {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text);
-}
 .attach-thumb {
   position: relative;
   display: inline-block;
@@ -634,45 +579,4 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-}
-
-/* ===================== 이미지 확대(라이트박스) ===================== */
-.zoomable-img {
-  cursor: zoom-in;
-}
-.lightbox-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  background: rgba(20, 16, 12, 0.86);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 32px;
-  cursor: zoom-out;
-}
-.lightbox-img {
-  max-width: 95vw;
-  max-height: 92vh;
-  object-fit: contain;
-  border-radius: 8px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-  cursor: default;
-}
-.lightbox-close {
-  position: fixed;
-  top: 18px;
-  right: 22px;
-  width: 42px;
-  height: 42px;
-  border: none;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.15);
-  color: #fff;
-  font-size: 26px;
-  line-height: 1;
-  cursor: pointer;
-}
-.lightbox-close:hover {
-  background: rgba(255, 255, 255, 0.28);
 }
