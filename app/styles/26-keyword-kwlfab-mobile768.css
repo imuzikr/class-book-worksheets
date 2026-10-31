@@ -283,8 +283,6 @@
   .broadcast-stop-pill { right: 12px; bottom: 12px; font-size: 12px; padding: 8px 14px; }
   /* 수업하기 — 좁은 화면에서는 슬라이드 카드 위 / 해설 카드 아래로 */
   .lesson-page { padding: 12px 12px 28px; }
-  /* 자리표는 활동 관리 아래로 내려갑니다 */
-  .lesson-lower { grid-template-columns: 1fr; gap: 28px; }
   .lesson-activity { margin-top: 40px; }
   .present-nav {
     width: 40px;
