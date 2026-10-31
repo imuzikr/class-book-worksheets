@@ -1,3 +1,3 @@
-index: bytes=506245 md5=8122d8d859e0673ba235dc72a0ce8b9f
-books: bytes=537671 md5=273aa802fdd01b6b47de45a2fef65d03
-dashboard: bytes=544049 md5=be5d05b8273d4fa1a97ef5ce648307c6
+index: bytes=501143 md5=1754e5ec5931342188cad51540b267d3
+books: bytes=532569 md5=f1ed3ca1f367a7b6c51e30d671ea66c4
+dashboard: bytes=538947 md5=ac46665329b12ec593c3a4ca14d4f401
