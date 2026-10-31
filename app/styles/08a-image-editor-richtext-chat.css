@@ -117,44 +117,6 @@
 }
 
 /* ===================== 나도 궁금해요 버튼 ===================== */
-/* 카드 오른쪽 아래 + 상세 모달 왼쪽 하단에서 사용.
-   1인 1회 — 누르면 채워진(on) 상태가 되고 다시 누르면 취소됩니다. */
-.metoo-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  border: 1.5px solid #ecbfa9;
-  background: var(--primary-light);
-  color: #3A312E;
-  border-radius: 999px;
-  padding: 6px 14px;
-  font-size: 13px;
-  font-weight: 700;
-  flex-shrink: 0;
-  transition: transform 0.12s, background 0.15s, box-shadow 0.12s;
-}
-
-.metoo-btn:hover {
-  transform: scale(1.05);
-  box-shadow: 0 3px 10px rgba(46, 36, 26, 0.12);
-}
-
-/* 내 질문 — 누를 수 없음(개수만 표시) */
-.metoo-btn.is-self {
-  opacity: 0.5;
-  cursor: default;
-}
-.metoo-btn.is-self:hover {
-  transform: none;
-  box-shadow: none;
-}
-
-/* 내가 이미 누른 상태 — 테라코타로 채움 */
-.metoo-btn.on {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
-}
 
 .metoo-count {
   min-width: 22px;
@@ -164,11 +126,6 @@
   padding: 1px 7px;
   font-size: 12px;
   font-weight: 800;
-}
-
-.metoo-btn.on .metoo-count {
-  background: rgba(255, 255, 255, 0.25);
-  color: #fff;
 }
 
 /* ===================== 그리기 캔버스 ===================== */
