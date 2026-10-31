@@ -71,11 +71,6 @@
   color: #3A312E;
 }
 
-/* 해결된 질문 카드는 왼쪽에 초록 띠 표시 */
-.question-card.is-resolved {
-  border-left: 4px solid var(--green-500);
-}
-
 /* 상세 모달 안의 토글: 오른쪽 위 닫기(×) 버튼과 겹치지 않게 여백 확보 */
 .qa-status {
   margin-right: 22px;
@@ -423,13 +418,6 @@ pre code {
 }
 
 /* ===================== 채팅 입력 영역 ===================== */
-.chat-compose {
-  background: #fff;
-  border-top: 1px solid var(--border);
-  padding: 10px 12px;
-  display: flex;
-  flex-direction: column;
-}
 
 .chat-attach-preview {
   display: flex;

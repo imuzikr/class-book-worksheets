@@ -330,26 +330,6 @@
   min-height: 56px;
 }
 
-.py-actions {
-  display: flex;
-  flex-wrap: wrap; /* 공간이 부족하면 버튼 단위로만 줄바꿈(글자는 안 깨짐) */
-  align-items: center;
-  gap: 8px;
-}
-/* 세 단추의 **높이를 하나로**. 저마다 세로 padding으로 정하고 있었고
-   '질문 만들기'에는 아이콘까지 들어 있어, 나란히 선 셋의 높이가 다
-   달랐습니다(실행 33 · 질문 만들기 36 · 출력 지우기 29px).
-   높이를 못 박고 안쪽 정렬은 inline-flex가 맡습니다. */
-.py-actions button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  height: 34px;
-  padding: 0 12px;
-  font-size: 13px;
-  white-space: nowrap;
-}
 .py-run-hint {
   font-size: 11px;
   font-weight: 600;

@@ -689,13 +689,6 @@
   position: relative;
 }
 
-.topnav-drop-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 14px;
-}
-
 .topnav-drop-chevron {
   font-size: 9px;
   opacity: 0.6;

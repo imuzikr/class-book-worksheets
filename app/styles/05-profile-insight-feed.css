@@ -168,40 +168,6 @@
   color: #fff;
 }
 
-.three-cols {
-  display: flex;
-  flex: 1;
-  min-height: 0;
-}
-
-/* --- 2단: 질문 게시판 --- */
-.feed-col {
-  flex: 1;
-  overflow-y: auto;
-  /* 위 패딩 0 — 상단 고정 헤더가 스크롤 콘텐츠를 완전히 덮도록(여백은 헤더가 가짐) */
-  padding: 0 40px 32px;
-  min-width: 0;
-}
-
-.feed-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  /* 피드 컬럼 스크롤 시 상단 고정 — 필터/인사이트/질문하기 항상 노출 */
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  background: var(--bg);
-  padding: 20px 0 12px;
-  margin-bottom: 12px;
-  border-bottom: 1px solid var(--border);
-  box-shadow: 0 6px 8px -6px rgba(46, 36, 26, 0.08);
-}
-
-.feed-head h2 {
-  font-size: 19px;
-}
-
 /* 문구 + 제목 한 줄 — 문구가 **왼쪽**, 세로선으로 가릅니다(공부방·책방은
    제목 위). 이 머리줄은 스크롤해도 붙어 있어 한 줄을 더 쌓으면 그만큼
    질문 목록이 늘 가려지므로 옆에 둡니다. */
@@ -221,14 +187,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* **칸이 좁으면 문구를 접습니다.** 가운데 피드 칸은 양옆에 키워드·공지 칸이
-   서서 창보다 훨씬 좁습니다 — 문구(255) + 제목(키워드가 붙으면 160 남짓) +
-   오른쪽 단추 묶음(326)이 한 줄에 서려면 780px이 필요하고, 그 칸 폭은 창이
-   1440px일 때 700 · 1600px일 때 860입니다(실측). 창 폭이 아니라 **이 줄의
-   폭**으로 판정해야 하므로 컨테이너 질의입니다. 접지 않고 두었을 때는
-   문구가 안 줄어드는 채로 제목을 눌러 '전체 질문 7개'가 한 글자씩 세로로
-   섰습니다(실측 1280px에서 제목 폭 19px). */
-.feed-head { container: feed-head / inline-size; }
 @container feed-head (max-width: 779px) {
   .feed-head-title .page-tagline { display: none; }
 }
@@ -248,28 +206,6 @@
   gap: 8px;
 }
 
-.question-card {
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 26px 28px;
-  margin-bottom: 22px;
-  cursor: pointer;
-  box-shadow: var(--shadow-soft);
-  transition: box-shadow 0.15s, transform 0.15s;
-}
-
-.question-card:hover {
-  box-shadow: 0 6px 20px rgba(46, 36, 26, 0.1);
-  transform: translateY(-1px);
-}
-
-.question-card.is-pinned {
-  border-color: #e7b78f;
-  box-shadow: 0 1px 3px rgba(46, 36, 26, 0.06),
-    0 8px 24px rgba(184, 92, 63, 0.12);
-}
-
 .card-meta {
   display: flex;
   align-items: center;
@@ -284,12 +220,6 @@
   font-size: 14px;
   line-height: 1;
   white-space: nowrap;
-}
-
-.question-card h3 {
-  font-size: 17px;
-  margin-bottom: 8px;
-  line-height: 1.4;
 }
 
 .card-preview {
