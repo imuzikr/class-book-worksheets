@@ -1,13 +1,11 @@
 // =============================================================
-// Storage 규칙 — uploads/{userId}/{fileName}  (이미지 보안 1단계 안전망)
+// Storage 규칙 — 옛 개인 폴더 uploads/{userId}/{fileName}  (이미지 보안 5단계: 닫힘)
 //
-// **지금 규칙을 있는 그대로 기록**합니다. 고쳐야 할 동작도 "통과"로 적어 둡니다.
-//   ① 로그인만 하면 누구 폴더든 읽기·목록 보기가 된다(다른 반 학생 포함) ← 2단계에서 막을 곳
-//   ② 비로그인은 못 읽는다
-//   ③ 쓰기는 제 uid 폴더에만, 이미지 6MB 미만 · 문서 20MB 미만 · 텍스트 1MB 미만
-//   ④ 지우기는 본인 또는 교사/관리자(클레임이나 users 문서의 role)
+//   ① 쓰기는 누구도 못 한다(이미지·PDF·텍스트 모두) — 그림은 반 폴더만 씀
+//   ② 목록(list)은 아무도 못 본다 — uploads/{classId} 한 단계 목록 포함
+//   ③ 읽기(get)는 로그인 사용자(남은 파일이 없어 사실상 쓰이지 않음), 비로그인은 실패
+//   ④ 지우기는 본인 또는 관리자만(교사라는 이유만으로는 못 지움)
 //   ⑤ uploads 밖은 전부 막힌다
-// 반(class) 개념이 규칙에 아직 없으므로, '같은 반/다른 반' 학생은 결과가 똑같아야 합니다.
 // =============================================================
 import { describe, it, before, after, beforeEach } from "node:test";
 import { readFileSync } from "node:fs";
@@ -52,38 +50,32 @@ beforeEach(async () => {
 
 const st = (ctx) => ctx.storage();
 
-describe("읽기 — 현재: 로그인한 누구나", () => {
+describe("옛 폴더 읽기 — get만, 목록은 막힘", () => {
   it("본인", () => assertSucceeds(getBytes(ref(st(asStudent(env, "stu1")), FILE))));
-  it("같은 반 학생", () => assertSucceeds(getBytes(ref(st(asStudent(env, "stu2")), FILE))));
-  it("다른 반 학생도 통과 (2단계에서 막을 곳)", () => assertSucceeds(getBytes(ref(st(asStudent(env, "other")), FILE))));
-  it("다른 반 학생이 메타데이터도 읽음", () => assertSucceeds(getMetadata(ref(st(asStudent(env, "other")), FILE))));
-  it("다른 반 학생이 남의 폴더 목록(list)도 봄", () => assertSucceeds(listAll(ref(st(asStudent(env, "other")), "uploads/stu1"))));
-  it("uploads 맨 위 목록은 아무도 못 봄(규칙이 uploads/{uid}/… 에만 걸림)", () => assertFails(listAll(ref(st(asStudent(env, "other")), "uploads"))));
-  it("담임 교사", () => assertSucceeds(getBytes(ref(st(asTeacher(env, "t1")), FILE))));
-  it("다른 반 교사", () => assertSucceeds(getBytes(ref(st(asTeacher(env, "t2")), FILE))));
+  it("로그인 사용자 get은 유지", () => assertSucceeds(getMetadata(ref(st(asStudent(env, "other")), FILE))));
   it("비로그인은 실패", () => assertFails(getBytes(ref(st(env.unauthenticatedContext()), FILE))));
-  it("비로그인 목록도 실패", () => assertFails(listAll(ref(st(env.unauthenticatedContext()), "uploads/stu1"))));
+  it("남의 폴더 목록(list) 실패", () => assertFails(listAll(ref(st(asStudent(env, "other")), "uploads/stu1"))));
+  it("본인 폴더 목록도 실패", () => assertFails(listAll(ref(st(asStudent(env, "stu1")), "uploads/stu1"))));
+  it("관리자 목록도 실패", () => assertFails(listAll(ref(st(asAdmin(env, "a1")), "uploads/stu1"))));
+  it("uploads 맨 위 목록 실패", () => assertFails(listAll(ref(st(asStudent(env, "other")), "uploads"))));
 });
 
-describe("쓰기 — 제 폴더에만, 종류·크기 제한", () => {
-  it("본인 폴더에 이미지", () => assertSucceeds(uploadBytes(ref(st(asStudent(env, "stu1")), "uploads/stu1/2.jpg"), img(), jpeg)));
-  it("같은 반 친구 폴더는 실패", () => assertFails(uploadBytes(ref(st(asStudent(env, "stu2")), "uploads/stu1/2.jpg"), img(), jpeg)));
-  it("교사도 남의 폴더는 실패", () => assertFails(uploadBytes(ref(st(asTeacher(env, "t1")), "uploads/stu1/2.jpg"), img(), jpeg)));
+describe("옛 폴더 쓰기 — 전부 닫힘", () => {
+  it("본인 폴더에 이미지도 실패", () => assertFails(uploadBytes(ref(st(asStudent(env, "stu1")), "uploads/stu1/2.jpg"), img(), jpeg)));
+  it("교사 본인 폴더에 이미지도 실패", () => assertFails(uploadBytes(ref(st(asTeacher(env, "t1")), "uploads/t1/2.jpg"), img(), jpeg)));
+  it("관리자도 실패", () => assertFails(uploadBytes(ref(st(asAdmin(env, "a1")), "uploads/a1/2.jpg"), img(), jpeg)));
+  it("교사 PDF도 실패(앱에 수업 자료 업로드 경로 없음)", () => assertFails(uploadBytes(ref(st(asTeacher(env, "t1")), "uploads/t1/a.pdf"), img(), { contentType: "application/pdf" })));
+  it("텍스트도 실패", () => assertFails(uploadBytes(ref(st(asStudent(env, "stu1")), "uploads/stu1/a.txt"), img(), { contentType: "text/plain" })));
+  it("기존 파일 덮어쓰기 실패", () => assertFails(uploadBytes(ref(st(asStudent(env, "stu1")), FILE), img(), jpeg)));
   it("비로그인 실패", () => assertFails(uploadBytes(ref(st(env.unauthenticatedContext()), "uploads/anon/2.jpg"), img(), jpeg)));
-  it("이미지 6MB 이상 실패", () => assertFails(uploadBytes(ref(st(asStudent(env, "stu1")), "uploads/stu1/big.jpg"), img(6 * 1024 * 1024), jpeg)));
-  it("PDF 2MB 통과", () => assertSucceeds(uploadBytes(ref(st(asStudent(env, "stu1")), "uploads/stu1/a.pdf"), img(2 * 1024 * 1024), { contentType: "application/pdf" })));
-  it("텍스트 2MB 실패", () => assertFails(uploadBytes(ref(st(asStudent(env, "stu1")), "uploads/stu1/a.txt"), img(2 * 1024 * 1024), { contentType: "text/plain" })));
-  it("영상은 실패", () => assertFails(uploadBytes(ref(st(asStudent(env, "stu1")), "uploads/stu1/a.mp4"), img(), { contentType: "video/mp4" })));
-  it("현재: 반 폴더 모양(uploads/반/학생/파일)은 아무도 못 씀", () =>
-    assertFails(uploadBytes(ref(st(asStudent(env, "stu1")), "uploads/class1/stu1/a.jpg"), img(), jpeg)));
 });
 
-describe("지우기 — 본인·교사·관리자", () => {
+describe("옛 폴더 지우기 — 본인·관리자", () => {
   it("본인", () => assertSucceeds(deleteObject(ref(st(asStudent(env, "stu1")), FILE))));
   it("같은 반 친구는 실패", () => assertFails(deleteObject(ref(st(asStudent(env, "stu2")), FILE))));
-  it("교사(클레임) — 다른 반 교사여도 통과", () => assertSucceeds(deleteObject(ref(st(asTeacher(env, "t2")), FILE))));
+  it("교사(클레임)는 실패", () => assertFails(deleteObject(ref(st(asTeacher(env, "t2")), FILE))));
+  it("users 문서 role=teacher도 실패", () => assertFails(deleteObject(ref(st(asStudent(env, "docTeacher")), FILE))));
   it("관리자", () => assertSucceeds(deleteObject(ref(st(asAdmin(env, "a1")), FILE))));
-  it("users 문서 role=teacher(클레임 없음)도 통과", () => assertSucceeds(deleteObject(ref(st(asStudent(env, "docTeacher")), FILE))));
   it("비로그인 실패", () => assertFails(deleteObject(ref(st(env.unauthenticatedContext()), FILE))));
 });
 
@@ -138,10 +130,10 @@ describe("반 폴더 uploads/{classId}/{uid}/{file}", () => {
     it("같은 반 학생도 학생 폴더 목록 실패", () => assertFails(listAll(ref(st(asStudent(env, "stu2")), "uploads/c1/stu1"))));
     it("담당 교사도 실패", () => assertFails(listAll(ref(st(asTeacher(env, "t1")), "uploads/c1/stu1"))));
     it("관리자도 실패", () => assertFails(listAll(ref(st(asAdmin(env, "a1")), "uploads/c1/stu1"))));
-    // 주의: uploads/{classId} 한 단계 목록은 옛 규칙 uploads/{userId}/{fileName}의
-    // read(로그인한 누구나)에 걸립니다 — 학생 uid 하위 폴더 이름이 보입니다. 7단계에서 옛 규칙과 함께 닫습니다.
-    it("현재: uploads/c1 목록은 옛 규칙 때문에 다른 반 학생도 통과", () =>
-      assertSucceeds(listAll(ref(st(asStudent(env, "other")), "uploads/c1"))));
+    // 5단계: uploads/{classId} 한 단계 목록도 옛 규칙에서 막혀 학생 uid가 드러나지 않습니다.
+    it("uploads/c1 목록 — 다른 반 학생 실패", () => assertFails(listAll(ref(st(asStudent(env, "other")), "uploads/c1"))));
+    it("uploads/c1 목록 — 같은 반 학생도 실패", () => assertFails(listAll(ref(st(asStudent(env, "stu1")), "uploads/c1"))));
+    it("uploads/c1 목록 — 담당 교사도 실패", () => assertFails(listAll(ref(st(asTeacher(env, "t1")), "uploads/c1"))));
   });
 
   describe("쓰기(create)", () => {

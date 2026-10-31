@@ -75,8 +75,15 @@ npx firebase-tools login   # 최초 1회
 npm run deploy             # 규칙 시험 → firestore(rules·indexes) + storage
 ```
 
-- Storage 규칙은 역할을 Firestore에서 읽습니다. 처음 올릴 때 서비스 간 권한을
-  허용할지 물으면 'Y'로 답하세요.
+- **그림 저장 방식(이미지 보안)**: 그림은 반 폴더 `uploads/{반}/{uid}/{파일}`에만 올라가고,
+  Firestore에는 다운로드 URL 대신 `storage:uploads/…` 경로만 저장합니다. 화면은 권한을
+  확인하며 내려받아 보여 줍니다. 같은 반 학생 · 그 반 담당 교사 · 관리자만 볼 수 있고,
+  다른 반 교사는 못 봅니다. 옛 개인 폴더 `uploads/{uid}/…`는 닫혀 있습니다(쓰기·목록 거부).
+- `storage.rules`를 바꾸면 **Storage 규칙을 다시 게시**해야 합니다(`npm run deploy` 또는 콘솔
+  → Storage → 규칙). GitHub 병합 · Vercel 배포만으로는 규칙이 바뀌지 않습니다.
+- Storage 규칙은 반 소속 · 역할을 Firestore에서 읽습니다. 처음 게시할 때 **Firestore 접근
+  권한 연결**(서비스 간 권한)을 물으면 허용('Y' · 콘솔은 '권한 연결')하세요. 거부하면 반
+  폴더 그림이 전부 막힙니다.
 - 콘솔에서 할 일 두 가지: `config/teacherSignup` 문서에 `code`(4자 이상) 적기 ·
   첫 관리자의 `users/{uid}.role`을 `admin`으로 고치기.
 

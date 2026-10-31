@@ -113,8 +113,13 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
    ```
 
    `npm run deploy -- --rules-only` / `--indexes-only` / `--skip-tests`로 좁힐 수 있습니다
-   (`scripts/deploy.sh`). Storage 규칙이 역할을 Firestore에서 읽으므로(서비스 간 규칙) 처음
-   올릴 때 권한을 물으면 'Y'.
+   (`scripts/deploy.sh`). Storage 규칙이 반 소속·역할을 Firestore에서 읽으므로(서비스 간 규칙)
+   처음 올릴 때 권한을 물으면 'Y'(콘솔은 'Firestore 접근 권한 연결' → 허용). `storage.rules`를
+   바꾼 뒤에는 Storage 규칙을 꼭 다시 게시합니다 — Vercel 배포로는 바뀌지 않습니다.
+   - **그림은 반 폴더만**(이미지 보안 1~5단계): `uploads/{classId}/{uid}/{파일}`에 올리고(`uploadImage`
+     — `classId` 필수), 문서에는 `storage:uploads/…` 경로를 저장하며, `SecureImage`/`SecureHtml`이
+     `getBlob`으로 내려받아 보여 줍니다. 읽기는 같은 반 학생 · 담당 교사(`createdBy`) · 관리자,
+     목록은 아무도 못 봅니다. 옛 개인 폴더 `uploads/{uid}/…`는 쓰기·목록이 닫혀 있습니다.
 4. **콘솔에서 두 가지를 손으로 적습니다.**
    - `config/teacherSignup` 문서에 `code`(4자 이상 글자) — 선생님 가입 코드. 바꾸면 그때부터 새
      코드만 통합니다. 이 문서가 없거나 코드가 짧으면 아무도 선생님이 될 수 없습니다.
