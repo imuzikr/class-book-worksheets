@@ -65,7 +65,7 @@
 }
 .paratext-card:hover { border-color: var(--primary); }
 /* 다 쓴 항목은 테두리로만 표시 — 글을 읽는 데 방해가 되지 않게 */
-.paratext-card.done { border-color: #8cc79f; }
+.paratext-card.done { border-color: var(--green-300); }
 /* 아직 시작조차 안 한 항목 — 배경으로만 구분(테두리는 hover와 겹쳐 혼동될 수 있어) */
 .paratext-card.empty { background: var(--bg-deep); }
 /* ── 칩 줄 — 공부방 '활동 열기'(.study-act-gate)가 씁니다.
@@ -258,7 +258,7 @@
   font-weight: 800;
   line-height: 1;
 }
-.paratext-card.done .paratext-letter { background: #3d8a72; }
+.paratext-card.done .paratext-letter { background: var(--teal-600); }
 .paratext-card-title {
   display: flex;
   flex-direction: column;
@@ -365,7 +365,7 @@
   transition: border-color 0.15s, background 0.15s;
 }
 .paratext-student-card:hover { border-color: var(--primary); }
-.paratext-student-card.done { border-color: #8cc79f; }
+.paratext-student-card.done { border-color: var(--green-300); }
 /* 아직 시작조차 안 한 학생 — 교사가 먼저 찾아봐야 할 카드라 흐리게 두지 않고
    배경으로 구분만 합니다(흐리면 오히려 놓치기 쉬움) */
 .paratext-student-card.none { background: var(--bg-deep); }
@@ -402,7 +402,7 @@
   background: var(--neutral);
 }
 .paratext-mark.doing { background: #f3c99a; }
-.paratext-mark.done { background: #8cc79f; }
+.paratext-mark.done { background: var(--green-300); }
 .paratext-student-meta {
   font-size: 11.5px;
   font-weight: 700;
@@ -488,9 +488,9 @@
   border-radius: var(--radius);
   transition: border-color 0.15s;
 }
-.raft-col.filled { border-color: #8cc79f; }
+.raft-col.filled { border-color: var(--green-300); }
 .raft-col-head { display: flex; align-items: center; gap: 9px; }
-.raft-col.filled .paratext-letter { background: #3d8a72; }
+.raft-col.filled .paratext-letter { background: var(--teal-600); }
 .raft-col-prompt {
   font-size: 12.5px;
   color: var(--text-sub);
@@ -607,7 +607,7 @@
 }
 /* 그 묶음을 다 채우면 초록으로 — 남은 묶음이 어디인지 바로 보이게 */
 .kwls-guide-step.done {
-  border-color: #8cc79f;
+  border-color: var(--green-300);
   background: #eaf4ee;
   color: #2f6f57;
 }
@@ -639,8 +639,8 @@
   border-radius: var(--radius);
   transition: border-color 0.15s;
 }
-.kwls-col.filled { border-color: #8cc79f; }
-.kwls-col.filled .paratext-letter { background: #3d8a72; }
+.kwls-col.filled { border-color: var(--green-300); }
+.kwls-col.filled .paratext-letter { background: var(--teal-600); }
 .kwls-col-head { display: flex; align-items: center; gap: 9px; }
 .kwls-col-prompt {
   font-size: 12.5px;

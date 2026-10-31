@@ -248,7 +248,7 @@
 }
 
 .btn-later {
-  background: #e8956c;
+  background: var(--coral-400);
   color: #fff;
   border: none;
   border-radius: var(--radius-btn);
@@ -388,9 +388,9 @@
   gap: 4px;
 }
 .qa-resolve.on {
-  background: #e8f7ed;
-  border-color: #a6d8b6;
-  color: #2f6b45;
+  background: var(--green-50);
+  border-color: var(--green-200);
+  color: var(--green-800);
 }
 
 .qa-title {
@@ -511,8 +511,8 @@
 }
 
 .chat-msg.mine.understood .chat-bubble {
-  background: #5c9e68;
-  border-color: #5c9e68;
+  background: var(--green-500);
+  border-color: var(--green-500);
   color: #fff;
 }
 
@@ -668,7 +668,7 @@ button.understood-bulb:hover {
 }
 
 .understood-bulb.readonly:not(.on) {
-  background: #faf9f5;
+  background: var(--bg);
   color: #c5c1b7;
 }
 

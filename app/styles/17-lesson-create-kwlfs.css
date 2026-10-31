@@ -225,7 +225,7 @@
 .kwl-fullscreen-btn {
   margin-left: auto;
   border: 1px solid rgba(255, 255, 255, 0.25);
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--on-dark-08);
   color: var(--sidebar-text);
   font-size: 12px;
   font-weight: 700;
@@ -234,7 +234,7 @@
   white-space: nowrap;
 }
 .kwl-fullscreen-btn:hover {
-  background: rgba(255, 255, 255, 0.16);
+  background: var(--on-dark-16);
   color: #fff;
 }
 
@@ -336,8 +336,8 @@
   width: 12px;
   height: 12px;
   border-radius: 4px;
-  background: #e8f7ed;
-  border: 1px solid #26734a;
+  background: var(--green-50);
+  border: 1px solid var(--green-750);
 }
 .kwlfs-cal-close {
   margin-left: auto;
@@ -751,7 +751,7 @@
 }
 /* 데이터가 끝나는 쪽만 둥글게 — 기준선 쪽은 각지게 붙여 둡니다 */
 .rwtrend-bar--up {
-  background: #d97757;
+  background: var(--primary);
   border-radius: 4px 4px 0 0;
 }
 .rwtrend-bar--down {

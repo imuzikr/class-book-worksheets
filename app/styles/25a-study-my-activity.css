@@ -532,7 +532,7 @@
   transition: color 0.2s;
 }
 .study-autosave--saved {
-  color: #5c9e68;
+  color: var(--green-500);
 }
 .study-autosave--error {
   color: var(--danger);

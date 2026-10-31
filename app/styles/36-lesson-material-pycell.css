@@ -188,9 +188,9 @@
 /* 다시 준 이름은 초록 — 이 앱에서 초록은 늘 '됐다'는 뜻입니다
    (출석부의 '출석' 자리·수업 노트 카드의 '과일 줌'과 같은 값). */
 .award-result-name.is-done {
-  background: #e8f7ed;
-  border-color: #a6d8b6;
-  color: #2f6b45;
+  background: var(--green-50);
+  border-color: var(--green-200);
+  color: var(--green-800);
   cursor: default;
 }
 .award-result-name.is-error {
@@ -484,7 +484,7 @@
 }
 .ltask-run-btn {
   background: var(--primary-light);
-  border-color: #efc19a;
+  border-color: var(--apricot-300);
   color: var(--primary-dark);
 }
 .ltask-run-btn:hover:not(:disabled),

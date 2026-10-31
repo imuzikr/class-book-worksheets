@@ -642,8 +642,8 @@
    이 앱에서 초록은 늘 '됐다'는 뜻이라 그 하나로 읽힙니다.
    `.has` 뒤에 와야 이깁니다(특이도가 같습니다). */
 .notes-mgr-card.awarded {
-  background: #e8f7ed;
-  border-color: #a6d8b6;
+  background: var(--green-50);
+  border-color: var(--green-200);
 }
 /* 학번이 위, 이름이 아래. 학번순으로 늘어선 격자라 눈이 좇는 것은 숫자라
    그쪽을 먼저 놓고, 이름을 크게 둡니다. */

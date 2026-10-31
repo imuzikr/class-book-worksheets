@@ -56,7 +56,7 @@
 
 /* A selected group keeps each member's writing and attendance status color. */
 .book-activity-group-rail .book-rail-card .book-rail-chip.member-status-done {
-  background: #e8f7ed;
+  background: var(--green-50);
   color: #2f6b47;
 }
 

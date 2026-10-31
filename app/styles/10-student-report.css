@@ -113,7 +113,7 @@
 }
 
 .study-stats-table .rate-fill.kwl {
-  background: #5c9e68;
+  background: var(--green-500);
 }
 
 .study-stats-table .rate-cell span {
@@ -188,7 +188,7 @@
 }
 
 .access-line-grid {
-  stroke: #e8e5dd;
+  stroke: var(--border);
   stroke-width: 1;
 }
 
@@ -207,7 +207,7 @@
 
 .access-line-path {
   fill: none;
-  stroke: #5c9e68;
+  stroke: var(--green-500);
   stroke-width: 2;
   stroke-linejoin: round;
   stroke-linecap: round;

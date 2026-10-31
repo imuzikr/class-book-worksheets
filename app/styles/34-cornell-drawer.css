@@ -639,8 +639,8 @@ ul.checklist > li::before:hover { border-color: var(--primary); }
    체크 표시는 ::after로 그린 'ㄴ'을 돌린 것입니다(글꼴에 기대지 않게). */
 li.check.done::before,
 ul.checklist > li.done::before {
-  border-color: #3f704b;
-  background: #3f704b;
+  border-color: var(--green-olive);
+  background: var(--green-olive);
 }
 li.check.done::after,
 ul.checklist > li.done::after {

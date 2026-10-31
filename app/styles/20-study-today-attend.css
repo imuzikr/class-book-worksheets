@@ -469,8 +469,8 @@
   font-weight: 800;
 }
 .study-attendance-live.on {
-  background: #e8f7ed;
-  color: #26734a;
+  background: var(--green-50);
+  color: var(--green-750);
 }
 
 /* 출석부 내려받기 '범위 고르기' 창 — 출석 관리 창 **위**에 뜹니다.
@@ -742,8 +742,8 @@
 }
 /* 오늘 출석한 학생 */
 .attend-seat--on {
-  background: #e8f7ed;
-  border-color: #a6d8b6;
+  background: var(--green-50);
+  border-color: var(--green-200);
 }
 /* ── 자리표(SeatPickGrid)의 출석 상태 ──
    출석을 아직 확인하기 전에는 모두 연한 회색으로 두고, 출석을 시작한
@@ -754,8 +754,8 @@
   border-color: var(--border);
 }
 .attend-seat--present {
-  background: #e8f7ed;
-  border-color: #a6d8b6;
+  background: var(--green-50);
+  border-color: var(--green-200);
 }
 /* 결석 — 참여 전광판의 결석 칸(.attend-desk--absent)과 같은 색입니다.
    예전엔 여기만 --primary-light(#f8ece5)를 썼는데, '확인 전'(--bg-deep
@@ -773,7 +773,7 @@
    눈에 들어오도록 테두리를 2px로 둡니다. 테두리가 1px 두꺼워진 만큼 안쪽이
    좁아져 글자가 흔들리므로 padding에서 1px을 돌려줍니다. */
 .attend-seat--me {
-  background: #e8f7ed;
+  background: var(--green-50);
   border: 2px solid #7cc194;
   padding: 3px 2px;
 }

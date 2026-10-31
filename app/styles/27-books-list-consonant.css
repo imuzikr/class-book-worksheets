@@ -157,7 +157,7 @@
    색과 말은 진행 대시보드의 같은 알약(.progress-act-state)을 그대로 씁니다 —
    두 화면이 같은 것을 말하는데 다른 옷을 입으면 다른 뜻으로 읽힙니다. */
 .book-activity-state {
-  border: 1px solid #efc19a;
+  border: 1px solid var(--apricot-300);
   background: var(--primary-light);
   color: var(--primary-dark);
 }
@@ -316,7 +316,7 @@
 .book-solo-note {
   margin: 0 0 13px;
   padding: 11px 13px;
-  border: 1px solid #efc19a;
+  border: 1px solid var(--apricot-300);
   border-radius: 10px;
   background: var(--primary-light);
   color: var(--primary-dark);

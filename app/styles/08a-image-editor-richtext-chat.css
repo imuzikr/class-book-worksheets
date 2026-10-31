@@ -118,7 +118,7 @@
 
 /* 해결된 질문 카드는 왼쪽에 초록 띠 표시 */
 .question-card.is-resolved {
-  border-left: 4px solid #5c9e68;
+  border-left: 4px solid var(--green-500);
 }
 
 /* 상세 모달 안의 토글: 오른쪽 위 닫기(×) 버튼과 겹치지 않게 여백 확보 */
@@ -454,7 +454,7 @@ pre code {
 .study-card-body pre.py-result {
   background: var(--bg-deep);
   color: var(--text);
-  border-left: 3px solid #a6d8b6;
+  border-left: 3px solid var(--green-200);
   border-radius: 0 10px 10px 0;
   white-space: pre-wrap;
   word-break: break-word;

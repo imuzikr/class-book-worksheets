@@ -148,7 +148,7 @@
   font-size: 13.5px; font-weight: 700; line-height: 1.5;
 }
 .fb-goal { background: #fff4df; color: #9a5a08; }
-.fb-all { background: #e8f7ed; color: #276b3d; border: 1px solid #a6d8b6; margin-top: 8px; }
+.fb-all { background: var(--green-50); color: #276b3d; border: 1px solid var(--green-200); margin-top: 8px; }
 .fb-note { margin: 0; font-size: 12.5px; color: var(--text-sub); line-height: 1.6; }
 .fb-entry .fb-note { margin-top: 8px; }
 .fb-mine-stats {
