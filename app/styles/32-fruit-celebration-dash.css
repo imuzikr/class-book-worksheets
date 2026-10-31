@@ -22,18 +22,6 @@
   margin-bottom: 6px;
 }
 
-.tkwl-pop-part + .tkwl-pop-part {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid var(--on-dark-10);
-}
-.tkwl-pop-src {
-  display: inline-block;
-  font-size: 10px;
-  color: #b9b7ad;
-  margin-bottom: 3px;
-}
-
 /* ── 독서 활동 진행 패널 — 결석 표시 ──
    0칸은 '아직 안 씀'과 '그날 못 옴' 둘 다일 수 있어, 결석은 따로 붙입니다. */
 .book-absent-chip {

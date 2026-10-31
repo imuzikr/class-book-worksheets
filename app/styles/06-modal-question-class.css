@@ -409,13 +409,6 @@
 /* ===================== 질문 작성/수정 모달 ===================== */
 
 /* 반 만들기 모달 — 입력이 반 이름 하나뿐이지만 답답하지 않게 넉넉한 폭 */
-/* .modal 기본(640px)보다 우선하도록 specificity를 높임 */
-.modal.modal-class-create {
-  max-width: 440px;
-}
-.modal-class-create .form-grid {
-  gap: 14px;
-}
 
 /* ===================== 반 관리하기 모달 ===================== */
 .modal.modal-class-manager {
@@ -531,12 +524,6 @@
   color: var(--text-sub);
   font-size: 13px;
   font-weight: 600;
-}
-
-/* 수업 보드 만들기 모달 — 폭을 절반으로(1000→520px). 키워드 칩은
-   .study-keyword-chips의 flex-wrap으로 좁아지면 자동 줄바꿈됨 */
-.modal.modal-study-board {
-  max-width: 520px;
 }
 
 /* 본문(에디터/표시)에 들어간 인라인 이미지 크기 제한 */

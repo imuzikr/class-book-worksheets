@@ -127,12 +127,6 @@ body:has(.confirm-backdrop) .cornell-handle {
   color: var(--text-sub);
   font-variant-numeric: tabular-nums;
 }
-.cornell-status {
-  margin-left: auto;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-sub);
-}
 .cornell-close {
   /* 저장 단추가 머리말을 떠나 요약 칸 아래로 내려가면서, 오른쪽으로 미는
      일을 여기가 맡습니다(예전에는 그 단추의 margin-left:auto가 했습니다) */
@@ -149,18 +143,6 @@ body:has(.confirm-backdrop) .cornell-handle {
   cursor: pointer;
 }
 .cornell-close:hover { background: var(--neutral); color: var(--text); }
-.cornell-lesson {
-  flex-shrink: 0;
-  padding: 8px 16px;
-  background: var(--bg-deep);
-  border-bottom: 1px solid var(--border);
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--text-sub);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 .cornell-empty { padding: 20px 16px; font-size: 13px; color: var(--text-sub); }
 
 /* 두 칸(노트 · 활동)이 나란히 서는 자리. 날개를 안 폈을 때도 이 줄은
