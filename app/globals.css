@@ -33679,3 +33679,25 @@ button.msgr-receipt:hover { color: var(--text-sub); }
 @media (max-width: 640px) {
   .sample-class-entry { flex-direction: column; align-items: stretch; }
 }
+
+/* 곁텍스트 읽기 머리 — 제목 · 활동 목록 · 안내문을 한 줄에.
+   .books-head-title은 원래 한 줄 고정(가로 스크롤)이지만, 여기서는 긴
+   안내문이 있어 좁은 화면(크롬북·휴대폰)에서 다음 줄로 내려가게 합니다. */
+.books-head-title.paratext-head-title {
+  flex-wrap: wrap;
+  overflow-x: visible;
+  row-gap: 6px;
+}
+.books-head-title.paratext-head-title > .paratext-head-intro {
+  flex: 1 1 320px;
+  flex-shrink: 1;
+  min-width: 0;
+  margin: 0 0 0 6px;
+  line-height: 1.5;
+}
+/* 둘째 줄 — 도서명 배지와 '8 / 8칸'을 나란히(좁으면 줄바꿈) */
+.paratext-head-main { flex-wrap: wrap; gap: 8px 10px; }
+.paratext-main .books-head { margin-bottom: 16px; }
+@media (max-width: 640px) {
+  .books-head-title.paratext-head-title > .paratext-head-intro { flex-basis: 100%; margin-left: 0; }
+}
