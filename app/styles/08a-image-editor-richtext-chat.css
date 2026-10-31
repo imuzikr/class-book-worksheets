@@ -55,41 +55,6 @@
 }
 
 /* ===================== 질문 상태 토글 (궁금해요/해결됐어요) ===================== */
-.status-toggle {
-  margin-left: auto;
-  border-radius: 999px;
-  padding: 6px 14px;
-  font-size: 13px;
-  font-weight: 800;
-  border: 1.5px solid transparent;
-  transition: transform 0.12s, box-shadow 0.12s;
-  flex-shrink: 0;
-}
-
-.status-toggle:hover {
-  transform: scale(1.06);
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
-}
-
-.status-toggle.open {
-  background: var(--primary-light);
-  color: var(--primary-dark);
-  border-color: #ecbfa9;
-}
-
-.status-toggle.resolved {
-  background: #e9f0e6;
-  color: #3d7a4a;
-  border-color: #b3d0b4;
-}
-
-.status-toggle.disabled,
-.status-toggle:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
 
 /* 카드의 상태 표시 — 클릭 불가(상태 변경은 상세 모달의 인사이트 흐름에서만) */
 .status-badge {

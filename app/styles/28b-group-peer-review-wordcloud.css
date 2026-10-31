@@ -506,8 +506,6 @@ span.cloud-word { cursor: default; }
   /* 곁텍스트 — 좁은 화면에서는 카드를 한 줄에 하나씩 */
   .paratext-grid { grid-template-columns: 1fr; }
   .paratext-card-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-  /* 공부방 활동 대시보드도 마찬가지로 한 줄에 하나씩 */
-  .activity-dash-grid { grid-template-columns: 1fr; }
   /* 만들기 창 — 좁은 화면에서는 항목 짝짓기(.book-field-row)를 풀어 한 줄에
      하나씩 놓습니다. 활동 종류는 아래 560px에서 한 열로 접습니다. */
   .book-field-row { flex-wrap: wrap; }

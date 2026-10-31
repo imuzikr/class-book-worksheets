@@ -1,19 +1,4 @@
 
-/* 오늘 항목 — 수정 버튼 / 인라인 편집 */
-.kwl-entry-edit-btn {
-  align-self: flex-end;
-  background: none;
-  border: none;
-  color: var(--text-sub);
-  font-size: 11px;
-  cursor: pointer;
-  padding: 2px 4px;
-  border-radius: 4px;
-}
-.kwl-entry-edit-btn:hover {
-  color: var(--primary, #e07a5f);
-  background: rgba(0, 0, 0, 0.04);
-}
 
 .kwl-entry--editing {
   cursor: default;
@@ -175,7 +160,6 @@
    같은 '누가기록 관리' 버튼이 화면을 옮길 때마다 커졌다 작아졌습니다.
    색과 모양(채움·테두리)은 역할별로 그대로 두고 크기만 맞춥니다. */
 .study-title-row > .study-class-select,
-.study-title-row > .study-code-btn,
 .study-title-row > .btn-ghost,
 .books-head .btn-ghost,
 .books-head .btn-primary,
@@ -304,25 +288,6 @@
   font-size: 12px;
   color: var(--text-sub);
   margin-top: 4px;
-}
-
-/* 참여 코드 토글 버튼 */
-.study-code-btn {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: var(--primary-dark);
-  background: var(--primary-light);
-  border: 1px solid transparent;
-  border-radius: 999px;
-  padding: 7px 14px;
-  cursor: pointer;
-  transition: border-color 0.15s;
-}
-
-.study-code-btn:hover {
-  border-color: var(--primary);
 }
 
 .study-attend-btn.done {
