@@ -33662,3 +33662,20 @@ button.msgr-receipt:hover { color: var(--text-sub); }
   .paratext-board > .book-workspace > .book-group-progress { order: 1; }
   .paratext-board > .book-workspace > .book-workspace-center { order: 2; }
 }
+
+/* ── 체험용 샘플 반(교사 전용) — 들어가는 안내 · 안에서의 배지 ── */
+.sample-class-entry {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin: 8px 16px 0; padding: 10px 14px; border-radius: 12px;
+  background: #f4f1ff; border: 1px dashed #b7a8f0; font-size: 14px; color: #3b2f6b;
+}
+.sample-class-entry .btn-ghost { white-space: nowrap; }
+.sample-class-bar { display: flex; align-items: center; gap: 6px; }
+.sample-class-badge {
+  padding: 4px 10px; border-radius: 999px; background: #fff3cd; border: 1px solid #f0c36d;
+  color: #7a5200; font-size: 12px; font-weight: 700; white-space: nowrap;
+}
+.sample-class-exit { font-size: 12px; padding: 4px 10px; white-space: nowrap; }
+@media (max-width: 640px) {
+  .sample-class-entry { flex-direction: column; align-items: stretch; }
+}
