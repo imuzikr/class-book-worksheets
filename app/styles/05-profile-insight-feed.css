@@ -134,8 +134,7 @@
 .joincode-regen,
 .study-form-title-pen,
 .notice-author,
-.kwl-entry-edit-btn,
-.kwl-tab {
+.kwl-entry-edit-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
