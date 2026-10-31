@@ -657,9 +657,6 @@
   flex-wrap: wrap;
   gap: 8px;
 }
-.qa-image-grid .qa-image {
-  max-width: 100%;
-}
 
 .attach-image-del {
   position: absolute;

@@ -143,81 +143,13 @@
 
 /* ===================== 한 줄 정리(인사이트) 모달 ===================== */
 
-/* 저장된 한 줄 정리 — 질문 상세 왼쪽에 표시 */
-.qa-reflection {
-  margin-top: 16px;
-  background: var(--primary-light);
-  border-left: 3px solid var(--primary);
-  border-radius: 10px;
-  padding: 12px 14px;
-}
-
-.qa-reflection h4 {
-  font-size: 13px;
-  color: var(--primary-dark);
-  margin-bottom: 6px;
-}
-
-.qa-reflection p {
-  font-size: 14px;
-  line-height: 1.7;
-}
-
-.qa-reflection-next {
-  margin-top: 8px;
-  color: var(--text-sub);
-  font-size: 13px;
-}
-
 /* ===================== 질문 상세 모달 (2열 구조) ===================== */
-/* 모바일 전용 헤더 — 데스크톱에서는 숨깁니다 */
-.qa-mobile-header { display: none; }
 
 .modal-close-float {
   position: absolute;
   top: 14px;
   right: 16px;
   z-index: 2;
-}
-
-.qa-grid {
-  display: flex;
-  height: min(72vh, 640px);
-}
-
-/* --- 왼쪽: 질문 본문 + 첨부 이미지 --- */
-.qa-left {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  border-right: 1px solid var(--border);
-}
-
-/* 본문 스크롤 영역 (qa-foot은 아래에 고정) */
-.qa-left-scroll {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 28px;
-}
-
-/* 왼쪽 하단 고정 푸터 — 나도 궁금해요 + 수정 */
-.qa-foot {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 28px;
-  border-top: 1px solid var(--border);
-  background: var(--bg);
-}
-
-/* 왼쪽 하단 버튼 4개(나도 궁금해요·고정하기·수정·삭제) — 아이콘 크기가
-   서로 달라(나도 궁금해요만 22px) 높이가 들쭉날쭉했던 것을 여기서만 맞춤 */
-.qa-foot .metoo-btn,
-.qa-foot .btn-ghost {
-  height: 36px;
 }
 
 /* 삭제 버튼 */
@@ -237,21 +169,6 @@
   color: var(--text);
 }
 
-.qa-image {
-  width: 100%;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-}
-
-/* --- 오른쪽: 채팅형 대화방 --- */
-.qa-right {
-  width: 380px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  background: var(--bg);
-}
-
 /* 다른 사람 말풍선 — 왼쪽, 은은한 크림/그레이 채움 (흰 배경과 구분) */
 .chat-bubble {
   background: #f0ede6;
@@ -266,21 +183,3 @@
   word-break: break-word;
 }
 
-@media (max-width: 760px) {
-  .qa-grid {
-    flex-direction: column;
-    height: 80vh;
-  }
-
-  .qa-left {
-    flex: 0 0 42%;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .qa-right {
-    width: 100%;
-    flex: 1;
-    min-height: 0;
-  }
-}
