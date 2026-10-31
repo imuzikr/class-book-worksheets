@@ -508,10 +508,6 @@
 .attend-seatmap--compact .seat-pairs-grid {
   --seat-min-width: 44px;
 }
-.lesson-seat-panel .seat-pairs-scroll > .seat-pairs-grid {
-  --seat-min-width: 64px;
-  column-gap: var(--seat-pair-gap);
-}
 .seat-pairs-grid.attend-grid,
 .seat-pairs-grid.notes-mgr-grid {
   --seat-min-width: 96px;
