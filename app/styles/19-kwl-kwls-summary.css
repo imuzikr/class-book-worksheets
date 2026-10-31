@@ -36,32 +36,6 @@
   background: rgba(255, 255, 255, 0.32);
 }
 
-.kwl-panel {
-  width: 300px;
-  height: 100%;
-}
-
-.kwl-panel {
-  width: 300px;
-  flex-shrink: 0;
-  background: var(--sidebar-bg);
-  color: var(--sidebar-text);
-  overflow-y: auto;
-  padding: 20px 14px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.kwl-panel-title {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--gray-300);
-}
-
 .kwl-badge {
   display: inline-flex;
   align-items: center;
@@ -394,32 +368,3 @@
   flex-direction: column;
   gap: 8px;
 }
-
-.kwl-today-entries {
-  margin-top: 12px;
-  border-top: 1px solid var(--border);
-  padding-top: 10px;
-}
-
-.kwl-today-entries-label {
-  font-size: 11px;
-  color: var(--text-sub);
-  margin: 0 0 8px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.kwl-entry {
-  background: var(--card-bg, #fff);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 10px;
-  margin-bottom: 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  cursor: pointer;
-  transition: border-color 0.1s;
-}
-.kwl-entry:hover { border-color: var(--primary, #e07a5f); }
