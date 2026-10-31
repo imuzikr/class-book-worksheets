@@ -236,7 +236,6 @@
 .pq-past-title-row { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 14px; font-weight: 800; color: var(--dark); }
 .pq-past--open .pq-past-list { gap: 10px; }
 .pq-past--open .pq-past-body { padding: 14px; }
-.pq-past-toggle,
 .pq-past-head {
   display: flex;
   align-items: center;
@@ -250,8 +249,6 @@
   text-align: left;
   cursor: pointer;
 }
-.pq-past-toggle { font-size: 14px; font-weight: 800; color: var(--dark); }
-.pq-past-toggle:hover,
 .pq-past-head:hover { background: var(--neutral); }
 .pq-past-count {
   padding: 1px 8px;
@@ -420,8 +417,6 @@
 .pq-review-head { display: flex; align-items: center; gap: 8px; }
 .pq-review-head strong { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; font-size: 14.5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .pq-review-no { font-family: var(--font-mono); font-size: 12px; color: var(--text-sub); }
-.pq-review-time,
-.pq-review-note { margin: 0; font-size: 12px; color: var(--text-faint); overflow-wrap: anywhere; }
 .pq-review-done { margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--green-50); color: #22603b; font-size: 13px; font-weight: 700; }
 .pq-return-note { font-family: inherit; font-size: 13.5px; }
 .pq-review-btns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }

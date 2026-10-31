@@ -192,19 +192,6 @@
 }
 
 /* ===================== 내 인사이트 모음 모달 ===================== */
-.modal-insight {
-  width: min(560px, 92vw);
-  max-height: 82vh;
-  display: flex;
-  flex-direction: column;
-}
-
-/* 제목 줄: 아이콘 + "내 인사이트" + 개수 배지를 세로 중앙으로 정렬 */
-.modal-insight .modal-head h3 {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
 
 .card-meta {
   display: flex;
