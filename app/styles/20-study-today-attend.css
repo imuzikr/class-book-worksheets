@@ -57,7 +57,6 @@
    11.5px였는데, 카드에서 가장 먼저 훑는 것이 이 줄인데도 카드 안에서 제일
    작은 글자였습니다. 13px로 올리고 여백도 함께 키웁니다 — 글자만 키우면
    알약이 글자에 끼어 답답해집니다. 안에 드는 아이콘도 15px로 맞추세요. */
-.study-project-badge,
 .book-activity-state,
 .progress-act-state {
   display: inline-flex;
