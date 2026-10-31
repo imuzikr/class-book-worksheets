@@ -9,7 +9,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isAdmin, isTeacher } from "@/lib/user";
-import { isFirebaseConfigured } from "@/lib/firebase";
+import { isFirebaseConfigured, sampleMode } from "@/lib/firebase";
 import { backdropClose } from "@/lib/modal";
 import StudentRewardTrend from "./StudentRewardTrend";
 import { signOutUser } from "@/lib/auth";
@@ -31,6 +31,7 @@ import PopQuizButton from "./PopQuizButton";
 import QuestionSignalButton from "./QuestionSignalButton";
 import ClassNoticeButton from "./ClassNoticeButton";
 import RoleSwitcher from "./RoleSwitcher";
+import SampleClassBar from "./SampleClassBar";
 import RoleManagerModal from "./RoleManagerModal";
 import PresentationOverlay from "./PresentationOverlay";
 import RewardCelebration from "./RewardCelebration";
@@ -202,6 +203,17 @@ export default function TopNav({ active, growthEnabled = false, readingOpen = fa
   }
 
   async function handleLogout() {
+    // 체험용 샘플 반 안 — 화면은 데모지만 실제 로그인은 살아 있으므로
+    // 진짜로 로그아웃하고, 체험 값도 지운 뒤 새로 엽니다(공용 크롬북 대비).
+    if (sampleMode) {
+      try {
+        await signOutUser();
+      } catch {
+        /* 무시하고 랜딩으로 */
+      }
+      window.location.assign("/");
+      return;
+    }
     if (isFirebaseConfigured) {
       try {
         await signOutUser();
@@ -309,6 +321,7 @@ export default function TopNav({ active, growthEnabled = false, readingOpen = fa
           전광판의 '가운데'가 오른쪽으로 치우쳤고 아이콘도 메뉴 줄에 얹혀
           눈에 덜 들어왔습니다(실제 신고). */}
       <div className="user-area">
+        <SampleClassBar />
         {!isFirebaseConfigured && <RoleSwitcher />}
         {/* 손들기 → 돌발 퀴즈 → 반 공지(교사) → 알림 순 — **교사·학생 같은
             차례**입니다(선생님 요청). 손들기와 퀴즈는 반 안의 일이라 확성기

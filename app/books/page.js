@@ -14,6 +14,7 @@
 // · 학생 화면: 활동을 누르면 곧바로 자기 판으로 들어가 낱말을 넣습니다.
 //     (아직 모둠이 없으면 모둠 목록을 보여 줘 고르거나 기다리게 합니다)
 // =============================================================
+import { enterSampleClass, canUseSampleClass, sampleMode, SAMPLE_CLASS_ID } from "@/lib/sampleClass";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ReadingHub from "@/components/reading/ReadingHub";
@@ -144,6 +145,8 @@ function activityDateLabel(activity) {
     day: "2-digit",
   }).format(new Date(time));
 }
+
+const SAMPLE_CLASS_PICK = `__sample__${SAMPLE_CLASS_ID}`;
 
 export default function BooksPage() {
   // useSearchParams()는 정적 프리렌더 시 Suspense 경계가 필요합니다 —
@@ -624,6 +627,9 @@ function BooksPageInner() {
   const pickableClasses = admin
     ? myClasses
     : classes.filter((c) => membershipIds.includes(c.id));
+  // 체험용 샘플 반 — 실제 반을 쓰는 교사·관리자에게만 보입니다(학생 X).
+  // 고르면 이 탭을 데모 자료로 새로 엽니다(lib/sampleClass.js).
+  const showSampleEntry = isFirebaseConfigured && canUseSampleClass(user);
   const classPicker =
     pickableClasses.length > 1 ? (
       <select
@@ -631,6 +637,7 @@ function BooksPageInner() {
         value={activeClassId ?? ""}
         onChange={(e) => {
           const id = e.target.value;
+          if (id === SAMPLE_CLASS_PICK) { enterSampleClass(); return; }
           if (admin) setTeacherClassId(id);
           setSelectedClassId(id);
           goToList();
@@ -641,6 +648,7 @@ function BooksPageInner() {
         {pickableClasses.map((c) => (
           <option key={c.id} value={c.id}>{c.name}</option>
         ))}
+        {showSampleEntry && <option value={SAMPLE_CLASS_PICK}>🧪 체험용 샘플 반 (저장 안 됨)</option>}
       </select>
     ) : activeClassName ? (
       <span className="book-group-class">{activeClassName}</span>
@@ -675,9 +683,17 @@ function BooksPageInner() {
   return (
     <div className="board-shell">
       <TopNav key={myUid} active="books" growthEnabled={growthEnabled} readingOpen={readingOpen} />
+      {showSampleEntry && !activeActivity && (
+        <aside className="sample-class-entry" aria-label="체험용 샘플 반">
+          <span>가상의 학생 15명과 활동이 준비된 <strong>체험용 샘플 반</strong>에서 기능을 마음껏 시험해 보세요. 여기서 한 일은 저장되지 않아요.</span>
+          <button type="button" className="btn-ghost" onClick={() => enterSampleClass()}>🧪 체험용 샘플 반 열기</button>
+        </aside>
+      )}
       {!isFirebaseConfigured && <aside className="demo-classroom-notice" aria-label="체험 데이터 안내">
         <div><strong>책봄 체험반 · 학생 15명</strong><span>10가지 독서 활동과 학생별 서재 1~2권이 준비되어 있어요. 상단에서 체험 학생을 골라 볼 수 있어요.</span>
-          <small>모두 가상의 기록입니다. 활동·독서 기록을 수정한 내용은 새로고침하면 샘플로 돌아가고, 반 설정은 유지됩니다.</small></div>
+          <small>{sampleMode
+            ? "모두 가상의 기록입니다. 이 체험용 샘플 반에서 한 일은 어디에도 저장되지 않고, 새로고침하면 처음으로 돌아가요. 상단의 '샘플 반 나가기'로 실제 반에 돌아갑니다."
+            : "모두 가상의 기록입니다. 활동·독서 기록을 수정한 내용은 새로고침하면 샘플로 돌아가고, 반 설정은 유지됩니다."}</small></div>
         <button type="button" className="btn-ghost" onClick={() => {
           setRoleOverride("admin");
           setTeacherClassId(DEMO_CLASS_ID);
