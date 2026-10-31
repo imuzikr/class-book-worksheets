@@ -341,7 +341,7 @@ html[data-auth-pending] .site-footer {
 
 .tab-row button.active {
   background: var(--dark);
-  color: #faf9f5;
+  color: var(--bg);
 }
 
 /* 화면에는 안 보이지만 스크린 리더는 읽는 텍스트 (입력칸 라벨 등) */

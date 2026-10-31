@@ -210,7 +210,7 @@
 .qsig-tag:hover { border-color: var(--text-sub); color: var(--text); }
 /* 고른 태그 — 갈래마다 다른 색. 교사 목록에서도 같은 색으로 섭니다. */
 .qsig-tag.on { color: #fff; border-color: transparent; }
-.qsig-tag--ask.on { background: #d97757; }
+.qsig-tag--ask.on { background: var(--primary); }
 .qsig-tag--idea.on { background: #3f704b; }
 .qsig-tag--bug.on { background: #b8474b; }
 

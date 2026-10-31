@@ -188,7 +188,7 @@
 }
 
 .access-line-grid {
-  stroke: #e8e5dd;
+  stroke: var(--border);
   stroke-width: 1;
 }
 

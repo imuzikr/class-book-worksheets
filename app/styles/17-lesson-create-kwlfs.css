@@ -751,7 +751,7 @@
 }
 /* 데이터가 끝나는 쪽만 둥글게 — 기준선 쪽은 각지게 붙여 둡니다 */
 .rwtrend-bar--up {
-  background: #d97757;
+  background: var(--primary);
   border-radius: 4px 4px 0 0;
 }
 .rwtrend-bar--down {

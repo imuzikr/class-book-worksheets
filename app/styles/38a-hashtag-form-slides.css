@@ -29,7 +29,7 @@
   padding: 6px 12px;
   font-size: 12.5px;
   font-weight: 800;
-  background: #c04a3f;
+  background: var(--danger);
   color: #fff;
 }
 .paratext-saved.err { color: var(--danger); }
