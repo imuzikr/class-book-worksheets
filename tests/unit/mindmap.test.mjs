@@ -632,3 +632,15 @@ test("부모 없는 노드와 순환 관계도 멈추지 않고 모든 노드를
   assert.equal(layoutPositions({ layout: "radial", nodes: [] }).size, 0);
   assert.equal(computeTreeLayout([]).size, 0);
 });
+
+test("반 폴더 그림(storage: 경로)은 저장→불러오기를 거쳐도 그 노드에 그대로 남습니다", async () => {
+  const { normalizeMindmap, updateNodeImage, addChild } = await import("../../lib/mindmap.js");
+  let map = normalizeMindmap({ nodes: [{ id: "root", parentId: null, text: "주제" }] });
+  map = addChild(map, "root", "가지");
+  const child = map.nodes[map.nodes.length - 1];
+  const src = "storage:uploads/cls_1/stu-1/1700000000000_photo.jpg";
+  map = updateNodeImage(map, child.id, src);
+  const loaded = normalizeMindmap(JSON.parse(JSON.stringify(map)));
+  assert.equal(loaded.nodes.find((n) => n.id === child.id).image, src);
+  assert.equal(loaded.nodes.find((n) => n.id === "root").image, "");
+});

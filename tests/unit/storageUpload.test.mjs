@@ -41,7 +41,7 @@ function load({ configured = true, uid = "stu1", now = 1700000000000 } = {}) {
     blobSize: 1000,
     Promise, String, Math, Error, RegExp,
   };
-  runInNewContext(BODY + "\n;globalThis.api = { uploadImage, deleteUploadedFile, classImagePath, safeFileName, CLASS_ID_RE, NoClassError };", ctx);
+  runInNewContext(BODY + "\n;globalThis.api = { uploadImage, deleteUploadedFile, classImagePath, safeFileName, CLASS_ID_RE, NoClassError, uploadErrorMessage, isUploadDemoMode };", ctx);
   return { api: ctx.api, calls, ctx };
 }
 
@@ -125,4 +125,23 @@ test("deleteUploadedFile: 삭제 실패는 삼키고, 데모 모드는 아무것
   const demo = load({ configured: false });
   await demo.api.deleteUploadedFile("https://firebasestorage.googleapis.com/v0/b/x/o/a");
   assert.deepEqual(demo.calls, []);
+});
+
+test("마인드맵 버그 조사: 체험 모드는 Storage에 아무것도 올리지 않습니다(버킷이 비는 이유)", async () => {
+  const { api, calls } = load({ configured: false });
+  assert.equal(api.isUploadDemoMode(), true);
+  await api.uploadImage({ name: "a.png" }, { classId: "c1" });
+  assert.ok(!calls.some(([k]) => k === "uploadBytes" || k === "resumable"));
+  assert.equal(load().api.isUploadDemoMode(), false);
+});
+
+test("업로드 실패 문구 — 이유마다 학생에게 보이는 안내가 다릅니다", async () => {
+  const { api } = load();
+  await assert.rejects(api.uploadImage({ name: "a.png" }, {}), (e) => {
+    assert.equal(api.uploadErrorMessage(e), "반을 고른 뒤에 그림을 올릴 수 있어요.");
+    return true;
+  });
+  assert.match(api.uploadErrorMessage({ code: "storage/unauthorized" }), /권한이 없어요/);
+  assert.match(api.uploadErrorMessage({ code: "storage/retry-limit-exceeded" }), /인터넷/);
+  assert.match(api.uploadErrorMessage(new Error("x")), /이미지를 올리지 못했어요/);
 });

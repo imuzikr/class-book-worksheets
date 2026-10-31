@@ -22,7 +22,7 @@ import {
   normalizeMindmap,
   withRadialPositions,
 } from "@/lib/mindmap";
-import { uploadImage, deleteUploadedFile } from "@/lib/storageUpload";
+import { uploadImage, deleteUploadedFile, isUploadDemoMode } from "@/lib/storageUpload";
 import { safeBookUrl } from "@/lib/paratext";
 import MindmapCanvas from "./MindmapCanvas";
 import { IconBook, IconLock } from "./StatusIcons";
@@ -152,6 +152,13 @@ export default function MindmapForm({ activity, user, onBack }) {
             {status === "saving" ? "저장 중…" : "저장됨"}
           </span>
         )
+      )}
+      {/* 체험 모드에서는 그림·고친 내용이 새로고침하면 사라집니다 — 실제 저장으로
+          착각하지 않도록 알려 둡니다(Firebase 미연결: lib/firebase.js). */}
+      {isUploadDemoMode() && (
+        <span className="paratext-saved" role="note">
+          체험 모드 · 새로고침하면 처음 자료로 돌아가요
+        </span>
       )}
     </div>
   );

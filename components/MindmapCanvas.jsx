@@ -52,6 +52,7 @@ import {
 import { IMAGE_ACCEPT } from "@/lib/image";
 import { mindmapEdgeGeometry } from "@/lib/mindmapEdges";
 import SecureImage from "./SecureImage";
+import { uploadErrorMessage } from "@/lib/storageUpload";
 
 const ZOOM_MIN = 0.1;
 const ZOOM_MAX = 2.4;
@@ -467,8 +468,9 @@ export default function MindmapCanvas({
       if (nodeById(mapRef.current.nodes, nodeId)) {
         onChange(updateNodeImage(mapRef.current, nodeId, url));
       }
-    } catch {
-      setImageError("이미지를 올리지 못했어요. 잠시 뒤 다시 해 주세요.");
+    } catch (err) {
+      // 실패 이유(반 없음·권한 없음·연결 끊김)를 학생에게 그대로 알립니다
+      setImageError(uploadErrorMessage(err));
     } finally {
       setUploadingId(null);
     }
