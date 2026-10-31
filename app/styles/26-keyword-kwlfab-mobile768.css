@@ -1,18 +1,6 @@
 
 /* ===================== 키워드 사이드바 헤더 ===================== */
 
-/* ── 사이드바 내 인사이트 섹션 ── */
-
-.reflect-sidebar-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: #e8e8e4;
-  margin: 0 0 3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 /* ===================== 키워드 관리 모달 ===================== */
 
 /* =============================================================
@@ -110,117 +98,17 @@
     color: var(--text-sub);
   }
 
-  /* ──────────────────────────────────────────────────────────
-     게시판: 피드만 전체 너비 사용
-     ────────────────────────────────────────────────────────── */
-  .three-cols { flex-direction: column; }
-  .feed-col { padding: 0 14px 80px; }
-
-  /* 접힘이 기본 — 펼치면 화면 절반까지만 쓰고 그 안에서 스크롤 */
-  .notice-body { display: none; }
-
-  .feed-head {
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 12px;
-  }
-  .feed-head h1 { font-size: 17px; }
-
-  /* 질문 카드 */
-  .question-card { padding: 14px 14px 12px; }
-  .question-card-title { font-size: 15px; }
-  .question-card-meta { font-size: 11px; gap: 6px; }
-
-  /* ──────────────────────────────────────────────────────────
-     공부방 레이아웃
-     ────────────────────────────────────────────────────────── */
-  .study-body { position: relative; }
-  .study-cols-wrap { padding: 0 10px 80px; }
-
-  .study-head {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-    padding-top: 14px;
-  }
-  .study-head h1 { font-size: 17px; }
   .study-title-row { flex-wrap: wrap; gap: 6px; }
 
-  /* ──────────────────────────────────────────────────────────
-     발표 모드 · KWL 전체 보기 모달: 좁은 화면 대응
-     — 헤더가 한 줄에 안 들어가 화살표·닫기가 화면 밖으로 밀리던 문제
-     ────────────────────────────────────────────────────────── */
-  .present-modal {
-    width: 100vw;
-    height: 100dvh;
-    border-radius: 0;
-  }
-  .present-head {
-    position: relative;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 10px 44px 10px 12px; /* 오른쪽은 닫기(×) 자리 */
-  }
-  /* 닫기 버튼은 항상 오른쪽 위에 고정 */
-  .present-head .btn-close {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-  }
-  .present-who {
-    flex-wrap: wrap;
-    row-gap: 6px;
-    gap: 8px;
-  }
-  .present-name { font-size: 18px; white-space: normal; }
-  .present-avatar { font-size: 22px; }
-  .present-body { padding: 16px 14px; }
   .present-slide { padding: 28px 22px; border-radius: 18px; }
   .present-slide-title { font-size: 24px; margin-bottom: 18px; }
   .present-slide-content { font-size: 18px; line-height: 1.75; }
-  .present-activities { gap: 24px; }
-  .present-activity + .present-activity { padding-top: 20px; }
-  .present-activity-title { font-size: 20px; }
-  .present-foot { padding: 10px 12px; }
   .broadcast-bar { padding: 10px 14px; font-size: 13px; }
   .broadcast-body { padding: 20px 14px; }
   .broadcast-stop-pill { right: 12px; bottom: 12px; font-size: 12px; padding: 8px 14px; }
-  /* 수업하기 — 좁은 화면에서는 슬라이드 카드 위 / 해설 카드 아래로 */
-  .lesson-page { padding: 12px 12px 28px; }
-  .lesson-activity { margin-top: 40px; }
-  .present-nav {
-    width: 40px;
-    height: 40px;
-    font-size: 26px;
-  }
-
-  /* ──────────────────────────────────────────────────────────
-     대시보드·리포트 잔디 히트맵: 세로 배치
-     — 오른쪽 레이더 패널(고정 350px)이 폭을 다 차지해
-       히트맵이 0px로 찌그러져 안 보이던 문제
-     ────────────────────────────────────────────────────────── */
-  .activity-overview {
-    width: 100%;
-    margin-left: 0;
-    padding-left: 0;
-    border-left: none;
-    margin-top: 16px;
-    padding-top: 16px;
-    border-top: 1px solid var(--border);
-  }
 
   /* 참여 보상 패널은 모바일에서 숨김(교사 관리용, 데스크톱 전용) */
   .reward-panel { display: none; }
-
-  /* ──────────────────────────────────────────────────────────
-     프로젝트 머리말 버튼 — 데스크톱 기준 24~27px이라 손가락으로는 너무
-     작습니다. 버튼 사이 간격이 8px뿐이라 여백만 넓히면 옆 버튼과 탭 영역이
-     겹치므로, 버튼 자체를 34px로 키웁니다.
-     ────────────────────────────────────────────────────────── */
-  .study-present-btn {
-    width: 34px;
-    height: 34px;
-  }
 
   /* 모달 닫기(×) — 글자만 있어 13×22px밖에 안 됩니다. 눈에 보이는 크기는
      그대로 두고 탭 영역만 40px로 넓힙니다. */
@@ -247,25 +135,6 @@
     padding: 20px 16px 36px;
     margin: 0;
   }
-  /* ── modal-wide: 전체화면 ── */
-  .modal-form { padding: 20px 16px 32px; }
-
-  .qa-expand-chevron {
-    flex-shrink: 0;
-    font-size: 11px;
-    color: var(--text-sub);
-    line-height: 1;
-  }
-  .qa-mobile-title {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  /* 입력창 */
-  .chat-compose { flex-shrink: 0; background: #fff; }
 
   /* ── 에디터 툴바: 좁은 화면에서는 버튼을 조금 줄여 한 줄에 더 담습니다
      (넘치면 옆으로 구릅니다 — 전송은 이제 아래 제 줄이라 안 걸립니다) ── */
@@ -283,17 +152,10 @@
      터치 영역 확보 (최소 44px)
      ────────────────────────────────────────────────────────── */
   .btn-primary { min-height: 44px; font-size: 15px; }
-  /* 파이썬 실행기의 세 단추 — 위 규칙이 .btn-primary에만 걸려 그 하나만
-     44px가 되고 나머지 둘은 34px로 남습니다. 셋을 함께 올립니다. */
-  .py-actions button { height: 44px; min-height: 44px; font-size: 13px; }
-  .vote-btn { min-height: 40px; min-width: 40px; }
 
   /* 과일 흐름·자리표에 새로 붙인 조작들 — 데스크톱 기준으로 잡아 둔 크기가
      손가락에는 작습니다. 글자는 그대로 두고 높이만 확보합니다. */
   .rwtrend-toggle { min-height: 40px; padding: 4px 16px; }
-  .lesson-seat-collapse-btn { min-height: 40px; padding: 5px 16px; }
-  .lesson-seat-tabs button { min-height: 38px; }
-  .lesson-seat-toggle { min-height: 48px; }
   /* 모달 제목 옆 뒤로 화살표 — 22px 글자만으로는 짚기 어려워 정사각으로 */
   .modal-back {
     min-width: 40px;
@@ -307,6 +169,5 @@
 @media (max-width: 480px) {
   .topbar { padding: 0 10px; }
   .topbar-left .logo { font-size: 15px; }
-  .topnav-drop-btn { font-size: 12px; padding: 4px 8px; }
   .modal { padding: 16px 14px 32px; }
 }

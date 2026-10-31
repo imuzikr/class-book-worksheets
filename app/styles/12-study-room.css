@@ -15,27 +15,6 @@
   /* padding은 study-head와 study-cols-wrap에서 각각 처리 */
 }
 
-/* KWL 패널 + 보드 컬럼 나란히 */
-.study-body {
-  flex: 1;
-  display: flex;
-  min-height: 0;
-  overflow: hidden;
-}
-
-/* 보드 컬럼 영역 래퍼 */
-.study-cols-wrap {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding: 0 24px;
-}
-
-.study-cols-wrap .empty-note {
-  margin-top: 20px;
-}
-
 /* ── 오른쪽: 참여 보상 패널 (교사 전용) ── */
 /* 폭을 패널이 아니라 **안쪽 내용에** 줍니다.
    -------------------------------------------------------------
@@ -518,69 +497,8 @@
   line-height: 1.15;
 }
 
-/* ── 발표 모드 — 아이콘(▶) 전용 원형 버튼 ── */
-.study-present-btn {
-  width: 26px;
-  height: 26px;
-  border: 1px solid var(--primary);
-  background: var(--primary-light);
-  color: var(--primary-dark);
-  font-size: 11px;
-  line-height: 1;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  padding: 0 0 0 2px; /* ▶ 글리프의 시각 중심 보정 */
-  flex-shrink: 0;
-}
-.study-present-btn:hover:not(:disabled) {
-  background: #f3d9cb;
-}
-.study-present-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
 .present-backdrop {
   z-index: 1000;
-}
-.present-modal {
-  position: relative;
-  width: 94vw;
-  height: 94vh;
-  max-width: 1600px;
-  background: #fff;
-  border-radius: 20px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.4);
-}
-.present-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 18px 26px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-.present-who {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-.present-avatar {
-  font-size: 30px;
-  flex-shrink: 0;
-}
-.present-name {
-  font-family: var(--font-serif);
-  font-weight: 700;
-  font-size: 24px;
-  color: var(--dark);
-  white-space: nowrap;
 }
 .present-progress {
   font-size: 15px;
@@ -597,15 +515,6 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-/* 발표 화면 본문 — 첨부는 없고, 가운데 슬라이드 카드 한 장에 텍스트만 크게 */
-.present-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 40px 56px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 .present-slide {
   width: 100%;
@@ -659,43 +568,6 @@
   text-align: center;
 }
 
-/* 활동(질문)이 여러 개인 카드 — 활동마다 제목을 먼저 굵고 크게, 그
-   아래에 그 학생의 내용을 보여줍니다. 왼쪽 정렬해 여러 개가 쌓여도
-   제목·내용의 짝을 눈으로 따라가기 쉽게 합니다. */
-.present-activities {
-  display: flex;
-  flex-direction: column;
-  gap: 34px;
-  text-align: left;
-}
-.present-activity {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.present-activity + .present-activity {
-  padding-top: 30px;
-  border-top: 1px solid var(--border);
-}
-.present-activity-title {
-  font-family: var(--font-serif);
-  font-size: 27px;
-  font-weight: 800;
-  color: var(--dark);
-  line-height: 1.35;
-}
-.present-activities .present-empty {
-  text-align: left;
-}
-.present-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 16px 26px;
-  border-top: 1px solid var(--border);
-  flex-shrink: 0;
-}
 .present-fruits {
   display: flex;
   align-items: center;
@@ -723,32 +595,6 @@
   padding: 12px 24px;
   font-size: 16px;
   flex-shrink: 0;
-}
-.present-nav {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(30, 25, 20, 0.4);
-  color: #fff;
-  font-size: 40px;
-  line-height: 1;
-  display: grid;
-  place-items: center;
-  /* ‹ › 글리프의 베이스라인 여백 때문에 아래로 쳐져 보여 위로 보정 */
-  padding-bottom: 8px;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.present-nav:hover:not(:disabled) {
-  background: rgba(30, 25, 20, 0.62);
-}
-.present-nav:disabled {
-  opacity: 0.2;
-  cursor: default;
 }
 .present-prev {
   left: 18px;

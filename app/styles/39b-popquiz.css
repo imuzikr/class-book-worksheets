@@ -40,13 +40,6 @@
 }
 
 /* 카드 머리의 '돌발 퀴즈'(교사) — 삭제 바로 왼쪽. 삭제(빨강)와 갈리도록 살구. */
-/* 옛 카드 창(StudyCardModal)의 아래 줄 — 옆 '삭제 · 저장하고 닫기'와 높이를 맞춤 */
-.study-card-modal-save-row > .pq-card-btn {
-  height: 38px;
-  padding: 0 14px;
-  font-size: 14px;
-  gap: 6px;
-}
 
 /* ── 공통 조각 ── */
 .pq-backdrop { z-index: 3010; } /* 수업 노트 서랍(3001)·수업 화면 위 */

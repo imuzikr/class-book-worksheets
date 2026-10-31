@@ -121,12 +121,6 @@
   display: grid;
   place-items: center;
 }
-/* 페이지 본문 — 앞으로 이 안에 수업 관련 섹션을 계속 덧붙입니다 */
-.lesson-page {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 18px 20px 40px;
-}
 /* 주제 — 수업준비에서 미리 입력해 둔 이름 */
 .lesson-page-title {
   font-family: var(--font-serif);
@@ -327,11 +321,6 @@
   cursor: pointer;
 }
 
-/* 활동 안내 — 슬라이드·해설 아래 전체 폭.
-   테두리가 없어 구분이 간격으로만 되므로 위쪽을 확실히 띄웁니다. */
-.lesson-activity {
-  margin-top: 64px;
-}
 .lesson-activity-body {
   padding: 0;
 }
@@ -376,27 +365,6 @@
    (여백이 두 번 겹치면 왼쪽만 아래로 밀려 오른쪽 자리표와 어긋납니다) */
 .lesson-lower-main > :first-child {
   margin-top: 0;
-}
-/* 접힌 버튼 — 카드 자리와 높이를 맞춰 위쪽 줄이 나란해 보이게 */
-.lesson-seat-toggle {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 10px 16px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-deep);
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
-}
-.lesson-seat-toggle:hover {
-  border-color: var(--primary);
-  background: #fff;
 }
 .lesson-seat-toggle-icon { flex-shrink: 0; }
 .lesson-seat-toggle-hand {
