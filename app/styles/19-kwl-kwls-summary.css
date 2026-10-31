@@ -35,26 +35,3 @@
   color: rgba(255, 255, 255, 0.28);
 }
 
-/* ── KWL 탭 ── */
-
-.kwl-tab {
-  flex: 1;
-  background: none;
-  border: none;
-  color: #d8d6cc; /* 어두운 사이드바에서도 잘 보이도록 밝은 회색 */
-  font-size: 13px;
-  font-weight: 600;
-  padding: 6px 0;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.12s, color 0.12s;
-}
-.kwl-tab:hover {
-  background: var(--on-dark-08);
-  color: #fff;
-}
-.kwl-tab.active {
-  background: var(--primary); /* 테라코타 강조 — 선택 탭이 확실히 보이게 */
-  color: #fff;
-}
-
