@@ -46,7 +46,6 @@
    위아래가 똑같이 떨어져 어느 칸에 딸린 줄인지 흐려집니다. */
 .ltask-chips { margin-top: -4px; }
 
-
 /* 별도 창 전광판 — 같은 자리표를 창 너비에 맞춰 보여 줍니다. */
 .attend-window-actions {
   display: flex;
@@ -333,12 +332,6 @@ h4.attendance-seat-help { margin-top: 16px; }
   font-size: 13.5px;
   color: var(--text-sub);
   word-break: keep-all;
-}
-/* .lesson-create-btn은 가로 줄에 서도록 flex: 1이라, 세로로 쌓는 이 창에서는
-   높이를 나눠 갖지 않게 풉니다. */
-.tpl-import-modal .lesson-create-btn,
-.tpl-import-empty .lesson-create-btn {
-  flex: none;
 }
 
 /* ── 실행기 '＋ 새 프로젝트' — 활동 여럿 (PyProjectPanel) ──

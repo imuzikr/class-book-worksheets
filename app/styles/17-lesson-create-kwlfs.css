@@ -78,13 +78,6 @@
   line-height: 1.6;
   margin-bottom: 12px;
 }
-.lesson-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 46vh;
-  overflow-y: auto;
-}
 .lesson-row {
   display: flex;
   align-items: center;
@@ -152,16 +145,6 @@
   width: 120px;
   min-height: 0;
   padding: 0 8px;
-}
-.lesson-edit-btn {
-  background: var(--primary-light);
-  border-color: #EDCBB8;
-  color: var(--primary-dark);
-}
-.lesson-edit-btn:hover {
-  background: var(--primary);
-  color: #fff;
-  border-color: var(--primary);
 }
 
 /* ── 교사 화면 — 방송 중일 때 어디서든 바로 끌 수 있는 안전장치 ── */

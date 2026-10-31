@@ -15,7 +15,6 @@
 
 /* ===================== 키워드 관리 모달 ===================== */
 
-
 /* =============================================================
    KWL FAB (모바일 전용 — 데스크톱에서는 숨김)
    ============================================================= */
@@ -284,12 +283,8 @@
   .broadcast-stop-pill { right: 12px; bottom: 12px; font-size: 12px; padding: 8px 14px; }
   /* 수업하기 — 좁은 화면에서는 슬라이드 카드 위 / 해설 카드 아래로 */
   .lesson-page { padding: 12px 12px 28px; }
-  .lesson-deck { grid-template-columns: 1fr; gap: 28px; }
   /* 자리표는 활동 관리 아래로 내려갑니다 */
   .lesson-lower { grid-template-columns: 1fr; gap: 28px; }
-  .lesson-title { font-size: 14px; }
-  .lesson-ctrl-btn { width: 88px; padding: 9px 4px; font-size: 13px; }
-  .lesson-dots { display: none; }
   .lesson-activity { margin-top: 40px; }
   .present-nav {
     width: 40px;

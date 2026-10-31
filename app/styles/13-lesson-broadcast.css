@@ -97,100 +97,12 @@
 }
 
 /* ── 수업하기 — 교사 화면 (왼쪽 슬라이드 · 오른쪽 메모) ── */
-/* 수업 페이지 — 위아래로 스크롤됩니다(스크롤은 학생 화면과 무관) */
-.lesson-mode {
-  position: fixed;
-  inset: 0;
-  z-index: 2900;
-  background: var(--bg);
-  overflow-y: auto;
-}
 /* 머리말은 붙여 둡니다 — 아래로 내려가도 진행 상황과 '수업 종료'가 늘 보이게 */
-.lesson-head {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 20px;
-  background: var(--dark);
-  color: #fff;
-}
-.lesson-title {
-  font-size: 16px;
-  font-weight: 700;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.lesson-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 12px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.15);
-  font-size: 12px;
-  font-weight: 700;
-  flex-shrink: 0;
-}
 .lesson-badge--edit {
   background: var(--on-dark-10);
   color: rgba(255, 255, 255, 0.8);
 }
-/* 배지 안의 긴 말 / 짧은 말 — 넓은 화면에선 긴 쪽만 보입니다 */
-.lesson-badge-short {
-  display: none;
-}
-/* 반 이름 앞 구분점. 왼쪽 여백은 배지의 flex gap이 만들어 줍니다 */
-.lesson-badge-class::before {
-  content: "· ";
-  opacity: 0.65;
-}
-/* 수업 도구 — 헤더 '화면 기준' 정가운데.
-   좌우 여백(auto)만으로는 왼쪽 제목이 길어질수록 중앙에서 밀리므로,
-   절대 위치로 헤더 한가운데에 고정합니다. (.lesson-head는 sticky =
-   위치 지정 요소라 이 절대 위치의 기준이 됩니다) */
-.lesson-tools {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-.lesson-tool-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  border-radius: 999px;
-  background: var(--on-dark-12);
-  color: #fff;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.lesson-tool-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.22);
-}
-/* 지금 쓸 수 없는 도구 — 자리는 지키되 눌리지 않음(이유는 툴팁으로) */
-.lesson-tool-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
 
-.lesson-count {
-  margin-left: auto;
-  font-size: 14px;
-  font-weight: 800;
-  flex-shrink: 0;
-}
 /* 수업 화면 머리말의 상단바 도구 — 돌발 퀴즈 · 손들기 · 반 공지 · 알림.
    이 화면이 position: fixed로 상단바를 통째로 덮어, 수업 중에는 공지도
    알림도 손이 닿지 않았습니다. 같은 컴포넌트를 그대로 가져다 씁니다.
@@ -244,48 +156,6 @@
   font-weight: 800;
   display: grid;
   place-items: center;
-}
-.lesson-exit {
-  flex-shrink: 0;
-  padding: 7px 16px;
-  border: none;
-  border-radius: var(--radius-btn);
-  background: var(--danger);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.lesson-exit:hover {
-  filter: brightness(1.08);
-}
-.lesson-start-btn {
-  flex-shrink: 0;
-  padding: 7px 16px;
-  border: none;
-  border-radius: var(--radius-btn);
-  background: var(--primary);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.lesson-start-btn:hover {
-  filter: brightness(1.08);
-}
-.lesson-edit-btn {
-  flex-shrink: 0;
-  padding: 7px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.32);
-  border-radius: var(--radius-btn);
-  background: transparent;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.lesson-edit-btn:hover {
-  background: var(--on-dark-12);
 }
 /* 페이지 본문 — 앞으로 이 안에 수업 관련 섹션을 계속 덧붙입니다 */
 .lesson-page {
