@@ -61,36 +61,6 @@
   gap: 4px;
   max-width: 340px;
 }
-.bks-gcell {
-  aspect-ratio: 1;
-  border-radius: 6px;
-  background: var(--neutral);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1px;
-}
-.bks-gcell b {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
-}
-.bks-gcell em {
-  font-style: normal;
-  font-size: 10.5px;
-  font-family: var(--font-mono);
-  color: var(--text-sub);
-}
-.bks-gcell.lv1 { background: #84c192; }
-.bks-gcell.lv2 { background: #4f9364; }
-.bks-gcell.lv3 { background: #2a6039; }
-/* 낱말 수는 옅은 칸에서 --text-sub로 두면 1.66:1까지 떨어집니다.
-   본문 잉크로 올려 5.20:1을 확보합니다(작은 글자 기준 통과). */
-.bks-gcell.lv1 em { color: var(--text); }
-/* 진한 칸에서는 글자를 뒤집어 대비를 지킵니다 */
-.bks-gcell.lv2 b, .bks-gcell.lv3 b { color: #fff; }
-.bks-gcell.lv2 em, .bks-gcell.lv3 em { color: rgba(255,255,255,0.82); }
 
 .bks-gcell--topic {
   background: var(--primary-light);
@@ -195,9 +165,6 @@
   font-family: var(--font-mono);
   white-space: nowrap;
 }
-
-
-.report-kwl .kwls-hm { padding-bottom: 0; }
 
 /* 책방 KWLS 활동에서 넘어온 기록 표시 — 같은 날짜 아래 공부방 하루 성찰과
    나란히 놓이므로, 어디서 쓴 것인지 밝혀 둡니다. */

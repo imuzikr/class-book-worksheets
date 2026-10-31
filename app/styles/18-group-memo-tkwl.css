@@ -689,7 +689,6 @@
    학생용과 같은 자리(.kwl-panel)를 쓰되 담는 게 다릅니다 — 작성 현황,
    '알기를 원하는 것' 모아보기, 학생 × K·W·L·S 격자. 어두운 사이드바
    배경 위라 글자·선 색을 밝은 쪽으로 맞춥니다. */
-.teacher-kwl { gap: 14px; }
 .tkwl-head {
   display: flex;
   flex-direction: column;
