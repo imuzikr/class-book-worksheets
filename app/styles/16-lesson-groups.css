@@ -203,98 +203,6 @@
   cursor: default;
 }
 
-/* ── 학습 자료 — 프로젝트 전체에서 쓰는 파일 (활동 목록 위) ── */
-.lesson-board-files {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-btn);
-  background: var(--bg-deep);
-}
-.lesson-board-files-head {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.lesson-board-files-title {
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--text);
-}
-.lesson-board-files-head small {
-  font-size: 12px;
-  color: var(--text-sub);
-}
-.lesson-board-file-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.lesson-board-file {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  font-size: 13.5px;
-}
-.lesson-board-file-thumb {
-  width: 34px;
-  height: 34px;
-  border-radius: 6px;
-  object-fit: cover;
-  flex-shrink: 0;
-}
-.lesson-board-file-icon { flex-shrink: 0; }
-/* 파일 이름이 길어도 크기·삭제 버튼이 밀려나지 않게 잘라 둡니다 */
-.lesson-board-file-name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text);
-}
-a.lesson-board-file-name { text-decoration: underline; }
-.lesson-board-file-size {
-  flex-shrink: 0;
-  font-size: 12px;
-  color: var(--text-sub);
-  font-variant-numeric: tabular-nums;
-}
-.lesson-board-file-add {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 12px;
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-btn);
-  background: #fff;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--primary);
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
-}
-.lesson-board-file-add:hover {
-  border-color: var(--primary);
-  background: var(--primary-light);
-}
-.lesson-board-file-add small {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--text-sub);
-}
-
 @media (max-width: 768px) {
   .lesson-board-select { max-width: none; }
   .lesson-board-act-del { width: 34px; height: 34px; }
@@ -374,90 +282,11 @@ a.lesson-board-file-name { text-decoration: underline; }
 /* 해설 카드 — 높이는 옆의 슬라이드 카드가 정합니다.
    내용을 절대 배치해 두어야 해설이 길어져도 카드가 늘어나지 않고
    안에서만 스크롤됩니다(두 카드 높이가 항상 같도록). */
-/* 해설 칸 — 제목 줄과 본문이 세로로 쌓입니다.
-   예전에는 자식 하나(입력칸 또는 본문)를 absolute로 채웠는데, 제목이
-   생기면서 자식이 둘이 되어 겹쳤습니다. 열(column) 플렉스로 바꾸고,
-   남는 높이는 본문이 가져가게 합니다(제목은 제 높이만). */
-.lesson-note-body {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.lesson-note-body > * {
-  margin: 0;
-}
-/* 본문·빈 안내는 남는 높이를 채우고, 넘치면 그 안에서 스크롤 */
-.lesson-note-body > .lesson-note-input,
-.lesson-note-body > .lesson-note-text,
-.lesson-note-body > .lesson-note-empty {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-}
-/* 제목은 한 줄이라 제 높이만 차지합니다 */
-.lesson-note-body > .lesson-note-title-input,
-.lesson-note-body > .lesson-note-title {
-  flex: none;
-}
-/* 편집 화면의 제목 칸 — 아래 본문 칸과 같은 테두리·같은 여백으로 맞추되,
-   글자를 키워 '여기가 제목'임이 입력할 때부터 보이게 합니다. */
-.lesson-note-title-input {
-  width: 100%;
-  box-sizing: border-box;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 10px 12px;
-  font-family: inherit;
-  font-size: 19px;
-  font-weight: 700;
-  color: var(--dark);
-  outline: none;
-}
-.lesson-note-title-input:focus {
-  border-color: var(--primary);
-}
-/* 수업 중 화면의 제목 — 본문(24px)보다 크고, 아래에 밑줄을 두어
-   제목이 어디서 끝나는지 멀리서도 갈립니다. */
-.lesson-note-title {
-  font-size: 30px;
-  font-weight: 800;
-  line-height: 1.35;
-  color: var(--primary-dark);
-  padding-bottom: 8px;
-  border-bottom: 2px solid var(--primary-light);
-  word-break: keep-all;
-}
 .lesson-saved {
   font-style: normal;
   font-size: 11px;
   font-weight: 700;
   color: var(--teal-600);
-}
-.lesson-note-input {
-  resize: none;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 12px;
-  font-family: inherit;
-  font-size: 15px;
-  line-height: 1.75;
-  color: var(--text);
-  outline: none;
-}
-.lesson-note-input:focus {
-  border-color: var(--primary);
-}
-/* 본문 — 전자칠판에서 함께 보는 글이라 크게 둡니다. 다만 제목(30px)보다는
-   작고 덜 굵게 해서 둘이 구분되게 합니다(예전에는 제목이 없어 본문이 가장
-   큰 글씨였습니다). */
-.lesson-note-text {
-  font-size: 24px;
-  font-weight: 600;
-  line-height: 1.6;
-  color: var(--dark);
-  white-space: pre-wrap;
 }
 .lesson-note-empty {
   color: var(--text-sub);
@@ -542,7 +371,6 @@ a.lesson-board-file-name { text-decoration: underline; }
   grid-template-columns: minmax(0, 1fr) 340px;
   gap: 20px;
 }
-.lesson-mgr-body.no-usage { grid-template-columns: minmax(0, 1fr); }
 .lesson-mgr-main {
   display: flex;
   flex-direction: column;
@@ -555,186 +383,12 @@ a.lesson-board-file-name { text-decoration: underline; }
   height: auto;
   max-height: none;
 }
-/* 반별 현황 — 옅은 바탕의 한 판. 반마다 한 덩이, 안의 줄은 목록 줄보다 작게
-   (여기는 훑어보는 자리지 누르는 자리가 아닙니다 — 프로젝트 줄만 '열기'). */
-.lesson-usage {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg);
-  overflow: hidden;
-}
-.lesson-usage-head {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 12px 14px 10px;
-  border-bottom: 1px solid var(--border);
-}
-.lesson-usage-head strong { font-size: 14px; color: var(--dark); }
-.lesson-usage-head span { font-size: 12px; color: var(--text-sub); }
-.lesson-usage-list {
-  flex: 1 1 0;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.lesson-usage-class {
-  flex-shrink: 0;
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 9px 10px;
-}
-/* 지금 보는 반 — 자리는 그대로(이름순)이고 테두리만 살구빛입니다 */
-.lesson-usage-class.here { border-color: var(--primary); }
-/* 반 머리줄이 곧 여닫는 단추입니다 — 줄 전체를 누를 수 있어야 손이 안
-   헤맵니다(삼각형만 누르게 두면 과녁이 12px). 여닫는 자리가 늘 같은 곳이라
-   접었다 펴도 반 이름이 제자리에 있습니다. */
-.lesson-usage-class-head {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0;
-  border: 0;
-  background: none;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--dark);
-  text-align: left;
-  cursor: pointer;
-}
-.lesson-usage-caret {
-  flex-shrink: 0;
-  color: var(--text-sub);
-  transition: transform 0.15s;
-}
-.lesson-usage-class.open .lesson-usage-caret { transform: rotate(90deg); }
-/* 접힌 반의 요약 — 최근에 한 날. 펼치면 줄마다 날짜가 서므로 뺍니다. */
-.lesson-usage-last {
-  flex-shrink: 0;
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--text-sub);
-  white-space: nowrap;
-}
-.lesson-usage-all {
-  margin-left: auto;
-  flex-shrink: 0;
-  padding: 2px 8px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: #fff;
-  font-family: inherit;
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--text-sub);
-  cursor: pointer;
-}
-.lesson-usage-all:hover { border-color: var(--primary); color: var(--primary-dark); }
-.lesson-usage-class-name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.lesson-usage-class-head em {
-  flex-shrink: 0;
-  font-style: normal;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--primary-dark);
-  background: var(--primary-light);
-  border-radius: 999px;
-  padding: 1px 7px;
-}
-.lesson-usage-count {
-  margin-left: auto;
-  flex-shrink: 0;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-sub);
-}
-.lesson-usage-class ul {
-  list-style: none;
-  margin: 6px 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.lesson-usage-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  column-gap: 8px;
-  align-items: baseline;
-  padding: 4px 6px;
-  border-radius: 6px;
-  font-size: 12.5px;
-}
-button.lesson-usage-row {
-  width: 100%;
-  border: 0;
-  background: none;
-  font-family: inherit;
-  text-align: left;
-  color: inherit;
-  cursor: pointer;
-}
-button.lesson-usage-row:hover { background: var(--primary-light); }
-.lesson-usage-title {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text);
-  font-weight: 600;
-}
-.lesson-usage-meta {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  white-space: nowrap;
-  font-size: 12px;
-  color: var(--text-sub);
-}
-.lesson-usage-meta b { font-weight: 700; color: var(--primary-dark); }
-.lesson-usage-sub {
-  grid-column: 1 / -1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 11.5px;
-  color: var(--text-faint);
-}
-.lesson-usage-empty {
-  margin: 6px 0 0;
-  font-size: 12px;
-  color: var(--text-faint);
-}
-.lesson-usage-note {
-  margin: 0;
-  padding: 8px 14px;
-  border-top: 1px solid var(--border);
-  font-size: 11.5px;
-  color: var(--text-faint);
-}
 @media (max-width: 768px) {
   /* 좁은 화면 — 두 칸을 위아래로 풀고, 창 높이를 못 박지 않습니다
      (현황은 목록 아래로 내려가 창과 함께 구릅니다). */
   .modal-lesson { height: auto; }
   .lesson-mgr-body { grid-template-columns: minmax(0, 1fr); }
   .modal-lesson .lesson-mgr-main .lesson-list { flex: none; max-height: 46vh; }
-  .lesson-usage-list { flex: none; max-height: 40vh; }
 }
 .lesson-seats-empty { margin: 24px 0; text-align: center; }
 /* 목록 → 새 수업 만들기로 넘어갈 때 제목 자리에 뜨는 뒤로가기 */

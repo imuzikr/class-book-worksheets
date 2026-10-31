@@ -287,12 +287,6 @@
   .lesson-deck { grid-template-columns: 1fr; gap: 28px; }
   /* 자리표는 활동 관리 아래로 내려갑니다 */
   .lesson-lower { grid-template-columns: 1fr; gap: 28px; }
-  /* 세로로 쌓이면 옆에 높이를 정해 줄 카드가 없으므로 일반 흐름으로 되돌립니다
-     (절대 배치를 그대로 두면 해설 카드 높이가 0이 됩니다) */
-  .lesson-note-body { position: static; padding: 0; }
-  .lesson-note-body > * { position: static; inset: auto; overflow: visible; }
-  .lesson-note-input { width: 100%; min-height: 200px; }
-  .lesson-note-text { font-size: 19px; line-height: 1.55; }
   .lesson-title { font-size: 14px; }
   .lesson-ctrl-btn { width: 88px; padding: 9px 4px; font-size: 13px; }
   .lesson-dots { display: none; }
