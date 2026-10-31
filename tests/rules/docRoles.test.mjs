@@ -22,8 +22,6 @@ const promote = (code, extra = {}) => ({
   role: "teacher",
   teacherCode: code,
   teacherAt: serverTimestamp(),
-  displayName: "선생님",
-  emoji: "🧑‍🏫",
   requestedRole: null,
   ...extra,
 });
@@ -119,6 +117,9 @@ describe("users 문서의 role로 판정하기", () => {
       const db = as(env, "sDoc").firestore();
       await assertFails(
         updateDoc(doc(db, "users", "sDoc"), promote("BOOK-2026", { realName: "가짜" }))
+      );
+      await assertFails(
+        updateDoc(doc(db, "users", "sDoc"), promote("BOOK-2026", { displayName: "가짜" }))
       );
     });
 

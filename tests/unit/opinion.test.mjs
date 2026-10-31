@@ -7,8 +7,8 @@ import {
   noteReplyText,
   canAddOpinionNote,
   myZoneCount,
-  cleanNickname,
-  nicknameProblem,
+  OPINION_NAME_MODES,
+  DEFAULT_OPINION_NAME_MODE,
   opinionLayout,
   opinionListByZone,
   opinionNameMode,
@@ -147,21 +147,16 @@ test("한 장 모드는 영역마다 — 내 학생 메모만 그 영역에서 �
   assert.equal(myZoneCount(notes, zones, null, "z1"), 0);
 });
 
-test("판 모양 · 이름표 — 표시가 없는 옛 활동은 메모지 · 예전 이름표", () => {
+test("판 모양 · 이름표 — 표시가 없는 옛 활동은 메모지 · 이름표는 늘 실명", () => {
   assert.equal(opinionLayout({}), "memo");
   assert.equal(opinionLayout({ layout: "list" }), "list");
   assert.equal(opinionLayout({ layout: "grid" }), "memo");
-  assert.equal(opinionNameMode({}), "auto");
-  assert.equal(opinionNameMode({ nameMode: "nick" }), "nick");
+  // 닉네임 기능을 없앴으므로 예전 nick·auto 활동도 새 글은 실명
+  assert.equal(opinionNameMode({}), "real");
+  assert.equal(opinionNameMode({ nameMode: "nick" }), "real");
   assert.equal(opinionNameMode({ nameMode: "real" }), "real");
-});
-
-test("닉네임 — 공백을 하나로 · 20자 · 비었거나 '선생님'이면 막음", () => {
-  assert.equal(cleanNickname("  생각하는   고양이 "), "생각하는 고양이");
-  assert.equal(cleanNickname("가".repeat(30)).length, 20);
-  assert.equal(nicknameProblem("   "), "empty");
-  assert.equal(nicknameProblem(" 선생님 "), "teacher");
-  assert.equal(nicknameProblem("구름"), null);
+  assert.equal(DEFAULT_OPINION_NAME_MODE, "real");
+  assert.deepEqual(OPINION_NAME_MODES.map((m) => m.key), ["real"]);
 });
 
 test("실명 이름표 — 학번 이름", () => {

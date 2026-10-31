@@ -52,12 +52,9 @@ export default function UserProfile({
     return () => document.removeEventListener("pointerdown", onDown);
   }, [menuOpen]);
 
-  // 학생은 본인 실명(없으면 익명 닉네임 폴백), 교사는 '선생님'
-  const shownName = user
-    ? teacherRole
-      ? user.displayName
-      : user.realName || user.displayName
-    : "...";
+  // 표시 이름은 실명(닉네임 기능 없음). 선생님은 실명이 없으면 '선생님'.
+  const shownName = user ? user.displayName || user.realName || "..." : "...";
+  const initial = String(shownName).trim().charAt(0) || "?";
 
   return (
     <div className="profile-wrap" ref={wrapRef}>
@@ -70,7 +67,7 @@ export default function UserProfile({
         aria-expanded={menuOpen}
       >
         <span className="avatar" aria-hidden="true">
-          {teacherRole ? <IconTeacher size={20} /> : user ? user.emoji : "🙂"}
+          {teacherRole ? <IconTeacher size={20} /> : initial}
           {pendingCount > 0 && (
             <span className="profile-badge" aria-label={`승인 대기 ${pendingCount}건`}>
               {pendingCount}

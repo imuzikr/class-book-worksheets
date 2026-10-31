@@ -42,9 +42,17 @@ describe("사용자 프로필 규칙", () => {
   });
 
   describe("학생 본인", () => {
-    it("아바타·이메일은 스스로 바꿀 수 있다", async () => {
+    it("이메일은 스스로 바꿀 수 있지만 아바타(이모지)는 못 바꾼다", async () => {
       const db = asStudent(env, "stu1").firestore();
-      await assertSucceeds(updateDoc(doc(db, "users", "stu1"), { emoji: "🐧" }));
+      await assertSucceeds(updateDoc(doc(db, "users", "stu1"), { email: "new@example.com" }));
+      await assertFails(updateDoc(doc(db, "users", "stu1"), { emoji: "🐧" }));
+    });
+
+    it("예전 닉네임을 저장된 실명으로만 바꿀 수 있다 (자가 치유)", async () => {
+      const db = asStudent(env, "stu1").firestore();
+      await assertFails(updateDoc(doc(db, "users", "stu1"), { displayName: "학생B" }));
+      await assertFails(updateDoc(doc(db, "users", "stu1"), { displayName: "학생A", realName: "학생A" , studentId: "1" }));
+      await assertSucceeds(updateDoc(doc(db, "users", "stu1"), { displayName: "학생A" }));
     });
 
     it("탈퇴 신청을 남길 수 있다", async () => {
