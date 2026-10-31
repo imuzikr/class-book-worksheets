@@ -320,14 +320,6 @@
   grid-template-columns: repeat(auto-fill, 64px);
 }
 .study-act-images .attach-image-cell { border-radius: 8px; }
-/* 지우기 단추도 딱지에 맞춰 — 24px이면 사진을 거의 다 덮습니다 */
-.study-act-images .attach-image-grid-del {
-  top: 3px;
-  right: 3px;
-  width: 18px;
-  height: 18px;
-  font-size: 11px;
-}
 .study-mycard-foot {
   display: flex;
   align-items: center;

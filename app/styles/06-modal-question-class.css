@@ -697,26 +697,6 @@
   object-fit: cover;
   display: block;
 }
-.attach-image-grid-del {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.6);
-  color: #fff;
-  font-size: 13px;
-  line-height: 1;
-  cursor: pointer;
-}
-.attach-image-grid-del:hover {
-  background: rgba(0, 0, 0, 0.8);
-}
 
 /* ===================== 이미지 확대(라이트박스) ===================== */
 .zoomable-img {

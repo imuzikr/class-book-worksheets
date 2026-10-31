@@ -340,7 +340,6 @@
   /* 파이썬 실행기의 세 단추 — 위 규칙이 .btn-primary에만 걸려 그 하나만
      44px가 되고 나머지 둘은 34px로 남습니다. 셋을 함께 올립니다. */
   .py-actions button { height: 44px; min-height: 44px; font-size: 13px; }
-  .kwl-save-btn { min-height: 44px; }
   .vote-btn { min-height: 40px; min-width: 40px; }
 
   /* 과일 흐름·자리표에 새로 붙인 조작들 — 데스크톱 기준으로 잡아 둔 크기가
