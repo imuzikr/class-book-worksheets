@@ -21,18 +21,6 @@
 .xw-main { overflow-y: auto; container: xwmain / inline-size; }
 .xw-main > .canvas-head { flex-wrap: wrap; }
 
-/* 학생 화면 — 왼쪽 내 낱말 풀이 · 오른쪽 퀴즈. 좁으면 위아래로. */
-.xw-student {
-  display: grid;
-  grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
-  gap: 16px;
-  align-items: start;
-  container-type: inline-size;
-}
-@media (max-width: 960px) {
-  .xw-student { grid-template-columns: minmax(0, 1fr); }
-}
-
 .xw-card {
   background: var(--card-bg);
   border: 1px solid var(--border);
@@ -44,7 +32,6 @@
   min-width: 0;
 }
 .xw-card + .xw-card { margin-top: 0; }
-.xw-teacher { gap: 14px; }
 .xw-card-head {
   display: flex;
   align-items: center;
@@ -68,48 +55,7 @@
 .xw-badge.done { background: var(--green-50); color: #2f7a45; }
 .xw-empty { margin: 0; font-size: 13px; color: var(--text-faint); line-height: 1.6; }
 
-/* 낱말 고르기 칩 */
-.xw-word-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.xw-word-chip {
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1.5px solid var(--border);
-  background: #fff;
-  font-family: inherit;
-  font-size: 13.5px;
-  font-weight: 700;
-  color: var(--text);
-  cursor: pointer;
-}
-.xw-word-chip:hover:not(:disabled) { border-color: var(--primary); }
-.xw-word-chip.on { background: var(--primary); border-color: var(--primary); color: #fff; }
-.xw-word-chip:disabled { opacity: 0.45; cursor: not-allowed; }
-
-.xw-pick-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-.xw-pick-list > li {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: var(--bg);
-}
-.xw-pick-head { display: flex; align-items: center; gap: 8px; }
-.xw-pick-no {
-  width: 22px; height: 22px; border-radius: 50%;
-  display: inline-flex; align-items: center; justify-content: center;
-  background: var(--primary-light); color: var(--primary-dark);
-  font-size: 12px; font-weight: 800;
-}
-.xw-pick-head strong { font-size: 15px; color: var(--text); }
 .xw-pick-len { font-size: 12px; color: var(--text-sub); }
-.xw-pick-x {
-  margin-left: auto;
-  width: 26px; height: 26px; border-radius: 50%;
-  border: none; background: transparent; color: var(--text-sub);
-  font-size: 17px; cursor: pointer;
-}
-.xw-pick-x:hover { background: var(--neutral); color: var(--text); }
 .xw-pick-clue {
   width: 100%;
   box-sizing: border-box;
@@ -132,7 +78,6 @@
 @container (max-width: 760px) {
   .xw { grid-template-columns: minmax(0, 1fr); }
 }
-.xw-board-col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .xw-grid {
   display: grid;
   grid-template-columns: repeat(var(--xw-cols), minmax(0, 44px));
@@ -211,10 +156,6 @@
 .xw-cell.typing .xw-ch { color: var(--primary-dark); }
 .xw-cell.filled .xw-ch { color: var(--text); }
 
-.xw-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
-.xw-score { font-size: 13px; font-weight: 700; color: var(--text-sub); }
-.xw-score.all { color: #2f7a45; }
-
 .xw-clues { display: grid; grid-template-columns: 1fr; gap: 14px; min-width: 0; }
 .xw-clues-col h4 { margin: 0 0 6px; font-size: 13px; font-weight: 800; color: var(--text-sub); }
 .xw-clues-col ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
@@ -238,13 +179,12 @@
 .xw-clue.done { color: var(--text-sub); }
 .xw-clue > b { min-width: 18px; font-size: 13px; color: var(--primary-dark); }
 .xw-clue-text { flex: 1; min-width: 0; font-size: 13.5px; line-height: 1.5; }
-.xw-clue-len, .xw-clue-ans {
+.xw-clue-len {
   font-style: normal;
   margin-left: 6px;
   font-size: 11.5px;
   color: var(--text-faint);
 }
-.xw-clue-ans { display: block; margin-left: 0; color: var(--primary-dark); font-weight: 700; }
 .xw-clue-ok { color: #2f7a45; font-weight: 800; }
 
 /* ── 교사 화면 ── */
@@ -296,20 +236,6 @@
 /* 카드 머리줄 오른쪽의 옅은 한 줄(아직 퀴즈 없음 등) */
 .xw-card-head-note { font-size: 13px; color: var(--text-faint); }
 
-.xw-subs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.xw-subs > li {
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1.5px solid transparent;
-  background: var(--bg);
-}
-.xw-subs > li.on { border-color: var(--primary); background: var(--primary-light); }
-.xw-sub-who { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-.xw-sub-who em { font-style: normal; font-size: 12px; color: var(--text-sub); font-variant-numeric: tabular-nums; }
-.xw-sub-who b { font-size: 14px; color: var(--text); }
-.xw-subs ol { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; }
-.xw-subs ol li { font-size: 13.5px; line-height: 1.5; color: var(--text); }
-.xw-subs ol li strong { margin-right: 6px; }
 .xw-sub-empty { color: var(--text-faint); }
 .xw-used {
   display: inline-block;
