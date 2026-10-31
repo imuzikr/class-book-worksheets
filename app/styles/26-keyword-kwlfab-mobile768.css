@@ -308,7 +308,6 @@
      — 오른쪽 레이더 패널(고정 350px)이 폭을 다 차지해
        히트맵이 0px로 찌그러져 안 보이던 문제
      ────────────────────────────────────────────────────────── */
-  .heatmap-outer { flex-direction: column; }
   .activity-overview {
     width: 100%;
     margin-left: 0;
@@ -319,24 +318,8 @@
     border-top: 1px solid var(--border);
   }
 
-  /* ──────────────────────────────────────────────────────────
-     KWL 패널: 왼쪽에서 슬라이드인 오버레이
-     ────────────────────────────────────────────────────────── */
-  .kwl-panel {
-    display: none;
-    position: fixed;
-    top: 0; left: 0; bottom: 0;
-    z-index: 500;
-    width: 88vw;
-    max-width: 320px;
-    padding-top: 52px;
-    overflow-y: auto;
-    box-shadow: 6px 0 32px rgba(0,0,0,0.4);
-  }
-
   /* 참여 보상 패널은 모바일에서 숨김(교사 관리용, 데스크톱 전용) */
   .reward-panel { display: none; }
-  .kwl-panel.kwl-panel--open { display: flex; }
   /* 모바일에선 패널이 position: fixed로 떠오르므로 슬롯은 폭을 벌리지
      않습니다(벌리면 본문이 밀린 채 빈 칸만 생깁니다) */
   .study-kwl-slot.open { width: 0; }
@@ -560,7 +543,6 @@
   .topbar-left .logo { font-size: 15px; }
   .topnav-drop-btn { font-size: 12px; padding: 4px 8px; }
   .modal { padding: 16px 14px 32px; }
-  .kwl-panel { width: 92vw; max-width: 92vw; }
   /* 우리 모둠 — 두 칸을 나란히 둘 폭이 없어 위아래로 풉니다. 목록은 높이를
      제한해(구름) 아래 대화가 화면 밖으로 밀리지 않게 하고, 창이 통째로
      구르도록 되돌립니다(좁은 화면에서 칸마다 구르면 어느 것을 만지는지
