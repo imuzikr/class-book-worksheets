@@ -43,7 +43,7 @@
 // =============================================================
 import { execSync } from "node:child_process";
 
-const PROJECT_ID = "YOUR_PROJECT_ID"; // .firebaserc와 같은 값
+const PROJECT_ID = "book-sheets-19fd2"; // .firebaserc와 같은 값
 const BASE = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
 const APPLY = process.argv.includes("--apply");
 const ONLY_UID = (process.argv.find((a) => a.startsWith("--uid=")) ?? "").slice(6);
