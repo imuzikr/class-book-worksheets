@@ -1,0 +1,643 @@
+
+/* 목록 맨 위 — 안 읽은 수와 '모두 읽음' */
+.notif-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 10px 8px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+.notif-tools-count {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-sub);
+}
+.notif-readall {
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text-sub);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.notif-readall:hover:not(:disabled) {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+.notif-readall:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.notif-item-head {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.notif-item-time {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-sub);
+  flex-shrink: 0;
+}
+.notif-item-sub {
+  font-size: 12.5px;
+  color: var(--text-sub);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 반 공지는 이 줄이 곧 공지 내용입니다 — 한 줄로 잘라 '…'로 끝내면 학생이
+   내용을 끝까지 못 읽습니다(질문 알림은 제목이라 잘려도 눌러서 볼 수
+   있지만, 공지는 눌러서 갈 곳이 없습니다). 그래서 여기만 줄바꿈을 허용하고
+   최대 6줄까지 보여 줍니다 — 그보다 길면 목록이 공지 하나로 가득 찹니다. */
+.notif-item-sub--full {
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  white-space: pre-wrap;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  line-height: 1.55;
+}
+
+/* 상단바 질문하기 손들기 */
+.question-signal-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+/* 손든 학생이 없을 때 교사 화면에서 그 자리를 대신 지키는 빈 상자.
+   그림은 그대로 안 그립니다 — 자리만 남깁니다. 없애면 손이 오르내릴 때마다
+   오른쪽 묶음의 폭이 28px씩 달라져, 거기 붙어 있는 **전광판이 그만큼
+   밀립니다**. 아래 `.question-signal-btn`과 **같은 28px**이라야 맞습니다 —
+   그 값을 고치면 여기도 함께 고치세요. */
+.question-signal-hold {
+  flex-shrink: 0;
+  width: 28px;
+}
+.question-signal-btn {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 999px;
+  /* 옆의 종·확성기(18px 글자 + 5px 여백 = 28px 상자)와 같은 크기·같은 글자.
+     예전에는 이 상자만 38px에 글자 23px이라 나란히 두면 손바닥만 커
+     보였습니다. 세 상자를 28px로 함께 줄여 아이콘 사이를 좁혔습니다. */
+  font-size: 18px;
+  line-height: 1;
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  transition: transform 0.14s ease, filter 0.14s ease, opacity 0.14s ease;
+}
+.question-signal-btn:hover {
+  background: none;
+  transform: translateY(-1px);
+}
+.question-signal-btn.on {
+  background: none;
+  filter: saturate(1.25) drop-shadow(0 2px 4px rgba(214, 117, 48, 0.28));
+}
+.question-signal-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.question-signal-hand {
+  display: block;
+  transform-origin: 50% 85%;
+}
+.question-signal-btn.on .question-signal-hand {
+  transform: rotate(-8deg) scale(1.08);
+}
+.question-signal-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #e05a2f;
+  box-shadow: 0 0 0 2px #fff;
+}
+/* 학생 손바닥의 초록 불 — 선생님 답변이 왔다(안 읽음). 빨간 불(손 들었음)과
+   크기·자리는 같고 색만 다릅니다. 색은 자리표의 이벤트 점(.attend-seat-event)과
+   같은 초록 — 이 앱에서 초록은 '됐다'. */
+.question-signal-dot.is-reply { background: #2f9e5a; }
+/* 교사 손바닥의 불 — 같은 자리에 손든 인원을 담습니다(투표처럼 셈).
+   점보다 커지므로 손바닥 상자 밖으로 반쯤 걸쳐 앉혀 손바닥을 덜 덮습니다.
+   absolute라 버튼 폭(28px)은 그대로 — 숫자가 늘어도 전광판이 안 밀립니다.
+   한때 손바닥 옆 칸에 따로 세웠는데 둘로 나뉘어 보여 걷었습니다(선생님 요청). */
+.question-signal-dot.question-signal-count {
+  /* 위로 올려 손가락 끝만 살짝 걸치게 — 오른쪽으로는 5px만(옆 메모지 사이 틈이
+     4px이라 더 내밀면 그 상자를 덮음) */
+  top: -5px;
+  right: -4px;
+  width: auto;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+/* 다 답했지만 손은 아직 올라가 있음 — 숫자는 남기고 불만 끕니다 */
+.question-signal-dot.question-signal-count.is-quiet { background: #8f8a84; }
+/* ── 손들기: 학생이 함께 보내는 태그·메모 ────────────────────────
+   손바닥 하나로는 '질문이 있다'까지만 전해집니다. 태그와 짧은 메모를 함께
+   보내면 교사가 다가가기 전에 무엇인지 압니다(lib/questionTags.js).
+   학생 창과 교사 목록이 **같은 알약**을 씁니다 — 학생이 고른 것과 교사가
+   보는 것이 다른 모양이면 서로 다른 것으로 읽힙니다. */
+/* 뒤에 오는 .question-signal-dropdown(330px)과 특이도가 같아, 이름을 겹쳐
+   써서 이깁니다 — 순서에 기대지 않게. */
+.question-signal-dropdown.question-signal-ask {
+  width: 400px;
+  padding: 10px 12px 12px;
+  /* 대화가 서면 360px로는 아래 단추가 밀려 구릅니다(대화 칸은 제 안에서 구름). */
+  max-height: min(600px, 80vh);
+}
+.question-signal-ask .question-signal-head { padding: 0 0 8px; }
+.question-signal-ask .btn-close { font-size: 20px; line-height: 1; }
+
+/* 셋 다 **같은 크기** — 한 줄 3칸 격자(1fr)라 글자 길이와 무관합니다 */
+.qsig-tags {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.qsig-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+  padding: 7px 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text-sub);
+  cursor: pointer;
+  /* 줄바꿈은 낱말 단위로 — 좁아지면 '선생님, / 질문이요!'로 접히고,
+     셋 다 같은 높이를 지킵니다(min-height). 글자가 잘리지 않게. */
+  white-space: normal;
+  word-break: keep-all;
+  text-align: center;
+  min-height: 34px;
+}
+.qsig-tag:hover { border-color: var(--text-sub); color: var(--text); }
+/* 고른 태그 — 갈래마다 다른 색. 교사 목록에서도 같은 색으로 섭니다. */
+.qsig-tag.on { color: #fff; border-color: transparent; }
+.qsig-tag--ask.on { background: #d97757; }
+.qsig-tag--idea.on { background: #3f704b; }
+.qsig-tag--bug.on { background: #b8474b; }
+
+.qsig-note-label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--dark);
+}
+.qsig-note-label em { font-style: normal; font-weight: 600; color: var(--text-sub); }
+.qsig-note {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-btn);
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text);
+  resize: vertical;
+}
+.qsig-note:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+.qsig-note-count {
+  display: block;
+  margin: 4px 0 10px;
+  text-align: right;
+  font-size: 11px;
+  color: var(--text-faint);
+}
+/* 두 단추는 한 줄에 반씩 — 모달 아래 두 단추와 같은 규칙입니다
+   (`.modal-actions` 참고: `flex: 1 1 0`으로 두면 테두리가 있는 `.btn-ghost`가
+   `.btn-primary`보다 2px 넓어져, 격자로 정확히 반씩 나눕니다).
+   둘 다 손을 드는 단추이고, 적은 내용이 있는 쪽만 채운 색입니다.
+   창이 400px이라 '내용과 함께 손들기'가 한 줄에 그대로 섭니다. */
+.qsig-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+/* `justify-content: center`가 **꼭 있어야 합니다.** `.btn-ghost`는
+   `display: inline-flex`인데 여기서 폭을 100%로 늘이므로, 안 주면 글자가
+   왼쪽에 붙습니다(실측 왼쪽 13px · 오른쪽 73px). 옆의 `.btn-primary`는
+   보통 button이라 글자가 저절로 가운데라, 두 단추의 글자가 서로 다른
+   자리에 섰습니다. */
+.qsig-actions button { width: 100%; white-space: nowrap; justify-content: center; }
+
+/* ── 손들기 대화 ─────────────────────────────────────────────
+   손든 학생과 교사가 주고받는 말(lib/signalThread.js). 첫 물음(태그·메모)부터
+   시간순으로 쌓이고, 교사가 '확인'·'닫기'로 손을 내릴 때까지 그대로입니다.
+   **보는 사람의 말이 오른쪽**(살구빛), 상대의 말이 왼쪽(선생님 말은 연한 초록
+   — 초록은 이 앱에서 '됐다', 학생 말은 회색 바탕). 모둠 메모의 대화
+   (.gmemo-chat)와 같은 생각입니다. 교사 목록에서는 아바타 폭(38px)만큼
+   들여 이름과 세로선을 맞춥니다. */
+.qsig-thread {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 2px 2px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 260px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.qsig-thread--compact {
+  margin: 6px 0 4px 38px;
+  padding: 0;
+  max-height: none;
+  overflow: visible;
+  gap: 6px;
+}
+.qsig-msg {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  max-width: 88%;
+}
+.qsig-msg--mine { align-self: flex-end; align-items: flex-end; }
+.qsig-msg-bubble {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: var(--bg-deep, #f7f5f0);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text);
+}
+.qsig-msg--teacher .qsig-msg-bubble { background: #e8f7ed; border: 1px solid #a6d8b6; }
+.qsig-msg--mine .qsig-msg-bubble { background: var(--primary-light); border: 1px solid transparent; }
+.qsig-msg--teacher.qsig-msg--mine .qsig-msg-bubble { border-color: #a6d8b6; background: #e8f7ed; }
+.qsig-msg-text { white-space: pre-wrap; word-break: break-word; }
+.qsig-msg-empty { color: var(--text-sub); font-style: italic; }
+.qsig-msg-meta { font-size: 10.5px; color: var(--text-faint); }
+/* 대화 안의 태그 알약은 **작아야 합니다** — 주인공은 학생의 글입니다.
+   기본 `.qsig-tag`의 `min-height: 34px`는 학생 창에서 셋이 한 줄에 서며
+   접힐 때 높이를 맞추려던 값이라, 여기서는 풀고 `nowrap`으로 접히지 않게. */
+.qsig-msg .qsig-tag {
+  min-height: 0;
+  padding: 3px 9px;
+  font-size: 10.5px;
+  white-space: nowrap;
+  cursor: default;
+}
+.qsig-msg .qsig-tag > span[aria-hidden] { font-size: 9.5px; }
+/* 답을 기다리는 학생 — 이름 아래 작은 글씨로(교사 손바닥의 빨간 불과 같은 색) */
+.qsig-waiting { color: #e05a2f; font-weight: 700; }
+.question-signal-list > li.is-waiting .question-signal-item { box-shadow: inset 3px 0 0 #e05a2f; }
+.qsig-follow { min-height: 64px; margin-bottom: 8px; }
+.qsig-thread-closed { margin: 0 0 10px; font-size: 12px; line-height: 1.5; color: var(--text-sub); }
+.qsig-actions--one { grid-template-columns: 1fr; }
+
+/* 손들고 대화한 이력(교사) — 자리표 과일 창에서 엽니다. 과일 팝오버(320)
+   위에 떠야 하고, 그 팝오버가 다른 모달 안에서 열릴 때도 있습니다. 창 높이를
+   못 박고 본문만 구릅니다(머리줄·아래 안내는 제자리). */
+.modal-backdrop.signal-history-backdrop { z-index: 340; }
+.modal.signal-history-modal {
+  width: min(560px, 94vw);
+  max-width: min(560px, 94vw);
+  height: min(640px, 88vh);
+  max-height: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.signal-history-who { margin-left: 8px; font-size: 13.5px; font-weight: 700; color: var(--text-sub); }
+.signal-history-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 2px 2px 6px;
+}
+.signal-history-thread {
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+/* 접고 펴는 머리줄 — 줄 전체가 단추(반별 현황의 반 머리줄과 같은 모양) */
+.signal-history-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  padding: 11px 12px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.signal-history-head:hover { background: var(--bg); }
+.signal-history-caret {
+  flex-shrink: 0;
+  color: var(--text-sub);
+  transition: transform 0.15s;
+}
+.signal-history-thread.open .signal-history-caret { transform: rotate(90deg); }
+.signal-history-date {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--dark);
+}
+/* 접힌 줄의 첫 물음 한 줄 — 남는 폭을 다 받고 넘치면 말줄임 */
+.signal-history-preview {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+  color: var(--text-sub);
+}
+.signal-history-count {
+  flex-shrink: 0;
+  margin-left: auto;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-faint);
+}
+.signal-history-thread-body { padding: 0 12px 12px; }
+.signal-history-thread .qsig-thread { max-height: none; overflow: visible; margin: 0; }
+.signal-history-empty { margin: 24px 0; text-align: center; font-size: 13px; color: var(--text-sub); }
+.signal-history-note { margin: 10px 0 0; font-size: 11.5px; color: var(--text-faint); }
+
+/* 교사 — 대화 아래 '💬 답하기' → 그 자리에서 쓰는 칸 */
+.qsig-reply-row,
+.qsig-reply-edit {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  margin: 4px 0 6px 38px;
+}
+.qsig-reply-row { flex-direction: row; justify-content: flex-end; gap: 6px; }
+.qsig-reply-edit { align-items: stretch; }
+.qsig-reply-edit .qsig-note { min-height: 64px; }
+.qsig-reply-btns { display: flex; justify-content: flex-end; gap: 6px; }
+.qsig-reply-btns .question-signal-confirm { margin-left: 0; }
+.qsig-reply-err { display: block; margin: -4px 0 8px; font-size: 12px; color: #c0392b; }
+.qsig-reply-edit .qsig-reply-err { margin: 0; }
+.qsig-reply-start {
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-sub);
+  cursor: pointer;
+}
+.qsig-reply-start:hover { border-color: var(--primary); color: var(--primary-dark); background: var(--primary-light); }
+
+.question-signal-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 300;
+  /* 280px일 때는 버튼이 하나였습니다. '확인'과 '닫기' 둘이 되면서 이름 칸이
+     71px로 눌려 '20223 · 방금 전'이 두 줄로 접혔습니다(실측). */
+  width: 380px;
+  /* 학생 줄마다 대화가 붙어 330 × 360px에서 넓히고 올렸습니다 */
+  max-height: min(560px, 80vh);
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(46, 36, 26, 0.14);
+  padding: 6px;
+}
+/* 목록 머리 — 왼쪽 '질문 대기 n명', 오른쪽 '자리확인' 입구 */
+.question-signal-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.question-signal-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text);
+}
+.question-signal-seats {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 4px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-sub);
+  cursor: pointer;
+}
+.question-signal-seats:hover {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary-dark);
+}
+/* '모두 손 내리기' — 자리확인 옆, 같은 크기 알약. 한 번 누르면 'n명 내릴까요?'로
+   바뀌고(살구) 한 번 더 누르면 내립니다. */
+.question-signal-lower {
+  flex-shrink: 0;
+  padding: 4px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-sub);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.question-signal-lower:hover,
+.question-signal-lower.is-asking {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary-dark);
+}
+.question-signal-lower:disabled { opacity: 0.6; cursor: default; }
+.question-signal-empty {
+  padding: 16px 10px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-sub);
+}
+.question-signal-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.question-signal-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  background: #fffaf0;
+}
+.question-signal-confirm {
+  flex-shrink: 0;
+  margin-left: auto;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.question-signal-confirm:hover:not(:disabled) {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary-dark);
+}
+.question-signal-confirm:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+/* 닫기 — 과일 없이 손만 내립니다. 격려('확인')가 주된 길이라 이쪽은 한
+   단계 물러난 모습으로 두어, 눌러야 할 버튼이 눈에 먼저 들어오게 합니다. */
+.question-signal-close {
+  flex-shrink: 0;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: none;
+  color: var(--text-sub);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.question-signal-close:hover:not(:disabled) {
+  background: var(--neutral);
+  border-color: var(--border);
+}
+.question-signal-close:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.question-signal-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--primary-light);
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.question-signal-name {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.question-signal-name strong {
+  font-size: 13.5px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* 학번과 시각은 한 줄로 — 접히면 항목 높이가 들쭉날쭉해집니다. 이름이 아주
+   길면 줄이 늘어나는 대신 말줄임으로 끊습니다. */
+.question-signal-name small {
+  font-size: 11.5px;
+  color: var(--text-sub);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--primary-light);
+  border: 1.5px solid #ecbfa9;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  flex-shrink: 0;
+}
+
+.profile-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  min-width: 0;
+}
+
+.profile-text strong {
+  font-size: 14px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -1,0 +1,801 @@
+/* 만드는 길 두 칸 — PDF 올리기 · 슬라이드 없이 만들기.
+   **`.modal-actions`와 같은 셈**입니다: 격자 `1fr 1fr`로 정확히 반씩 나누고,
+   두 단추의 높이·글자를 여기서 못 박습니다. flex(`1 1 0`)로 두면 테두리가
+   있는 `.btn-ghost`가 2px 넓어지고, 두 클래스의 padding(12px ↔ 6px)과 글자
+   크기(15px ↔ 13px)가 달라 높이도 20px 가까이 벌어집니다.
+   `.modal-actions`를 그대로 안 쓰는 까닭: 그것은 창 **바닥**의 취소/실행
+   줄이라 `margin-top: 18px`을 달고 있는데, 여기는 폼 가운데입니다. */
+.lesson-new-ways {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.lesson-new-ways > .btn-primary {
+  height: 44px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border-radius: var(--radius-btn);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  /* 긴 이름이 두 줄로 접히면 한쪽만 높아 보이므로 한 줄에 붙듭니다 */
+  white-space: nowrap;
+}
+/* 두 단추 모두 채운 살구색(.btn-primary)입니다 — 제목이 비어 있으면 '슬라이드
+   없이 만들기'만 옅어집니다(.btn-primary:disabled). */
+/* 설명 두 덩이 — 어느 단추의 말인지 굵은 글씨로 먼저 밝힙니다. */
+.lesson-new-hints > p + p {
+  margin-top: 6px;
+}
+.lesson-new-hints strong {
+  color: var(--text);
+}
+.lesson-new-hints em {
+  font-style: normal;
+  color: var(--text-faint);
+}
+@media (max-width: 480px) {
+  /* 아주 좁은 화면에서만 위아래로 — 둘이 한 줄에 서면 글자가 잘립니다
+     (`white-space: nowrap`이라 접히는 대신 넘칩니다). */
+  .lesson-new-ways {
+    grid-template-columns: 1fr;
+  }
+}
+.lesson-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.lesson-progress-bar {
+  flex: 1;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--neutral);
+  overflow: hidden;
+}
+.lesson-progress-bar span {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+  transition: width 0.2s;
+}
+.lesson-progress-text {
+  font-size: 12px;
+  color: var(--text-sub);
+  flex-shrink: 0;
+}
+.lesson-error {
+  font-size: 13px;
+  color: var(--danger);
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+.lesson-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 46vh;
+  overflow-y: auto;
+}
+.lesson-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.lesson-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.lesson-row-main strong {
+  font-size: 14px;
+  color: var(--dark);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lesson-row-main span {
+  font-size: 12px;
+  color: var(--text-sub);
+}
+.lesson-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+/* 수업 관리 목록의 단추 셋 — 수업 시작 직전에 누르는 자리라 손이 급합니다.
+   12px 글자에 세로 여백 6px이면 높이가 27px밖에 안 돼 눌러야 할 곳이
+   작았습니다. 높이를 36px로 못 박고 글자도 13.5px로 올립니다
+   (줄이 그만큼 두꺼워지는 것은 괜찮습니다 — 한 줄에 수업 하나입니다). */
+.lesson-row-actions .btn-ghost,
+.lesson-row-actions .btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 14px;
+  font-size: 13.5px;
+  line-height: 1;
+  box-sizing: border-box;
+}
+/* 아이콘만 있는 삭제 단추는 **정사각형**으로. 글자 단추와 같은 좌우 여백을
+   주면 아이콘 하나가 옆으로 늘어져 줄에서 혼자 넓어 보입니다. */
+.lesson-row-actions .qa-delete {
+  width: 36px;
+  padding: 0;
+}
+/* btn-primary는 테두리가 없어 btn-ghost(1px solid)보다 2px 낮게 보였습니다 —
+   투명 테두리를 같은 두께로 둬 높이를 맞춥니다. */
+.lesson-row-actions .btn-primary {
+  border: 1px solid transparent;
+}
+/* 수업 줄의 '편집하기 · 수업 시작하기'는 **같은 폭**입니다(선생님 요청) —
+   글자 수만큼 차지하게 두면 넉 자와 여섯 자라 두 단추가 짝으로 안 읽힙니다.
+   긴 쪽('수업 시작하기')이 들어가는 폭으로 못 박습니다. 프로젝트 줄의 '열기'
+   등은 이 클래스가 없어 그대로입니다. `min-height: 0`은 768px 아래의
+   터치 규칙(`.btn-primary { min-height: 44px }`)을 풉니다 — 안 풀면 좁은
+   화면에서 '수업 시작하기'만 44px로 커져 옆 단추(36px)보다 높아집니다. */
+.lesson-row-actions .lesson-pair-btn {
+  width: 120px;
+  min-height: 0;
+  padding: 0 8px;
+}
+.lesson-edit-btn {
+  background: var(--primary-light);
+  border-color: #EDCBB8;
+  color: var(--primary-dark);
+}
+.lesson-edit-btn:hover {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+/* ── 교사 화면 — 방송 중일 때 어디서든 바로 끌 수 있는 안전장치 ── */
+.broadcast-stop-pill {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: none;
+  background: var(--danger);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+.broadcast-stop-pill:hover {
+  filter: brightness(1.08);
+}
+
+/* ── KWL 전체 화면 (교사) ── */
+.kwlfs-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+.kwlfs-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-deep);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 7px 14px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.kwlfs-refresh-btn:hover:not(:disabled) {
+  background: var(--neutral);
+}
+.kwlfs-refresh-btn:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+.kwlfs-refresh-btn.spinning {
+  animation: kwlfs-refresh-pulse 0.9s ease-in-out infinite;
+}
+@keyframes kwlfs-refresh-pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+.kwl-fullscreen-btn {
+  margin-left: auto;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--sidebar-text);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.kwl-fullscreen-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+
+/* 날짜 이동 — 좌우 화살표 + 달력 선택 */
+.kwlfs-date-nav {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+/* 좌우 화살표를 붙여서 하나의 컨트롤처럼 — 달력 클릭과 헷갈리지 않게 분리 */
+.kwlfs-date-arrows {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.kwlfs-date-arrow {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text);
+  font-size: 20px;
+  line-height: 1;
+  padding-bottom: 3px;
+  display: grid;
+  place-items: center;
+}
+.kwlfs-date-arrow:hover:not(:disabled) {
+  background: var(--neutral);
+}
+.kwlfs-date-arrow:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.kwlfs-date-label {
+  border: 1px solid var(--border);
+  background: var(--bg-deep);
+  color: var(--dark);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 6px 0;
+  border-radius: 999px;
+  white-space: nowrap;
+  /* 날짜 글자 수와 무관하게 폭 고정 — 화살표 위치가 흔들리지 않게 */
+  width: 148px;
+  text-align: center;
+}
+.kwlfs-date-label:hover {
+  background: var(--neutral);
+}
+/* 달력이 열려 있는 동안 — 어느 버튼이 그것을 연 것인지 보이게 */
+.kwlfs-date-label.on {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary-dark);
+}
+.kwlfs-date-today {
+  color: var(--primary);
+  font-weight: 800;
+}
+/* 날짜 달력 — 날짜 버튼 바로 아래로 내려옵니다.
+   예전에는 브라우저 기본 날짜 선택기(input[type=date])를 열었는데, 그것은
+   '어느 날에 기록이 있는지'를 모릅니다. 기록이 있는 날을 칠해 보여 주는
+   달력으로 바꿨습니다(KwlCalendar). */
+.kwlfs-cal {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 5;
+  /* 좁은 화면에서는 화면 밖으로 나가지 않게 — 이 모달은 94vw입니다 */
+  width: min(340px, calc(100vw - 48px));
+  padding: 10px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.18);
+}
+.kwlfs-cal .study-attendance-calendar {
+  margin-bottom: 0;
+  border: none;
+  padding: 0;
+}
+.kwlfs-cal-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding-top: 9px;
+  border-top: 1px solid var(--border);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-sub);
+}
+.kwlfs-cal-swatch {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  background: #e8f7ed;
+  border: 1px solid #26734a;
+}
+.kwlfs-cal-close {
+  margin-left: auto;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 999px;
+  padding: 3px 11px;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-sub);
+  cursor: pointer;
+}
+.kwlfs-cal-close:hover {
+  background: var(--neutral);
+  color: var(--text);
+}
+.kwlfs-date-today-btn {
+  border: 1px solid var(--primary);
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  font-size: 15px;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 6px 16px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.kwlfs-date-today-btn:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
+.kwlfs-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 22px 30px 30px;
+}
+
+/* CSS Grid: 학생 | K | W | L | S 다섯 컬럼. 컬럼 배경 띠(.kwlfs-colbg)를 먼저 깔고
+   그 위에 헤더·셀을 명시적 grid-row/column으로 겹쳐 올려, 셀 사이 여백과
+   무관하게 "컬럼 전체"가 하나의 색으로 이어져 보이게 합니다. */
+.kwlfs-table {
+  position: relative;
+  display: grid;
+  grid-template-columns: 200px repeat(4, minmax(180px, 1fr));
+  column-gap: 14px;
+  row-gap: 0;
+  /* body 높이만큼 최소 확보 — 마지막 1fr 트랙이 빈 공간을 채우게 함 */
+  min-height: 100%;
+}
+
+/* 컬럼 배경 띠 — 헤더 첫 줄부터 마지막 행까지 관통 */
+.kwlfs-colbg {
+  grid-row: 1 / -1;
+  border-radius: 14px;
+}
+.kwlfs-colbg--name {
+  grid-column: 1;
+  background: var(--neutral);
+}
+.kwlfs-colbg--k {
+  grid-column: 2;
+  background: #e2ebf7;
+}
+.kwlfs-colbg--w {
+  grid-column: 3;
+  background: #f3e6d3;
+}
+.kwlfs-colbg--l {
+  grid-column: 4;
+  background: #dfeee4;
+}
+.kwlfs-colbg--s {
+  grid-column: 5;
+  background: #e7e2f2;
+}
+
+.kwlfs-cell {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+}
+
+.kwlfs-head {
+  position: sticky;
+  top: -22px; /* body 패딩만큼 올려 붙임 */
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--dark);
+  border-bottom: 2px solid rgba(0, 0, 0, 0.14);
+}
+/* 헤더도 컬럼과 같은 색으로 — 스크롤해 위에 고정될 때 아래 내용을 가림 */
+.kwlfs-head--name {
+  background: var(--neutral);
+  color: var(--dark);
+}
+.kwlfs-head--k {
+  background: #e2ebf7;
+  color: #3d5f8f;
+}
+.kwlfs-head--w {
+  background: #f3e6d3;
+  color: #7d5533;
+}
+.kwlfs-head--l {
+  background: #dfeee4;
+  color: #3f6f50;
+}
+.kwlfs-head--s {
+  background: #e7e2f2;
+  color: #654f8a;
+}
+
+/* 이름 칸 — 세로로 쌓습니다.
+   예전에는 [이모지][이름][🍊 4][＋]를 한 줄에 두어, 190px 안에서 이름이
+   'OO…'으로 잘렸습니다. 이름에 한 줄을 통째로 내주고 과일은 아랫줄로
+   내렸습니다 — 익명 닉네임은 실명보다 길어질 수 있어(예: '푸른 돌고래')
+   잘리면 누가 누구인지 알 수 없습니다. */
+.kwlfs-cell--name {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--dark);
+  min-width: 0;
+}
+/* 익명 이름 — 누르면 아래에 실명이 펼쳐집니다 */
+.kwlfs-who {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 8px;
+}
+.kwlfs-who:disabled {
+  cursor: default;
+}
+.kwlfs-who:hover:not(:disabled) .kwlfs-name-text {
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+}
+.kwlfs-who.open .kwlfs-name-text {
+  color: var(--primary-dark);
+}
+.kwlfs-name-text {
+  flex: 1;
+  min-width: 0;
+  /* 잘라 내지 않고 흘려 씁니다 — 두 줄이 되어도 이름이 다 보이는 편이 낫습니다 */
+  line-height: 1.35;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+/* 펼친 실명 — 교사에게만 보이는 줄이라 조용하게, 학번을 앞에 둡니다 */
+.kwlfs-real {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  font-size: 12.5px;
+  font-weight: 800;
+  max-width: 100%;
+}
+.kwlfs-real em {
+  font-style: normal;
+  font-weight: 700;
+  font-size: 11px;
+  opacity: 0.75;
+}
+/* 과일 — 이름 아랫줄 */
+.kwlfs-fruit {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+/* 머리글의 안내 — '이름을 누르면 실명'이라는 것을 한 번은 알려 줍니다 */
+.kwlfs-head-hint {
+  margin-left: auto;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-sub);
+  white-space: nowrap;
+}
+.kwlfs-fruit-count {
+  flex-shrink: 0;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--primary-dark);
+  background: var(--primary-light);
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+/* 과일 주기 ＋ — 배경 없는 글리프만 (호버 시에만 은은한 원) */
+.kwlfs-fruit-btn {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--primary);
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+.kwlfs-fruit-btn:hover:not(:disabled) {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+}
+.kwlfs-fruit-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+  color: var(--text-sub);
+}
+.kwlfs-avatar {
+  font-size: 22px;
+  flex-shrink: 0;
+}
+/* 전자칠판에 띄워 함께 읽는 표라 본문을 넉넉히 둡니다 */
+.kwlfs-text {
+  font-size: 18.5px;
+  line-height: 1.7;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 이름 오른쪽 말풍선(누가기록) 버튼 */
+.reward-note-btn {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.6;
+  border-radius: 6px;
+}
+.reward-note-btn:hover {
+  opacity: 1;
+  background: var(--neutral);
+}
+
+/* ── 누가기록(학생 관찰 메모) — 모달 + 대시보드 공통 ── */
+.modal-notes {
+  max-width: 480px;
+}
+.modal-notes .modal-head h3 {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+/* 기록 관리 머리말의 반 고르개 — 책방 머리말의 것(.study-class-select)을
+   그대로 씁니다. 창 머리 높이가 이 컨트롤로 잡히므로(실측 33px) 크기를
+   건드리면 제목 줄이 함께 움직입니다. 창이 804px이라 240px까지 갈 일은
+   없지만, 이름이 아주 긴 반 하나가 ×를 밀어내지 않게 조금 좁혀 둡니다. */
+.notes-mgr-class {
+  max-width: 200px;
+}
+
+.notes-student {
+  font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-sub);
+}
+.notes-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── 과일 받은 흐름 — 누가기록 맨 위의 작은 시계열 ──
+   수업은 띄엄띄엄 있는 사건이라 하루를 막대 하나로 세웁니다(선으로 이으면
+   수업 사이가 이어진 변화처럼 읽힙니다). 회수한 날은 기준선 아래로 —
+   색이 아니라 방향과 부호가 먼저 알려 주게 합니다. */
+.rwtrend {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-btn);
+  background: var(--bg-deep);
+}
+/* 제목 + 펼치기 버튼 — 버튼이 들어와 baseline 대신 center로 맞춥니다 */
+.rwtrend-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.rwtrend-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+/* 제목 없이 버튼만 두는 자리(과일 주기 모달) — 버튼은 왼쪽, 누적 개수는
+   오른쪽. space-between이라 오른쪽에 아무것도 없으면 버튼만 왼쪽에 섭니다. */
+.rwtrend-head--bare {
+  justify-content: space-between;
+}
+
+/* 지금 누적 몇 개인지 (과일 주기 모달) — +1/-1을 눌렀을 때 무언가 달라졌음을
+   보여 주는 자리입니다. 버튼만 있으면 눌렀는지 알 길이 없었습니다. */
+.attend-tools-total {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.attend-tools-total-label {
+  font-size: 11.5px;
+  color: var(--text-sub);
+}
+.attend-tools-total-n {
+  display: inline-block;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+  color: #a06a00;
+  font-variant-numeric: tabular-nums;
+  animation: attend-total-bump 0.32s ease-out;
+}
+/* 값이 바뀌면 key가 바뀌어 이 애니메이션이 처음부터 다시 돕니다 */
+@keyframes attend-total-bump {
+  from { transform: scale(1.4); }
+  to   { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .attend-tools-total-n { animation: none; }
+}
+/* 펼치기 버튼 — 전자칠판에 비치는 화면이라 기본은 접힌 채로 둡니다 */
+.rwtrend-toggle {
+  padding: 4px 11px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text-sub);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.rwtrend-toggle:hover {
+  border-color: var(--primary);
+  color: var(--primary-dark);
+}
+.rwtrend-summary {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-sub);
+  font-variant-numeric: tabular-nums;
+}
+.rwtrend-summary b {
+  color: var(--text);
+  font-weight: 700;
+}
+.rwtrend-plot {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.rwtrend-col {
+  flex: 1 1 0;
+  min-width: 26px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+/* 위/아래 칸을 같은 높이로 잡아 두어야 기준선이 늘 같은 자리에 섭니다 */
+.rwtrend-slot {
+  width: 100%;
+  height: 46px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.rwtrend-slot--down {
+  height: 16px;
+  align-items: flex-start;
+}
+.rwtrend-bar {
+  width: 11px;
+  min-height: 3px;
+  display: block;
+}
+/* 데이터가 끝나는 쪽만 둥글게 — 기준선 쪽은 각지게 붙여 둡니다 */
+.rwtrend-bar--up {
+  background: #d97757;
+  border-radius: 4px 4px 0 0;
+}
+.rwtrend-bar--down {
+  background: #1f6f9c;
+  border-radius: 0 0 4px 4px;
+}
+/* 기준선(0) — 눈금이 아니라 바닥이라는 표시라 아주 옅게 */
+.rwtrend-base {
+  width: 100%;
+  height: 1px;
+  background: var(--border);
+}
+.rwtrend-val {
+  margin-top: 5px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.rwtrend-date {
+  font-size: 10px;
+  color: var(--text-sub);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.rwtrend-note {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-sub);
+}
+/* 모달 제목 왼쪽의 뒤로 화살표 — 과일 주기 → 누가기록으로 넘어온 길을
+   되짚어 갑니다(닫고 자리를 다시 누르는 수고를 없앰) */
+.modal-back {
+  border: none;
+  background: none;
+  padding: 0 2px 0 0;
+  margin-right: 2px;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--text-sub);
+  cursor: pointer;
+}
+.modal-back:hover { color: var(--primary-dark); }
+
+/* 자리표 확대 보기 — 좁은 패널의 8.5px 글씨를 큰 폭에서 제 크기로 봅니다.
+   내용은 같은 SeatPickGrid라 자리 이동·과일 주기가 그대로 동작합니다. */

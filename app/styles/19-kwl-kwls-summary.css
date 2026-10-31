@@ -1,0 +1,777 @@
+
+/* [C] 집계 — K·W·L·S 칸마다 작성 인원 */
+.tkwl-counts { display: flex; align-items: center; gap: 6px; }
+.tkwl-count {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 6px 2px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.18);
+}
+.tkwl-count b { font-size: 11px; font-weight: 800; color: #e8956c; }
+.tkwl-count em { font-style: normal; font-size: 15px; font-weight: 800; color: #fff; }
+.tkwl-count--total {
+  flex: 0 0 auto;
+  border: none;
+  background: none;
+  font-size: 11.5px;
+  color: #8f8d84;
+}
+.tkwl-notstarted {
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: #9a988e;
+}
+.tkwl-notstarted > span {
+  display: block;
+  font-weight: 800;
+  color: #d99a7f;
+}
+
+/* [B] '알기를 원하는 것' 모아보기 — 수업에서 바로 집어 쓰는 목록 */
+.tkwl-wants {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tkwl-wants li {
+  padding: 8px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.18);
+}
+.tkwl-wants li.live { border-color: var(--primary); }
+.tkwl-want-text {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #e8e6dd;
+  white-space: pre-wrap;
+}
+.tkwl-want-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 5px;
+}
+.tkwl-want-who { font-size: 11px; font-weight: 700; color: #8f8d84; }
+.tkwl-cast {
+  padding: 3px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: none;
+  color: #c5c4bc;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.tkwl-cast:hover { border-color: var(--primary); color: #e8956c; }
+.tkwl-cast.on {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+/* [A] 학생 × K·W·L·S 격자 — 전광판과 같은 시각 언어 */
+/* 이름 칸을 minmax(0, 1fr)로 — 그냥 1fr이면 최소 폭이 '내용 크기'라
+   긴 이름에서 줄이 넓어지고 가로 스크롤이 생깁니다. 0까지 줄어들 수
+   있어야 이름이 말줄임표로 잘립니다. */
+.tkwl-grid-head,
+.tkwl-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) repeat(4, 20px);
+  gap: 4px;
+  align-items: center;
+}
+/* 머리글은 스크롤 영역 안에 있고 위에 붙습니다 — 칸과 같은 폭을 써서
+   세로 막대가 생겨도 어긋나지 않고, 스크롤을 내려도 K·W·L·S가 남습니다. */
+.tkwl-grid-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--sidebar-bg);
+  padding-bottom: 3px;
+}
+.tkwl-grid-head span {
+  text-align: center;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #8f8d84;
+}
+/* 스크롤은 패널 하나만 — 패널 안에 스크롤 영역을 여럿 두니 막대가
+   겹쳐 보이고, 어느 걸 굴려야 할지도 헷갈렸습니다. 격자는 길이대로
+   늘어나고 패널이 통째로 스크롤됩니다(머리글은 sticky로 남습니다). */
+.tkwl-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.tkwl-row-name {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 11.5px;
+  color: #d8d6cc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tkwl-row-name em {
+  font-style: normal;
+  font-size: 10px;
+  color: #8f8d84;
+  font-variant-numeric: tabular-nums;
+}
+.tkwl-cell {
+  width: 20px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+.tkwl-cell:hover { transform: scale(1.15); }
+/* 읽기 전(K·W)과 읽은 뒤(L·S)를 색으로 갈라, 어디서 멈췄는지 바로 보이게 */
+.tkwl-cell.on.before { background: #7a9ec4; border-color: #6b8db2; }
+.tkwl-cell.on.after { background: #7fb98a; border-color: #6aa877; }
+.tkwl-cell.picked { box-shadow: 0 0 0 2px var(--primary); }
+
+/* 어두운 사이드 패널의 스크롤 막대 — 기본 막대는 밝고 두꺼워 칸 위에
+   덧댄 것처럼 보입니다. 얇고 반투명하게 낮춰 배경에 묻히게 합니다.
+   KWLS 차트에서 쓰던 것을 왼쪽 '오늘'/활동 패널에도 같이 겁니다 —
+   같은 어두운 바탕에 나란히 서는 패널이라 막대만 다르면 튑니다. */
+.teacher-kwl,
+.tkwl-pop-text,
+.study-activity-panel,
+.today-feed-list {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+.teacher-kwl::-webkit-scrollbar,
+.tkwl-pop-text::-webkit-scrollbar,
+.study-activity-panel::-webkit-scrollbar,
+.today-feed-list::-webkit-scrollbar {
+  width: 8px;
+}
+.teacher-kwl::-webkit-scrollbar-track,
+.tkwl-pop-text::-webkit-scrollbar-track,
+.study-activity-panel::-webkit-scrollbar-track,
+.today-feed-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.teacher-kwl::-webkit-scrollbar-thumb,
+.tkwl-pop-text::-webkit-scrollbar-thumb,
+.study-activity-panel::-webkit-scrollbar-thumb,
+.today-feed-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+}
+.teacher-kwl::-webkit-scrollbar-thumb:hover,
+.tkwl-pop-text::-webkit-scrollbar-thumb:hover,
+.study-activity-panel::-webkit-scrollbar-thumb:hover,
+.today-feed-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+/* 칸을 누르면 뜨는 전문 — 패널 안 아래쪽에 붙습니다 */
+/* 칸을 누르면 뜨는 전문 — 패널 아래에 붙여 두어, 격자를 굴리며 다른
+   칸을 눌러도 내용이 늘 같은 자리에 보입니다(예전엔 목록 끝까지
+   내려가야 보였습니다). */
+.tkwl-pop {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--primary);
+  border-radius: 10px;
+  /* 아래에 붙어 있는 동안 격자가 비쳐 보이면 안 되므로 불투명하게 */
+  background: #1e1e1d;
+  box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.35);
+}
+.tkwl-pop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.tkwl-pop-head strong { font-size: 13px; color: #fff; }
+.tkwl-pop-head button {
+  border: none;
+  background: none;
+  color: #8f8d84;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+.tkwl-pop-label { font-size: 11px; font-weight: 800; color: #e8956c; }
+.tkwl-pop-text {
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: #e8e6dd;
+  white-space: pre-wrap;
+  max-height: 160px;
+  overflow-y: auto;
+}
+.tkwl-pop-text.empty { color: #8f8d84; }
+
+.kwl-panel {
+  width: 300px;
+  height: 100%;
+}
+@media (prefers-reduced-motion: reduce) {
+  .study-kwl-slot { transition: none; }
+}
+
+.kwl-panel {
+  width: 300px;
+  flex-shrink: 0;
+  background: var(--sidebar-bg);
+  color: var(--sidebar-text);
+  overflow-y: auto;
+  padding: 20px 14px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.kwl-panel-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.kwl-panel-title {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #c5c4bc;
+}
+
+.kwl-panel-date {
+  font-size: 13px;
+  color: #5c5b55;
+}
+
+.kwl-section {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.kwl-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kwl-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #87867f;
+  letter-spacing: 0.3px;
+}
+
+.kwl-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+
+.kwl-badge-k { background: #3d5a80; color: #d0e4f7; }
+.kwl-badge-w { background: #6b4c2a; color: #f5dfc0; }
+.kwl-badge-l { background: #2e6b3e; color: #c2eacb; }
+.kwl-badge-s { background: #604c8b; color: #e8ddff; }
+
+/* 기록 탭의 요약 딱지 — 같은 팔레트를 작게 쓴 것. 색은 위 네 줄이 그대로
+   맡고 여기서는 크기만 줄입니다(팔레트를 두 벌로 만들지 않기 위함). */
+.kwl-badge--mini {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+}
+/* 안 쓴 칸 — 색을 빼고 자리만 남깁니다. 지워 버리면 네 칸 중
+   '어느' 칸이 비었는지 알 수 없어 윤곽만 남겨 둡니다. */
+.kwl-badge--off {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.28);
+}
+
+.kwl-textarea {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #e8e8e4;
+  font-size: 14px;
+  line-height: 1.6;
+  padding: 10px 12px;
+  resize: none;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.kwl-textarea::placeholder { color: #9a988e; }
+
+.kwl-textarea:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.kwl-ask-btn {
+  background: none;
+  border: none;
+  color: #e8956c;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 0;
+  white-space: nowrap;
+}
+.kwl-ask-btn:hover { text-decoration: underline; }
+
+.kwl-save-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-btn);
+  padding: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  width: 100%;
+}
+.kwl-save-btn:hover:not(:disabled) { background: var(--primary-dark); }
+
+/* 오늘 이미 작성한 경우 — 입력 폼 대신 안내 문구 */
+.kwl-already-done {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--sidebar-text);
+}
+.kwl-already-done strong {
+  color: #fff;
+}
+.kwl-save-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* 교사: 학생 W 모아보기 */
+.kwl-all-w {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 10px;
+  margin-top: 4px;
+}
+
+.kwl-all-w-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: none;
+  color: #87867f;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  gap: 4px;
+}
+.kwl-all-w-toggle:hover { color: #c5c4bc; }
+
+.kwl-chevron { font-size: 9px; opacity: 0.7; }
+
+.kwl-all-w-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kwl-all-w-item {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  padding: 7px 9px;
+}
+
+.kwl-all-w-author {
+  font-size: 10px;
+  color: #5c5b55;
+  display: block;
+  margin-bottom: 3px;
+}
+
+.kwl-all-w-text {
+  font-size: 12px;
+  color: #c5c4bc;
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* ── KWL 탭 ── */
+.kwl-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 10px;
+  margin-bottom: 2px;
+}
+
+.kwl-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  color: #d8d6cc; /* 어두운 사이드바에서도 잘 보이도록 밝은 회색 */
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.kwl-tab:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+.kwl-tab.active {
+  background: var(--primary); /* 테라코타 강조 — 선택 탭이 확실히 보이게 */
+  color: #fff;
+}
+
+.kwl-panel-date {
+  font-size: 13px;
+  color: #5c5b55;
+  margin-bottom: 6px;
+}
+
+/* ── KWLS 학기 히트맵 (기록 탭 맨 위) ──────────────────────────
+   사이드바가 300px뿐이라 주 컬럼에 고정 폭을 주면 넘칩니다. 한 학기(약
+   19주)를 flex로 균등 분할해 폭에 맞춰 늘고 줄게 둡니다 — 공부방
+   히트맵(.heatmap-week)이 쓰는 방식과 같습니다.
+   농도는 그날 채운 칸 수(0~4). 어두운 패널이라 밝은 화면용 팔레트
+   (LEVEL_COLORS) 대신 kwl-badge-l(#2e6b3e)~tkwl-cell.on.after(#7fb98a)
+   사이를 잇는 어두운 배경용 다섯 단계를 씁니다. */
+.kwls-hm {
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  padding-bottom: 12px;
+  margin-bottom: 10px;
+}
+
+.kwls-hm-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+.kwls-hm-head h4 {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #c5c4bc;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.kwls-hm-head h4 small {
+  font-size: 10.5px;
+  font-weight: 400;
+  color: #87867f;
+}
+.kwls-hm-stat { font-size: 11px; color: #87867f; }
+.kwls-hm-stat b { color: #7fb98a; font-weight: 700; }
+
+.kwls-hm-grid { display: flex; gap: 4px; }
+
+.kwls-hm-days {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+  padding-top: 13px; /* 달 이름 줄만큼 내려 칸과 줄을 맞춥니다 */
+}
+.kwls-hm-days span {
+  height: 11px;
+  font-size: 8px;
+  line-height: 11px;
+  color: #6f6e68;
+}
+
+.kwls-hm-weeks { flex: 1; min-width: 0; }
+
+.kwls-hm-months {
+  display: flex;
+  gap: 2px;
+  height: 13px;
+}
+.kwls-hm-months span {
+  flex: 1;
+  min-width: 0;
+  font-size: 8.5px;
+  color: #6f6e68;
+  white-space: nowrap;
+}
+
+.kwls-hm-body { display: flex; gap: 2px; }
+
+.kwls-hm-week {
+  flex: 1;
+  min-width: 0; /* 고정 폭이면 19주가 300px 패널을 넘칩니다 */
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.kwls-hm-cell {
+  height: 11px;
+  border: none;
+  padding: 0;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.06);
+}
+.kwls-hm-cell:not(:disabled) { cursor: pointer; }
+.kwls-hm-cell.lv1 { background: #2e6b3e; }
+.kwls-hm-cell.lv2 { background: #3f8a52; }
+.kwls-hm-cell.lv3 { background: #5aa86b; }
+.kwls-hm-cell.lv4 { background: #7fb98a; }
+/* 아직 오지 않은 날 — 격자 모양은 지키되 '안 씀'과 구분되게 더 흐리게 */
+.kwls-hm-cell.future { background: rgba(255,255,255,0.02); }
+.kwls-hm-cell.on { box-shadow: 0 0 0 2px var(--primary, #e07a5f); }
+.kwls-hm-cell:not(:disabled):hover { box-shadow: 0 0 0 2px rgba(255,255,255,0.45); }
+
+.kwls-hm-legend {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 8px;
+  font-size: 9.5px;
+  color: #6f6e68;
+}
+.kwls-hm-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.06);
+}
+.kwls-hm-swatch.lv1 { background: #2e6b3e; }
+.kwls-hm-swatch.lv2 { background: #3f8a52; }
+.kwls-hm-swatch.lv3 { background: #5aa86b; }
+.kwls-hm-swatch.lv4 { background: #7fb98a; }
+
+/* 밝은 바탕(학습 리포트) 변형 — 어두운 패널용 값을 자동으로 뒤집으면
+   명도 순서가 무너져 '많이 쓴 날'이 오히려 옅어집니다. 흰 바탕에서
+   검증기의 ordinal 게이트를 통과시킨 램프를 따로 둡니다
+   (#84c192 → #22502f, 색조 편차 0°, 단계 간 ΔL ≥ 0.06,
+   가장 밝은 단계도 흰 바탕 대비 2.09:1). */
+.kwls-hm--light {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+.kwls-hm--light .kwls-hm-head h4 { color: var(--text); }
+.kwls-hm--light .kwls-hm-head h4 small,
+.kwls-hm--light .kwls-hm-stat,
+.kwls-hm--light .kwls-hm-days span,
+.kwls-hm--light .kwls-hm-months span,
+.kwls-hm--light .kwls-hm-legend { color: var(--text-sub); }
+.kwls-hm--light .kwls-hm-stat b { color: #22502f; }
+
+.kwls-hm--light .kwls-hm-cell,
+.kwls-hm--light .kwls-hm-swatch { background: var(--neutral); }
+.kwls-hm--light .kwls-hm-cell.lv1,
+.kwls-hm--light .kwls-hm-swatch.lv1 { background: #84c192; }
+.kwls-hm--light .kwls-hm-cell.lv2,
+.kwls-hm--light .kwls-hm-swatch.lv2 { background: #619f70; }
+.kwls-hm--light .kwls-hm-cell.lv3,
+.kwls-hm--light .kwls-hm-swatch.lv3 { background: #41794f; }
+.kwls-hm--light .kwls-hm-cell.lv4,
+.kwls-hm--light .kwls-hm-swatch.lv4 { background: #22502f; }
+.kwls-hm--light .kwls-hm-cell.future { background: var(--bg-deep); }
+.kwls-hm--light .kwls-hm-cell:not(:disabled):hover {
+  box-shadow: 0 0 0 2px var(--text-sub);
+}
+
+/* 리포트에서는 칸이 조금 더 커도 자리가 넉넉합니다 */
+.kwls-hm--light .kwls-hm-cell { height: 13px; }
+.kwls-hm--light .kwls-hm-days span { height: 13px; line-height: 13px; font-size: 9px; }
+
+/* ── KWL 지난 기록 탭 ── */
+.kwl-history { flex: 1; overflow-y: auto; }
+
+.kwl-history-empty {
+  font-size: 12px;
+  color: #5c5b55;
+  text-align: center;
+  margin-top: 24px;
+}
+
+.kwl-history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* 날짜 칸 — 왼쪽 색 띠가 그날 어디까지 갔는지를 말합니다.
+   교사 격자(.tkwl-cell.on.before/.after)와 같은 색 언어:
+     읽기 전(K·W)까지  → 파랑
+     읽은 뒤(L·S)까지  → 초록
+     그 밖의 부분 작성 → 흐린 갈색
+   회색 목록이던 곳에 색을 넣되, 장식이 아니라 진행도를 읽게 했습니다. */
+.kwl-history-item {
+  border-radius: 7px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.04);
+  border-left: 3px solid transparent;
+}
+
+.kwl-history-item--partial { border-left-color: #6b4c2a; }
+.kwl-history-item--before  { border-left-color: #7a9ec4; }
+.kwl-history-item--done {
+  border-left-color: #7fb98a;
+  background: rgba(127, 185, 138, 0.09);
+}
+
+.kwl-history-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px; /* K·W·L·S 딱지가 오른쪽 화살표에 달라붙지 않게 */
+  width: 100%;
+  background: none;
+  border: none;
+  color: #c5c4bc;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 10px;
+  cursor: pointer;
+  text-align: left;
+}
+.kwl-history-toggle:hover { background: rgba(255,255,255,0.06); }
+
+.kwl-history-toggle-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* 날짜(왼쪽) + K·W·L·S 딱지(오른쪽) 한 줄 */
+.kwl-history-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.kwl-history-date { flex: 1; min-width: 0; }
+
+.kwl-history-chips {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.kwl-history-preview {
+  font-size: 11px;
+  font-weight: 400;
+  color: #87867f;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kwl-history-body {
+  padding: 4px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kwl-history-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.kwl-history-row p {
+  font-size: 12px;
+  color: #87867f;
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kwl-today-entries {
+  margin-top: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.kwl-today-entries-label {
+  font-size: 11px;
+  color: var(--text-sub);
+  margin: 0 0 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.kwl-entry {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+  transition: border-color 0.1s;
+}
+.kwl-entry:hover { border-color: var(--primary, #e07a5f); }
+
+.kwl-entry--open .kwl-history-row p {
+  white-space: pre-wrap;
+  overflow: visible;
+  text-overflow: unset;
+}

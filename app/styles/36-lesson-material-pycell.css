@@ -1,0 +1,790 @@
+
+/* ===== 수업 노트에 걸린 그날 학습 자료 ===== */
+.cornell-handouts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-btn);
+  background: var(--bg-deep);
+}
+.cornell-handouts-tag {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-sub);
+}
+.cornell-handout {
+  max-width: 100%;
+  border-radius: 999px;
+  padding: 3px 10px;
+  background: #fff;
+  border: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary-dark);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cornell-handout:hover { border-color: var(--primary); }
+/* 노트 한 장 안에서는 요약 아래 한 줄로 */
+.cornell-sheet-handouts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  background: #fdfcfa;
+}
+.cornell-sheet-handout-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* 모둠 줄 오른쪽 끝의 단추 묶음 — '동료 평가' */
+.peer-row-actions { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; }
+.peer-row-actions .peer-open-btn { margin-left: 0; }
+/* 잠긴 동안의 '동료 평가' — 자리는 남기되 지금은 쓰는 자리가 아님을 색으로 */
+.peer-open-btn.is-locked { color: var(--text-sub); }
+.peer-open-btn.is-locked em { background: var(--neutral); color: var(--text-sub); }
+
+/* 자리표 머리말의 단추 묶음 — 보기 방향 · 확대
+   손바닥 뱃지와 나란히 오른쪽 끝에 섭니다(margin-left: auto). 셋이 같은
+   알약 모양·같은 바탕이라 한 줄로 읽힙니다 — 하나만 테두리가 있으면 그것만
+   '누르는 것'처럼 보여 나머지가 눌리는 줄 모릅니다. */
+/* **모자라면 오른쪽에 붙인 채 접습니다**(`flex-wrap` + `justify-content: flex-end`).
+   '🍊 다 함께'가 들어오며 넷이 됐는데 패널 안쪽은 312px로 못 박혀 있고, 그
+   넷이 한 줄에 서느냐는 **기기의 한글 폰트에 달렸습니다** — 이 앱은
+   Pretendard를 먼저 부르지만 없는 기기(학교 크롬북 등)는 Malgun Gothic·시스템
+   폰트로 떨어지고, 그중 넓은 것에서는 못 섭니다. 접어 두면 그럴 때 **패널
+   밖으로 삐져나가는 대신** 둘째 줄로 내려갑니다.
+   **'멋진 순간' 패널의 이 줄에는 단추 셋만 둡니다** — 다 함께 · 보기 방향 ·
+   확대. '출석 n/N'과 손바닥 뱃지(🖐️)는 패널 설명 줄(`.reward-sub`) 끝으로
+   옮겼습니다(`SeatPickGrid`의 `showHands={false}`). 넷·다섯이 함께 서면
+   '선생님 보기'처럼 긴 글자에서 넘쳐 두 줄로 접혔습니다(실제 신고, 두 번).
+   셋이면 대체 폰트(WenQuanYi)의 '선생님 보기'에서도 한 줄이고 61px이
+   남습니다(실측). */
+.reward-seat-head-btns {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+/* 묶음 안에서는 밀어낼 자리가 없습니다 — 바깥 auto와 겹치지 않게 지웁니다 */
+.reward-seat-head-btns .reward-seat-zoom { margin-left: 0; }
+.reward-seat-flip {
+  flex-shrink: 0;
+  padding: 5px 12px;
+  border: none;
+  border-radius: 999px;
+  background: #f1eee8;
+  color: var(--text-sub);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.reward-seat-flip:hover { background: var(--primary-light); color: var(--primary-dark); }
+/* '🍊 멋진 순간' — 출석한 학생 모두에게 과일 하나씩.
+   모양·크기는 옆의 두 알약과 같게 두되 **혼자 색이 있습니다.** 위 주석의
+   '하나만 달라 보이면 나머지가 눌리는 줄 모른다'는 셋이 같은 종류일 때의
+   이야기입니다 — 이것은 보는 방법을 바꾸는 것이 아니라 스물몇 명의 기록을
+   건드리는 단추라, 눈에 띄는 편이 맞습니다.
+   `.reward-seat-flip` 규칙을 함께 받아 크기가 저절로 맞습니다(따로 적으면
+   글자 크기·여백이 어긋나 줄이 들쭉날쭉해집니다). */
+.reward-seat-all {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+}
+.reward-seat-all:hover:not(:disabled) { background: var(--primary); color: #fff; }
+/* 못 누르는 때(출석 확인 전·받는 중·출석 0명)와 보내는 중. 까닭은 툴팁에
+   적혀 있습니다 — 눌러 보고서야 알게 하지 않으려고요. */
+.reward-seat-all:disabled {
+  background: #f1eee8;
+  color: var(--text-faint);
+  cursor: not-allowed;
+}
+
+/* ── '🍊 다 함께' 결과 창(AwardAllResultModal) ──────────────────────
+   되묻는 창을 걷어 내 **끝난 뒤에 무슨 일이 있었는지 말해 주는 자리가
+   이 창 하나뿐**입니다. 그래서 '몇 명에게 갔다'만이 아니라 안 간 사람까지
+   함께 적고, 실패한 이름은 눌러서 그 학생에게만 다시 보냅니다.
+
+   `.modal`이 `width: 100%; max-width: 640px`이라 폭을 좁히려면 **둘 다**
+   손대야 합니다(max-width만 내리면 width가 이깁니다 — 수업 화면 창에서
+   겪은 그 함정의 반대쪽). 이름 몇 개가 드는 창이라 640px은 너무 넓습니다. */
+.award-result-modal {
+  width: 100%;
+  max-width: 460px;
+}
+
+.award-result-sum {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--text);
+}
+.award-result-sum strong { color: var(--primary-dark); }
+
+/* 안 간 사람 칸 — 위 한 줄과 선으로 가릅니다. '줬다'와 '안 갔다'는 읽는
+   뜻이 다른 두 덩이라, 붙여 두면 한 문단으로 읽혀 놓칩니다. */
+.award-result-sec {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.award-result-sec h4 {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text);
+}
+.award-result-sec h4 em {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--text-sub);
+}
+.award-result-hint {
+  margin-top: 3px;
+  font-size: 12.5px;
+  color: var(--text-faint);
+}
+
+.award-result-names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+/* **이름이 곧 단추입니다** — 누르면 그 학생에게만 다시 보냅니다. 자리표에서
+   그 자리를 다시 찾는 것보다 짧고, 누가 안 받았는지 보면서 처리합니다. */
+.award-result-name {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.award-result-name:hover:not(:disabled) {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary-dark);
+}
+.award-result-name.is-sending {
+  color: var(--text-faint);
+  cursor: progress;
+}
+/* 다시 준 이름은 초록 — 이 앱에서 초록은 늘 '됐다'는 뜻입니다
+   (출석부의 '출석' 자리·수업 노트 카드의 '과일 줌'과 같은 값). */
+.award-result-name.is-done {
+  background: #e8f7ed;
+  border-color: #a6d8b6;
+  color: #2f6b45;
+  cursor: default;
+}
+.award-result-name.is-error {
+  border-color: #e4b4ad;
+  color: var(--danger);
+}
+
+/* 이미 가득 찬 학생은 **글자로만** — 다시 보내도 천장이라 값이 그대로인데,
+   눌리는데 아무 일도 안 일어나면 고장으로 보입니다. */
+.award-result-maxed {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-sub);
+}
+
+.award-result-foot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+/* 켜짐 색(.on)을 두지 않습니다 — 글자가 '선생님 보기'/'학생 보기'로 바뀌어
+   지금 어느 쪽인지 그대로 말합니다. 색까지 얹으면 옆의 손바닥 뱃지처럼
+   '무언가 켜져 있으니 봐 달라'는 신호로 읽혀 눈길을 뺏습니다. */
+/* 출석 종료 뒤에만 뜨는 '출석 21/25' — 단추가 아니라 알림이라 **패널 설명
+   줄(.reward-sub) 끝**에 글자로 붙습니다. 한때 자리표 머리의 단추 줄에 섰는데,
+   출석을 마치는 순간 그 줄이 넷이 되어 '⤢ 확대'가 둘째 줄로 밀려났습니다.
+   글자 크기·색은 설명 줄을 물려받고, 숫자만 굵게. `nowrap`이라 줄이 모자라면
+   '· 출석 n/N'이 통째로 다음 줄로 내려갑니다(가운데서 쪼개지지 않게).
+   숫자는 tabular-nums로 자리를 고정해 값이 바뀌어도 안 흔들립니다. */
+.reward-seat-att {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+/* 설명 줄 끝의 손바닥 인원 — 단추 줄에 두면 넘쳐 두 줄로 접혀서 여기
+   둡니다. 없을 때는 설명 글과 같은 옅은 글자, 손을 들면 살구빛으로 눈에
+   띕니다. 설명 줄 높이를 늘리지 않게 세로 여백 없이 둡니다. */
+.reward-sub-hands {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.reward-sub-hands.on {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  font-weight: 800;
+}
+.reward-sub { white-space: nowrap; }
+.reward-seat-att b { font-weight: 800; color: var(--text); }
+
+/* ── KWLS 종합 격자 (/admin 종합 분석 맨 아래) ──
+   세로 학생 · 가로 'KWLS를 쓴 날'. 색은 그날 채운 칸 수(1~4)이고, 램프는
+   KWLS 학기 히트맵의 밝은 바탕용(.kwls-hm--light)과 **같은 값**입니다 —
+   같은 것을 세는 두 격자가 다른 색을 쓰면 한쪽을 보고 다른 쪽을 오해합니다. */
+.kgrid-note {
+  font-size: 12px;
+  color: var(--text-sub);
+  font-variant-numeric: tabular-nums;
+}
+.kgrid-note b { color: var(--primary-dark); font-weight: 800; }
+/* 가로는 날짜 수만큼, 세로는 학생 수만큼 길어집니다 — 둘 다 이 상자 안에서만
+   구르고, 이름 칸과 날짜 줄은 붙여 두어 어디를 보든 누구의 언제인지 압니다. */
+.kgrid-scroll {
+  margin-top: 10px;
+  max-height: 560px;
+  overflow: auto;
+}
+.kgrid-table {
+  border-collapse: separate;
+  border-spacing: 3px;
+}
+.kgrid-table th {
+  font-weight: 700;
+  color: var(--text-sub);
+  white-space: nowrap;
+}
+/* 날짜 줄 — 위에 붙습니다 */
+.kgrid-date {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--card-bg);
+  padding: 2px 0 4px;
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+}
+/* 이름 칸 — 왼쪽에 붙습니다 */
+.kgrid-name {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--card-bg);
+  padding-right: 8px;
+  text-align: left;
+  font-size: 12px;
+  color: var(--text);
+  max-width: 132px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kgrid-name em {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--text-sub);
+  font-variant-numeric: tabular-nums;
+  margin-right: 5px;
+}
+/* 두 방향이 만나는 모서리 — 둘 다 붙어야 가려지지 않습니다 */
+.kgrid-corner {
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  background: var(--card-bg);
+  text-align: left;
+  font-size: 11.5px;
+}
+.kgrid-cell {
+  display: block;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: var(--neutral);
+  cursor: pointer;
+  transition: box-shadow 0.12s;
+}
+.kgrid-cell:hover { box-shadow: 0 0 0 2px var(--primary); }
+.kgrid-cell.lv1 { background: #84c192; }
+.kgrid-cell.lv2 { background: #619f70; }
+.kgrid-cell.lv3 { background: #41794f; }
+.kgrid-cell.lv4 { background: #22502f; }
+
+.kgrid-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--text-sub);
+}
+.kgrid-swatch {
+  width: 13px;
+  height: 13px;
+  border-radius: 3px;
+  background: var(--neutral);
+}
+.kgrid-swatch.lv1 { background: #84c192; }
+.kgrid-swatch.lv2 { background: #619f70; }
+.kgrid-swatch.lv3 { background: #41794f; }
+.kgrid-swatch.lv4 { background: #22502f; }
+.kgrid-legend-hint { margin-left: auto; font-style: normal; }
+
+/* 전체 화면의 학생 고르개 — 날짜 이동 왼쪽 */
+.kwlfs-who-select {
+  height: 28px;
+  max-width: 168px;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--text);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   수업 중 활동 내보내기 — 교사 줄 · 학생 서랍의 활동 탭
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── 교사: 칩 줄 아래의 '지금 무엇이 나가 있나' 한 줄 ──
+   보내는 것은 칩이고, 이 줄은 나가 있는 것의 이름을 적고 거두는 자리입니다.
+   나가 있는 것이 이 화면에 안 보이는 칩일 수 있어(다른 프로젝트의 활동, 안
+   고른 독서 활동) 이름이 필요합니다. */
+.lesson-push-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+/* 같은 줄에 서는 것들은 높이를 하나로 — 세로 padding으로 저마다 정하면
+   글자 크기가 다른 만큼 줄이 들쭉날쭉해집니다(출석 관리 줄과 같은 생각). */
+.lesson-push-btn {
+  flex-shrink: 0;
+  height: 30px;
+  padding: 0 14px;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-btn);
+  background: var(--primary);
+  color: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.lesson-push-btn:disabled { opacity: 0.5; cursor: default; }
+.lesson-push-btn--stop {
+  background: none;
+  border-color: var(--border);
+  color: var(--text-sub);
+}
+.lesson-push-btn--stop:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary-dark);
+}
+/* 내보내는 중 — 방송 중임을 알리는 점을 그대로 씁니다(같은 뜻의 신호가
+   화면마다 다른 모양이면 두 번 익혀야 합니다). */
+.lesson-push-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--primary-dark);
+}
+.lesson-push-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+  color: var(--text-sub);
+}
+
+/* ── 학생: 서랍의 탭 줄 ──
+   **이 줄만 켜기/끄기입니다** — 둘 다 켜면 서랍이 두 칸 폭으로 벌어집니다
+   (날개 펴기). 그래서 노트 크게 보기 창·닿소리 '전체 보기'가 쓰는 공용
+   알약(`.dash-view-tabs`)을 **일부러 안 씁니다**: 그쪽은 '하나 고르기'라,
+   같은 생김새가 화면마다 다르게 움직이면 눌러 봐야 알게 됩니다.
+   여기는 체크 표시로 켜짐이 한눈에 보이게 합니다.
+   머리줄 밑줄에 바로 붙으면 제목의 딸린 줄처럼 보입니다 — 아래 내용을
+   고르는 줄이라 그 사이를 띄워 둡니다. */
+.cornell-tabrow {
+  flex-shrink: 0;
+  display: flex;
+  gap: 6px;
+  margin: 12px 14px 10px;
+}
+.cornell-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-deep);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-sub);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.cornell-tab:hover { border-color: var(--primary); }
+.cornell-tab.on {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary-dark);
+}
+/* 체크 자리는 꺼져 있을 때도 비워 둡니다 — 켜고 끌 때마다 글자가 4px씩
+   움직이면 두 단추가 나란히 흔들립니다(실측 7px). */
+.cornell-tab-mark {
+  display: inline-block;
+  width: 9px;
+  font-size: 11px;
+  line-height: 1;
+  text-align: center;
+}
+
+/* ── 학생: 코드 셀의 ▶ 실행 · 중단 단추(PyCellEditor) ──
+   서랍이 380px이라 작게. 예전에는 활동 칸 아래 '실행 줄'(▶ 실행 · 결과
+   붙이기)이 따로 섰는데, 셀이 코드와 결과를 제 것으로 들면서 셀 머리로
+   옮겼습니다(그 줄의 .ltask-run · -attach · -kbd는 걷었습니다). */
+.ltask-run-btn,
+.ltask-run-stop {
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  cursor: pointer;
+}
+.ltask-run-btn {
+  background: var(--primary-light);
+  border-color: #efc19a;
+  color: var(--primary-dark);
+}
+.ltask-run-btn:hover:not(:disabled),
+.ltask-run-stop:hover { border-color: var(--primary); }
+.ltask-run-btn:disabled { opacity: 0.55; cursor: default; }
+
+/* 입력값 — input()을 쓰는 코드일 때만 뜹니다 */
+.ltask-stdin {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+.ltask-stdin > span {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--dark);
+}
+.ltask-stdin em {
+  margin-left: 5px;
+  font-style: normal;
+  font-weight: 600;
+  color: var(--text-faint);
+}
+.ltask-stdin textarea {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  resize: vertical;
+}
+
+/* 출력 — 코드 블록과 같은 어두운 바탕이라 '프로그램이 낸 말'로 읽힙니다.
+   **긴 출력은 이 칸 안에서만 구릅니다**(max-height) — 안 그러면 for문 한 번에
+   서랍이 한없이 길어져 쓰던 칸이 화면 밖으로 밀립니다. */
+.ltask-out {
+  margin-top: 6px;
+  max-height: 180px;
+  overflow: auto;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: var(--dark);
+  color: #ede9e0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.ltask-out-line { display: block; }
+.ltask-out-line--err { color: #ffb4a2; }
+.ltask-out-line--info { color: #b8b2a6; }
+.ltask-out-line--result { color: #a7d7a7; }
+
+/* input()이 찍은 '입력한 값' — 출력보다 옅게(components/PyLineText.jsx).
+   `print(input())`에서 같은 값이 두 줄 서는데, 하나는 입력이고 하나는
+   출력이라 색으로 갈라 둡니다. 실행기(.py-output)와 서랍(.ltask-out)이
+   **같은 값**을 씁니다 — 같은 코드의 결과가 두 곳에서 달라 보이면 안 됩니다.
+   실행기의 안내 줄(.py-line.info, #87867f)과 색이 거의 같아 점선 밑줄을
+   함께 둡니다 — 안내는 줄 하나를 통째로 쓰고 입력한 값은 줄 안의 조각이라
+   자리로도 갈리지만, 짧은 값 하나가 한 줄일 때는 모양이 같아집니다. */
+.py-echo {
+  color: #8f8a80;
+  text-decoration: underline dotted rgba(143, 138, 128, 0.7);
+  text-underline-offset: 3px;
+}
+
+/* ── 학생: 활동 탭 ── */
+.ltask {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ltask-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+}
+.ltask-tag {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--primary-dark);
+}
+.ltask-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--dark);
+}
+.ltask-board { font-size: 12px; color: var(--text-sub); }
+.ltask-guide {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-sub);
+}
+.ltask-blocked {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bg-deep);
+  font-size: 12.5px;
+  color: var(--text-sub);
+}
+/* 잠긴 활동·모둠 프로젝트에서 지금까지 쓴 것만 보여 주는 칸 */
+.ltask-read {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+.ltask-note {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--text-faint);
+}
+
+/* 쓰는 칸 — 탭을 열면 곧바로 여기입니다(큰 창을 따로 열지 않습니다).
+   서랍이 세로로 구르므로 높이는 최소만 잡고 글만큼 늘어납니다. */
+.ltask-rte { min-height: 220px; }
+/* 파이썬 연계 프로젝트의 칸 — 서랍에서는 쓴 것의 미리보기와 '크게 열어 쓰기'만
+   (쓰는 것은 큰 셀 창 PyCellModal). 미리보기는 제 안에서 구릅니다 — 코드가
+   길면 서랍이 한없이 길어져 아래 칸이 밀립니다. */
+.ltask-cells { display: flex; flex-direction: column; gap: 8px; }
+.ltask-cells-peek {
+  max-height: 240px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+}
+.ltask-cells-empty {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--text-faint);
+}
+.ltask-cells-open { align-self: stretch; }
+.ltask-status {
+  margin: -4px 0 0;
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+/* ── 서랍의 책방 활동 ──
+   서랍에는 학생이 쓸 수 있는 것이 다 있고, 보내기는 그중 하나로 눈을
+   맞춥니다. 그래서 '보낸 칸'을 색이 아니라 **테두리와 바탕**으로 짚습니다 —
+   글자색까지 건드리면 나머지 칸이 못 쓰는 것처럼 보입니다. */
+.ltask-field--on textarea {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+/* 곁텍스트 — 접힌 단계 한 줄. 누르면 그 자리에서 펴져 고칠 수 있습니다. */
+.ltask-fold {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.ltask-fold:hover { border-color: var(--primary); }
+.ltask-fold-no {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--neutral);
+  color: var(--text-sub);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+}
+.ltask-fold-name { flex: none; font-weight: 700; }
+/* 미리보기는 **한 줄로 자릅니다** — 접어 둔 뜻이 길이를 줄이는 것이라,
+   여기서 두 줄이 되면 줄마다 높이가 달라져 목록이 들쭉날쭉해집니다. */
+.ltask-fold-peek {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--text-sub);
+}
+.ltask-fold-peek.empty { color: var(--text-faint); }
+.ltask-fold-caret { flex: none; color: var(--text-faint); }
+/* 편 상태 — 같은 줄이 그대로 '접기'가 됩니다. 여닫는 자리가 늘 같은 곳이라야
+   손이 기억합니다(수업 노트 서랍의 손잡이와 같은 생각). 화살표가 아래를
+   가리켜 지금 펴져 있음을 말하고, 미리보기가 빠진 자리는 이름이 채웁니다. */
+.ltask-fold.open {
+  background: var(--neutral);
+  border-color: transparent;
+}
+.ltask-fold.open .ltask-fold-name { flex: 1; min-width: 0; }
+.ltask-fold.open .ltask-fold-caret { transform: rotate(90deg); }
+/* 지금 보낸 칸의 이름 줄 — 누르는 자리가 아닙니다(늘 펼쳐져 있습니다).
+   방송 점을 달아 이 칸이 지금 하라고 온 것임을 말합니다. */
+.ltask-fold.now {
+  background: var(--primary-light);
+  color: var(--primary-dark, #c15a2a);
+  cursor: default;
+}
+.ltask-fold.now .ltask-fold-no {
+  background: var(--primary);
+  color: #fff;
+}
+
+/* 펼친 단계 — 여는 줄과 쓰는 칸을 한 묶음으로 둡니다. */
+.ltask-step { display: flex; flex-direction: column; gap: 8px; }
+
+/* ── 파이썬 연계 활동의 셀 편집기(components/PyCellEditor.jsx) ──
+   셀마다 테두리를 두르지 않습니다 — 글 셀의 서식 에디터와 코드 셀의 코드 칸이
+   이미 제 테두리가 있어, 한 겹 더 두르면 선이 겹겹이 섭니다.
+   셀 **위에는 아무것도 없고** 칸이 곧바로 시작합니다. 이름표와 단추는 칸
+   **아래 한 줄**(.pycell-foot)입니다 — 왼쪽 이름표 · ↑ ↓ ✕, 오른쪽 ＋ 글 ·
+   ＋ 코드 · ▶ 실행. 그래야 두 열 셀 창에서 왼쪽 예시 코드와 오른쪽 첫 셀이
+   같은 높이에서 시작합니다(선생님 요청).
+   고른 셀을 짚던 **왼쪽 띠는 걷었습니다**(선생님 요청) — 되살리지 마세요.
+   초점은 코드 칸의 테두리(:focus-within)가 이미 말합니다. */
+.pycells { display: flex; flex-direction: column; gap: 14px; }
+.pycell { display: flex; flex-direction: column; gap: 6px; }
+.pycell-foot { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-height: 28px; }
+.pycell-acts { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.pycell-kind,
+.pycell .pycell-run,
+.pycell .pycell-add-btn {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 800;
+  line-height: 1;
+}
+.pycell-kind {
+  min-width: 52px;
+  border: 1px solid var(--bg-deep);
+  background: var(--bg-deep);
+  color: var(--text-sub);
+}
+.pycell--code .pycell-kind { background: var(--dark); border-color: var(--dark); color: #ede9e0; }
+.pycell-tools { display: flex; gap: 2px; }
+.pycell-tool {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text-faint);
+  cursor: pointer;
+}
+.pycell-tool:hover:not(:disabled) { background: var(--bg-deep); color: var(--text); }
+.pycell-tool:disabled { opacity: 0.35; cursor: default; }
+.pycell-tool--del:hover:not(:disabled) { color: #c0392b; }
+/* 코드 칸 — 실행기의 코드 칸(.py-editor)과 같은 글꼴·줄 간격 */
+.pycell-code {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--card-bg);
+}
+.pycell-code:focus-within { border-color: var(--primary); }
+.pycell-code .cm-editor { font-size: 13px; max-height: 480px; }
+.pycell-code .cm-editor.cm-focused { outline: none; }
+.pycell-code .cm-scroller { font-family: var(--font-mono); line-height: 1.6; }
+/* 빈 코드 셀도 **열 줄 남짓** 높이로 섭니다 — 코드는 여러 줄에 걸쳐 쓰는데
+   두 줄 높이로 시작하면 짜기 전부터 좁아 보였습니다(선생님 지적). 높이는
+   scroller가 아니라 내용·줄 번호 칸에 줘야 줄 번호 띠가 바닥까지 이어지고,
+   아래 빈 곳을 눌러도 커서가 갑니다. 글이 넘치면 480px까지 늘고 그 뒤로는
+   셀 안에서 구릅니다. */
+.pycell-code .cm-content,
+.pycell-code .cm-gutter { min-height: 216px; }
+.pycell-code .cm-gutters {
+  background: var(--bg-deep);
+  color: #a8a69d;
+  border-right: 1px solid var(--border);
+}

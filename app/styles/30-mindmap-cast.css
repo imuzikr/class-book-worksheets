@@ -1,0 +1,869 @@
+
+/* =============================================================
+   마인드맵 — 학생 판 · 교사 화면(왼쪽 목록 + 오른쪽 판) · 방송
+   ============================================================= */
+/* ── 판 ── */
+.mm-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+.mm-viewport {
+  position: relative;
+  /* 판 높이는 여기서 직접 정합니다. 부모(.mm-stage)가 세로 flex라 flex를 주면
+     flex-basis:0이 height를 눌러 판이 2px로 접혀 버립니다(실측). 화면을 채워야
+     하는 방송 화면만 아래에서 flex로 따로 덮어씁니다. */
+  height: clamp(380px, calc(100vh - 300px), 760px);
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 1px 1px, rgba(61, 61, 58, 0.14) 1px, transparent 0)
+    0 0 / 22px 22px,
+    var(--bg-deep);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  cursor: grab;
+  touch-action: none; /* 판을 끌 때 브라우저가 화면을 대신 스크롤하지 않도록 */
+}
+.mm-viewport:active { cursor: grabbing; }
+/* 판의 원점(뿌리 자리)을 화면 한가운데 두고, 이동·확대를 한 번에 겁니다 */
+.mm-world {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  transform-origin: 0 0;
+}
+.mm-edges {
+  position: absolute;
+  left: -3000px;
+  top: -3000px;
+  width: 6000px;
+  height: 6000px;
+  overflow: visible;
+  pointer-events: none;
+}
+.mm-edge { fill: none; stroke-linecap: round; }
+.mm-edge.dragging {
+  opacity: 0.48;
+  filter: blur(0.35px);
+  stroke-dasharray: 10 7;
+  animation: mm-edge-drift 0.85s linear infinite;
+}
+/* 실제 선(위 .mm-edge)은 1~3px라 그대로 두면 정확히 못 눌러 라벨을 못 답니다.
+   같은 자리에 훨씬 굵은 투명 선을 하나 더 깔아 클릭 폭을 넓힙니다.
+   부모(.mm-edges)의 pointer-events:none을 여기서만 되살립니다. */
+.mm-edge-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 16;
+  pointer-events: stroke;
+  cursor: text;
+}
+
+/* 노드 — 부드러운 곡률의 사각형. 배경이 불투명해서 가운데로 그은 선을 가립니다 */
+.mm-node {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  /* 부모(.mm-world)가 0×0이라 폭을 알아서 맞추면(shrink-to-fit) 쓸 수 있는
+     너비를 0으로 보고 한 글자씩 줄바꿈합니다(실측). 글자 길이만큼 늘리되
+     max-width에서 멈추도록 max-content를 씁니다. */
+  width: max-content;
+  max-width: 168px;
+  min-width: 62px;
+  padding: 9px 14px;
+  border: 2px solid;
+  border-radius: 14px;
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.45;
+  text-align: center;
+  word-break: break-word;
+  box-shadow: 0 1px 3px rgba(61, 61, 58, 0.12);
+  user-select: none;
+  cursor: default;
+}
+.mm-node.root {
+  max-width: 200px;
+  padding: 12px 18px;
+  border-radius: 17px;
+  font-size: 15px;
+  font-weight: 800;
+}
+.mm-node.sel { box-shadow: 0 0 0 3px var(--primary-light), 0 1px 3px rgba(61, 61, 58, 0.12); }
+.mm-node-text { white-space: pre-wrap; }
+.mm-node-empty { font-style: normal; font-weight: 600; opacity: 0.55; }
+/* 노드 이미지 — 어느 층이든 **같은 크기**(lib/mindmap.js의 MINDMAP_IMAGE_W·_H와
+   같은 값). 가득 채워 자르므로(cover) 사진 비율이 제각각이어도 판 위의 틀은
+   하나입니다. 배치는 MindmapCanvas가 잰 노드 전체 크기를 사용합니다.
+   실측 전 크기 추정도 맞도록 위 상수와 글자 사이의 틈을 함께 유지하세요.
+   pointer-events를 끄는 것은 그림 위에서도 노드의 더블클릭·우클릭·끌기가
+   그대로 먹게 하려는 것입니다(그림이 이벤트를 가로채면 끌 때 그림만 끌려
+   나옵니다). */
+.mm-node-img {
+  display: block;
+  width: 120px;
+  height: 90px;
+  margin: 0 auto;
+  object-fit: cover;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.6);
+  pointer-events: none;
+}
+.mm-node-img--loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px dashed currentColor;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.7;
+}
+/* 고른 노드 모서리의 '이미지' 단추 — 노드 안에 두어 판을 옮기고 키워도
+   함께 따라갑니다. 노드가 translate(-50%,-50%)로 서 있어 모서리 기준은
+   노드 상자 그대로입니다. */
+.mm-node-imgbtn {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1.5px solid var(--primary);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--primary-dark);
+  box-shadow: 0 2px 6px rgba(61, 61, 58, 0.18);
+  cursor: pointer;
+  z-index: 3;
+}
+.mm-node-imgbtn:hover { background: var(--primary-light); }
+.mm-node-imgbtn:disabled { opacity: 0.55; cursor: progress; }
+.mm-node.has-img .mm-node-text,
+.mm-node.has-img .mm-node-input { display: block; margin-top: 6px; }
+/* 두 형태 모두 가운데 주제 이외의 가지를 위아래로 끌 수 있습니다. */
+.mm-node.draggable { cursor: grab; }
+.mm-node.draggable:active,
+.mm-node.draggable.dragging { cursor: grabbing; }
+.mm-node.dragging {
+  opacity: 0.78;
+  filter: saturate(0.95);
+  box-shadow: 0 8px 18px rgba(61, 61, 58, 0.18);
+}
+.mm-node.drag-child {
+  opacity: 0.56;
+  filter: blur(0.25px) saturate(0.92);
+  pointer-events: none;
+  transition: opacity 0.14s ease, filter 0.14s ease;
+}
+@keyframes mm-edge-drift {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -17; }
+}
+/* 우클릭으로 편집 중인 노드 — 안의 입력칸이 노드 크기를 그대로 씁니다 */
+.mm-node.editing { cursor: text; }
+.mm-node-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-weight: inherit;
+  color: inherit;
+  text-align: center;
+}
+.mm-node-input:focus { outline: none; }
+.mm-node-input::placeholder { color: inherit; opacity: 0.65; }
+
+/* ── 선 위 라벨 ── */
+.mm-edge-label {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-sub);
+  white-space: nowrap;
+  cursor: text;
+  user-select: none;
+}
+/* 아직 안 쓴 선 — 있는 줄도 모르게 하지 않되, 그림을 어지럽히지 않도록 옅게 */
+.mm-edge-label.empty {
+  padding: 1px 6px;
+  border-style: dashed;
+  opacity: 0.4;
+  font-weight: 800;
+}
+.mm-edge-label.editing { padding: 0; border-style: solid; opacity: 1; }
+.mm-edge-input {
+  width: 92px;
+  padding: 2px 8px;
+  border: none;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
+  background: var(--primary-light);
+}
+.mm-edge-input:focus { outline: none; box-shadow: 0 0 0 2px var(--primary); border-radius: 999px; }
+
+/* 확대/축소 — 판 위에 떠 있어 배율과 무관하게 크기가 그대로입니다 */
+.mm-zoom {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 6px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(61, 61, 58, 0.12);
+}
+.mm-zoom button {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-sub);
+  cursor: pointer;
+}
+.mm-zoom button:hover { background: var(--bg-deep); color: var(--text); }
+.mm-zoom-val {
+  min-width: 44px;
+  text-align: center;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--text-sub);
+}
+.mm-zoom .mm-zoom-fit {
+  width: auto;
+  padding: 0 11px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+/* ── 편집 막대 ── */
+.mm-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  background: var(--card-bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+}
+.mm-bar-input {
+  flex: 1;
+  min-width: 160px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text);
+  background: #fff;
+}
+.mm-bar-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+.mm-bar-add, .mm-bar-del, .mm-bar-img { flex-shrink: 0; padding: 8px 13px; font-size: 13px; }
+.mm-bar-img:disabled { opacity: 0.55; cursor: progress; }
+.mm-bar-error { color: #b42318; }
+.mm-bar-del:disabled { opacity: 0.45; cursor: not-allowed; }
+.mm-bar-hint { font-size: 12.5px; color: var(--text-sub); line-height: 1.6; }
+
+/* ── 형태 고르기(방사형·계층형) ── */
+.mindmap-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+/* 형태 두 단추 · 설명 · 가지 수가 한 줄입니다. .book-seg는 접히는 줄이라
+   (flex-wrap) 여기서 그대로 두면 두 단추가 위아래로 쌓여 줄이 두 칸 높이가
+   됩니다(실제 신고). 단추는 글자만큼, 설명은 남는 폭을 받아 말줄임 없이
+   접히고, 가지 수는 줄 끝에 붙습니다. */
+.mindmap-layout-seg { flex-shrink: 0; flex-wrap: nowrap; }
+.mindmap-layout-seg .book-seg-btn { flex: 0 0 auto; min-width: 72px; padding: 8px 14px; }
+.mindmap-layout-hint { flex: 1 1 180px; min-width: 0; font-size: 12.5px; color: var(--text-faint); }
+.mindmap-toolbar .paratext-status { margin-left: auto; }
+.mindmap-layout-tag {
+  flex-shrink: 0;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--primary-light);
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--primary-dark);
+  white-space: nowrap;
+}
+
+/* ── 학생: 내 카드 ── */
+.mindmap-own-grid { grid-template-columns: minmax(0, 280px); }
+.mindmap-own-card.none { background: var(--bg-deep); }
+.mindmap-own-topic {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── 교사: 왼쪽 학생 목록 + 오른쪽 마인드맵 ── */
+.mindmap-board-body {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  margin-top: 14px;
+}
+.mindmap-student-side { width: 246px; max-height: none; }
+.mindmap-student-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.mindmap-student-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  text-align: left;
+  padding: 10px 12px;
+  background: var(--card-bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-btn);
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.mindmap-student-card:hover { border-color: var(--primary); }
+.mindmap-student-card.done { border-left: 4px solid #8cc79f; }
+/* 지금 보고 있는 학생 — 오른쪽 판과 짝이 맞는다는 것을 색으로 묶어 줍니다 */
+.mindmap-student-card.on {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+.mindmap-student-card.casting { border-color: var(--primary); }
+.mindmap-view {
+  flex: 1 1 0;
+  min-width: 0;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+}
+.mindmap-view-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.mindmap-view-who { display: inline-flex; align-items: center; gap: 7px; }
+.mindmap-view-who strong { font-size: 15px; font-weight: 800; color: var(--text); }
+.mindmap-view-meta { font-size: 12.5px; font-weight: 700; color: var(--text-sub); }
+.mindmap-view-head .dash-cast-btn { margin-left: auto; flex-shrink: 0; }
+.mindmap-view-stage {
+  width: 100%;
+  min-width: 0;
+  align-self: stretch;
+  margin-top: 10px;
+}
+.mindmap-view-stage .mm-viewport {
+  width: 100%;
+  min-width: 0;
+  height: clamp(360px, calc(100vh - 330px), 720px);
+}
+.mindmap-view-stage .mm-bar {
+  width: 100%;
+  min-width: 0;
+}
+/* 학생이 아직 시작 전인 판 위에 얹는 안내 — 판 자체는 그대로 두고
+   교사가 바로 이어서 가지를 만들 수 있게 합니다 */
+.mindmap-empty-hint {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  color: var(--text-sub);
+}
+
+/* ── 학생 화면에 중계된 마인드맵 — 화면을 가득 채우게 ── */
+.broadcast-overlay--mindmap .broadcast-body {
+  flex: 1;
+  min-height: 0;
+  padding: 12px 16px 18px;
+  display: flex;
+  flex-direction: column;
+  /* 기본 .broadcast-body는 가운데 정렬(align-items:center)입니다. 세로 flex에서
+     align-items는 '가로 크기'를 정하는데, center면 자식이 내용 너비만큼만
+     줄어듭니다. 판(.mm-viewport)은 속을 절대배치로 그려 내용 너비가 0이라
+     테두리 2px만 남은 세로줄이 되고, 마인드맵이 통째로 안 보였습니다(실측).
+     여기서는 판이 가로를 꽉 채워야 하므로 stretch로 되돌립니다. */
+  align-items: stretch;
+  justify-content: flex-start;
+}
+.broadcast-overlay--mindmap .broadcast-mindmap-stage {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  margin-top: 0;
+}
+/* 방송 화면은 부모 높이가 정해진 전체 화면 오버레이라 판을 남은 공간에 고정합니다 */
+.broadcast-overlay--mindmap .broadcast-mindmap-stage .mm-viewport {
+  flex: 1;
+  min-height: 360px;
+  height: 100%;
+}
+
+/* ── 모바일 ── */
+@media (max-width: 900px) {
+  /* 목록과 판을 위아래로 — 좁은 화면에서 옆에 두면 판이 너무 눌립니다 */
+  .mindmap-board-body { flex-direction: column; }
+  .mindmap-student-side { width: auto; align-self: stretch; max-height: 230px; }
+  .mindmap-student-list { flex-direction: row; flex-wrap: wrap; }
+  .mindmap-student-card { width: auto; flex: 1 1 150px; }
+}
+@media (max-width: 560px) {
+  .mm-viewport { height: clamp(300px, 58vh, 460px); }
+  .mindmap-own-grid { grid-template-columns: 1fr; }
+  .mm-bar-input { min-width: 0; }
+}
+
+/* =============================================================
+   개인 활동 교사 상세 화면 — 영역을 한 화면에 펼치고 영역별로 방송
+   (곁텍스트 읽기 8영역 · RAFT 글쓰기 5영역 · KWLS 4칸 공용)
+   ============================================================= */
+.entry-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+.entry-region {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 14px 15px 16px;
+  background: var(--card-bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.entry-region.done { border-color: #8cc79f; }
+/* 지금 학생 화면에 띄우고 있는 영역 — 한눈에 찾을 수 있게 */
+.entry-region.live {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+.entry-region.done .paratext-letter { background: #3d8a72; }
+/* 방송 중인 아이콘은 회색 — 안 쓴 칸(주황)과 헷갈리지 않게. 다 쓴 칸이어도
+   지금은 '방송 중'이 더 중요한 정보라 done의 초록보다 우선합니다 */
+.entry-region.live .paratext-letter { background: #8a8a82; }
+/* 영역 머리말의 방송 버튼은 오른쪽 끝으로 */
+.entry-region .paratext-card-head .dash-cast-btn { margin-left: auto; flex-shrink: 0; }
+.entry-region-body {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+/* 한 단계 안에 물음이 여럿입니다(곁텍스트의 제목 단계는 다섯 칸). 지금까지
+   칸 사이가 9px 간격뿐이었고 물음 이름도 답과 굵기가 같아, 한 카드 안의
+   물음·답·물음·답이 통째로 한 덩이로 읽혔습니다 — 어디까지가 한 물음의
+   답인지 눈으로 갈라야 했습니다(실제 신고).
+   **줄은 칸과 칸 사이에만** 긋습니다 — 첫 칸 위에도 그으면 바로 위 안내
+   글(.paratext-prompt)과 붙어 머리말을 가르는 선처럼 보입니다.
+   위아래 여백을 11px로 맞춘 것은 부모의 flex gap이 9px이라, 위쪽에 2px을
+   더해야 선이 두 칸 한가운데 서기 때문입니다(실측). */
+/* 선생님이 낸 안내(.paratext-prompt)와 학생이 쓴 첫 답 사이도 조금 벌립니다 —
+   칸과 칸이 22px로 갈리는데 안내와 첫 칸만 9px이면, 안내가 첫 물음의 일부처럼
+   붙어 읽힙니다. 칸 사이보다는 좁게 둡니다(줄이 물음의 경계라는 것이 그대로
+   가장 세야 합니다). */
+.entry-region .paratext-prompt { margin-bottom: 5px; }
+.paratext-read-field + .paratext-read-field {
+  margin-top: 2px;
+  padding-top: 11px;
+  border-top: 1px solid var(--border);
+}
+/* 물음 이름 — 답(14.5px)보다 한 단계 또렷하게. **크기만 키우면 모자랍니다**:
+   지금도 16px로 답보다 컸는데 굵기가 같아 한 문단으로 이어져 읽혔습니다.
+   굵기를 함께 올려야 '여기서 새 물음이 시작한다'가 보입니다.
+   (칠판에 띄우는 화면은 아래 `.entry-cast-body`가 크기만 따로 정합니다 —
+   그 규칙이 파일에서 뒤에 오므로 여기 크기는 안 이깁니다.) */
+.paratext-read-label {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 15.5px;
+  font-weight: 700;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+/* 학생이 쓴 글(곁텍스트·RAFT·KWLS 공용) — 지금까지 이 클래스에 기본 스타일이
+   없어 <p> 기본값(white-space: normal)을 그대로 썼고, 학생이 줄바꿈으로 여러
+   줄을 나눠 써도 화면에는 공백으로 뭉개져 한 줄로 보였습니다. pre-wrap으로
+   줄바꿈은 그대로 살리고 긴 줄은 필요할 때 자동 줄바꿈되게 둡니다. */
+.paratext-read-text {
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.paratext-read-text.empty { color: var(--text-sub); }
+/* RAFT 글쓰기 칸은 내용이 길어 한 줄을 통째로 씁니다 */
+/* RAFT는 **두 칸 고정**입니다 — R·A 한 줄, F·T 한 줄, 글쓰기가 아래 한 줄.
+   `.entry-detail-grid`의 `auto-fill`을 그대로 두면 가운데 칸 폭에 따라 한 줄에
+   셋이 서다 둘이 서다 하고, 셋이 서는 화면에서는 R·A·F 다음에 T 하나만 덩그러니
+   남아 네 요소가 한 묶음으로 안 읽힙니다. RAFT는 개수가 넷으로 못 박힌 틀이라
+   폭에 맡길 것이 아닙니다.
+   (`.entry-detail-grid` 뒤에 놓이므로 선택자를 한 겹 좁히지 않아도 이깁니다 —
+   `.kwls-detail-grid`가 `.entry-detail-grid.kwls-detail-grid`로 적혀 있는 것은
+   그쪽 규칙이 파일에서 **앞**에 오기 때문입니다) */
+.raft-detail-grid { grid-template-columns: repeat(2, 1fr); }
+.raft-detail-grid .entry-region.wide { grid-column: 1 / -1; }
+/* 좁아지면 한 줄에 하나 — 두 칸을 우겨 넣으면 카드가 좁아 글이 자꾸 접힙니다 */
+@media (max-width: 900px) {
+  .raft-detail-grid { grid-template-columns: 1fr; }
+}
+
+/* ── 방송 상태 막대 ── */
+/* ===== 수업 화면 창 — 지금 띄우는 것을 교사도 크게 (CastStageModal) ===== */
+/* 발표 모드로 수업할 때 교사 화면에는 '누구의 무엇을 띄우는 중'이라는 막대
+   한 줄뿐이라, 칠판에 무엇이 떠 있는지도 다음 학생의 같은 항목도 볼 수
+   없었습니다(실제 신고). 이 창이 그 둘을 함께 답합니다.
+   축이 둘입니다 — **학생 축이 주인공**(아래 큰 단추 둘 + 키보드 ← →),
+   단계 축은 딸림(위 줄의 작은 단추 둘). 창이 머리말 막대를 덮으므로
+   단계 축도 여기 있어야 합니다. */
+.modal-cast-stage {
+  /* `.modal`이 `max-width: 640px`으로 못 박아 두어 width만 키우면 안
+     넓어집니다 — 그 천장을 함께 올려야 합니다(실측 640 그대로였음).
+     수업 중에 교사가 답을 읽는 창이라 넉넉해야 합니다. */
+  width: 100%;
+  max-width: 960px;
+  /* 높이를 못 박습니다(선생님 요청) — 영역마다 글 양이 달라 넘길 때마다 창이
+     늘었다 줄었다 했습니다. 가장 긴 RAFT 글쓰기에 맞춘 값이고, 모자라면 본문만
+     구릅니다. 곁텍스트 · KWLS · 물음표 · 해시태그도 같은 창이라 함께 고정됩니다. */
+  height: min(780px, 88vh);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  /* 구르는 것은 본문 한 칸뿐 — `.modal`의 overflow-y를 여기서 끕니다 */
+  overflow: hidden;
+}
+.cast-stage-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  /* 방송 중인 창이라는 것이 한눈에 — 머리말 막대와 같은 살구빛입니다 */
+  background: var(--primary-light);
+}
+.cast-stage-head h3 { margin: 0; font-size: 15px; }
+.cast-stage-who {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.cast-stage-who em { font-style: normal; font-size: 12.5px; color: var(--text-sub); }
+.cast-stage-count { font-size: 12.5px; color: var(--text-sub); }
+/* 과일 단추는 받는 학생 이름 옆, 닫기만 오른쪽 끝입니다 — 둘을 붙여
+   두었을 때는 창을 닫으려다 과일이 나갈 수 있었습니다(선생님 지적). */
+.cast-stage-close { margin-left: auto; }
+
+.cast-stage-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.cast-stage-secnav { display: flex; gap: 6px; margin-left: auto; }
+.cast-stage-secnav .btn-ghost { font-size: 12.5px; padding: 5px 10px; }
+
+/* 본문만 구릅니다 — 머리줄과 학생 넘기는 줄은 늘 제자리에 있어야
+   수업 중에 손이 같은 곳을 짚습니다. */
+.cast-stage-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px;
+}
+.cast-stage-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-deep);
+}
+/* 학생 축은 이 창의 주인공이라 단계 축(12.5px)보다 큽니다 */
+.cast-stage-step { font-size: 14px; font-weight: 700; padding: 9px 16px; }
+.cast-stage-hint {
+  flex: 1;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+.cast-stage-stop { margin-left: 4px; }
+
+@media (max-width: 768px) {
+  .cast-stage-hint { display: none; }
+  .cast-stage-foot { flex-wrap: wrap; }
+}
+
+.cast-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: var(--primary-light);
+  border: 1.5px solid var(--primary);
+  border-radius: var(--radius);
+}
+.cast-bar-text {
+  font-size: 13px;
+  color: var(--primary-dark);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.cast-bar-text strong { font-weight: 800; }
+.cast-bar-step {
+  font-size: 11.5px;
+  font-weight: 800;
+  background: #fff;
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+.cast-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+.cast-bar-actions .btn-ghost { background: #fff; }
+.cast-bar-stop { padding: 6px 14px; font-size: 13px; line-height: 1; }
+
+/* 머리말 둘째 줄로 들어간 방송 막대
+   -------------------------------------------------------------
+   예전엔 머리말 아래 제 줄을 하나 차지했습니다. 그런데 그 위 줄은 배지
+   두어 개(학번 · 0/8칸)뿐이라 오른쪽이 통째로 비어 있어, 같은 내용에
+   두 줄을 쓰고 본문이 그만큼 밀렸습니다. 배지 옆 남는 폭을 채우게 합니다.
+   좁아지면 books-head-row의 flex-wrap이 알아서 아랫줄로 내려 줍니다. */
+.books-head-row > .cast-bar {
+  flex: 1 1 320px;
+  margin-top: 0;
+  /* 옆의 학번·칸수 배지와 같은 높이(27px). min-height라 좁은 화면에서 막대
+     안쪽이 접히면 그만큼 자랍니다 — 못 박아 두면 글자가 잘립니다.
+     오른쪽 여백은 버튼이 제 것을 갖고 있어 4px만 둡니다. */
+  min-height: 27px;
+  padding: 0 4px 0 10px;
+  gap: 8px;
+}
+/* .books-head 안의 버튼을 38px로 키우는 규칙(위쪽 '머리말 줄의 컨트롤')이
+   여기까지 닿습니다. 이 막대의 버튼은 머리말 컨트롤이 아니라 막대에 딸린
+   것이라, 27px 안에 들어가는 크기로 되돌립니다. */
+.books-head .cast-bar .btn-ghost,
+.books-head .cast-bar .btn-primary {
+  height: 21px;
+  padding: 0 9px;
+  font-size: 12px;
+}
+.books-head-row > .cast-bar .cast-bar-step { padding: 1px 7px; font-size: 11px; }
+
+/* ── 학생 화면 중계 — 고른 영역 하나만 크게 ── */
+.broadcast-overlay--entry .broadcast-body { overflow-y: auto; }
+.entry-cast {
+  width: min(94vw, 880px);
+  margin: 0 auto;
+  background: #fff;
+  border-radius: var(--radius);
+  padding: 26px 30px 30px;
+}
+.entry-cast-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 10px;
+}
+.entry-cast-head .paratext-letter { width: 34px; height: 34px; font-size: 18px; }
+.entry-cast-head .paratext-card-title strong { font-size: 20px; }
+.entry-cast-head .paratext-step { margin-left: auto; font-size: 13px; }
+.entry-cast-prompt {
+  font-size: 14px;
+  color: var(--text-sub);
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+.entry-cast-body { display: flex; flex-direction: column; gap: 14px; }
+/* 칠판에 띄우는 화면이라 뒷자리에서도 읽히게 크게 */
+.entry-cast-body .paratext-read-text { font-size: 19px; line-height: 1.75; }
+.entry-cast-body .paratext-read-label { font-size: 13px; }
+
+/* 글 길이에 따라 네 단계 (PresentationOverlay가 data-size로 알려 줍니다).
+   KWLS 한 칸은 흔히 열댓 자라, 한 크기로 두면 넓은 화면에 작은 글씨 한 줄만
+   놓입니다. 짧을수록 크게 키우고 상자도 함께 넓힙니다. vw를 섞어 큰 칠판에서
+   더 커지되, 학생 개인 화면에서도 무너지지 않게 clamp로 위아래를 묶습니다. */
+/* vw만 쓰면 넓고 낮은 화면(교실 프로젝터)에서 글이 세로로 넘칩니다.
+   min(vw, vh)로 두 방향을 함께 봅니다 — 폭이 넓어도 화면이 낮으면 그만큼만
+   커집니다. 그래도 넘치면 .broadcast-body가 스크롤을 내줍니다. */
+.entry-cast[data-size="xl"],
+.entry-cast[data-size="lg"] {
+  width: min(97vw, 1650px);
+  padding: 40px 48px 46px;
+}
+.entry-cast[data-size="md"] { width: min(96vw, 1300px); }
+/* 굵게 하지 않습니다. 120px까지 커지는 글자에 700을 얹으면 획이 뭉쳐
+   덩어리로 보이고, 옆의 머리말·안내 글과 무게가 어긋나 균형이 깨집니다.
+   이 크기에서는 '크다'는 것만으로 이미 충분히 강조됩니다. */
+.entry-cast[data-size="xl"] .entry-cast-body .paratext-read-text {
+  font-size: clamp(38px, min(8.5vw, 16vh), 120px);
+  line-height: 1.3;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+.entry-cast[data-size="lg"] .entry-cast-body .paratext-read-text {
+  font-size: clamp(28px, min(4.4vw, 7.5vh), 72px);
+  line-height: 1.42;
+  font-weight: 400;
+}
+.entry-cast[data-size="md"] .entry-cast-body .paratext-read-text {
+  font-size: clamp(22px, min(2.9vw, 4.6vh), 40px);
+  line-height: 1.6;
+}
+/* 큰 단계에서는 머리말도 함께 키웁니다 — 글자만 커지면 제목이 붙어 보입니다 */
+.entry-cast[data-size="xl"] .entry-cast-head,
+.entry-cast[data-size="lg"] .entry-cast-head { margin-bottom: 18px; }
+.entry-cast[data-size="xl"] .entry-cast-head .paratext-letter,
+.entry-cast[data-size="lg"] .entry-cast-head .paratext-letter {
+  width: 44px;
+  height: 44px;
+  font-size: 23px;
+}
+.entry-cast[data-size="xl"] .entry-cast-head .paratext-card-title strong,
+.entry-cast[data-size="lg"] .entry-cast-head .paratext-card-title strong {
+  font-size: clamp(22px, 2.1vw, 30px);
+}
+.entry-cast[data-size="xl"] .entry-cast-prompt,
+.entry-cast[data-size="lg"] .entry-cast-prompt {
+  font-size: clamp(15px, 1.3vw, 19px);
+  margin-bottom: 18px;
+}
+
+/* RAFT 글쓰기 — '한 눈에 보기' 카드 모양(EntryCastCard · `look: "card"`).
+   학생 방송 화면과 교사의 수업 화면 창이 같은 조각입니다. 글자 크기는 위의
+   data-size 단계(`.entry-cast-body .paratext-read-text`)가 그대로 정합니다. */
+.entry-cast--card { background: var(--bg); }
+.entry-cast-card .eov-lead { margin: 0 0 16px; }
+.entry-cast-card .eov-card { box-shadow: none; padding: 18px 22px 22px; }
+.entry-cast-card .eov-text { color: var(--text); }
+.entry-cast--card .eov-lead { font-size: clamp(16px, 1.4vw, 22px); }
+.entry-cast--card .eov-card-head .paratext-card-title strong { font-size: clamp(18px, 1.6vw, 26px); }
+.entry-cast--card .eov-state { font-size: 13px; padding: 4px 11px; }
+.entry-cast--card .eov-prompt { font-size: clamp(13px, 1.1vw, 17px); }
+.entry-cast--card .eov-field { padding: 16px 20px; }
+/* 화면에 맞추기(fit) — 카드가 방송 칸의 높이를 다 쓰고, 글 칸이 남는 높이를 받아
+   그 안에 다 들도록 EntryCastCard가 --fit-size를 잽니다. */
+.broadcast-overlay--entry .broadcast-body:has(.entry-cast--fit) { padding: 20px 24px; }
+.entry-cast--fit {
+  width: min(97vw, 1650px);
+  align-self: stretch;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 22px 30px 26px;
+}
+.entry-cast-card--fit { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.entry-cast-card--fit .eov-card { flex: 1; min-height: 0; }
+.entry-cast-card--fit .eov-fields { flex: 1; min-height: 0; overflow-y: auto; }
+.entry-cast-card--fit .eov-fields .eov-text {
+  font-size: var(--fit-size, 24px);
+  line-height: 1.6;
+  font-weight: 400;
+}
+
+/* 두 칸 꾸러미(물음표로 책 읽기 — `columns: 2`) — 칸을 둘씩 한 줄로.
+   물음표는 '궁금증 | 이유는' 한 쌍, 나의 생각은 '고른 물음 | 나의 생각'.
+   학생 방송 화면과 교사의 수업 화면 창이 **같은 규칙**을 씁니다.
+   가로줄은 줄 사이에만(첫 줄 둘은 없음), 세로선은 오른쪽 칸 앞에만. */
+.entry-cast-body--cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px 0; /* 칸 사이는 여백(padding) + 세로선이 맡습니다 */
+}
+.entry-cast-body--cols > .paratext-read-field {
+  margin-top: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.entry-cast-body--cols > .paratext-read-field:nth-child(-n + 2) {
+  padding-top: 0;
+  border-top: none;
+}
+.entry-cast-body--cols > .paratext-read-field:nth-child(odd) { padding-right: 22px; }
+.entry-cast-body--cols > .paratext-read-field:nth-child(even) {
+  padding-left: 22px;
+  border-left: 1px solid var(--border);
+}
+/* 두 칸이면 가장 작은 단계(sm)여도 상자를 넓힙니다 — 880px을 반으로 나누면
+   한 칸이 400px 남짓이라 글이 자꾸 접힙니다 */
+.entry-cast[data-cols="2"] { width: min(96vw, 1300px); }
+/* 두 칸 · 여러 줄(물음표 다섯 쌍 = 다섯 줄)은 한 화면에 다 들어오는 크기로 —
+   칠판에서 한 쌍씩 굴려 봐야 하면 '무엇에 대한 이유인지'가 화면 밖으로 나갑니다.
+   실측 1920×943에서 다섯 줄이 스크롤 없이 섭니다. */
+.entry-cast[data-cols="2"][data-size="sm"] .entry-cast-body .paratext-read-text {
+  font-size: clamp(17px, min(1.8vw, 3.1vh), 28px);
+  line-height: 1.5;
+}
+
+@media (max-width: 760px) {
+  .entry-detail-grid { grid-template-columns: 1fr; }
+  .cast-bar-actions { margin-left: 0; width: 100%; }
+  .entry-cast-body--cols { grid-template-columns: minmax(0, 1fr); }
+  .entry-cast-body--cols > .paratext-read-field:nth-child(2) {
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+  .entry-cast-body--cols > .paratext-read-field:nth-child(odd) { padding-right: 0; }
+  .entry-cast-body--cols > .paratext-read-field:nth-child(even) { padding-left: 0; border-left: none; }
+  .entry-cast { padding: 18px 16px 22px; }
+  .entry-cast-body .paratext-read-text { font-size: 16px; }
+}
+
+/* 방송 종류를 못 알아봤을 때(배포 직후 학생 화면이 구버전일 때) 안내 */
+.broadcast-stale-note {
+  width: min(92vw, 460px);
+  margin: 0 auto;
+  padding: 28px 30px 30px;
+  background: #fff;
+  border-radius: var(--radius);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+.broadcast-stale-note strong { font-size: 17px; font-weight: 800; color: var(--text); }
+.broadcast-stale-note p { font-size: 14px; line-height: 1.7; color: var(--text-sub); }
+.broadcast-stale-note button { padding: 10px 22px; font-size: 14px; }

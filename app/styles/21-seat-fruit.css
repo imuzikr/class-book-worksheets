@@ -1,0 +1,551 @@
+/* 자리 칸 안의 과일 수 — 칸이 작아 아래쪽에 작게 붙입니다 */
+.attend-seat-fruit {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--primary-dark);
+}
+
+/* 손들기 자리 확인 모달 — 자리표만 담으므로 전광판보다 조금 좁게 */
+.question-seat-modal {
+  width: min(640px, 94vw);
+  max-height: 85vh;
+  overflow-y: auto;
+}
+/* 학생이 보는 자리 배치 — 손든 학생 확인 창과 같은 폭입니다(같은 자리표를
+   그리므로 폭이 다르면 한 교실의 자리표가 화면마다 다른 모양이 됩니다). */
+.my-seat-modal {
+  width: min(640px, 94vw);
+  max-height: 85vh;
+  overflow-y: auto;
+}
+.my-seat-foot {
+  margin: 14px 0 0;
+  font-size: 12.5px;
+  color: var(--text-faint);
+  text-align: center;
+}
+/* 지금 과일이 가장 많은 학생 — 공부방 카드의 '반응 1등' 테두리 강조와
+   같은 색으로 맞춰, 자리표에서도 같은 규칙임을 알 수 있게 합니다. */
+.attend-seat--top {
+  border: 2px solid #5c9e68;
+  box-shadow: 0 0 0 2px rgba(92, 158, 104, 0.25);
+}
+.attend-seat-no {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-sub);
+}
+.attend-seat-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.2;
+  word-break: keep-all;
+}
+/* 손든 표시 — 자리 네모의 오른쪽 위 모서리에 작게. 크면 학번·이름을
+   가려 정작 누가 들었는지 읽기 어려워집니다. 자리 칸도 overflow:hidden이라
+   안쪽 모서리에 둡니다. 테두리 강조는 두지 않습니다 — '과일 1등'의 초록
+   테두리와 뜻이 다른 두 테두리가 한 자리표에 섞여 헷갈렸습니다. */
+.attend-seat-hand {
+  position: absolute;
+  top: 1px;
+  right: 2px;
+  font-size: 12px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
+  animation: attend-hand-wave 1.6s ease-in-out infinite;
+}
+/* 돌발 퀴즈 — 답을 보냈는데 아직 확인 전이면 오른쪽 위에 메모지(퀴즈 창의
+   자리표에는 손바닥을 안 그려 자리가 겹치지 않습니다). 과일을 줬으면 칸 바탕이 초록(출석 '출석'과 같은 값 — 이 앱에서
+   초록은 늘 '됐다'). 반송·미제출은 아무 표시가 없습니다(선생님 요청).
+   자리 칸이 overflow:hidden이라 안쪽 모서리에 둡니다. */
+.attend-seat-quiz {
+  position: absolute;
+  top: 1px;
+  right: 2px;
+  line-height: 0;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.18));
+}
+.attend-seat.attend-seat--quizdone {
+  background: #e8f7ed;
+  border-color: #a6d8b6;
+}
+
+/* 실시간 시청 여부 — 출석(배경색)과는 별개 신호라 자리 칸 왼쪽 아래에
+   작은 점으로만 얹습니다. 색은 참여 전광판의 상태 색과 맞춥니다. */
+.attend-seat-live {
+  position: absolute;
+  bottom: 3px;
+  left: 3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+}
+.attend-seat-live--on { background: #4caf6f; }
+.attend-seat-live--away { background: #f0b483; }
+.attend-seat-live--off { background: #b8b4ab; }
+
+/* 과일 바구니 이벤트 — 응모 여부를 골랐는데 선생님이 아직 접수하지 않은
+   학생(lib/fruitBasket.js의 isEventPending). 자리 칸 오른쪽 위 모서리에 초록
+   점 하나. 같은 자리의 손바닥은 점 왼쪽으로 비켜 섭니다. 초록은 이 앱에서
+   '됐다'는 뜻(출석 · 과일 준 노트)과 같은 계열입니다. */
+.attend-seat-event {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #2f9e5a;
+  border: 1.5px solid #fff;
+  box-shadow: 0 0 0 1px rgba(47, 158, 90, 0.35);
+}
+.attend-seat--event .attend-seat-hand { right: 14px; }
+
+/* 수업 노트에 필기 중 — 오른쪽 위 표시와 겹치지 않게 왼쪽 위에 둡니다.
+   '보는 중' 점이 화면이 켜져 있다는 말이라면, 이것은 손이 움직인다는 말입니다. */
+.attend-seat-noting {
+  position: absolute;
+  top: 1px;
+  left: 2px;
+  font-size: 11px;
+  line-height: 1;
+}
+
+/* 출석 캘린더 — 한 달씩 넘겨 보며 날짜를 고릅니다(교사는 클릭해 아래
+   목록의 기준 날짜를 바꿀 수 있고, 학생은 보기 전용입니다) */
+.study-attendance-calendar {
+  margin-bottom: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff;
+}
+.study-cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 10px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text);
+}
+.study-cal-head button {
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 8px;
+  width: 26px;
+  height: 26px;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--text-sub);
+}
+/* '상세 보기' — 달력 안 왼쪽 위. 글자 버튼이라 폭 고정을 풀어 줍니다. */
+.study-cal-head .study-cal-detail-btn {
+  margin-right: auto;
+  width: auto;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.study-cal-head .study-cal-detail-btn.on {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+.study-cal-head button:hover {
+  background: var(--neutral);
+}
+.study-cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 4px;
+}
+.study-cal-weekdays span {
+  text-align: center;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--text-sub);
+}
+.study-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.study-cal-cell {
+  /* 목록형 모달과 크기를 맞추려고 모달 높이를 고정했는데, aspect-ratio로
+     칸 높이를 폭(780px÷7열)에 맞추면 한 칸이 90px 안팎까지 커져 달력만으로
+     본문을 다 채워 버립니다(아래 출석 표가 안 보임). 높이를 고정값으로 눌러
+     달력을 늘 같은 크기로 유지합니다.
+     -------------------------------------------------------------
+     44px인 이유(42px이 아니라): 아래 주 구분선은 칸 위 gap(4px)에 그리므로
+     줄 간격이 '칸 높이 + 4'입니다. 42면 46인데, 화면 배율이 1.75배인 기기에서
+     46 × 1.75 = 80.5 — 줄마다 반 픽셀씩 어긋나 한 줄 건너 굵게 그려집니다
+     (실측: 장치 픽셀 3,2,3,2). 44로 두면 줄 간격이 48이 되어 배율이 1.25·
+     1.5·1.75·2·2.5·3 어디서든 정수로 떨어져 모든 줄이 같은 굵기가 됩니다.
+     이 값을 바꿀 땐 '칸 높이 + gap'을 8의 배수로 맞추세요. */
+  height: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  font-family: inherit;
+  cursor: default;
+  padding: 2px;
+}
+.study-cal-cell--blank {
+  visibility: hidden;
+}
+/* 상세 보기 — 기록이 있는 날짜 아래로 결석생 이름이 펼쳐지므로 칸 높이를
+   내용에 맞춰 늘립니다(평소엔 44px 고정). */
+.study-cal-grid.detail .study-cal-cell {
+  height: auto;
+  min-height: 44px;
+  justify-content: flex-start;
+  padding: 5px 3px;
+}
+.study-cal-absents {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  margin-top: 2px;
+  padding-top: 3px;
+  border-top: 1px dashed rgba(0, 0, 0, 0.12);
+}
+.study-cal-absent-name {
+  font-size: 10px;
+  line-height: 1.35;
+  font-weight: 600;
+  color: var(--danger);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.study-cal-absent-none {
+  font-size: 10px;
+  line-height: 1.35;
+  font-weight: 600;
+  color: var(--text-sub);
+}
+/* 달력에서 고른 날짜가 아래 표의 기준임을 알려 주는 줄 */
+.study-attendance-active-date {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-sub);
+  margin: 10px 0 -2px;
+}
+/* 제목 옆 반 이름 — 지금 어느 반의 출석을 보는지 */
+.study-attendance-class {
+  margin-left: 8px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  font-size: 12px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+/* 주(週) 구분선 — 칸 사이 gap만으로는 줄이 안 보여 몇 주째인지 눈으로
+   가늠하기 어려웠습니다. 2번째 줄부터 칸 위에 옅은 선을 둡니다.
+   -------------------------------------------------------------
+   칸에 직접 그리면 안 됩니다. box-shadow든 border든 칸의 둥근 모서리
+   (border-radius: 8px)를 따라가고 칸 사이 4px gap에서 끊겨, 한 줄이 아니라
+   일곱 개의 둥근 토막으로 보였습니다.
+   그래서 칸이 아니라 '칸 위의 빈틈'에 그립니다 — 가상 요소를 위쪽 gap
+   한가운데에 두고 좌우로 늘려 옆 칸의 것과 맞닿게 합니다. 일곱 토막이
+   이어져 한 줄이 됩니다.
+   -------------------------------------------------------------
+   늘리는 값이 3px인 이유(2px이 아니라): 절대 배치의 기준은 테두리 상자가
+   아니라 안쪽 여백 상자(padding box)입니다. 이 칸은 border: 1px가 있어
+   기준선이 이미 1px 안쪽이라, gap의 절반(2px)만 주면 1px이 모자라 토막
+   사이가 벌어집니다. 1px(테두리) + 2px(gap 절반) = 3px.
+   덤으로 고른 칸의 테두리(border-color: var(--primary))와도 겹치지
+   않습니다 — 선이 칸 바깥에 있어서입니다. */
+.study-cal-cell { position: relative; }
+.study-cal-cell:nth-child(n + 8)::before {
+  content: "";
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  right: -3px;
+  height: 1px;
+  background: var(--border);
+}
+.study-cal-day {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-sub);
+}
+.study-cal-cell.today .study-cal-day {
+  color: var(--primary-dark);
+}
+.study-cal-cell.has-record {
+  background: #e8f7ed;
+}
+.study-cal-cell.has-record .study-cal-day {
+  color: #26734a;
+  font-weight: 800;
+}
+.study-cal-count {
+  font-size: 9.5px;
+  font-weight: 800;
+  color: #26734a;
+}
+.study-cal-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #26734a;
+}
+.study-cal-cell.selected {
+  border-color: var(--primary);
+}
+button.study-cal-cell:not(:disabled) {
+  cursor: pointer;
+}
+button.study-cal-cell:not(:disabled):hover {
+  background: var(--neutral);
+}
+button.study-cal-cell.has-record:not(:disabled):hover {
+  background: #d8efdf;
+}
+
+/* 캘린더형 — 반별 출석/결석 목록 (고른 날짜 기준) */
+.attend-class-overview {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.attend-class-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-btn);
+  background: #fff;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.attend-class-row:hover {
+  background: var(--neutral);
+}
+.attend-class-row.active {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+.attend-class-name {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.attend-class-stat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+}
+.attend-class-present {
+  color: #26734a;
+}
+.attend-class-absent {
+  color: var(--text-sub);
+}
+
+/* 좁은 화면에서는 **옆으로 구릅니다** — 출석 기록 칸이 밀리초까지 적으며
+   길어져, 안 두면 표가 이 테두리 밖으로 삐져나갑니다(실측 400px에서 48px).
+   글자를 줄이는 대신 구르게 하는 것은 상단바 이동 메뉴와 같은 방식입니다. */
+.study-attendance-table-wrap {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow-x: auto;
+}
+
+.study-attendance-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+}
+
+.study-attendance-table th,
+.study-attendance-table td {
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: middle;
+  font-size: 13px;
+}
+
+.study-attendance-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--card-bg);
+  color: var(--text-sub);
+  font-size: 12px;
+}
+
+.study-attendance-table tr:last-child td {
+  border-bottom: none;
+}
+
+.study-attendance-student {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.study-attendance-student strong {
+  display: block;
+  color: var(--text);
+  font-size: 13.5px;
+}
+
+.study-attendance-student small {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-sub);
+  font-size: 11.5px;
+}
+
+.study-attendance-status {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: #f1eee8;
+  color: var(--text-sub);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.study-attendance-status.on {
+  background: #e8f7ed;
+  color: #26734a;
+}
+
+.study-attendance-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.study-attendance-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.study-attendance-list strong {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.study-attendance-list span {
+  color: #26734a;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* 학생 반 입장 화면 */
+.class-entry {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.class-entry-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: var(--shadow-soft);
+  padding: 36px 32px;
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+}
+
+.class-entry-emoji {
+  font-size: 40px;
+  margin-bottom: 8px;
+}
+
+.class-entry-card h2 {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  color: var(--dark);
+  margin-bottom: 8px;
+}
+
+.class-entry-card p {
+  color: var(--text-sub);
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.class-entry-form {
+  display: flex;
+  gap: 8px;
+}
+
+.class-entry-input {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 16px;
+  font-family: var(--font-mono);
+  letter-spacing: 2px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.class-entry-error {
+  margin-top: 12px;
+  color: #c0392b;
+  font-size: 13px;
+}
+
+.class-entry-hint {
+  margin-top: 18px;
+  font-size: 12px;
+  color: var(--text-sub);
+}
+
+.class-entry-hint code {
+  background: #f2efe9;
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-family: var(--font-mono);
+}

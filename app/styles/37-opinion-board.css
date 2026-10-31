@@ -1,0 +1,838 @@
+/* 접기 칸은 뺍니다 — 셀 하나가 짧은 코드라 쓸 일이 없고 폭만 먹습니다 */
+.pycell-code .cm-foldGutter { display: none; }
+.pycell .ltask-stdin,
+.pycell .ltask-out { margin-top: 0; }
+.pycell-text .rte-area { min-height: 64px; }
+.pycell-undo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--bg-deep);
+  font-size: 12px;
+  color: var(--text-sub);
+}
+.pycell-undo button {
+  margin-left: auto;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--primary-dark);
+  cursor: pointer;
+}
+/* ＋ 글 · ＋ 코드 — 셀 아래 줄 오른쪽, ▶ 실행 왼쪽. 크기는 위 알약 규칙
+   그대로(28px)이고 점선으로 '새로 넣는 단추'임을 말합니다. 한때 셀 목록 맨
+   아래에 반씩 나눈 줄로 따로 섰습니다(.pycell-add — 걷음). */
+.pycell .pycell-add-btn {
+  border: 1px dashed var(--border);
+  background: transparent;
+  font-family: inherit;
+  font-weight: 700;
+  color: var(--text-sub);
+  cursor: pointer;
+}
+.pycell .pycell-add-btn:hover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary-dark);
+}
+/* RAFT 문장은 책방 화면과 같은 규칙(.raft-sentence)을 그대로 쓰고,
+   서랍에서만 위아래 여백을 줄입니다. */
+.ltask .raft-sentence { margin: 0; font-size: 13px; }
+/* 형식 칩 줄 — 그 칸 바로 아래에 붙습니다. 칸 사이 간격(9px)을 그대로 두면
+   위아래가 똑같이 떨어져 어느 칸에 딸린 줄인지 흐려집니다. */
+.ltask-chips { margin-top: -4px; }
+
+
+/* 별도 창 전광판 — 같은 자리표를 창 너비에 맞춰 보여 줍니다. */
+.attend-window-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.attend-window-actions button { word-break: keep-all; }
+.attend-window-status {
+  color: var(--text-sub);
+  font-size: 13px;
+  word-break: keep-all;
+  margin: 0;
+}
+.attend-popout {
+  min-height: 100vh;
+  padding: 20px;
+  background: var(--bg-deep);
+}
+.attend-popout .attend-shell {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  width: 100%;
+  max-height: none;
+  overflow: visible;
+}
+.attend-popout .attend-modal {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  max-width: none;
+  max-height: none;
+  overflow: visible;
+}
+.attend-popout .attend-notes-panel {
+  position: sticky;
+  top: 20px;
+  right: auto;
+  left: auto;
+  flex: 0 0 340px;
+  width: 340px;
+  margin: 0;
+  transform: none;
+  max-height: calc(100vh - 40px);
+  animation: none;
+}
+@media (max-width: 1100px) {
+  .attend-popout .attend-shell { flex-wrap: wrap; }
+  .attend-popout .attend-modal { flex-basis: 100%; }
+  .attend-popout .attend-notes-panel {
+    position: static;
+    flex-basis: 100%;
+    width: 100%;
+  }
+}
+@media (max-width: 768px) {
+  .attend-popout { padding: 12px; }
+  .attend-window-actions { gap: 4px; }
+  .attend-modal > .modal-head { flex-wrap: wrap; gap: 8px; }
+}
+
+/* 출석 관리는 저장된 자리배치 위에 같은 날짜의 출석 기록을 표시합니다. */
+.seat-pairs-grid.attendance-seat-grid {
+  --seat-min-width: 96px;
+  row-gap: 8px;
+}
+.attendance-seat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: 116px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-deep);
+  text-align: center;
+  color: var(--text);
+}
+.attendance-seat--present { background: #e8f7ed; border-color: #8fcea3; }
+.attendance-seat strong { max-width: 100%; font-size: 14px; overflow-wrap: anywhere; }
+.attendance-seat-number,
+/* 찍힌 시각은 **고정폭 숫자**로 — 밀리초까지 적으면 자리마다 글자 폭이
+   달라 세로로 훑을 때 자릿수가 어긋나 보입니다(표에서는 열이 들쭉날쭉).
+   한 줄에 다 서야 순서를 눈으로 좇을 수 있어 줄바꿈도 막습니다. */
+.attendance-seat-time,
+.study-attendance-at {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.attendance-seat-time { font-size: 11.5px; color: var(--text-sub); }
+/* 내 출석 목록에서는 '출석' 뒤에 붙는 딸림값이라 한 칸 띄웁니다 */
+.study-attendance-list .study-attendance-at {
+  margin-left: 8px;
+  color: var(--text-sub);
+  font-size: 12px;
+}
+.attendance-seat .study-attendance-status { flex-shrink: 0; white-space: nowrap; }
+/* 출결 수정 중 — 칸이 단추가 됩니다. 단추 기본 모양을 걷고 칸 모양 그대로,
+   누를 수 있다는 것만 손 모양과 점선 테두리로 알립니다. */
+button.attendance-seat {
+  width: 100%;
+  font: inherit;
+  cursor: pointer;
+}
+.attendance-seat--editable { border-style: dashed; border-color: var(--primary); }
+.attendance-seat--editable:hover { box-shadow: 0 0 0 2px var(--primary-light); }
+.attendance-seat--editable.is-busy { opacity: .55; cursor: progress; }
+/* 선생님이 남긴 기록 — 목록형 표의 시각 앞 '수정' */
+.attendance-seat-manual { font-family: inherit; font-weight: 700; color: var(--primary-dark); }
+.attendance-seat--empty { border-style: dashed; background: transparent; color: var(--text-sub); font-size: 12px; }
+.attendance-seat-help { margin: 0 0 12px; font-size: 13px; color: var(--text-sub); }
+h4.attendance-seat-help { margin-top: 16px; }
+.study-attendance-date-picker input[type="date"] {
+  width: auto;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  color: var(--text);
+  background: #fff;
+}
+@media (max-width: 768px) {
+  .study-attendance-toolbar { flex-wrap: wrap; gap: 8px; }
+  .study-attendance-toolbar > .study-attendance-controls {
+    flex-basis: 100%;
+    height: auto;
+    flex-wrap: wrap;
+  }
+  .study-attendance-controls > * { flex-shrink: 0; white-space: nowrap; }
+  .study-attendance-export { margin-left: 0; }
+}
+
+/* ── 프로젝트 연계 두 단추 (ProjectLinkOptions) — 만들기 창 · 편집 창 공용 ──
+   키워드 · 파이썬 실행기. 두 창이 같은 조각이라 규칙도 한 벌입니다.
+   한 줄에 반씩 선 누름 단추이고, 꺼짐은 연한 살구 · 켜짐은 살구로 채웁니다
+   (활동 유형 두 단추 `.board-acttype-btn`과 같은 격자). */
+.project-links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.project-link-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.project-link-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-width: 0;
+  padding: 11px 14px;
+  border: 1.5px solid #f0d5c6;
+  border-radius: 10px;
+  background: var(--primary-light);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.project-link-btn strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.project-link-btn small {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-sub);
+  line-height: 1.4;
+  word-break: keep-all;
+}
+.project-link-btn:hover:not(:disabled) {
+  border-color: var(--primary);
+}
+.project-link-btn.on {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+.project-link-btn.on small {
+  color: rgba(255, 255, 255, 0.88);
+}
+.project-link-btn.on:hover {
+  background: var(--primary-dark);
+  border-color: var(--primary-dark);
+}
+.project-link-btn:disabled {
+  background: var(--bg);
+  border-color: var(--border);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+.project-link-chips {
+  padding: 0;
+}
+/* 만들기 창의 '연계하기' 칸 — 아래 '활동' 칸과 같은 머리·가름선 */
+.project-form-links {
+  gap: 8px;
+}
+@media (max-width: 480px) {
+  .project-link-grid { grid-template-columns: 1fr; }
+}
+
+/* 셀 창(PyCellModal)의 제목은 입력칸이 아니라 글자입니다 — 학생이 활동
+   이름을 고칠 일이 없습니다(선생님 요청). */
+.study-act-modal-title.study-act-modal-title--view {
+  border-color: transparent;
+  background: none;
+  padding-left: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 셀 창의 몸통 — 셀이 쌓이면 이 칸만 구릅니다(머리줄은 제자리). 셀 편집기는
+   서랍 폭(380px)에 맞춰 만든 것이라 넓은 창에서는 가운데 한 기둥으로 둡니다 —
+   코드 줄이 창 끝까지 늘어나면 눈이 줄 끝과 다음 줄 처음을 오가기 멉니다. */
+.study-act-modal-body.study-act-cells-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px 4px 8px;
+}
+.study-act-cells-body > .pycells {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* ── 프로젝트 원본 편집 (StudyTemplateEditModal) ──
+   '수업 관리' 창(배경 z 100) 위에, 되묻는 창(200) 아래에 섭니다. */
+.tpl-edit-backdrop {
+  z-index: 150;
+}
+/* 고친 것이 어디까지 닿는지 — 창 맨 위 한 줄 */
+.tpl-edit-scope {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--bg);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-sub);
+  word-break: keep-all;
+}
+
+/* ── 프로젝트 가져오기 (StudyProjectImportModal) ──
+   줄 모양은 수업 관리 프로젝트 탭과 같은 .lesson-row · .tpl-row. 여기만의
+   것은 안내 한 줄 · 빈 상태 · 맨 아래 만들기 단추뿐입니다. */
+.tpl-import-modal {
+  width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.tpl-import-hint {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-sub);
+  word-break: keep-all;
+}
+.tpl-import-create {
+  width: 100%;
+}
+.tpl-import-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  padding: 24px 8px 8px;
+  text-align: center;
+}
+.tpl-import-empty p {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--text-sub);
+  word-break: keep-all;
+}
+/* .lesson-create-btn은 가로 줄에 서도록 flex: 1이라, 세로로 쌓는 이 창에서는
+   높이를 나눠 갖지 않게 풉니다. */
+.tpl-import-modal .lesson-create-btn,
+.tpl-import-empty .lesson-create-btn {
+  flex: none;
+}
+
+/* ── 실행기 '＋ 새 프로젝트' — 활동 여럿 (PyProjectPanel) ──
+   활동 칸마다 한 줄, 둘째 줄부터 ✕. '＋ 활동 추가'는 목록 아래 제 줄
+   (만들기 창 .study-activity-add와 같은 점선 모양, 칸이 좁아 작게). */
+.py-project-actrow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.py-project-actrow .py-project-input {
+  flex: 1;
+  min-width: 0;
+}
+.py-project-actdel {
+  flex: 0 0 26px;
+  height: 26px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-sub);
+  font-size: 12px;
+  cursor: pointer;
+}
+.py-project-actdel:hover {
+  background: var(--neutral);
+  color: var(--text);
+}
+.py-project-actadd {
+  padding: 6px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text-sub);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.py-project-actadd:hover {
+  border-color: var(--primary);
+  color: var(--primary-dark);
+}
+.py-project-actdel--gap {
+  cursor: default;
+}
+
+/* =============================================================
+   내 생각은요... — 영역 위에 붙이는 파스텔 메모판 (OpinionBoard)
+   -------------------------------------------------------------
+   메모지 크기(176×142)는 components/OpinionBoard.jsx의 NOTE_W·NOTE_H와
+   **같아야** 합니다 — 자리 셈(lib/opinion.js)이 그 값으로 영역 안의
+   비율을 픽셀로 바꿉니다. 색은 lib/opinion.js의 OPINION_COLORS(인라인
+   --note-bg · --note-ink)에서 옵니다.
+   ============================================================= */
+.opinion-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 2px 0 12px;
+}
+.opinion-prompt {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 10px 16px;
+  background: #fff8ec;
+  border: 1.5px solid #f2dcc2;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+/* 영역 색 — 판 위에서 영역이 한눈에 갈리도록 바탕을 또렷하게 칠합니다
+   (선생님이 주신 그림의 색). 한때 흰색에 가까운 띠 하나뿐이라 영역끼리
+   잘 안 갈렸습니다. --tint-zone 영역 바탕 · --tint-line 경계선 · --tint-ink 글자 */
+.tint-mint { --tint-zone: #d5faf1; --tint-line: #5cc5a8; --tint-ink: #2f8a72; }
+.tint-rose { --tint-zone: #f9dbdb; --tint-line: #e15241; --tint-ink: #c2453a; }
+.tint-lime { --tint-zone: #e4fee0; --tint-line: #69c44b; --tint-ink: #4a8f35; }
+.tint-peach { --tint-zone: #fbeacc; --tint-line: #ef8a4f; --tint-ink: #c06a2f; }
+.tint-sky { --tint-zone: #ddedfc; --tint-line: #5a9be0; --tint-ink: #3a74b8; }
+
+.opinion-board {
+  border: 1.5px solid #eee0cb;
+  border-radius: 18px;
+  background: #fffaf2;
+  /* 영역 하나가 메모지(176px)보다 좁아지면 메모가 옆 영역까지 걸칩니다 —
+     그때는 판을 짜부라뜨리지 않고 옆으로 구르게 둡니다(아래 min-width).
+     창이 넓어도 양옆에 '오늘'·'멋진 순간' 패널이 서면 가운데가 300px대로
+     줄어듭니다(실측 1024px). */
+  overflow-x: auto;
+  overflow-y: hidden;
+  box-shadow: 0 1px 2px rgba(120, 90, 50, 0.05);
+}
+.opinion-heads,
+.opinion-body {
+  display: grid;
+  grid-template-columns: repeat(var(--zones, 2), minmax(0, 1fr));
+  min-width: calc(var(--zones, 2) * 200px);
+}
+.opinion-zone-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px 14px;
+  background: var(--tint-zone);
+  border-bottom: 2px solid var(--tint-line);
+}
+.opinion-zone-head + .opinion-zone-head { border-left: 2px solid var(--tint-line); }
+.opinion-zone-head strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 4px 13px;
+  border-radius: 999px;
+  border: 1.5px solid var(--tint-line);
+  background: #fff;
+  color: var(--tint-ink);
+  font-size: 15px;
+  font-weight: 800;
+}
+.opinion-zone-count { flex-shrink: 0; font-size: 12.5px; font-weight: 700; color: var(--text-sub); }
+.opinion-zone-add {
+  flex-shrink: 0;
+  margin-left: auto;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1.5px dashed var(--tint-ink);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--tint-ink);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+.opinion-zone-add:hover { background: #fff; border-style: solid; }
+/* 한 장을 이미 붙인 학생 — 꺼진 ＋(까닭은 툴팁) */
+.opinion-zone-add:disabled { opacity: 0.4; cursor: not-allowed; }
+.opinion-zone-add:disabled:hover { background: transparent; border-style: dashed; }
+
+/* 메모가 서는 몸통 — 높이가 곧 자리 셈의 zoneH입니다 */
+.opinion-body {
+  position: relative;
+  height: clamp(420px, calc(100vh - 340px), 780px);
+}
+.opinion-zone {
+  background:
+    radial-gradient(circle at 1px 1px, rgba(90, 70, 40, 0.12) 1px, transparent 0) 0 0 / 22px 22px,
+    var(--tint-zone);
+}
+.opinion-zone + .opinion-zone { border-left: 2px solid var(--tint-line); }
+.opinion-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0 24px;
+  text-align: center;
+  color: var(--text-faint);
+  font-size: 14px;
+  pointer-events: none;
+}
+
+/* 메모지 한 장 — 위에 반투명 테이프, 오른쪽 아래 살짝 접힌 귀 */
+.opinion-note {
+  position: absolute;
+  width: 176px;
+  height: 142px;
+  padding: 26px 13px 12px;
+  background: var(--note-bg);
+  border-radius: 3px 3px 16px 3px;
+  box-shadow:
+    0 1px 1px rgba(90, 60, 30, 0.06),
+    0 8px 16px -8px rgba(110, 75, 40, 0.38);
+  transform: rotate(var(--tilt, 0deg));
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+  cursor: pointer;
+  user-select: none;
+  touch-action: none;
+  outline: none;
+}
+.opinion-note::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  width: 54px;
+  height: 16px;
+  transform: translateX(-50%) rotate(-3deg);
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 1px 2px rgba(90, 60, 30, 0.08);
+}
+.opinion-note::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 0 0 16px 0;
+  background: linear-gradient(135deg, transparent 50%, rgba(90, 60, 30, 0.08) 50%);
+}
+.opinion-note:hover,
+.opinion-note:focus-visible {
+  transform: rotate(0deg) translateY(-2px) scale(1.03);
+  box-shadow:
+    0 1px 1px rgba(90, 60, 30, 0.06),
+    0 14px 24px -10px rgba(110, 75, 40, 0.45);
+  z-index: 40;
+}
+.opinion-note:focus-visible { outline: 2.5px solid var(--note-ink); outline-offset: 3px; }
+.opinion-note.is-movable { cursor: grab; }
+.opinion-note.is-dragging {
+  cursor: grabbing;
+  transform: rotate(0deg) scale(1.06);
+  box-shadow: 0 22px 34px -12px rgba(110, 75, 40, 0.5);
+  transition: none;
+  z-index: 60;
+}
+/* 이름표 — 오른쪽 위, 그 메모 색의 짙은 톤 */
+.opinion-note-who {
+  position: absolute;
+  top: 7px;
+  right: 11px;
+  max-width: calc(100% - 34px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--note-ink);
+  letter-spacing: -0.01em;
+}
+/* 내 메모 — 왼쪽 위 작은 핀 */
+.opinion-note-pin {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--note-ink);
+  box-shadow: 0 0 0 2.5px rgba(255, 255, 255, 0.7);
+}
+.opinion-note-text {
+  margin: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #3d352d;
+}
+.opinion-note.is-teacher .opinion-note-who::before { content: "✦ "; }
+/* 이름표 — 익명 닉네임(+ 동물 이모지). 교사에게는 눌러서 실제 학생을 보는
+   단추라 단추 기본 모양을 걷고 글자만 남깁니다. 연 이름표(🔓 학번 이름)는
+   질문방의 실명 칩(.author-real)처럼 옅은 바탕을 깝니다. */
+.opinion-who-emoji { margin-right: 3px; font-size: 1.05em; }
+.opinion-who-btn {
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  line-height: inherit;
+  cursor: pointer;
+  text-align: right;
+}
+.opinion-who-btn:hover { text-decoration: underline; text-underline-offset: 2px; }
+.opinion-who-btn.is-real {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.75);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.opinion-note .opinion-who-btn.is-real { display: block; }
+
+/* 크게 보기 · 쓰기 창 — 창 자체가 그 메모의 색 */
+.modal.opinion-modal {
+  position: relative;
+  width: min(680px, 94vw);
+  max-width: none;
+  max-height: none;
+  overflow: visible;
+  padding: 34px 32px 26px;
+  background: var(--note-bg);
+  border-radius: 6px 6px 28px 6px;
+  box-shadow: 0 30px 60px -20px rgba(80, 55, 30, 0.5);
+}
+.opinion-modal-tape {
+  position: absolute;
+  top: -13px;
+  left: 50%;
+  width: 124px;
+  height: 28px;
+  transform: translateX(-50%) rotate(-2deg);
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 3px rgba(90, 60, 30, 0.1);
+}
+.opinion-modal-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.opinion-modal-zone {
+  padding: 4px 13px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--note-ink);
+  font-size: 13px;
+  font-weight: 800;
+}
+.opinion-modal-who {
+  margin-left: auto;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--note-ink);
+}
+.opinion-modal-text {
+  margin: 0;
+  min-height: 160px;
+  max-height: 58vh;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 21px;
+  line-height: 1.7;
+  color: #3a322a;
+}
+.opinion-modal-input {
+  width: 100%;
+  min-height: 200px;
+  max-height: 46vh;
+  resize: vertical;
+  padding: 14px 16px;
+  border: 1.5px dashed color-mix(in srgb, var(--note-ink) 55%, transparent);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.55);
+  font: inherit;
+  font-size: 18px;
+  line-height: 1.6;
+  color: #3a322a;
+}
+.opinion-modal-input:focus { outline: none; border-style: solid; border-color: var(--note-ink); background: rgba(255, 255, 255, 0.75); }
+.opinion-modal-count { margin-top: 4px; text-align: right; font-size: 12px; color: var(--note-ink); }
+.opinion-modal-pick {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.opinion-modal-pick > span {
+  flex-shrink: 0;
+  width: 30px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--note-ink);
+}
+.opinion-zone-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.opinion-zone-chip {
+  padding: 6px 14px;
+  border: 1.5px solid rgba(90, 60, 30, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.5);
+  color: #5a4d40;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.opinion-zone-chip.on { background: #fff; border-color: var(--note-ink); color: var(--note-ink); }
+.opinion-zone-chip:disabled { opacity: 0.4; cursor: not-allowed; }
+.opinion-swatches { display: flex; flex-wrap: wrap; gap: 9px; }
+.opinion-swatch {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  border-radius: 8px;
+  background: var(--sw);
+  box-shadow: 0 1px 3px rgba(90, 60, 30, 0.2);
+  cursor: pointer;
+}
+.opinion-swatch.on { outline: 2.5px solid var(--sw-ink); outline-offset: 2px; }
+.opinion-modal .modal-actions { margin-top: 20px; }
+.opinion-modal-tools { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+.opinion-modal-remove { color: #b42318; }
+
+/* ── 닉네임 칸 — 익명(nick) 활동에서 글마다 ── */
+.opinion-nick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-bottom: 10px; }
+.opinion-nick > span { flex-shrink: 0; font-size: 13px; font-weight: 700; color: var(--text-sub); }
+.opinion-nick input { flex: 1 1 180px; min-width: 0; max-width: 280px; padding: 7px 11px; font-size: 14px; }
+.opinion-nick em { flex-basis: 100%; font-style: normal; font-size: 12px; color: var(--text-faint); }
+.opinion-modal .opinion-nick > span,
+.opinion-modal .opinion-nick em { color: var(--note-ink); }
+
+/* ── 목록형 — 영역마다 한 칸, 글이 올린 차례대로 쌓임 ── */
+.opinion-list-body {
+  display: grid;
+  grid-template-columns: repeat(var(--zones, 2), minmax(0, 1fr));
+  min-width: calc(var(--zones, 2) * 200px);
+  /* 창 바닥까지 — 높이는 OpinionBoard가 판의 자리를 재어 --list-h로 줍니다
+     (위에 서는 머리말 · 물음 줄의 높이가 화면마다 달라 고정 값으로는 중간에서
+     끊긴 듯 보였습니다). 재기 전에는 아래 값. */
+  min-height: var(--list-h, clamp(300px, calc(100vh - 340px), 900px));
+}
+.opinion-list-col { padding: 10px; background: var(--tint-zone); }
+.opinion-list-col + .opinion-list-col { border-left: 2px solid var(--tint-line); }
+.opinion-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.opinion-list-item {
+  display: flex;
+  gap: 9px;
+  padding: 10px 12px;
+  border: 1px solid rgba(90, 70, 40, 0.12);
+  border-left: 4px solid var(--note-ink);
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  transition: box-shadow 0.15s, transform 0.1s;
+}
+.opinion-list-item:hover { box-shadow: 0 3px 10px rgba(120, 90, 50, 0.12); transform: translateY(-1px); }
+.opinion-list-item:focus-visible { outline: 2.5px solid var(--tint-line); outline-offset: 2px; }
+.opinion-list-item.is-mine { background: var(--note-bg); }
+.opinion-list-no {
+  flex-shrink: 0;
+  min-width: 20px;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--tint-ink);
+  font-variant-numeric: tabular-nums;
+}
+.opinion-list-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.opinion-list-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--text);
+}
+.opinion-list-who { align-self: flex-start; font-size: 12px; font-weight: 700; color: var(--note-ink); }
+.opinion-list-item.is-teacher .opinion-list-who::before { content: "✦ "; }
+.opinion-list-empty { margin: 8px 4px; font-size: 13px; color: var(--text-faint); }
+
+/* 만들기 · 편집 창의 영역 이름 칸 — 한 줄에 둘씩 */
+.opinion-zone-inputs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.opinion-zone-input { position: relative; display: flex; }
+.opinion-zone-input input { flex: 1; min-width: 0; padding-right: 32px; }
+.opinion-zone-del {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  transform: translateY(-50%);
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-sub);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+.opinion-zone-del:hover { background: var(--bg-deep); color: var(--text); }
+.opinion-zone-more { justify-self: start; }
+/* 만들기 창은 고른 개수(2~4)가 한 줄에 같은 폭으로 — 판의 영역 차례와 같게 */
+.opinion-zone-inputs--row { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+
+/* 좁은 화면 — 영역을 짜부라뜨리지 않고 판이 옆으로 구릅니다 */
+@media (max-width: 768px) {
+  .opinion-bar { flex-wrap: wrap; }
+  .modal.opinion-modal { padding: 30px 20px 20px; }
+  .opinion-modal-text { font-size: 18px; }
+  .opinion-zone-inputs,
+  .opinion-zone-inputs--row { grid-template-columns: 1fr; grid-auto-flow: row; }
+}

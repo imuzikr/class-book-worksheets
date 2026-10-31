@@ -1,0 +1,822 @@
+
+/* ===================== 공부방 (Study) ===================== */
+.study-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.study-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  /* padding은 study-head와 study-cols-wrap에서 각각 처리 */
+}
+
+/* KWL 패널 + 보드 컬럼 나란히 */
+.study-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* 보드 컬럼 영역 래퍼 */
+.study-cols-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0 24px;
+}
+
+.study-cols-wrap .empty-note {
+  margin-top: 20px;
+}
+
+/* ── 오른쪽: 참여 보상 패널 (교사 전용) ── */
+/* 폭을 패널이 아니라 **안쪽 내용에** 줍니다.
+   -------------------------------------------------------------
+   예전에는 패널에 width: 288px를 걸었습니다. box-sizing이 border-box라
+   세로 스크롤바가 생기면 그 15px가 288 안에서 빠져나가, 자리표 칸과 모둠
+   이름표가 한꺼번에 눌리고 줄이 다시 접혔습니다('궁금한 순간'을 펼쳤을 때
+   실제로 그랬습니다).
+   지금은 내용 폭을 312px로 못박고, 패널은 거기에 여백과 스크롤바 자리를
+   더한 만큼 저절로 넓어집니다. scrollbar-gutter: stable로 그 자리를 늘
+   비워 두어, 스크롤바가 생기고 사라져도 내용은 한 픽셀도 움직이지 않습니다.
+   (scrollbar-gutter를 모르는 옛 브라우저에서는 예전처럼 동작합니다 —
+   그때도 내용 폭 312px 자체는 지켜집니다) */
+.reward-panel {
+  flex-shrink: 0;
+  border-left: 1px solid var(--border);
+  background: var(--bg-deep);
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding: 18px 14px 24px;
+}
+/* 폭을 이 안쪽 상자가 정합니다. 패널에 걸면 안 되는 이유가 둘입니다.
+   · scrollbar-gutter는 어느 box-sizing에서든 내용 폭에서 빠져나갑니다
+     (재 봤습니다: border-box 288px → 244px, content-box 260px → 245px).
+   · 겹쳐 뜨는 것들(확대 보기·과일 주기·누가기록)이 패널의 직계 자식이라
+     '> *'로 폭을 주면 전체 화면 배경이 260px로 쪼그라듭니다.
+   이 상자 안에 두면 그것들은 position: fixed라 폭에 매이지 않습니다. */
+.reward-panel-inner {
+  width: 312px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+/* ── 궁금한 순간 — 반 전체 과일 집계(자리표와 모둠 현황 사이) ──
+   '멋진 순간'과 같은 패널의 두 칸이라, 흰 카드에 담긴 버튼이 아니라 같은
+   제목 줄 모양으로 둡니다(제목은 .reward-title을 그대로 씁니다). 칸을 가르는
+   선은 아래 '모둠 현황'과 같은 방식입니다. */
+.reward-tally {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.reward-tally-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  /* .reward-head와 같은 좌우 여백 — 제목끼리 세로로 나란해집니다 */
+  padding: 0 4px;
+  background: none;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+}
+.reward-tally-toggle:hover .reward-title { color: var(--primary-dark); }
+.reward-tally-caret {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--text-sub);
+}
+/* 카드로 감싸지 않습니다 — 패널 바탕 위에 그대로 얹혀 '배경 같은' 결을
+   유지합니다. 대신 막대 색을 --primary에서 --primary-dark로 내렸습니다:
+   흰 바탕에서는 --primary가 3.12:1이지만 패널 바탕(--bg-deep) 위에서는
+   2.84:1로 기준(3:1)에 못 미칩니다. --primary-dark는 3.88:1입니다. */
+.reward-tally-body {
+  padding: 0 4px;
+}
+.reward-tally-empty,
+.reward-tally-sum {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-sub);
+}
+.reward-tally-sum { margin-bottom: 8px; }
+.reward-tally-list {
+  display: flex;
+  flex-direction: column;
+  /* 막대끼리 2px 바탕이 비쳐야 서로 붙어 한 덩어리로 읽히지 않습니다 */
+  gap: 2px;
+  max-height: 320px;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+/* 줄 전체가 단추입니다 — 눌러서 그 학생의 이력 팝오버를 엽니다. 막대만
+   누르게 하면 과일이 적은 학생일수록 누를 곳이 좁아집니다(0개면 없습니다). */
+.reward-tally-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 18px;
+  width: 100%;
+  padding: 1px 2px;
+  border: none;
+  border-radius: 5px;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.reward-tally-row:hover { background: var(--bg-deep, #f5f4ef); }
+.reward-tally-row.on { background: var(--neutral); }
+
+/* ── 이력 팝오버 ──────────────────────────────────────────
+   모달이 아닙니다 — 뒤를 덮지 않고, 누른 줄 옆에 붙고, 바깥을 누르거나
+   Esc·×로 닫힙니다. **`position: fixed`인 것이 핵심입니다**: 목록이
+   `max-height: 320px`로 구르므로 줄 안에 절대 배치로 넣으면 목록 밖으로
+   나가는 부분이 잘립니다. 자리는 컴포넌트가 인라인으로 줍니다. */
+.tally-pop {
+  position: fixed;
+  z-index: 320;
+  width: 300px;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(46, 36, 26, 0.16);
+}
+.tally-pop-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.tally-pop-head strong {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13.5px;
+  color: var(--dark);
+}
+.tally-pop-head strong em {
+  margin-right: 5px;
+  font-style: normal;
+  font-weight: 600;
+  color: var(--text-sub);
+}
+.tally-pop-count {
+  flex-shrink: 0;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-sub);
+}
+.reward-tally-name {
+  flex: 0 0 52px;
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.reward-tally-track {
+  flex: 1;
+  min-width: 0;
+  height: 10px;
+  /* 패널 바탕(--bg-deep)보다 한 톤 어두워야 빈 자리가 자리로 읽힙니다 */
+  background: #e6e3da;
+  border-radius: 3px;
+  overflow: hidden;
+}
+/* 왼쪽(기준선)은 각지게, 값이 끝나는 오른쪽만 둥글게 */
+.reward-tally-fill {
+  display: block;
+  height: 100%;
+  background: var(--primary-dark);
+  border-radius: 0 4px 4px 0;
+}
+.reward-tally-val {
+  flex: 0 0 20px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
+  /* 숫자는 잉크 색으로 — 막대 색을 글자에까지 쓰면 어느 것이 자료인지
+     흐려집니다. */
+  color: var(--text);
+}
+.reward-tally-val.zero { color: var(--text-sub); font-weight: 400; }
+
+.reward-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 4px;
+}
+.reward-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.reward-collapse-btn {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--text-sub);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.reward-collapse-btn:hover {
+  background: var(--neutral);
+}
+
+/* 접힌 상태 — 세로 슬림 바 (보드 접기와 같은 패턴) */
+.reward-panel.reward-panel--collapsed {
+  width: 44px;
+  padding: 14px 0 16px;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  overflow: hidden;
+  /* 접힌 상태는 스크롤하지 않으므로 비워 둘 자리도 없습니다 */
+  scrollbar-gutter: auto;
+}
+/* 접힌 띠는 안쪽 상자를 쓰지 않는 별도 갈래라(컴포넌트가 일찍 return),
+   여기서 제 flex를 직접 세웁니다. */
+.reward-panel.reward-panel--collapsed {
+  display: flex;
+  flex-direction: column;
+}
+.reward-panel.reward-panel--collapsed:hover {
+  background: var(--neutral);
+}
+.reward-collapsed-expand {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-sub);
+}
+.reward-collapsed-icon {
+  font-size: 16px;
+}
+.reward-collapsed-title {
+  writing-mode: vertical-rl;
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 3px;
+  color: var(--dark);
+}
+.reward-title {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--dark);
+}
+.reward-sub {
+  font-size: 11.5px;
+  color: var(--text-sub);
+  font-weight: 600;
+}
+.reward-empty {
+  font-size: 13px;
+  color: var(--text-sub);
+  padding: 8px 6px;
+  line-height: 1.6;
+}
+
+/* 멋진 순간 패널 — 자리표 아래 모둠 현황(학생 칩을 드래그·탭으로 재배치) */
+.reward-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.reward-groups-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.reward-groups-title {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--text-sub);
+}
+.reward-groups-count-btns {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+/* 옆의 '정렬' 알약과 **높이를 하나로**(22px) — 같은 줄에 선 것들이 2px씩
+   달라도 줄이 미묘하게 들쭉날쭉해 보입니다. */
+.reward-groups-count-btn {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--text-sub);
+  cursor: pointer;
+}
+.reward-groups-count-btn:hover:not(:disabled) {
+  background: var(--neutral);
+}
+.reward-groups-count-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+/* 그림이 들어가 20px 알약에는 빠듯해 22px로 한 칸 키웁니다 —
+   옆의 ＋ − 단추도 같은 22px로 함께 올렸습니다. */
+.reward-groups-sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-sub);
+  cursor: pointer;
+}
+.reward-groups-sort-btn:hover {
+  background: var(--neutral);
+  border-color: var(--primary);
+  color: var(--text);
+}
+.reward-group-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: #fff;
+  border-left: 3px solid var(--group-color, var(--border));
+  cursor: default;
+}
+.reward-group-row--unassigned {
+  border-left-color: var(--border);
+  border-left-style: dashed;
+}
+.reward-group-name {
+  flex-shrink: 0;
+  padding-top: 3px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text);
+}
+/* 모둠 이름 + 그 아래 과일 단추(모둠원 모두에게 하나씩 — 선생님 요청).
+   이름 칸의 폭을 단추가 정해, 모둠마다 칩이 같은 자리에서 시작합니다. */
+.reward-group-lead {
+  flex-shrink: 0;
+  width: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+}
+.reward-group-lead .reward-group-name {
+  overflow-wrap: anywhere;
+}
+.reward-group-award {
+  height: 22px;
+  padding: 0 4px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s;
+}
+.reward-group-award:hover:not(:disabled) { background: var(--primary); color: #fff; }
+.reward-group-award:disabled { opacity: 0.5; cursor: default; }
+/* 다 준 뒤 잠깐 — 이 앱에서 초록은 늘 '됐다' */
+.reward-group-award.done,
+.reward-group-award.done:disabled,
+.reward-group-award.done:hover:not(:disabled) { background: #e8f7ed; color: #2f6b47; opacity: 1; }
+.reward-group-members {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 4px;
+  /* 한 줄에 3명, 최대 6명(2줄) 기준으로 미리 높이를 잡아 둡니다 —
+     인원이 적을 때도 모둠 칸 높이가 들쭉날쭉하지 않게(칩 높이 23px × 2줄
+     + 줄 사이 gap 4px). */
+  min-height: calc(23px * 2 + 4px);
+}
+.reward-group-empty {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--text-sub);
+  padding-top: 3px;
+}
+/* 모둠 안의 학생 카드 — 드래그로 옮기거나(끌어서), 눌러서 모둠에서 빼거나
+   (모둠 안) 짚어 뒀다가 다른 모둠을 눌러 옮깁니다(미배정 칸) */
+.reward-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-deep);
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 15px;
+  font-weight: 700;
+  color: var(--text);
+  cursor: grab;
+}
+.reward-chip:hover {
+  border-color: var(--primary);
+}
+.reward-chip.picked {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary-dark);
+}
+/* 지금 반 명단에 없는 사람 — 배정하던 때의 스냅샷에만 남은 자취입니다.
+   점선 테두리로 '여기 있을 사람이 아니다'를 알리되, 지우는 것은 선생님이
+   눌러서 하도록 그대로 둡니다(자동으로 걷어 내면 명단을 받는 중에 잘못
+   지울 수 있습니다). 누르면 빠지므로 커서는 손가락으로 바꿉니다. */
+.reward-chip.stale {
+  border-style: dashed;
+  border-color: #c9c2b6;
+  background: transparent;
+  color: var(--text-sub);
+  cursor: pointer;
+}
+.reward-chip.stale:hover {
+  border-color: var(--primary);
+  color: var(--primary-dark);
+}
+
+/* 발표 모드 하단의 별 표시 */
+.present-star {
+  font-size: 20px;
+  letter-spacing: -2px;
+  flex-shrink: 0;
+}
+/* 발표 모드 — 모둠 카드의 구성원·안내 */
+.present-group-members {
+  font-size: 14px;
+  color: var(--text-sub);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.present-group-note {
+  font-size: 13.5px;
+  color: var(--text-sub);
+}
+/* 과일 그리드 — 10개씩 한 줄, 20개면 2줄로 반복 */
+.reward-fruits {
+  margin-top: 6px;
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 3px 1px;
+  justify-items: center;
+}
+.reward-fruit {
+  font-size: clamp(10px, 0.8vw, 12.5px);
+  line-height: 1.15;
+}
+
+/* ── 발표 모드 — 아이콘(▶) 전용 원형 버튼 ── */
+.study-present-btn {
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--primary);
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  font-size: 11px;
+  line-height: 1;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  padding: 0 0 0 2px; /* ▶ 글리프의 시각 중심 보정 */
+  flex-shrink: 0;
+}
+.study-present-btn:hover:not(:disabled) {
+  background: #f3d9cb;
+}
+.study-present-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.present-backdrop {
+  z-index: 1000;
+}
+.present-modal {
+  position: relative;
+  width: 94vw;
+  height: 94vh;
+  max-width: 1600px;
+  background: #fff;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.4);
+}
+.present-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 26px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.present-who {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.present-avatar {
+  font-size: 30px;
+  flex-shrink: 0;
+}
+.present-name {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 24px;
+  color: var(--dark);
+  white-space: nowrap;
+}
+.present-progress {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--primary-dark);
+  background: var(--primary-light);
+  padding: 4px 14px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+.present-board {
+  color: var(--text-sub);
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* 발표 화면 본문 — 첨부는 없고, 가운데 슬라이드 카드 한 장에 텍스트만 크게 */
+.present-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 40px 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.present-slide {
+  width: 100%;
+  max-width: 880px;
+  margin: auto;
+  padding: 56px 64px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: 0 10px 36px rgba(46, 36, 26, 0.1);
+}
+.present-slide-title {
+  font-family: var(--font-serif);
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--dark);
+  text-align: center;
+  line-height: 1.35;
+  margin: 0 0 30px;
+}
+.present-slide-content {
+  font-size: 23px;
+  line-height: 1.9;
+  color: var(--dark);
+}
+/* .study-card-body(14px, 카드 읽기 모드용)가 이 요소에도 같이 붙는데
+   (present-slide-content study-card-body), 두 클래스 선택자의 우선순위가
+   같아 나중에 나오는 .study-card-body가 이겨서 정작 발표 화면에서는
+   23px가 아니라 14px로 작게 보였습니다. 두 클래스를 함께 지정해 확실히
+   이기게 하고, 발표 화면이니 굵게도 더해 눈에 띄게 합니다. */
+.present-slide-content.study-card-body {
+  font-size: 26px;
+  line-height: 1.7;
+  font-weight: 700;
+  color: var(--dark);
+}
+/* 활동 제목(질문) 띠도 같은 이유(.study-card-body .activity-title가 나중에
+   나와 이김)로 작게 보이던 걸, 발표 화면에서는 답 글자 크기에 맞춰 함께
+   키웁니다. 두 클래스를 함께 건 선택자로 확실히 우선하게 합니다. */
+.present-slide-content.study-card-body .activity-title {
+  font-size: 19px;
+}
+/* 제목 띠가 19px로 커진 만큼 띠 자체도 높아져, 고정값이던 padding-top
+   (48px)으로는 답 텍스트와 겹쳤습니다. 발표 화면에서만 더 띄웁니다. */
+.present-slide-content.study-card-body .activity-section {
+  padding-top: 58px;
+}
+.present-empty {
+  color: var(--text-sub);
+  font-size: 18px;
+  text-align: center;
+}
+
+/* 활동(질문)이 여러 개인 카드 — 활동마다 제목을 먼저 굵고 크게, 그
+   아래에 그 학생의 내용을 보여줍니다. 왼쪽 정렬해 여러 개가 쌓여도
+   제목·내용의 짝을 눈으로 따라가기 쉽게 합니다. */
+.present-activities {
+  display: flex;
+  flex-direction: column;
+  gap: 34px;
+  text-align: left;
+}
+.present-activity {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.present-activity + .present-activity {
+  padding-top: 30px;
+  border-top: 1px solid var(--border);
+}
+.present-activity-title {
+  font-family: var(--font-serif);
+  font-size: 27px;
+  font-weight: 800;
+  color: var(--dark);
+  line-height: 1.35;
+}
+.present-activities .present-empty {
+  text-align: left;
+}
+.present-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 26px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.present-fruits {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.present-fruit-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 3px;
+  grid-template-columns: none;
+  max-width: 42vw;
+  overflow: hidden;
+}
+.present-fruit-strip .reward-fruit {
+  font-size: 20px;
+}
+.present-fruit-count {
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--primary-dark);
+  white-space: nowrap;
+}
+.present-award {
+  padding: 12px 24px;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.present-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(30, 25, 20, 0.4);
+  color: #fff;
+  font-size: 40px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  /* ‹ › 글리프의 베이스라인 여백 때문에 아래로 쳐져 보여 위로 보정 */
+  padding-bottom: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.present-nav:hover:not(:disabled) {
+  background: rgba(30, 25, 20, 0.62);
+}
+.present-nav:disabled {
+  opacity: 0.2;
+  cursor: default;
+}
+.present-prev {
+  left: 18px;
+}
+.present-next {
+  right: 18px;
+}
+
+/* ── 발표 강제 전환(방송) — 학생 화면 전체를 덮는 오버레이 ── */
+.broadcast-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+}
+.broadcast-bar {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 22px;
+  background: var(--dark);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+}
+.broadcast-live-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #ef4444;
+  flex-shrink: 0;
+  animation: broadcast-pulse 1.4s ease-in-out infinite;
+}
+@keyframes broadcast-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.broadcast-board {
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 600;
+}
+.broadcast-progress {
+  margin-left: auto;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+}
+.broadcast-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 40px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.broadcast-who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  margin-bottom: 34px;
+}
+.broadcast-who strong {
+  font-size: 18px;
+  color: var(--dark);
+}

@@ -1,0 +1,816 @@
+
+/* 학급별 분석 — 지금 보고 있는 반을 학생 이름 옆에 작게 */
+.admin-hero-class {
+  margin-left: 10px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 800;
+  vertical-align: middle;
+}
+
+/* 학급 목록(사이드바, 종합 분석 모드) */
+.class-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text);
+}
+.class-row:hover {
+  background: var(--neutral, #f3f1ec);
+}
+.class-row.active {
+  background: rgba(224, 122, 95, 0.1);
+  border-color: var(--primary, #e07a5f);
+}
+.class-row-icon {
+  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* 학급 전체 통계 — 표 + 차트 2열 */
+/* 예전에는 '학생별 활동' 표와 나란히 두 칸이었습니다(1.7fr 1fr). 표를
+   빼면서 남은 키워드 분포가 폭을 다 쓰도록 한 칸으로 둡니다. */
+.overview-charts {
+  grid-template-columns: 1fr;
+}
+
+.overview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.overview-table th {
+  text-align: center;
+  color: var(--text-sub);
+  font-weight: 600;
+  font-size: 11px;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border);
+}
+.overview-table th:first-child {
+  text-align: left;
+}
+
+.overview-table td {
+  padding: 7px 6px;
+  text-align: center;
+  border-bottom: 1px solid var(--neutral, #f0eee7);
+}
+
+.overview-table td.ov-name {
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.ov-unresolved {
+  font-size: 11px;
+  color: var(--primary-dark, #b85c4a);
+  background: rgba(224, 122, 95, 0.12);
+  border-radius: 4px;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+
+/* 공부방별 통계 표 — 제출률/참여 막대 셀 */
+.study-stats-table .rate-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+}
+
+.study-stats-table .rate-track {
+  flex: 1;
+  max-width: 90px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--neutral, #eee);
+  overflow: hidden;
+}
+
+.study-stats-table .rate-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary, #e07a5f);
+}
+
+.study-stats-table .rate-fill.kwl {
+  background: #5c9e68;
+}
+
+.study-stats-table .rate-cell span {
+  font-size: 11px;
+  color: var(--text-sub);
+  white-space: nowrap;
+  min-width: 30px;
+  text-align: right;
+}
+
+/* ── 학생 KWL 기록 패널 (관리자) ── */
+.kwl-record-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.kwl-record-day {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kwl-record-date {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-sub);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 4px;
+}
+
+.kwl-record-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  background: var(--card-bg, #faf9f6);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.kwl-record-entry .kwl-history-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.kwl-record-entry .kwl-history-row p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+/* ── 접속 시간 추이 (선 그래프) ── */
+.access-panel {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.access-line {
+  width: 100%;
+  height: auto;
+  display: block;
+  margin-top: 8px;
+}
+
+.access-line-grid {
+  stroke: #e8e5dd;
+  stroke-width: 1;
+}
+
+.access-line-grid.faint {
+  stroke: #f0eee7;
+}
+
+.access-line-axis {
+  fill: var(--text-sub);
+  font-size: 11px;
+}
+
+.access-line-area {
+  fill: rgba(92, 158, 104, 0.14);
+}
+
+.access-line-path {
+  fill: none;
+  stroke: #5c9e68;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.access-line-foot {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-sub);
+  text-align: right;
+}
+
+/* ── 학습 균형 레이더 오버뷰 ── */
+.activity-overview {
+  flex-shrink: 0;
+  width: 350px;
+  border-left: 1px solid var(--border);
+  margin-left: 20px;
+  padding-left: 20px;
+  padding-top: 2px;
+}
+
+.overview-heading {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-sub);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+
+/* 레이더(좌) + 막대(우) 나란히 */
+.overview-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.overview-svg {
+  flex-shrink: 0;
+}
+
+.overview-empty {
+  width: 172px;
+  height: 157px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--text-sub);
+  flex-shrink: 0;
+}
+
+.overview-bars {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.overview-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.overview-bar-label {
+  width: 26px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-sub);
+}
+
+.overview-bar-track {
+  flex: 1;
+  height: 6px;
+  background: var(--neutral);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.overview-bar-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.overview-bar-pct {
+  width: 32px;
+  text-align: right;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.donut {
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 8px 0;
+  position: relative;
+}
+
+.donut::after {
+  content: "";
+  position: absolute;
+  inset: 22px;
+  background: #fff;
+  border-radius: 50%;
+}
+
+.donut span {
+  position: relative;
+  z-index: 1;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--dark);
+}
+
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 최근 활동 + KWL 기록 — 2열 나란히 (넓은 화면) */
+.admin-bottom-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  align-items: start;
+}
+.admin-bottom-row > .admin-activity-panel {
+  min-width: 0;
+  margin-top: 0;
+}
+
+/* 최근 활동 — 5건까지 보이고 초과분은 스크롤 */
+.admin-activity-panel .activity-list {
+  max-height: 194px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.activity-row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 64px 72px;
+  align-items: center;
+  gap: 10px;
+  border-top: 1px solid var(--border);
+  padding-top: 9px;
+  font-size: 13px;
+}
+
+.activity-row:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.activity-row strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activity-row span,
+.activity-row time {
+  color: var(--text-sub);
+}
+
+.activity-type {
+  justify-self: start;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-weight: 800;
+}
+
+.activity-type.ask {
+  color: var(--primary-dark);
+  background: var(--primary-light);
+}
+
+.activity-type.answer {
+  color: #3d7a4a;
+  background: #e9f0e6;
+}
+
+.admin-empty {
+  color: var(--text-sub);
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+  font-size: 13px;
+}
+
+@media (max-width: 1100px) {
+  .admin-stats-grid {
+    grid-template-columns: repeat(3, minmax(120px, 1fr));
+  }
+
+  .admin-charts {
+    grid-template-columns: 1fr 1fr;
+  }
+  .heatmap-cell {
+    width: 11px;
+    height: 11px;
+  }
+  .heatmap-month-cell {
+    width: 11px;
+  }
+}
+
+@media (max-width: 820px) {
+  .admin-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .student-panel {
+    max-height: 250px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .admin-hero {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-stats-grid {
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
+
+  .activity-row {
+    grid-template-columns: 52px minmax(0, 1fr);
+  }
+
+  .activity-row span:not(.activity-type),
+  .activity-row time {
+    display: none;
+  }
+}
+
+/* ===================== 학생 학습 리포트 ===================== */
+.report-layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+}
+
+.report-side {
+  background: #fff;
+  border-right: 1px solid var(--border);
+  padding: 16px 14px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.report-main {
+  min-width: 0;
+  overflow-y: auto;
+  padding: 20px 24px;
+}
+
+/* 사이드 인사이트 패널 */
+.side-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 4px;
+  margin-bottom: 4px;
+}
+
+.side-section-head h3 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--dark);
+}
+
+.side-section-head span {
+  font-size: 12px;
+  color: var(--text-sub);
+}
+
+.side-section-head.pending-head h3 {
+  color: #92400e;
+}
+
+.side-section-head.pending-head span {
+  color: #a16207;
+}
+
+.side-ref-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+
+.side-ref-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: background 0.12s;
+}
+
+.side-ref-item:hover {
+  background: var(--bg);
+}
+
+.side-ref-item.pending {
+  border-left: 3px solid #e8a817;
+  padding-left: 8px;
+  background: #fffbf3;
+  border-radius: 0 8px 8px 0;
+}
+
+.side-ref-item.pending:hover {
+  background: #fff3d4;
+}
+
+.side-ref-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.side-ref-top time {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-sub);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.side-ref-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.side-ref-sub {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-sub);
+}
+
+.side-ref-action {
+  font-size: 11px;
+  color: #a16207;
+  font-weight: 600;
+}
+
+.side-ref-preview {
+  font-size: 12px;
+  color: var(--text-sub);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.5;
+}
+
+.side-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 10px 0 12px;
+}
+
+.side-empty {
+  font-size: 13px;
+  color: var(--text-sub);
+  line-height: 1.65;
+  padding: 4px 6px;
+}
+
+.report-hero {
+  padding: 4px 0 2px;
+}
+
+.report-reflection {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.reflection-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.reflection-item {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+/* 내 인사이트 모음 — 아코디언 헤더(클릭해서 펼침/접기) */
+.reflection-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0 0 2px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.reflection-toggle h2 {
+  font-size: 16px;
+}
+
+.reflection-toggle .reflection-count {
+  font-size: 13px;
+  color: var(--text-sub);
+}
+
+.reflection-toggle .reflection-chevron {
+  margin-left: auto;
+  font-size: 14px;
+  color: var(--text-sub);
+  transition: transform 0.18s ease;
+}
+
+.reflection-toggle.open .reflection-chevron {
+  transform: rotate(180deg);
+}
+
+/* 내 인사이트 모음 — 실제 인사이트 기록 카드 (많아지면 내부 스크롤로 높이 제한) */
+.reflection-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.reflection-card {
+  background: var(--primary-light);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--primary);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.reflection-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.reflection-card-head strong {
+  font-size: 14px;
+  color: var(--text);
+}
+
+.reflection-card-head time {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-sub);
+}
+
+.reflection-card .reflection-learned {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.reflection-card .reflection-next {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-sub);
+}
+
+.report-charts {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 900px) {
+  .reflection-grid {
+    grid-template-columns: 1fr;
+  }
+  .report-charts {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .report-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  .report-side {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    max-height: 44vh;
+  }
+}
+
+/* 통계 카드 드릴다운 패널 */
+.stat-detail {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.stat-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.stat-detail-head h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--dark);
+}
+
+.stat-detail-count {
+  font-size: 13px;
+  color: var(--text-sub);
+}
+
+.stat-detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.stat-detail-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text);
+  transition: background 0.12s;
+}
+
+.stat-detail-item:hover {
+  background: var(--bg);
+}
+
+.stat-detail-title {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stat-detail-badge {
+  font-size: 12px;
+  color: var(--text-sub);
+  white-space: nowrap;
+}
+
+.stat-detail-item time {
+  font-size: 12px;
+  color: var(--text-sub);
+  white-space: nowrap;
+}
