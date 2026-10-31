@@ -305,14 +305,11 @@
    고른 쪽은 다시 눌러도 아무 일이 없어(토글 아님) 손 모양을 안 줍니다. */
 .fb-choice .fb-choice-on,
 .fb-choice .fb-choice-on:hover:not(:disabled) { background: var(--primary-dark); cursor: default; }
-.fb-enter .fb-entered { margin: 0 0 10px; }
-.fb-entered.fb-declined { color: var(--text-sub); }
 .fb-received { font-size: 12px; color: #276b3d; }
 .fb-receive { margin-top: 12px; }
 /* 이벤트 취소 — 접수 아래 옅은 단추(되묻는 창이 뜹니다). 높이는 접수와 같은 40px. */
 .fb-cancel-event { margin-top: 8px; color: #b0412e; }
 .fb-cancel-event:hover:not(:disabled) { border-color: #e4a99c; background: #fdf1ee; }
-.fb-entered { margin: 0; font-size: 13.5px; font-weight: 700; color: #276b3d; text-align: center; }
 @media (max-width: 720px) {
   /* 좁은 화면은 위아래로 풀어 창 전체가 구릅니다(높이 못 박기를 풂). */
   .modal.fruit-basket-modal { height: auto; max-height: 92vh; overflow-y: auto; display: block; }
@@ -509,22 +506,6 @@
   padding: 5px 9px;
   font-size: 12.5px;
 }
-.class-mgr-delete {
-  color: var(--danger);
-}
-
-/* 보관된 반 표시 배지 — 상단 반 선택 드롭다운 대신 노출 */
-.study-class-archived-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: var(--neutral);
-  color: var(--text-sub);
-  font-size: 13px;
-  font-weight: 600;
-}
 
 /* 본문(에디터/표시)에 들어간 인라인 이미지 크기 제한 */
 .rte-area img,
@@ -561,9 +542,3 @@
   display: block;
 }
 
-/* 질문 첨부 이미지 그리드(읽기) */
-.qa-image-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}

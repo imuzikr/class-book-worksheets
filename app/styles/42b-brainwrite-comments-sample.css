@@ -142,7 +142,6 @@
 .bw-row-save.error { color: #c0392b; }
 .bw-row-text { margin: 0; font-size: 15px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text); }
 .bw-row-text.empty { color: var(--text-faint); font-size: 13.5px; }
-.bw-row-hint { margin: 0; font-size: 12.5px; color: var(--text-sub); }
 .bw-rail-item.ready .bw-rail-state { color: var(--primary-dark); font-weight: 700; }
 /* 앞 사람이 아직 안 써서 잠긴 내 줄 — 쓰는 칸 자리를 같은 높이로 지킵니다 */
 .bw-row-wait {

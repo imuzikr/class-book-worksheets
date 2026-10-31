@@ -168,27 +168,7 @@
   color: #fff;
 }
 
-/* 문구 + 제목 한 줄 — 문구가 **왼쪽**, 세로선으로 가릅니다(공부방·책방은
-   제목 위). 이 머리줄은 스크롤해도 붙어 있어 한 줄을 더 쌓으면 그만큼
-   질문 목록이 늘 가려지므로 옆에 둡니다. */
-.feed-head-title {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-width: 0;
-}
-.feed-head-title .page-tagline {
-  margin: 0;
-  padding-right: 14px;
-  border-right: 1px solid var(--border);
-  /* 마지막 방어선 — 긴 키워드 제목과 만나 모자라면 문구 쪽이 말줄임으로 */
-  flex-shrink: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 @container feed-head (max-width: 779px) {
-  .feed-head-title .page-tagline { display: none; }
 }
 
 /* ===================== 내 인사이트 모음 모달 ===================== */

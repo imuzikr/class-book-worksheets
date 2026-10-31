@@ -92,23 +92,6 @@
   color: var(--text);
 }
 
-/* 이름 오른쪽 말풍선(누가기록) 버튼 */
-.reward-note-btn {
-  flex-shrink: 0;
-  width: 24px;
-  height: 24px;
-  border: none;
-  background: transparent;
-  font-size: 14px;
-  line-height: 1;
-  opacity: 0.6;
-  border-radius: 6px;
-}
-.reward-note-btn:hover {
-  opacity: 1;
-  background: var(--neutral);
-}
-
 /* ── 누가기록(학생 관찰 메모) — 모달 + 대시보드 공통 ── */
 .modal-notes {
   max-width: 480px;
@@ -207,16 +190,6 @@
 .rwtrend-toggle:hover {
   border-color: var(--primary);
   color: var(--primary-dark);
-}
-.rwtrend-summary {
-  margin: 0;
-  font-size: 12px;
-  color: var(--text-sub);
-  font-variant-numeric: tabular-nums;
-}
-.rwtrend-summary b {
-  color: var(--text);
-  font-weight: 700;
 }
 .rwtrend-plot {
   display: flex;
