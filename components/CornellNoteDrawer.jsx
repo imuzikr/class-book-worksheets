@@ -57,9 +57,9 @@ import { UploadClassProvider } from "@/lib/uploadClass";
 const SAVE_DELAY = 2000; // ms — 이만큼 입력이 없으면 저장
 const OPEN_KEY = "cornell-drawer-open";
 // 날개를 펼 수 없는 폭 — 서랍이 아래에서 올라오는 시트로 바뀌는 그 폭입니다
-// (globals.css의 `@media (max-width: 760px)`와 **같은 값이어야** 합니다).
+// (app/styles/34-cornell-drawer.css의 `@media (max-width: 760px)`와 **같은 값이어야** 합니다).
 const NARROW_Q = "(max-width: 760px)";
-// 미끄러지는 길이 — globals.css의 `--cornell-slide`와 **같은 값이어야** 합니다.
+// 미끄러지는 길이 — app/styles/34-cornell-drawer.css의 `--cornell-slide`와 **같은 값이어야** 합니다.
 // 닫을 때 서랍을 그만큼 더 그려 두었다가 걷어 내는 데 씁니다. 짧게 잡으면
 // 다 미끄러지기 전에 사라지고, 길게 잡으면 다 닫힌 자리에 빈 서랍이 남습니다.
 const SLIDE_MS = 250;

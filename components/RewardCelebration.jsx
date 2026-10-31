@@ -65,7 +65,7 @@ import { useEffect, useRef, useState } from "react";
 
 // 4.2초 — 3.2초에서 1초 늘렸습니다(선생님 요청). 늘린 만큼 하늘이 비지 않게
 // 발사마다 1초 뒤 작은 뒤풀이(`ENCORE_MS`)를 함께 쏩니다. 뱃지의 사라지는
-// 동작(globals.css `.reward-cheer-badge`의 4.2s)도 **같은 값**이어야 합니다.
+// 동작(app/styles/32-fruit-celebration-dash.css `.reward-cheer-badge`의 4.2s)도 **같은 값**이어야 합니다.
 const LIFE_MS = 4200;
 // 뒤풀이 발사가 앞 발사보다 늦는 시간. 첫 발사의 불티가 한풀 꺾일 무렵 다음
 // 발이 솟아 끝까지 하늘을 채웁니다. 1000으로 두면 뒤풀이가 첫 발사에 겹쳐
@@ -73,7 +73,7 @@ const LIFE_MS = 4200;
 // 불티가 4.1초까지 남아 밤하늘과 함께 걷힙니다.
 const ENCORE_MS = 1800;
 // 끝에서 옅어지는 구간. 캔버스의 `fade`와 밤하늘의 transition이 **같은 값**을
-// 봐야 둘이 함께 걷힙니다(globals.css의 `.reward-cheer-sky` 참고).
+// 봐야 둘이 함께 걷힙니다(app/styles/32-fruit-celebration-dash.css의 `.reward-cheer-sky` 참고).
 const FADE_MS = 640;
 // 발마다 하나씩 골라 쓰는 색. 밤하늘(스크림) 위에서 재 보니 가장 낮은 색도
 // 3.66:1이라 여섯 색 모두 또렷합니다 — 크림색 배경 위에서 쓰던 과일 계열은

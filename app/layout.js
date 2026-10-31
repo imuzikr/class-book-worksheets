@@ -20,7 +20,7 @@ export const viewport = {
 // 뒤라 늦습니다 — 그래서 <head>에서 동기로 실행되는 이 스크립트가 필요합니다.
 //
 // 지난 접속에서 남긴 힌트(lib/auth.js)가 있으면 <html>에 표시를 달고,
-// 그 표시가 있는 동안 랜딩을 숨깁니다(app/globals.css). 표시는 인증이
+// 그 표시가 있는 동안 랜딩을 숨깁니다(app/styles/01-base-landing-footer.css). 표시는 인증이
 // 확정되는 순간 app/page.js가 지웁니다.
 //
 // 안전장치: 인증이 끝내 응답하지 않아도(네트워크 두절 등) 화면이 영영 빈

@@ -228,11 +228,11 @@ export default function TopNav({ active, growthEnabled = false, readingOpen = fa
     <>
     {/* 상단바는 넓은 화면(1180px 이상)에서 **한 줄**입니다 —
           로고 · 이동 메뉴 …… 전광판 …… 돌발 퀴즈·손들기·알림·프로필
-        그보다 좁으면 이동 메뉴만 2행으로 내려갑니다(globals.css의 1179px
+        그보다 좁으면 이동 메뉴만 2행으로 내려갑니다(app/styles/02-board-layout-notes.css의 1179px
         규칙이 order로 옮김). 768px 이하는 따로(모바일 블록).
         **여기 적힌 차례가 곧 넓은 화면의 보이는 차례이자 탭 이동 차례**입니다
         (CSS의 order는 자리만 바꾸고 탭 순서는 안 바꿉니다). 요소를 더할 때는
-        globals.css의 order 값도 함께 맞추세요.
+        app/styles/02-board-layout-notes.css의 order 값도 함께 맞추세요.
         '작은 변화로 시작하는 성장의 기록' 문구는 상단바에서 빠져 각 화면의
         제목 곁으로 갔습니다(`PageTagline` — 공부방·책방 제목 위, 질문방
         '전체 질문 n개' 왼쪽). */}
@@ -383,7 +383,7 @@ export default function TopNav({ active, growthEnabled = false, readingOpen = fa
         />
       </div>
 
-      {/* 줄바꿈 — 폭 100%·높이 0짜리 빈 칸(globals.css의 `.topbar-gap`).
+      {/* 줄바꿈 — 폭 100%·높이 0짜리 빈 칸(app/styles/02-board-layout-notes.css의 `.topbar-gap`).
           **1180px 아래에서만** 섭니다 — 그때 이동 메뉴가 order로 이 뒤(2행)에
           옮겨 앉습니다. 넓은 화면에서는 메뉴가 로고 옆이라 접어 둡니다. */}
       <span className="topbar-gap" aria-hidden="true" />

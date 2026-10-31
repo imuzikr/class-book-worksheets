@@ -10,7 +10,7 @@ import { seatOrder } from "@/lib/seats";
 
 const GROUP_COLORS = ["#2563eb", "#16a34a", "#f97316", "#9333ea", "#dc2626", "#0891b2"];
 
-// 자리표 그리드는 6열입니다(app/globals.css .seat-setup-grid). 실제 자리 배열
+// 자리표 그리드는 6열입니다(app/styles/15-attend-board.css .seat-setup-grid). 실제 자리 배열
 // 순서(배치·저장에 쓰는 인덱스)는 그대로 두고, 화면에 보이는 번호만 각 줄의
 // 오른쪽 끝을 1번으로 삼아 왼쪽으로 세도록 뒤집습니다.
 const SEAT_COLS = 6;
