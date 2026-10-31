@@ -658,15 +658,6 @@
   margin-bottom: 16px;
 }
 
-.pending-section .admin-panel-head h2 {
-  color: #92400e;
-}
-
-.pending-section .admin-panel-head > span {
-  color: #a16207;
-  font-size: 13px;
-}
-
 .pending-global {
   margin: 0;
   padding: 10px 24px 14px;
