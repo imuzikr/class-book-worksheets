@@ -56,98 +56,6 @@
 
 /* ===================== 질문 상태 토글 (궁금해요/해결됐어요) ===================== */
 
-/* 카드의 상태 표시 — 클릭 불가(상태 변경은 상세 모달의 인사이트 흐름에서만) */
-.status-badge {
-  margin-left: auto;
-  padding: 2px 0;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1;
-  flex-shrink: 0;
-  cursor: default;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: #3A312E;
-}
-
-/* 상세 모달 안의 토글: 오른쪽 위 닫기(×) 버튼과 겹치지 않게 여백 확보 */
-.qa-status {
-  margin-right: 22px;
-}
-
-/* ===================== 나도 궁금해요 버튼 ===================== */
-
-.metoo-count {
-  min-width: 22px;
-  text-align: center;
-  background: #fff;
-  border-radius: 999px;
-  padding: 1px 7px;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-/* ===================== 그리기 캔버스 ===================== */
-.modal-canvas {
-  max-width: 880px;
-}
-
-.canvas-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.color-row {
-  display: flex;
-  gap: 8px;
-}
-
-.color-swatch {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: 2px solid #fff;
-  box-shadow: 0 0 0 1px var(--border);
-}
-
-.color-swatch.active {
-  box-shadow: 0 0 0 3px var(--primary);
-}
-
-.tool-row {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.tool-active {
-  background: var(--primary-light);
-  border-color: var(--primary);
-  color: var(--primary-dark);
-  font-weight: 700;
-}
-
-.draw-canvas {
-  width: 100%;
-  border: 1.5px dashed var(--border);
-  border-radius: 10px;
-  background: #fff;
-  cursor: crosshair;
-  touch-action: none; /* 터치로 그릴 때 화면 스크롤 방지 */
-  display: block;
-}
-
-.canvas-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 12px;
-}
-
 /* ===================== 서식 입력 에디터 (RichTextEditor) ===================== */
 /* 둥근 박스 안에 툴바가 내장된 형태.
    variant=full → 툴바가 위 / variant=chat → 툴바가 아래 + 전송 버튼 */
@@ -184,16 +92,6 @@
 }
 
 .rte-full .rte-toolbar {
-  border-bottom: 1px solid var(--border);
-}
-
-.rte-chat .rte-toolbar {
-  border-top: 1px solid var(--border);
-}
-/* 툴바를 위로 올린 채팅 에디터(toolbarTop) — 가르는 선도 따라 넘어갑니다.
-   안 그러면 툴바 위에 선이 그어져 창 머리와 붙어 보입니다. */
-.rte-chat.rte-toolbar-top .rte-toolbar {
-  border-top: none;
   border-bottom: 1px solid var(--border);
 }
 
@@ -299,11 +197,6 @@ code.rte-code-glyph {
 .rte-full .rte-area {
   min-height: 130px;
   max-height: 320px;
-}
-
-.rte-chat .rte-area {
-  min-height: 42px;
-  max-height: 140px;
 }
 
 .rte-sm .rte-area {
@@ -415,28 +308,5 @@ pre code {
 .study-card-body ol {
   padding-left: 20px;
   margin: 4px 0;
-}
-
-/* ===================== 채팅 입력 영역 ===================== */
-
-.chat-attach-preview {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.chat-attach-preview img {
-  max-height: 64px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-}
-
-/* 말풍선 안 첨부 이미지 */
-.chat-image {
-  display: block;
-  max-width: 100%;
-  border-radius: 8px;
-  margin-top: 6px;
 }
 
