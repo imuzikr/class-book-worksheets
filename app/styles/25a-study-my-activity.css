@@ -328,10 +328,6 @@
   height: 18px;
   font-size: 11px;
 }
-.attach-add-btn.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
 .study-mycard-foot {
   display: flex;
   align-items: center;
