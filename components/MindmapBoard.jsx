@@ -141,12 +141,12 @@ export default function MindmapBoard({
         {/* 제목 · 돌아가는 길 · 도구 순서 — 닿소리 머리말(BookGroupBoard)과
             같은 차례입니다. 아래 둘째 줄은 딸림 정보(주제어·반)만 두는 자리라
             화면을 옮기는 버튼은 여기 첫 줄에 둡니다. */}
-        <div className="books-head-title">
+        <div className="books-head-title activity-head-title">
           <h1 className="book-group-title">{activity.title}</h1>
           <button type="button" className="btn-ghost" onClick={onBack}>← 활동 목록</button>
         </div>
         <div className="books-head-row">
-          <div className="books-head-main">
+          <div className="books-head-main activity-head-main">
             {/* 주제어를 비워 두면 학생마다 제 주제로 합니다 —
                 빈 배지를 두는 대신 그 사실을 적어 둡니다 */}
             <span className={`book-group-topic${(activity.topic ?? "").trim() ? "" : " soft"}`}>

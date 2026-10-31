@@ -234,12 +234,12 @@ export default function ParatextBoard({
         {/* 제목은 늘 활동 이름입니다 — 학생은 왼쪽 목록이 말해 주므로
             제목이 학생 이름으로 바뀌면 지금 어느 활동인지 알 수 없어집니다.
             '← 학생 목록'도 없앴습니다(목록이 늘 왼쪽에 서 있습니다). */}
-        <div className="books-head-title">
+        <div className="books-head-title activity-head-title">
           <h1 className="book-group-title">{activity.title}</h1>
           <button type="button" className="btn-ghost" onClick={onBack}>← 활동 목록</button>
         </div>
         <div className="books-head-row">
-          <div className="books-head-main">
+          <div className="books-head-main activity-head-main">
             {/* 모둠 짜기 — 닿소리 머리말과 **같은 자리·같은 말**입니다.
                 모둠으로 진행하는 활동인데 짜는 길이 만들기 창에만 있어,
                 한 번 만들고 나면 교사가 모둠을 고칠 수 없었습니다. */}

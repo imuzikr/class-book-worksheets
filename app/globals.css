@@ -33680,24 +33680,33 @@ button.msgr-receipt:hover { color: var(--text-sub); }
   .sample-class-entry { flex-direction: column; align-items: stretch; }
 }
 
-/* 곁텍스트 읽기 머리 — 제목 · 활동 목록 · 안내문을 한 줄에.
+/* 활동 화면 공통 머리(모든 독서 활동) — 제목 · 활동 목록 · 안내문을 한 줄에.
    .books-head-title은 원래 한 줄 고정(가로 스크롤)이지만, 여기서는 긴
    안내문이 있어 좁은 화면(크롬북·휴대폰)에서 다음 줄로 내려가게 합니다. */
-.books-head-title.paratext-head-title {
+.books-head-title.activity-head-title {
   flex-wrap: wrap;
   overflow-x: visible;
   row-gap: 6px;
 }
-.books-head-title.paratext-head-title > .paratext-head-intro {
+.books-head-title.activity-head-title > .activity-head-intro {
   flex: 1 1 320px;
   flex-shrink: 1;
   min-width: 0;
   margin: 0 0 0 6px;
   line-height: 1.5;
 }
-/* 둘째 줄 — 도서명 배지와 '8 / 8칸'을 나란히(좁으면 줄바꿈) */
-.paratext-head-main { flex-wrap: wrap; gap: 8px 10px; }
+/* 둘째 줄 — 도서명 배지와 'n / n칸'·저장 상태를 나란히(좁으면 줄바꿈) */
+.activity-head-main { flex-wrap: wrap; gap: 8px 10px; }
+.activity-head-main > .paratext-status { flex-shrink: 0; }
 .paratext-main .books-head { margin-bottom: 16px; }
+/* 안내문이 단계 표시(KWL·물음표)일 때 — 제목 줄 안에서는 바깥 여백 없이 */
+.activity-head-title > .kwls-guide,
+.activity-head-title > .qmark-guide,
+.activity-head-title > .ht-guide { margin: 0; }
+/* 캔버스형 화면(가로세로 낱말퀴즈·자음 판)도 같은 머리를 씁니다 */
+.canvas-main > .books-head { margin-bottom: 14px; flex-shrink: 0; }
 @media (max-width: 640px) {
-  .books-head-title.paratext-head-title > .paratext-head-intro { flex-basis: 100%; margin-left: 0; }
+  .books-head-title.activity-head-title > .activity-head-intro { flex-basis: 100%; margin-left: 0; }
 }
+/* 자음 판 '내 판' 머리 — 진행 막대를 배지들 옆에(오른쪽 끝으로 밀지 않음) */
+.activity-head-main > .activity-head-progress { margin-left: 0; }

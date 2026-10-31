@@ -197,7 +197,7 @@ function RaftFormBody({ activity, user, onBack }) {
       <div className="books-head">
         {/* 교사 화면(RaftBoard)과 같은 짜임 — 제목 줄에 돌아가는 길,
             둘째 줄에 딸림 정보(주제어) */}
-        <div className="books-head-title">
+        <div className="books-head-title activity-head-title">
           <h1 className="book-group-title">{activity.title}</h1>
           <button type="button" className="btn-ghost" onClick={onBack}>← 활동 목록</button>
           {/* 아직 제 책을 안 적었을 때만 — 곁텍스트 읽기와 같은 자리·같은

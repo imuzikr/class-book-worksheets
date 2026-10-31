@@ -242,28 +242,37 @@ export default function ConsonantCanvas({
   const Root = embedded ? "div" : "main";
   return (
     <Root ref={stageRef} className={embedded ? "canvas-embed" : "canvas-main"}>
-      {!embedded && (
-        <div className="canvas-head">
-          {/* 학생 '내 판'은 제목이 먼저, 그 오른쪽에 '← 활동 목록'(.canvas-head-pair).
-              교사의 모둠 판은 그대로. 가로세로 낱말 퀴즈는 제 독서 활동이라
-              여기서 열지 않습니다. */}
-          {!mineOnly && (
-            <button type="button" className="btn-ghost" onClick={onBack}>← 모둠</button>
-          )}
-          <div className="canvas-head-title">
-            <strong>
-              {mineOnly ? "내 판" : group?.groupName || "모둠"}
-            </strong>
-            <span>
-              {activity.title}
-              {mineOnly && group && ` · ${group.groupName || "모둠"}`}
-            </span>
+      {/* 학생 '내 판' — 다른 독서 활동과 같은 머리(제목 · 활동 목록 / 둘째 줄에
+          모둠 · 'n / n칸'). 교사가 모둠 판을 연 화면은 '← 모둠'으로 돌아가는
+          작은 머리 그대로입니다. 가로세로 낱말 퀴즈는 제 독서 활동이라 여기서
+          열지 않습니다. */}
+      {!embedded && mineOnly && (
+        <div className="books-head">
+          <div className="books-head-title activity-head-title">
+            <h1 className="book-group-title">{activity.title}</h1>
+            <button type="button" className="btn-ghost" onClick={onBack}>← 활동 목록</button>
           </div>
-          {mineOnly && (
-            <div className="canvas-head-pair">
-              <button type="button" className="btn-ghost" onClick={onBack}>← 활동 목록</button>
+          <div className="books-head-row">
+            <div className="books-head-main activity-head-main">
+              <span className="book-group-topic">내 판</span>
+              {group && <span className="book-group-class">{group.groupName || "모둠"}</span>}
+              <div className="canvas-progress activity-head-progress">
+                <div className="canvas-progress-bar">
+                  <span style={{ width: `${(filled / CELL_COUNT) * 100}%` }} />
+                </div>
+                <span className="canvas-progress-text">{filled} / {CELL_COUNT}칸</span>
+              </div>
             </div>
-          )}
+          </div>
+        </div>
+      )}
+      {!embedded && !mineOnly && (
+        <div className="canvas-head">
+          <button type="button" className="btn-ghost" onClick={onBack}>← 모둠</button>
+          <div className="canvas-head-title">
+            <strong>{group?.groupName || "모둠"}</strong>
+            <span>{activity.title}</span>
+          </div>
           <div className="canvas-progress">
             <div className="canvas-progress-bar">
               <span style={{ width: `${(filled / CELL_COUNT) * 100}%` }} />

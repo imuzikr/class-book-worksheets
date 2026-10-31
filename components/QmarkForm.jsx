@@ -134,7 +134,7 @@ export default function QmarkForm({ activity, user, onBack }) {
   return (
     <main className="books-main qmark-main">
       <div className="books-head">
-        <div className="books-head-title">
+        <div className="books-head-title activity-head-title">
           <h1 className="book-group-title">{activity.title}</h1>
           <button type="button" className="btn-ghost" onClick={onBack}>← 활동 목록</button>
           {!shownTopic && canEditTopic && (
@@ -147,10 +147,25 @@ export default function QmarkForm({ activity, user, onBack }) {
               도서명/주제 적기
             </button>
           )}
+          {/* 이 활동의 흐름을 한 줄로 — 책에 물음표를 붙이는 일은 화면 밖에서
+              합니다(종이책 여백 · 포스트잇). 여기서는 그 가운데 중요한 것을 적습니다. */}
+          <p className="qmark-guide activity-head-intro">
+            <span className={`qmark-guide-step${askDone ? " done" : ""}`}>
+              <b>①</b> 읽으며 궁금한 곳에 <b className="qmark-q">?</b>를 붙이고, 중요한 물음과 그 이유를 적어요
+            </span>
+            <span className="qmark-guide-arrow" aria-hidden="true">→</span>
+            <span className={`qmark-guide-step${picked >= QMARK_MIN_PICKS ? " done" : ""}`}>
+              <b>②</b> {QMARK_PROMPTS.length}개의 체크리스트에서 <b>{QMARK_MIN_PICKS}개 이상</b> 선택하세요
+            </span>
+            <span className="qmark-guide-arrow" aria-hidden="true">→</span>
+            <span className={`qmark-guide-step${thoughtDone ? " done" : ""}`}>
+              <b>③</b> 체크한 물음을 길잡이로 나의 생각을 정리해요
+            </span>
+          </p>
         </div>
-        {(shownTopic || bookUrl) && (
-          <div className="books-head-row">
-            <div className="books-head-main">
+        {/* 둘째 줄 — 주제어 배지 · 진행 · 저장 상태를 한 줄에(모든 활동 공통) */}
+        <div className="books-head-row">
+            <div className="books-head-main activity-head-main">
               {shownTopic &&
                 (canEditTopic ? (
                   <button
@@ -164,6 +179,23 @@ export default function QmarkForm({ activity, user, onBack }) {
                 ) : (
                   <span className="book-group-topic">{shownTopic}</span>
                 ))}
+              <div className="paratext-status">
+                <span className="paratext-progress">
+                  {done
+                    ? "완성"
+                    : `물음표 ${askCount}개${askDone ? " ✓" : ""} · 고른 물음 ${picked} / ${QMARK_MIN_PICKS} · 나의 생각 ${thoughtDone ? "✓" : "–"}`}
+                  {" · "}{qmarkChars(answers)}자
+                </span>
+                {locked ? (
+                  <span className="paratext-saved locked">
+                    <IconLock size={14} /> 잠김
+                  </span>
+                ) : (
+                  status !== "idle" && (
+                    <span className="paratext-saved">{status === "saving" ? "저장 중…" : "저장됨"}</span>
+                  )
+                )}
+              </div>
             </div>
             {bookUrl && (
               <a className="btn-primary book-info-btn" href={bookUrl} target="_blank" rel="noopener noreferrer">
@@ -171,24 +203,6 @@ export default function QmarkForm({ activity, user, onBack }) {
               </a>
             )}
           </div>
-        )}
-        <div className="paratext-status">
-          <span className="paratext-progress">
-            {done
-              ? "완성"
-              : `물음표 ${askCount}개${askDone ? " ✓" : ""} · 고른 물음 ${picked} / ${QMARK_MIN_PICKS} · 나의 생각 ${thoughtDone ? "✓" : "–"}`}
-            {" · "}{qmarkChars(answers)}자
-          </span>
-          {locked ? (
-            <span className="paratext-saved locked">
-              <IconLock size={14} /> 잠김
-            </span>
-          ) : (
-            status !== "idle" && (
-              <span className="paratext-saved">{status === "saving" ? "저장 중…" : "저장됨"}</span>
-            )
-          )}
-        </div>
       </div>
 
       {locked && (
@@ -205,22 +219,6 @@ export default function QmarkForm({ activity, user, onBack }) {
         <p className="empty-note">불러오는 중이에요…</p>
       ) : (
         <div className="qmark-wrap">
-          {/* 이 활동의 흐름을 한 줄로 — 책에 물음표를 붙이는 일은 화면 밖에서
-              합니다(종이책 여백 · 포스트잇). 여기서는 그 가운데 중요한 것을 적습니다. */}
-          <p className="qmark-guide">
-            <span className={`qmark-guide-step${askDone ? " done" : ""}`}>
-              <b>①</b> 읽으며 궁금한 곳에 <b className="qmark-q">?</b>를 붙이고, 중요한 물음과 그 이유를 적어요
-            </span>
-            <span className="qmark-guide-arrow" aria-hidden="true">→</span>
-            <span className={`qmark-guide-step${picked >= QMARK_MIN_PICKS ? " done" : ""}`}>
-              <b>②</b> {QMARK_PROMPTS.length}개의 체크리스트에서 <b>{QMARK_MIN_PICKS}개 이상</b> 선택하세요
-            </span>
-            <span className="qmark-guide-arrow" aria-hidden="true">→</span>
-            <span className={`qmark-guide-step${thoughtDone ? " done" : ""}`}>
-              <b>③</b> 체크한 물음을 길잡이로 나의 생각을 정리해요
-            </span>
-          </p>
-
           <div className="qmark-form">
             <section className={`qmark-sec qmark-sec--ask${askDone ? " filled" : ""}`}>
               <h2 className="qmark-sec-title">
