@@ -10,6 +10,7 @@
     "test:rules": "npm --prefix tests/rules test",
     "lint": "npm --prefix tools/lint run lint",
     "css:fingerprint": "node scripts/check-css-fingerprint.mjs --check",
+    "css:resolved": "node scripts/check-css-fingerprint.mjs --check --resolved",
     "deploy": "bash scripts/deploy.sh",
     "books:rescue": "node scripts/admin/rescue-activity.mjs",
     "notes:purge-orphans": "node scripts/admin/purge-orphan-cornell-notes.mjs",

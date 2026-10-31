@@ -9,26 +9,30 @@
 //   node scripts/check-css-fingerprint.mjs --save     기준으로 저장
 //   node scripts/check-css-fingerprint.mjs --check    기준과 비교(SAME / DIFFERENT)
 //   --no-build                                         이미 빌드된 .next를 그대로 사용
+//   --resolved                                         변수를 실제 값으로 풀어 쓴 뒤 비교(빌드 없이 원본 CSS로)
+//                                                      (색을 변수로 바꾸기만 했는지 확인 — scripts/css-resolve.mjs)
 //
-// 기준 파일: scripts/baseline/css-fingerprint.txt
+// 기준 파일: scripts/baseline/css-fingerprint.txt (--resolved는 css-resolved.txt)
 // =============================================================
 import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { resolvedSourceLine } from "./css-resolve.mjs";
 
 const ROOT = fileURLToPath(new URL("../", import.meta.url));
-const BASELINE = path.join(ROOT, "scripts/baseline/css-fingerprint.txt");
-const PAGES = ["index", "books", "dashboard"];
 const args = new Set(process.argv.slice(2));
+const RESOLVED = args.has("--resolved");
+const BASELINE = path.join(ROOT, "scripts/baseline", RESOLVED ? "css-resolved.txt" : "css-fingerprint.txt");
+const PAGES = ["index", "books", "dashboard"];
 
-if (!args.has("--no-build")) {
+if (!RESOLVED && !args.has("--no-build")) {
   execSync("npx next build", { cwd: ROOT, stdio: ["ignore", "ignore", "inherit"] });
 }
 
-const lines = [];
-for (const page of PAGES) {
+const lines = RESOLVED ? [await resolvedSourceLine(ROOT)] : [];
+for (const page of RESOLVED ? [] : PAGES) {
   const htmlPath = path.join(ROOT, ".next/server/app", `${page}.html`);
   if (!existsSync(htmlPath)) {
     lines.push(`${page}: (빌드 결과 없음)`);
@@ -36,7 +40,8 @@ for (const page of PAGES) {
   }
   const html = readFileSync(htmlPath, "utf8");
   const hrefs = [...html.matchAll(/<link rel="stylesheet" href="\/_next\/([^"]+)"/g)].map((m) => m[1]);
-  const css = hrefs.map((h) => readFileSync(path.join(ROOT, ".next", h.split("?")[0]), "utf8")).join("");
+  const joined = hrefs.map((h) => readFileSync(path.join(ROOT, ".next", h.split("?")[0]), "utf8")).join("");
+  const css = joined;
   const md5 = createHash("md5").update(css).digest("hex");
   lines.push(`${page}: bytes=${Buffer.byteLength(css)} md5=${md5}`);
 }
@@ -52,6 +57,6 @@ if (args.has("--save")) {
     process.exit(2);
   }
   const same = readFileSync(BASELINE, "utf8") === result;
-  console.log(same ? "SAME — 빌드된 CSS가 기준과 글자 하나까지 같습니다." : "DIFFERENT — 빌드된 CSS가 기준과 다릅니다.");
+  console.log(same ? RESOLVED ? "SAME — 변수를 풀어 쓴 CSS가 기준과 같습니다(실제 값 변화 없음)." : "SAME — 빌드된 CSS가 기준과 글자 하나까지 같습니다." : RESOLVED ? "DIFFERENT — 변수를 풀어 쓴 CSS가 기준과 다릅니다(실제 값이 바뀜)." : "DIFFERENT — 빌드된 CSS가 기준과 다릅니다.");
   process.exit(same ? 0 : 1);
 }
