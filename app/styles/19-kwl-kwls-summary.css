@@ -724,23 +724,6 @@
   gap: 8px;
 }
 
-.kwl-history-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.kwl-history-row p {
-  font-size: 12px;
-  color: var(--gray-600);
-  margin: 0;
-  flex: 1;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .kwl-today-entries {
   margin-top: 12px;
   border-top: 1px solid var(--border);
@@ -769,9 +752,3 @@
   transition: border-color 0.1s;
 }
 .kwl-entry:hover { border-color: var(--primary, #e07a5f); }
-
-.kwl-entry--open .kwl-history-row p {
-  white-space: pre-wrap;
-  overflow: visible;
-  text-overflow: unset;
-}

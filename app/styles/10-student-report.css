@@ -1,94 +1,4 @@
 
-/* 학급별 분석 — 지금 보고 있는 반을 학생 이름 옆에 작게 */
-.admin-hero-class {
-  margin-left: 10px;
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: var(--primary-light);
-  color: var(--primary-dark);
-  font-family: inherit;
-  font-size: 12.5px;
-  font-weight: 800;
-  vertical-align: middle;
-}
-
-/* 학급 목록(사이드바, 종합 분석 모드) */
-.class-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 11px 12px;
-  border: 1px solid transparent;
-  border-radius: 10px;
-  background: none;
-  cursor: pointer;
-  text-align: left;
-  color: var(--text);
-}
-.class-row:hover {
-  background: var(--neutral, #f3f1ec);
-}
-.class-row.active {
-  background: rgba(224, 122, 95, 0.1);
-  border-color: var(--primary, #e07a5f);
-}
-.class-row-icon {
-  font-size: 18px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-/* 학급 전체 통계 — 표 + 차트 2열 */
-/* 예전에는 '학생별 활동' 표와 나란히 두 칸이었습니다(1.7fr 1fr). 표를
-   빼면서 남은 키워드 분포가 폭을 다 쓰도록 한 칸으로 둡니다. */
-.overview-charts {
-  grid-template-columns: 1fr;
-}
-
-.overview-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-.overview-table th {
-  text-align: center;
-  color: var(--text-sub);
-  font-weight: 600;
-  font-size: 11px;
-  padding: 4px 6px;
-  border-bottom: 1px solid var(--border);
-}
-.overview-table th:first-child {
-  text-align: left;
-}
-
-.overview-table td {
-  padding: 7px 6px;
-  text-align: center;
-  border-bottom: 1px solid var(--neutral, #f0eee7);
-}
-
-.overview-table td.ov-name {
-  text-align: left;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 600;
-}
-
-.ov-unresolved {
-  font-size: 11px;
-  color: var(--primary-dark, #b85c4a);
-  background: rgba(224, 122, 95, 0.12);
-  border-radius: 4px;
-  padding: 1px 6px;
-  white-space: nowrap;
-}
-
 /* 공부방별 통계 표 — 제출률/참여 막대 셀 */
 .study-stats-table .rate-cell {
   display: flex;
@@ -122,53 +32,6 @@
   white-space: nowrap;
   min-width: 30px;
   text-align: right;
-}
-
-/* ── 학생 KWL 기록 패널 (관리자) ── */
-.kwl-record-list {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin-top: 4px;
-}
-
-.kwl-record-day {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.kwl-record-date {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-sub);
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 4px;
-}
-
-.kwl-record-entry {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 8px 10px;
-  background: var(--card-bg, #faf9f6);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-}
-
-.kwl-record-entry .kwl-history-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-}
-
-.kwl-record-entry .kwl-history-row p {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.4;
-  white-space: pre-wrap;
-  word-break: keep-all;
-  overflow-wrap: break-word;
 }
 
 /* ── 접속 시간 추이 (선 그래프) ── */
@@ -397,16 +260,6 @@
 .activity-type.answer {
   color: #3d7a4a;
   background: #e9f0e6;
-}
-
-.admin-empty {
-  color: var(--text-sub);
-  background: var(--bg);
-  border: 1px dashed var(--border);
-  border-radius: 10px;
-  padding: 20px;
-  text-align: center;
-  font-size: 13px;
 }
 
 @media (max-width: 1100px) {
