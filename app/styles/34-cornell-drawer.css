@@ -662,30 +662,6 @@ ul.checklist > li.done {
 }
 
 /* ===== 공부 기록 모달 — 누가기록 · 수업 노트 · 선생님 메모 ===== */
-.notes-mgr-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 2px 0 10px;
-  border-bottom: 1px solid var(--border);
-}
-.notes-mgr-tab {
-  border: none;
-  background: none;
-  padding: 8px 12px;
-  margin-bottom: -1px;
-  border-bottom: 2px solid transparent;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-sub);
-  cursor: pointer;
-}
-.notes-mgr-tab:hover { color: var(--primary-dark); }
-.notes-mgr-tab.active {
-  color: var(--primary-dark);
-  border-bottom-color: var(--primary);
-}
 
 /* 수업 노트 탭 — 날짜 한 줄 + 학생 격자 */
 .cornell-mgr-bar { align-items: center; }

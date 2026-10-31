@@ -528,81 +528,6 @@
 }
 
 /* ===== 누가기록 관리 (교사) ===== */
-.modal.modal-notes-manager {
-  /* 가장 큰 내용을 담던 상한을 공통 크기로 유지합니다. */
-  max-width: 940px;
-  height: min(85dvh, calc(100dvh - 48px));
-  max-height: calc(100dvh - 48px);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.modal-notes-manager > .modal-head,
-.modal-notes-manager > .notes-mgr-tabs {
-  flex-shrink: 0;
-}
-.notes-mgr-body {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  scrollbar-gutter: stable;
-}
-.notes-mgr-body .notes-mgr-scroll { max-height: none; }
-@media (max-width: 768px) {
-  .modal.modal-notes-manager {
-    height: 90dvh;
-    max-height: 90dvh;
-  }
-}
-.notes-mgr-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin: 4px 0 12px;
-}
-.notes-mgr-actions {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-left: auto;
-}
-.notes-mgr-summary {
-  font-size: 13px;
-  color: var(--text-sub);
-}
-.notes-mgr-summary strong {
-  color: var(--text);
-}
-.notes-mgr-filter {
-  border: 1px solid var(--border);
-  background: #fff;
-  color: var(--text-sub);
-  border-radius: 999px;
-  padding: 5px 12px;
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.12s, border-color 0.12s, color 0.12s;
-}
-.notes-mgr-filter:hover {
-  border-color: var(--primary);
-  color: var(--primary-dark);
-}
-.notes-mgr-filter.active {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
-}
-/* 누가기록 탭과 수업 노트 탭이 **같은 격자**를 씁니다 — 두 탭을 오가며 같은
-   학생을 찾는 화면이라, 줄바꿈 지점과 카드 크기가 다르면 눈이 매번 다시
-   자리를 잡아야 합니다. 자리표와 같이 한 줄에 여섯 명. */
-.notes-mgr-scroll {
-  max-height: 60vh;
-}
 .notes-mgr-grid {
   row-gap: 8px;
 }
@@ -644,33 +569,4 @@
 .notes-mgr-card.awarded {
   background: var(--green-50);
   border-color: var(--green-200);
-}
-/* 학번이 위, 이름이 아래. 학번순으로 늘어선 격자라 눈이 좇는 것은 숫자라
-   그쪽을 먼저 놓고, 이름을 크게 둡니다. */
-.notes-mgr-no {
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--text-sub);
-  font-variant-numeric: tabular-nums;
-}
-.notes-mgr-name {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
-  word-break: keep-all;
-}
-/* 있음/없음을 색만으로 나누지 않습니다 — 색 구분이 어려운 사람에게는
-   글자가 유일한 단서입니다. */
-.notes-mgr-badge {
-  margin-top: 3px;
-  border-radius: 999px;
-  padding: 2px 8px;
-  font-size: 11px;
-  font-weight: 700;
-  background: var(--neutral);
-  color: var(--text-sub);
-}
-.notes-mgr-badge.has {
-  background: var(--primary);
-  color: #fff;
 }
