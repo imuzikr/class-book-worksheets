@@ -312,14 +312,18 @@ export default function CrosswordGroupStudent({ activity, groupId, user, onBack 
     );
   }
 
+  // 머리 — 다른 독서 활동과 같은 짜임(제목 · 활동 목록 / 둘째 줄 배지)
   const head = (
-    <div className="canvas-head">
-      <div className="canvas-head-title">
-        <strong>가로세로 낱말퀴즈</strong>
-        <span>{activity.title}{myGroup?.groupName && !solo ? ` · ${myGroup.groupName}` : ""}</span>
-      </div>
-      <div className="canvas-head-pair">
+    <div className="books-head">
+      <div className="books-head-title activity-head-title">
+        <h1 className="book-group-title">{activity.title}</h1>
         <button type="button" className="btn-ghost" onClick={onBack}>← 활동 목록</button>
+      </div>
+      <div className="books-head-row">
+        <div className="books-head-main activity-head-main">
+          <span className="book-group-topic">가로세로 낱말퀴즈</span>
+          {myGroup?.groupName && !solo && <span className="book-group-class">{myGroup.groupName}</span>}
+        </div>
       </div>
     </div>
   );

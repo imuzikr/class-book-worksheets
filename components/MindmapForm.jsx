@@ -168,7 +168,7 @@ export default function MindmapForm({ activity, user, onBack }) {
       <div className="books-head">
         {/* 교사 화면(MindmapBoard)과 같은 짜임 — 제목 줄에 돌아가는 길,
             둘째 줄에 딸림 정보(주제어) */}
-        <div className="books-head-title">
+        <div className="books-head-title activity-head-title">
           <h1 className="book-group-title">{activity.title}</h1>
           {open ? (
             <button type="button" className="btn-ghost" onClick={() => setOpen(false)}>
@@ -194,9 +194,9 @@ export default function MindmapForm({ activity, user, onBack }) {
         </div>
         {/* 둘째 줄은 적어 둔 주제어나 도서 링크가 있을 때만 — 빈 줄이 남으면
             제목 아래가 괜히 벌어집니다. */}
-        {(shownTopic || (bookUrl && !open)) && (
+        {(shownTopic || !open) && (
         <div className="books-head-row">
-          <div className="books-head-main">
+          <div className="books-head-main activity-head-main">
             {/* 적어 둔 주제어 — 눌러서 고칠 수 있습니다. */}
             {shownTopic &&
               (canEditTopic ? (
@@ -211,6 +211,7 @@ export default function MindmapForm({ activity, user, onBack }) {
               ) : (
                 <span className="book-group-topic">{shownTopic}</span>
               ))}
+            {!open && statusLine}
           </div>
           {bookUrl && !open && (
             <a
@@ -224,7 +225,6 @@ export default function MindmapForm({ activity, user, onBack }) {
           )}
         </div>
         )}
-        {!open && statusLine}
       </div>
 
       {locked && (

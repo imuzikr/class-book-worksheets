@@ -329,7 +329,7 @@ export default function HashtagForm({ activity, user, onBack }) {
           비었습니다. 폼 한 기둥이라 가운데가 제자리입니다. */}
       <div className="ht-wrap">
       <div className="books-head">
-        <div className="books-head-title">
+        <div className="books-head-title activity-head-title">
           <h1 className="book-group-title">{activity.title}</h1>
           <button type="button" className="btn-ghost" onClick={onBack}>← 활동 목록</button>
           {newCount > 0 && tab === "mine" && (
@@ -341,26 +341,30 @@ export default function HashtagForm({ activity, user, onBack }) {
               새 댓글 {newCount}개
             </button>
           )}
+          {activity.guide?.trim() && <p className="ht-guide activity-head-intro">{activity.guide}</p>}
         </div>
-        <div className="paratext-status">
-          <span className="paratext-progress">
-            해시태그 {progress.tagged}개 · 완성 {progress.done} / {HASHTAG_COUNT}
-          </span>
-          {locked ? (
-            <span className="paratext-saved locked">
-              <IconLock size={14} /> 잠김
-            </span>
-          ) : (
-            status !== "idle" && (
-              <span className={`paratext-saved${status === "error" ? " err" : ""}`}>
-                {status === "saving" ? "저장 중…" : status === "error" ? "저장하지 못했어요" : "저장됨"}
+        {/* 둘째 줄 — 진행 · 저장 상태(모든 활동 공통 자리) */}
+        <div className="books-head-row">
+          <div className="books-head-main activity-head-main">
+            <div className="paratext-status">
+              <span className="paratext-progress">
+                해시태그 {progress.tagged}개 · 완성 {progress.done} / {HASHTAG_COUNT}
               </span>
-            )
-          )}
+              {locked ? (
+                <span className="paratext-saved locked">
+                  <IconLock size={14} /> 잠김
+                </span>
+              ) : (
+                status !== "idle" && (
+                  <span className={`paratext-saved${status === "error" ? " err" : ""}`}>
+                    {status === "saving" ? "저장 중…" : status === "error" ? "저장하지 못했어요" : "저장됨"}
+                  </span>
+                )
+              )}
+            </div>
+          </div>
         </div>
       </div>
-
-      {activity.guide?.trim() && <p className="ht-guide">{activity.guide}</p>}
 
       {published ? (
         <div className="ht-tabs-row">

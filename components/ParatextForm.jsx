@@ -133,7 +133,7 @@ export default function ParatextForm({ activity, user, onBack }) {
             둘째 줄에 딸림 정보(도서명·주제) */}
         {/* 제목 줄 — 제목 · 활동 목록 · 안내문을 한 줄에. 좁은 화면(크롬북·
             휴대폰)에서는 안내문이 다음 줄로 내려갑니다. */}
-        <div className="books-head-title paratext-head-title">
+        <div className="books-head-title activity-head-title">
           <h1 className="book-group-title">{activity.title}</h1>
           <button type="button" className="btn-ghost" onClick={onBack}>← 활동 목록</button>
           {/* 아직 제 책을 안 적었을 때만 — 제목 줄에 '활동 목록'과 나란히
@@ -149,14 +149,14 @@ export default function ParatextForm({ activity, user, onBack }) {
               도서명/주제 적기
             </button>
           )}
-          <p className="books-intro paratext-head-intro">
+          <p className="books-intro activity-head-intro">
             아직 본문은 읽지 마세요. 표지·제목·목차처럼 <b>본문을 둘러싼 것</b>만 보고
             어떤 책일지 짐작해 적어 봅니다. 카드를 누르면 크게 써 볼 수 있어요.
           </p>
         </div>
         {/* 둘째 줄 — 도서명 배지와 진행(8 / 8칸)·저장 상태를 한 줄에 */}
         <div className="books-head-row">
-          <div className="books-head-main paratext-head-main">
+          <div className="books-head-main activity-head-main">
             {shownTopic &&
               (canEditTopic ? (
                 <button

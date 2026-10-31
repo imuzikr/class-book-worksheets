@@ -347,20 +347,26 @@ export default function CrosswordGroupBoard({ activity, onBack, onToast, classPi
 
   return (
     <main ref={stageFocus.ref} className="canvas-main dash-root xw-main">
-      <div className="canvas-head">
-        {/* 머리말 — 활동 이름 · ← 활동 목록 · 반 고르개 · 기록 관리 · 진행 요약.
-            낱말을 가져온 닿소리 채우기의 이름을 함께 적습니다. */}
-        <strong className="canvas-head-name">{activity.title}</strong>
-        <button type="button" className="btn-ghost" onClick={onBack}>← 활동 목록</button>
-        {classPicker}
-        <span className="canvas-head-stats">
-          {activity.sourceTitle ? `낱말: ${activity.sourceTitle} · ` : ""}
-          {solo ? "개별 활동" : `모둠 ${liveGroups.length}개`} · 학생 {studentCount}명
-          {puzzle && ` · 낱말 ${puzzle.entries.length}개`}
-        </span>
-        <span className={`xw-badge xwg-stage${stage === "solve" ? " done" : ""}`}>
-          {stage === "solve" ? "낱말 채우기 중" : stage === "hint" ? "힌트 쓰는 중" : "준비"}
-        </span>
+      {/* 머리 — 다른 독서 활동과 같은 짜임(제목 · 활동 목록 / 둘째 줄에 반 고르개 ·
+          진행 요약). 낱말을 가져온 닿소리 채우기의 이름을 함께 적습니다. */}
+      <div className="books-head">
+        <div className="books-head-title activity-head-title">
+          <h1 className="book-group-title">{activity.title}</h1>
+          <button type="button" className="btn-ghost" onClick={onBack}>← 활동 목록</button>
+        </div>
+        <div className="books-head-row">
+          <div className="books-head-main activity-head-main">
+            {classPicker}
+            <span className="paratext-sum">
+              {activity.sourceTitle ? `낱말: ${activity.sourceTitle} · ` : ""}
+              {solo ? "개별 활동" : `모둠 ${liveGroups.length}개`} · 학생 {studentCount}명
+              {puzzle && ` · 낱말 ${puzzle.entries.length}개`}
+            </span>
+            <span className={`xw-badge xwg-stage${stage === "solve" ? " done" : ""}`}>
+              {stage === "solve" ? "낱말 채우기 중" : stage === "hint" ? "힌트 쓰는 중" : "준비"}
+            </span>
+          </div>
+        </div>
       </div>
 
       <div className="xwg xwg--teacher">

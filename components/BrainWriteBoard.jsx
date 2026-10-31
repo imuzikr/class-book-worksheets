@@ -181,12 +181,12 @@ export default function BrainWriteBoard({
   return (
     <main className="books-main book-workspace-main" ref={stageFocus.ref}>
       <div className="books-head">
-        <div className="books-head-title">
+        <div className="books-head-title activity-head-title">
           <h1 className="book-group-title">{activity.title}</h1>
           <button type="button" className="btn-ghost" onClick={onBack}>← 활동 목록</button>
         </div>
         <div className="books-head-row">
-          <div className="books-head-main">
+          <div className="books-head-main activity-head-main">
             {classPicker ?? (className && <span className="book-group-class">{className}</span>)}
             {!freeMode && (
               <button type="button" className="btn-ghost" onClick={() => setComposing(true)}>

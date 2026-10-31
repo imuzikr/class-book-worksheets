@@ -112,7 +112,7 @@ export default function KwlsForm({ activity, user, onBack }) {
       <div className="books-head">
         {/* 교사 화면(KwlsBoard)과 같은 짜임 — 제목 줄에 돌아가는 길,
             둘째 줄에 딸림 정보(주제어) */}
-        <div className="books-head-title">
+        <div className="books-head-title activity-head-title">
           <h1 className="book-group-title">{activity.title}</h1>
           <button type="button" className="btn-ghost" onClick={onBack}>← 활동 목록</button>
           {/* 아직 제 책을 안 적었을 때만 — 곁텍스트 읽기와 같은 자리·같은
@@ -128,12 +128,21 @@ export default function KwlsForm({ activity, user, onBack }) {
               도서명/주제 적기
             </button>
           )}
+          {/* 언제 어느 칸을 채우는지 — 이 활동의 흐름을 한 줄로 */}
+          <p className="kwls-guide activity-head-intro">
+            <span className={`kwls-guide-step${beforeDone ? " done" : ""}`}>
+              <b>읽기 전</b> K·W를 채우고
+            </span>
+            <span className="kwls-guide-arrow" aria-hidden="true">→</span>
+            <span className={`kwls-guide-step${afterDone ? " done" : ""}`}>
+              <b>읽은 뒤</b> L·S를 채웁니다
+            </span>
+            <em>먼저 쓴 칸은 지우지 마세요 — 무엇이 달라졌는지 견주어 보는 것이 핵심이에요.</em>
+          </p>
         </div>
-        {/* 둘째 줄은 적어 둔 주제어나 도서 링크가 있을 때만 — 빈 줄이 남으면
-            제목 아래가 괜히 벌어집니다. */}
-        {(shownTopic || bookUrl) && (
+        {/* 둘째 줄 — 주제어 배지 · 'n / n칸' · 저장 상태를 한 줄에(모든 활동 공통) */}
         <div className="books-head-row">
-          <div className="books-head-main">
+          <div className="books-head-main activity-head-main">
             {/* 적어 둔 주제어 — 눌러서 고칠 수 있습니다. */}
             {shownTopic &&
               (canEditTopic ? (
@@ -148,6 +157,22 @@ export default function KwlsForm({ activity, user, onBack }) {
               ) : (
                 <span className="book-group-topic">{shownTopic}</span>
               ))}
+            <div className="paratext-status">
+              <span className="paratext-progress">
+                {filled} / {KWLS_COLUMN_COUNT}칸 · {chars}자
+              </span>
+              {locked ? (
+                <span className="paratext-saved locked">
+                  <IconLock size={14} /> 잠김
+                </span>
+              ) : (
+                status !== "idle" && (
+                  <span className="paratext-saved">
+                    {status === "saving" ? "저장 중…" : "저장됨"}
+                  </span>
+                )
+              )}
+            </div>
           </div>
           {bookUrl && (
             <a
@@ -158,23 +183,6 @@ export default function KwlsForm({ activity, user, onBack }) {
             >
               <IconBook size={15} /> 도서 정보
             </a>
-          )}
-        </div>
-        )}
-        <div className="paratext-status">
-          <span className="paratext-progress">
-            {filled} / {KWLS_COLUMN_COUNT}칸 · {chars}자
-          </span>
-          {locked ? (
-            <span className="paratext-saved locked">
-              <IconLock size={14} /> 잠김
-            </span>
-          ) : (
-            status !== "idle" && (
-              <span className="paratext-saved">
-                {status === "saving" ? "저장 중…" : "저장됨"}
-              </span>
-            )
           )}
         </div>
       </div>
@@ -198,18 +206,6 @@ export default function KwlsForm({ activity, user, onBack }) {
         <p className="empty-note">불러오는 중이에요…</p>
       ) : (
         <>
-          {/* 언제 어느 칸을 채우는지 — 이 활동의 흐름을 한 줄로 */}
-          <p className="kwls-guide">
-            <span className={`kwls-guide-step${beforeDone ? " done" : ""}`}>
-              <b>읽기 전</b> K·W를 채우고
-            </span>
-            <span className="kwls-guide-arrow" aria-hidden="true">→</span>
-            <span className={`kwls-guide-step${afterDone ? " done" : ""}`}>
-              <b>읽은 뒤</b> L·S를 채웁니다
-            </span>
-            <em>먼저 쓴 칸은 지우지 마세요 — 무엇이 달라졌는지 견주어 보는 것이 핵심이에요.</em>
-          </p>
-
           <div className="kwls-grid">
             {KWLS_COLUMNS.map((c) => (
               <section

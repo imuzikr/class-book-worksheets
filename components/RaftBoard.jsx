@@ -314,12 +314,12 @@ export default function RaftBoard({
             화면을 옮기는 버튼은 여기 첫 줄에 둡니다. */}
         {/* 제목은 늘 활동 이름입니다 — 학생은 왼쪽 목록이 말해 주므로
             제목이 학생 이름으로 바뀌면 지금 어느 활동인지 알 수 없어집니다. */}
-        <div className="books-head-title">
+        <div className="books-head-title activity-head-title">
           <h1 className="book-group-title">{activity.title}</h1>
           <button type="button" className="btn-ghost" onClick={onBack}>← 활동 목록</button>
         </div>
         <div className="books-head-row">
-          <div className="books-head-main">
+          <div className="books-head-main activity-head-main">
             {/* 차례: 반 · 활동 모둠 · 동료 평가 · 주제어 · 진행 요약(선생님 요청) —
                 고르고 누르는 것이 앞에, 읽기만 하는 배지가 뒤에 섭니다. */}
             {/* 반 표시 — 고를 반이 둘 이상이면 고르개(반을 바꾸면 그 반의
