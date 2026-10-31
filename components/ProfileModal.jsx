@@ -3,27 +3,22 @@
 // =============================================================
 // 내 프로필 모달 — 상단바 프로필 메뉴에서 열림
 // -------------------------------------------------------------
-// · 학생: 기본 아바타(이모지)만 직접 수정. 실명·학번·닉네임은 읽기 전용
-//   (실명·학번은 선생님만 수정 — 서버 규칙에서도 강제).
-// · 교사: 실명만 수정(화면 표시는 항상 '선생님'·🧑‍🏫 고정).
+// · 학생: 모두 읽기 전용(실명·학번은 선생님만 수정 — 서버 규칙에서도 강제).
+// · 교사: 실명만 수정. 표시 이름도 실명이라 함께 바꿉니다.
+// (닉네임·아바타 이모지 기능은 없앴습니다 — 화면 이름은 늘 실명)
 // =============================================================
 import { backdropClose } from "@/lib/modal";
 import { useState } from "react";
 import { updateMyProfile } from "@/lib/store";
 import { isTeacher } from "@/lib/user";
-import { ANIMALS } from "./animals";
 
 export default function ProfileModal({ user, onClose }) {
   const teacherRole = isTeacher(user);
-  const [emoji, setEmoji] = useState(user.emoji || "🙂");
   const [realName, setRealName] = useState(user.realName || "");
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const dirty = teacherRole
-    ? realName.trim() !== (user.realName || "")
-    : emoji !== (user.emoji || "🙂");
+  const dirty = teacherRole && realName.trim() !== (user.realName || "");
 
   async function handleSave() {
     if (!dirty || saving) return;
@@ -31,7 +26,7 @@ export default function ProfileModal({ user, onClose }) {
     try {
       await updateMyProfile(
         user.uid,
-        teacherRole ? { realName: realName.trim() } : { emoji }
+        { realName: realName.trim(), displayName: realName.trim() || "선생님" }
       );
       setSaved(true);
       setTimeout(onClose, 700);
@@ -52,44 +47,6 @@ export default function ProfileModal({ user, onClose }) {
         </button>
 
         <h2 className="student-edit-title">내 프로필</h2>
-
-        <div className="student-edit-emoji-row">
-          <div className="student-edit-emoji-wrap">
-            {teacherRole ? (
-              <div className="student-edit-emoji-btn readonly">🧑‍🏫</div>
-            ) : (
-              <button
-                type="button"
-                className="student-edit-emoji-btn"
-                onClick={() => setPickerOpen((v) => !v)}
-                title="기본 아바타 변경"
-              >
-                {emoji}
-              </button>
-            )}
-            {pickerOpen && !teacherRole && (
-              <div className="emoji-picker" role="listbox" aria-label="아바타 선택">
-                {ANIMALS.map((a) => (
-                  <button
-                    key={a.emoji}
-                    type="button"
-                    role="option"
-                    aria-selected={emoji === a.emoji}
-                    className={`emoji-pick-btn${emoji === a.emoji ? " active" : ""}`}
-                    title={a.name}
-                    onClick={() => {
-                      setEmoji(a.emoji);
-                      setPickerOpen(false);
-                    }}
-                  >
-                    {a.emoji}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          {!teacherRole && <p className="student-edit-emoji-hint">클릭해서 변경</p>}
-        </div>
 
         <div className="student-edit-fields">
           <div className="student-edit-field">
@@ -112,12 +69,6 @@ export default function ProfileModal({ user, onClose }) {
                 <span>학번</span>
                 <div className="student-edit-value">{user.studentId || "—"}</div>
               </div>
-              <div className="student-edit-field">
-                <span>닉네임</span>
-                <div className="student-edit-value">
-                  {user.displayName || "—"}
-                </div>
-              </div>
             </>
           )}
           <div className="student-edit-field">
@@ -128,8 +79,8 @@ export default function ProfileModal({ user, onClose }) {
 
         {!teacherRole && (
           <p className="profile-modal-hint">
-            실명·학번은 선생님만 수정할 수 있어요. 게시물과 채팅에는 실명 대신
-            익명 닉네임만 표시됩니다.
+            실명·학번은 선생님만 수정할 수 있어요. 게시물과 채팅에는 실명이
+            표시됩니다.
           </p>
         )}
 
@@ -137,6 +88,7 @@ export default function ProfileModal({ user, onClose }) {
           <button type="button" className="btn-ghost" onClick={onClose}>
             닫기
           </button>
+          {teacherRole && (
           <button
             type="button"
             className="btn-primary"
@@ -145,6 +97,7 @@ export default function ProfileModal({ user, onClose }) {
           >
             {saved ? "저장했어요 ✓" : saving ? "저장 중…" : "저장"}
           </button>
+          )}
         </div>
 
       </div>

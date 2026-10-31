@@ -24,8 +24,8 @@
 // **올린 차례대로** 한 줄씩 쌓입니다. 줄을 누르면 같은 크게 보기 창이 뜹니다.
 // 자료는 같은 opinionNotes라 메모지 ↔ 목록을 오가도 글이 그대로입니다
 // (목록에서 쓴 글도 자리 x·y를 함께 적어 둡니다).
-// [이름표] 활동의 nameMode — nick이면 학생이 글마다 **닉네임을 직접** 적습니다
-// (안 적으면 알림 창). 고른 닉네임은 다음 글에 미리 채웁니다(내 글 · 이 기기).
+// [이름표] 학생은 늘 실명(학번 이름)입니다 — 익명 닉네임 기능은 없앴습니다.
+// 예전에 붙은 익명 메모는 문서의 이름표 그대로 보입니다.
 // =============================================================
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -40,15 +40,12 @@ import {
 } from "@/lib/store";
 import {
   OPINION_COLORS,
-  OPINION_NICK_MAX,
   OPINION_REPLY_MAX,
   OPINION_TEXT_MAX,
   canAddOpinionNote,
   myZoneCount,
-  cleanNickname,
   isOpinionReplyUnread,
   nextNoteSpot,
-  nicknameProblem,
   noteAuthorLabel,
   noteReplyText,
   noteRealLabel,
@@ -58,7 +55,6 @@ import {
   opinionColor,
   opinionLayout,
   opinionListByZone,
-  opinionNameMode,
   opinionNoteMode,
   opinionStats,
   pixelsFromPlace,
@@ -70,14 +66,6 @@ import { backdropClose } from "@/lib/modal";
 import ConfirmModal from "./ConfirmModal";
 import { IconAnswer, IconBook, IconLock, IconUnlock } from "./StatusIcons";
 
-// 닉네임을 이 기기에 기억 — 다음 활동에서도 같은 이름으로 시작하게
-const nickStoreKey = (uid) => `opinion_nick:${uid}`;
-function readStoredNick(uid) {
-  try { return uid ? localStorage.getItem(nickStoreKey(uid)) || "" : ""; } catch { return ""; }
-}
-function storeNick(uid, nick) {
-  try { if (uid && nick) localStorage.setItem(nickStoreKey(uid), nick); } catch { /* 막힌 저장소 — 다음에 다시 적으면 됨 */ }
-}
 const randomColor = () => OPINION_COLORS[Math.floor(Math.random() * OPINION_COLORS.length)].key;
 
 // 메모지 크기 — CSS의 .opinion-note와 같은 값이어야 자리 셈이 맞습니다.
@@ -178,31 +166,10 @@ export default function OpinionBoard({
   const layout = opinionLayout(activity);
   const isList = layout === "list";
   const unit = isList ? "글" : "메모";
-  const nameMode = opinionNameMode(activity);
-  const askNick = !isTeacher && nameMode === "nick";
-
-  // 닉네임 — 내가 이 활동에 마지막으로 쓴 닉네임, 없으면 이 기기에 적어 둔 것.
-  // 손대기 시작하면 더는 덮지 않습니다.
-  const [nick, setNickRaw] = useState("");
-  const nickTouched = useRef(false);
-  const setNick = (v) => { nickTouched.current = true; setNickRaw(v); };
-  const myLastNick = useMemo(() => {
-    const mine = notes.filter((n) => uid && n.authorId === uid && n.nick && n.authorName);
-    mine.sort((a, b) => noteStackTime(b) - noteStackTime(a));
-    return mine[0]?.authorName ?? "";
-  }, [notes, uid]);
-  useEffect(() => {
-    if (!askNick || !loaded || nickTouched.current) return;
-    setNickRaw(myLastNick || readStoredNick(uid));
-  }, [askNick, loaded, myLastNick, uid]);
-  // 쓰는 사람 이름표(미리 보기) — 판 모양과 상관없이 같은 셈
+  // 쓰는 사람 이름표(미리 보기) — 학생은 실명(학번 이름)
   const composeLabel = isTeacher
     ? "선생님"
-    : nameMode === "nick"
-      ? cleanNickname(nick) || "닉네임"
-      : nameMode === "real"
-        ? noteAuthorLabel({ real: true, studentId: user?.studentId, authorName: user?.realName || user?.displayName })
-        : noteAuthorLabel({ anon: true, authorName: user?.displayName });
+    : noteAuthorLabel({ real: true, studentId: user?.studentId, authorName: user?.realName || user?.displayName });
   // 붙이기 — 한 장 모드는 **영역마다** 한 장입니다. 그 영역에 이미 붙인 학생은
   // 그 영역에만 더 못 붙이고, 다른 영역에는 붙입니다(고치는 것은 그대로).
   // 교사 메모(byTeacher)는 세지 않습니다.
@@ -342,10 +309,7 @@ export default function OpinionBoard({
     const spot = nextNoteSpot(byZone.get(zone) ?? 0);
     await addOpinionNote(activity.id, user, {
       text, color, zone, ...spot, byTeacher: isTeacher, single: noteMode === "single",
-      nameMode: isTeacher ? "auto" : nameMode,
-      nickname: nick,
     });
-    if (askNick) storeNick(uid, cleanNickname(nick));
   }
   async function saveNote(n, { text, color, zone }) {
     await updateOpinionNote(activity.id, n.id, { text, color });
@@ -595,13 +559,7 @@ export default function OpinionBoard({
           zoneAllowed={canPostIn}
           who={
             <NoteWho
-              note={
-                isTeacher
-                  ? { byTeacher: true }
-                  : nameMode === "auto"
-                    ? { anon: true, authorName: user?.displayName, authorEmoji: user?.emoji }
-                    : {}
-              }
+              note={isTeacher ? { byTeacher: true } : {}}
               label={composeLabel}
               className="opinion-modal-who"
             />
@@ -609,9 +567,6 @@ export default function OpinionBoard({
           authorLabel={composeLabel}
           showColors={!isList}
           submitLabel={isList ? "제출" : "메모 붙이기"}
-          askNick={askNick}
-          nick={nick}
-          onNick={setNick}
           onSave={async (v) => { await createNote(v); setComposeZone(null); }}
           onClose={() => setComposeZone(null)}
         />
@@ -672,17 +627,12 @@ function OpinionNoteModal({
   onReply,
   showColors = true,
   submitLabel = "메모 붙이기",
-  askNick = false,
-  nick = "",
-  onNick,
   onSave,
   onRemove,
   onClose,
 }) {
   const isNew = mode === "new";
   const [replyBusy, setReplyBusy] = useState(false);
-  const [nickAlert, setNickAlert] = useState(null);
-  const nickRef = useRef(null);
   const [editing, setEditing] = useState(isNew);
   const [text, setText] = useState(note?.text ?? "");
   const [color, setColor] = useState(note?.color ?? randomColor);
@@ -710,10 +660,6 @@ function OpinionNoteModal({
 
   async function submit() {
     if (!trimmed || saving) return;
-    if (isNew && askNick) {
-      const problem = nicknameProblem(nick);
-      if (problem) { setNickAlert(problem); return; }
-    }
     setSaving(true);
     setErr("");
     try {
@@ -753,9 +699,6 @@ function OpinionNoteModal({
 
         {editing ? (
           <>
-            {isNew && askNick && (
-              <NickField value={nick} onChange={onNick} inputRef={nickRef} />
-            )}
             <textarea
               ref={textRef}
               className="opinion-modal-input"
@@ -850,12 +793,6 @@ function OpinionNoteModal({
           </nav>
         )}
       </div>
-      {nickAlert && (
-        <NickAlert
-          problem={nickAlert}
-          onClose={() => { setNickAlert(null); setTimeout(() => nickRef.current?.focus(), 0); }}
-        />
-      )}
       {confirmRemove && (
         <ConfirmModal
           title="이 메모를 떼어 낼까요?"
@@ -1006,44 +943,5 @@ function NoteWho({ note, label, real = null, onToggle = null, className = "opini
     >
       {body}
     </button>
-  );
-}
-
-// ─── 닉네임 칸 · 알림 ───────────────────────────────────────────
-// 익명 활동(nameMode 'nick')에서 학생이 글마다 적는 이름. 붙인 뒤에는 그 글의
-// 이름표를 못 바꾸므로(규칙) 쓰기 전에 받습니다. 내 글을 찾고 고칠 때 씁니다.
-function NickField({ value, onChange, inputRef }) {
-  return (
-    <label className="opinion-nick">
-      <span>닉네임</span>
-      <input
-        ref={inputRef}
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value.slice(0, OPINION_NICK_MAX))}
-        maxLength={OPINION_NICK_MAX}
-        placeholder="예: 생각하는 고양이"
-        aria-describedby="opinion-nick-help"
-      />
-      <em id="opinion-nick-help">친구들에게는 이 이름만 보여요 — 나중에 내 글을 찾을 때 써요.</em>
-    </label>
-  );
-}
-
-function NickAlert({ problem, onClose }) {
-  return (
-    <ConfirmModal
-      icon={<span aria-hidden="true">✍️</span>}
-      title={problem === "teacher" ? "‘선생님’은 쓸 수 없어요" : "닉네임을 입력해야 해요"}
-      description={
-        problem === "teacher"
-          ? "다른 닉네임을 적어 주세요. 친구들에게는 이 이름만 보여요."
-          : "이 활동은 익명이에요. 글을 올리기 전에 닉네임을 적어 주세요 — 나중에 내 글을 쉽게 찾고 고칠 수 있어요."
-      }
-      confirmLabel="닉네임 적으러 가기"
-      cancelLabel={null}
-      onConfirm={onClose}
-      onClose={onClose}
-    />
   );
 }

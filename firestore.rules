@@ -358,7 +358,9 @@ service cloud.firestore {
                     && request.resource.data.get('requestedRole', null) in [null, 'teacher'];
       // 쓰기 범위 — '누가' 뿐 아니라 '어떤 필드를' 쓰는지까지 제한합니다.
       //  · 최고 관리자: 전체. 역할 부여(역할 관리 창)가 여기에 해당합니다.
-      //  · 본인: 이메일·아바타·알림토큰·신청 표시만. 닉네임·실명·학번·역할 불가.
+      //  · 본인: 이메일·알림토큰·신청 표시만. 실명·학번·역할 불가.
+      //      표시 이름(displayName)은 '저장된 실명과 똑같게' 맞추는 것만 됩니다
+      //      (예전 랜덤 닉네임을 실명으로 바꾸는 자가 치유 — 닉네임 기능 없음).
       //  · 교사: 학생 관리에 실제로 쓰는 필드만(StudentEditModal의 프로필 수정,
       //      탈퇴 신청 거절). role은 목록에 없어 교사가 역할을 건드릴 수 없습니다 —
       //      역할 부여는 관리자만(또는 본인이 교사 가입 코드로 학생 → 선생님).
@@ -368,19 +370,24 @@ service cloud.firestore {
       allow update: if signedIn() && (
         isAdmin()
         || (userId == uid()
-            && changedOnly(['email','emoji','fcmTokens','requestedRole',
+            && changedOnly(['email','fcmTokens','requestedRole',
                             'withdrawRequested','withdrawRequestedAt']))
+        || (userId == uid()
+            && changedOnly(['displayName'])
+            && resource.data.get('realName', '') is string
+            && resource.data.get('realName', '') != ''
+            && request.resource.data.displayName == resource.data.get('realName', ''))
         // classIds는 별도 갈래 — 반에 들어갈 때마다 한 개씩만 이어붙이는
         // 자기 수정만 허용(lib/store.js의 joinClass 참고). 다른 필드와
         // 한 요청에 같이 못 바꾸게 changedOnly를 classIds 하나로 좁힙니다.
         || (userId == uid() && changedOnly(['classIds']) && isValidClassIdsAppend())
         // 교사 가입 코드 — 학생인 본인이 코드를 맞게 넣으면 선생님이 됩니다.
-        // 학생 → 선생님 한 방향만(관리자로는 못 올림). 표시 이름·아바타를
-        // '선생님'으로 함께 바꾸고, 넣은 코드(teacherCode)가 문서에 남습니다.
+        // 학생 → 선생님 한 방향만(관리자로는 못 올림). 넣은 코드(teacherCode)가
+        // 문서에 남습니다. 표시 이름은 실명 그대로라 바꾸지 않습니다.
         || (userId == uid()
             && resource.data.get('role', 'student') == 'student'
             && request.resource.data.role == 'teacher'
-            && changedOnly(['role','teacherCode','teacherAt','displayName','emoji','requestedRole'])
+            && changedOnly(['role','teacherCode','teacherAt','requestedRole'])
             && teacherCodeOk(request.resource.data.get('teacherCode', '')))
         || (isTeacher()
             && (userId == uid() || resource.data.get('role', 'student') == 'student')

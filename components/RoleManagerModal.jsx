@@ -143,7 +143,7 @@ export default function RoleManagerModal({ directory, onClose }) {
               {pending.map((u) => (
                 <li key={u.uid} className="role-pending-item">
                   <span className="role-pending-user">
-                    {u.emoji ?? "🙂"} <strong>{userLabel(u)}</strong>
+                    <strong>{userLabel(u)}</strong>
                     {u.email && <small>{u.email}</small>}
                   </span>
                   <span className="role-pending-actions">
@@ -209,7 +209,7 @@ export default function RoleManagerModal({ directory, onClose }) {
                   <li key={u.uid}>
                     <button type="button" onClick={() => pickUser(u)}>
                       <span className="role-combo-name">
-                        {u.emoji ?? "🙂"} {userLabel(u)}
+                        {userLabel(u)}
                       </span>
                       <span className="role-combo-meta">
                         {u.email ? `${u.email} · ` : ""}
@@ -225,7 +225,7 @@ export default function RoleManagerModal({ directory, onClose }) {
 
         {selected && (
           <div className="role-manager-match found">
-            {selected.emoji ?? "🙂"} <strong>{userLabel(selected)}</strong>
+            <strong>{userLabel(selected)}</strong>
             <span className="role-manager-current"> · 현재 {ROLE_LABELS[selected.role] ?? selected.role}</span>
           </div>
         )}

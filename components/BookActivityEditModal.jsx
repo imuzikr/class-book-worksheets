@@ -21,14 +21,12 @@ import { renameBookActivity, BOOK_SOLO_TYPES, BOOK_STUDENT_TOPIC_TYPES } from "@
 import { safeBookUrl } from "@/lib/paratext";
 import {
   OPINION_LAYOUTS,
-  OPINION_NAME_MODES,
   OPINION_NOTE_MODES,
   OPINION_PROMPT_MAX,
   OPINION_ZONE_EXAMPLES,
   OPINION_ZONE_NAME_MAX,
   normalizeZones,
   opinionLayout,
-  opinionNameMode,
   opinionNoteMode,
 } from "@/lib/opinion";
 import { HASHTAG_GUIDE_MAX } from "@/lib/hashtag";
@@ -278,11 +276,7 @@ export default function BookActivityEditModal({ activity, onClose, onDone }) {
                 ))}
               </div>
               <em className="book-help">
-                {OPINION_LAYOUTS.find((m) => m.key === opLayout)?.hint} · 이름표:{" "}
-                {opinionNameMode(activity) === "auto"
-                  ? "접속 닉네임(예전 방식)"
-                  : OPINION_NAME_MODES.find((m) => m.key === opinionNameMode(activity))?.label}
-                {" "}— 이름표는 만든 뒤에 바꿀 수 없어요.
+                {OPINION_LAYOUTS.find((m) => m.key === opLayout)?.hint} · 이름표: 실명
               </em>
             </div>
           </>
