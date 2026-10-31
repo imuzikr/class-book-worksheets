@@ -650,14 +650,6 @@
 }
 
 /* ===================== 인사이트 미완료 섹션 ===================== */
-.pending-section {
-  background: #fffbf3;
-  border: 1.5px solid #e8a817;
-  border-radius: 12px;
-  padding: 16px 20px;
-  margin-bottom: 16px;
-}
-
 .pending-global {
   margin: 0;
   padding: 10px 24px 14px;
