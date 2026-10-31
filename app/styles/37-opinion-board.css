@@ -342,10 +342,6 @@ h4.attendance-seat-help { margin-top: 16px; }
   align-items: center;
   gap: 4px;
 }
-.py-project-actrow .py-project-input {
-  flex: 1;
-  min-width: 0;
-}
 .py-project-actdel {
   flex: 0 0 26px;
   height: 26px;
