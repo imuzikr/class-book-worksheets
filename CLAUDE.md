@@ -69,7 +69,7 @@
 
 - **프레임워크**: Next.js 15.5 App Router, React 19 (Client Components)
 - **DB**: Firebase Firestore (실서비스) / 브라우저 인메모리 Mock (데모 모드)
-- **스타일**: `app/globals.css`는 입구일 뿐이고, 실제 규칙은 `app/styles/`의 42개 파일(01~42 번호 순)에 있습니다. globals.css의 `@import` 순서가 곧 적용 순서이니 바꾸지 마세요. 옮기기·정리 뒤에는 `npm run css:fingerprint`로 빌드 CSS가 그대로인지(SAME) 확인합니다. (CSS Variables + Flexbox)
+- **스타일**: `app/globals.css`는 입구일 뿐이고, 실제 규칙은 `app/styles/`의 49개 파일(01~42 번호 순, 큰 조각은 08a·08b처럼 a·b로 나눔)에 있습니다. globals.css의 `@import` 순서가 곧 적용 순서이니 바꾸지 마세요. 옮기기·정리 뒤에는 `npm run css:fingerprint`로 빌드 CSS가 그대로인지(SAME) 확인합니다. (CSS Variables + Flexbox)
 - **배포**: Vercel (앱) · Firebase (규칙 · 색인 · 함수 · Storage 규칙)
 
 ## 실행
@@ -3968,7 +3968,7 @@ CodeMirror가 아니라 그냥 글자 칸(contentEditable)이라, 손대지 않�
     (`castContent` — **칸을 먼저 나눈 뒤** 셀로 풀고 다시 묶습니다. 카드
     전체를 통째로 풀면 활동 구역 표식이 사라집니다). 새 읽는 자리를 만들면
     여기에도 함께 거세요 — 안 그러면 그 화면에서만 결과가 두 번 섭니다.
-- 읽는 자리의 모양(`app/styles/08-image-editor-python.css`의 `pre.py-result`): 코드는 검은 블록, 결과는
+- 읽는 자리의 모양(`app/styles/08a-image-editor-richtext-chat.css`의 `pre.py-result`): 코드는 검은 블록, 결과는
   **옅은 바탕 + 초록 왼쪽 선**, '실행 결과' 이름은 **코드 셀 바로 뒤일 때만**
   CSS가 그립니다(옛 '결과 붙이기'는 `<p>실행 결과</p>` 글줄을 넣어 두어,
   거기까지 달면 이름이 두 번 섭니다). 대상은 `.study-card-content` ·

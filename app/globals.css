@@ -1,5 +1,5 @@
 /* =============================================================
-   전역 CSS 입구 — 실제 규칙은 app/styles/ 의 42개 파일에 있습니다.
+   전역 CSS 입구 — 실제 규칙은 app/styles/ 의 49개 파일에 있습니다.
    -------------------------------------------------------------
    예전 globals.css 한 파일(33,712줄)을 **내용·순서 그대로** 잘라 둔 것이라
    아래 @import 순서가 곧 옛 파일의 줄 순서입니다. 순서를 바꾸면 뒤의 규칙이
@@ -14,13 +14,15 @@
 @import "./styles/05-profile-insight-feed.css";
 @import "./styles/06-modal-question-class.css";
 @import "./styles/07-joincode-detail-attach.css";
-@import "./styles/08-image-editor-python.css";
+@import "./styles/08a-image-editor-richtext-chat.css";
+@import "./styles/08b-python-panel.css";
 @import "./styles/09-admin-dashboard.css";
 @import "./styles/10-student-report.css";
 @import "./styles/11-confirm-profile-roles.css";
 @import "./styles/12-study-room.css";
 @import "./styles/13-lesson-broadcast.css";
-@import "./styles/14-activity-view-studying.css";
+@import "./styles/14a-activity-view-lesson-prep.css";
+@import "./styles/14b-studying-board.css";
 @import "./styles/15-attend-board.css";
 @import "./styles/16-lesson-groups.css";
 @import "./styles/17-lesson-create-kwlfs.css";
@@ -31,10 +33,12 @@
 @import "./styles/22-study-project-wall.css";
 @import "./styles/23-study-project-detail.css";
 @import "./styles/24-study-guide-cards.css";
-@import "./styles/25-study-my-activity.css";
+@import "./styles/25a-study-my-activity.css";
+@import "./styles/25b-related-questions.css";
 @import "./styles/26-keyword-kwlfab-mobile768.css";
 @import "./styles/27-books-list-consonant.css";
-@import "./styles/28-books-teacher-workspace.css";
+@import "./styles/28a-books-teacher-workspace.css";
+@import "./styles/28b-group-peer-review-wordcloud.css";
 @import "./styles/29-paratext-raft-kwls.css";
 @import "./styles/30-mindmap-cast.css";
 @import "./styles/31-study-activity-panel.css";
@@ -44,8 +48,11 @@
 @import "./styles/35-cornell-modal-report.css";
 @import "./styles/36-lesson-material-pycell.css";
 @import "./styles/37-opinion-board.css";
-@import "./styles/38-hashtag.css";
-@import "./styles/39-qmark-popquiz.css";
+@import "./styles/38a-hashtag-form-slides.css";
+@import "./styles/38b-hashtag-infographic-teacher.css";
+@import "./styles/39a-qmark-activity-examples.css";
+@import "./styles/39b-popquiz.css";
 @import "./styles/40-crossword.css";
 @import "./styles/41-floating-messenger.css";
-@import "./styles/42-brainwrite-tail.css";
+@import "./styles/42a-raft-crossword-signup.css";
+@import "./styles/42b-brainwrite-comments-sample.css";
