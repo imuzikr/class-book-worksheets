@@ -69,7 +69,7 @@
 
 - **프레임워크**: Next.js 15.5 App Router, React 19 (Client Components)
 - **DB**: Firebase Firestore (실서비스) / 브라우저 인메모리 Mock (데모 모드)
-- **스타일**: `app/globals.css`는 입구일 뿐이고, 실제 규칙은 `app/styles/`의 49개 파일(01~42 번호 순, 큰 조각은 08a·08b처럼 a·b로 나눔)에 있습니다. globals.css의 `@import` 순서가 곧 적용 순서이니 바꾸지 마세요. 옮기기·정리 뒤에는 `npm run css:fingerprint`로 빌드 CSS가 그대로인지(SAME) 확인합니다. (CSS Variables + Flexbox)
+- **스타일**: `app/globals.css`는 입구일 뿐이고, 실제 규칙은 `app/styles/`의 49개 파일(01~42 번호 순, 큰 조각은 08a·08b처럼 a·b로 나눔)에 있습니다. globals.css의 `@import` 순서가 곧 적용 순서이니 바꾸지 마세요. 옮기기·정리 뒤에는 `npm run css:fingerprint`로 빌드 CSS가 그대로인지(SAME) 확인합니다. (CSS Variables + Flexbox) 파일별 안내는 `app/styles/README.md`를 보세요.
 - **배포**: Vercel (앱) · Firebase (규칙 · 색인 · 함수 · Storage 규칙)
 
 ## 실행
