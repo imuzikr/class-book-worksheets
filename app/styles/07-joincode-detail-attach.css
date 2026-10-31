@@ -668,7 +668,7 @@ button.understood-bulb:hover {
 }
 
 .understood-bulb.readonly:not(.on) {
-  background: #faf9f5;
+  background: var(--bg);
   color: #c5c1b7;
 }
 

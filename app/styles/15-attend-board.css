@@ -592,7 +592,7 @@
   padding: 8px 4px;
   border: 1px dashed #d8d5ce;
   border-radius: 9px;
-  background: #faf9f5;
+  background: var(--bg);
   font-family: inherit;
   color: var(--text-sub);
   cursor: pointer;
