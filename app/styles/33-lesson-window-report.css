@@ -134,100 +134,10 @@
   font-size: 11.5px;
   color: var(--text-sub);
 }
-.kout-more { padding: 5px 12px; font-size: 12px; margin-top: 8px; }
-/* 사람 목록이 붙는 줄 — 이름까지 보여야 다음 수업에서 누구를 볼지 정합니다 */
-.kout-note {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  margin: 0 0 12px;
-  padding: 9px 12px;
-  border-radius: var(--radius-btn);
-  background: var(--primary-light);
-  font-size: 12.5px;
-}
-.kout-note strong { color: var(--primary-dark); }
-.kout-note-names { color: var(--text); line-height: 1.7; }
-.kout-note-why {
-  font-style: normal;
-  font-size: 11.5px;
-  color: var(--text-sub);
-  line-height: 1.65;
-}
-/* 아무것도 안 쓴 학생은 경고가 아니라 사실 — 눈길을 덜 끄는 바탕에 둡니다 */
-.kout-note--silent { background: var(--neutral); }
-.kout-note--silent strong { color: var(--text); }
 
 /* ── 손들기 흐름 (교사 대시보드) ──
    줄기가 '손든 횟수' 하나뿐이라 막대는 모두 같은 색입니다. 사람마다 색을
    주면 색이 곧 순위가 되어, 한 명이 앞지를 때마다 판이 다시 칠해집니다. */
-.signal-trend-sum {
-  margin: 0 0 10px;
-  font-size: 13px;
-  color: var(--text-sub);
-}
-.signal-trend-sum strong { color: var(--dark); }
-/* 한 달째 손을 안 든 학생 — 이 패널에서 가장 먼저 읽혀야 할 값입니다 */
-.signal-trend-silent {
-  font-style: normal;
-  font-weight: 700;
-  color: var(--danger);
-}
-.signal-trend-list {
-  display: flex;
-  flex-direction: column;
-  /* 막대끼리 2px 바탕이 비쳐야 한 덩어리로 뭉쳐 보이지 않습니다 */
-  gap: 2px;
-  max-height: 340px;
-  overflow-y: auto;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.signal-trend-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 20px;
-}
-.signal-trend-name {
-  flex: 0 0 68px;
-  font-size: 12.5px;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.signal-trend-track {
-  flex: 1;
-  min-width: 0;
-  height: 11px;
-  background: var(--neutral);
-  border-radius: 3px;
-  overflow: hidden;
-}
-/* 왼쪽(기준선)은 각지게, 값이 끝나는 오른쪽만 둥글게 */
-.signal-trend-fill {
-  display: block;
-  height: 100%;
-  background: var(--primary-dark);
-  border-radius: 0 4px 4px 0;
-}
-.signal-trend-val {
-  flex: 0 0 24px;
-  text-align: right;
-  font-size: 12.5px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  /* 숫자는 잉크 색으로 — 막대 색을 글자에까지 쓰면 어느 것이 자료인지 흐려집니다 */
-  color: var(--text);
-}
-.signal-trend-val.zero { color: var(--text-sub); font-weight: 400; }
-.signal-trend .admin-empty small {
-  display: block;
-  margin-top: 8px;
-  line-height: 1.7;
-}
 
 /* 발표 모드 자리표 안의 '궁금한 순간' — 공부방 패널의 제목(17px 세리프)을
    그대로 두면 이웃한 '🪑 자리표'(13px)보다 커져, 곁딸린 칸이 본 제목을
@@ -278,61 +188,6 @@
   padding-bottom: 16px;
   border-bottom: 1px solid var(--border);
 }
-.skew-lead {
-  margin: 0;
-  font-size: 13px;
-  color: var(--text-sub);
-}
-.skew-lead strong { color: var(--dark); }
-.skew-of { color: var(--text-sub); }
-/* 띠 사이에 2px 바탕이 비쳐야 네 덩이가 한 막대로 뭉쳐 보이지 않습니다 */
-.skew-bar {
-  display: flex;
-  gap: 2px;
-  height: 20px;
-  border-radius: 4px;
-  overflow: hidden;
-}
-.skew-bar span { display: block; }
-.skew-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 16px;
-  font-size: 12px;
-  /* 글자는 잉크 색으로 — 띠 색을 글자에까지 쓰면 어느 것이 자료인지
-     흐려집니다. 색은 옆의 네모가 나릅니다. */
-  color: var(--text-sub);
-}
-.skew-swatch {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-  margin-right: 5px;
-  vertical-align: -1px;
-}
-/* 이 패널의 요점 — 많이 받은 학생은 어차피 눈에 띄고, 한 개도 못 받은
-   학생은 어느 화면에도 나타나지 않습니다. */
-.skew-none {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  margin: 2px 0 0;
-  padding: 9px 12px;
-  font-size: 12.5px;
-  background: var(--primary-light);
-  border-radius: var(--radius-btn);
-}
-.skew-none strong { color: var(--primary-dark); }
-.skew-none-names { color: var(--text); line-height: 1.7; }
-/* 기간 단서(.skew-since)와 '표본이 얕음' 주석(.skew-thin)은 이 칸이 이력
-   대신 총계를 보게 되면서 없앴습니다 — 총계는 학기 처음부터의 값이라
-   기간을 밝힐 것이 없습니다. */
-.skew-outside {
-  margin: 6px 0 0;
-  font-size: 11.5px;
-  color: var(--text-sub);
-}
 
 /* ── 언제 주나 — 과일을 수업 어느 대목에 주는가 ──
    쏠림이 '누구에게'라면 이쪽은 '언제'. 셋은 순서가 있는 값이라 한 가지 색의
@@ -352,38 +207,6 @@
   color: var(--text-sub);
 }
 .rtime-title { font-size: 13px; font-weight: 800; color: var(--text); }
-/* 띠와 범례는 바로 위 '쏠림'의 .skew-bar / .skew-legend를 그대로 씁니다.
-   여기서는 그 위에 얹는 것만 정합니다. */
-.rtime .skew-bar { margin-bottom: 7px; }
-/* 개수는 비율 옆에 작게 — 비율이 먼저 읽히고 개수가 뒤를 받칩니다 */
-.rtime-n {
-  margin-left: 4px;
-  font-style: normal;
-  color: var(--text-sub);
-  font-variant-numeric: tabular-nums;
-}
-/* 0인 토막은 띠에 안 그려지므로 범례에만 남습니다 — 잉크를 낮춰 '없음'이
-   눈에 띄되 앞의 두 토막을 가리지 않게 합니다. */
-.rtime-zero { opacity: 0.55; }
-/* 띠 조각·범례에 설명이 붙어 있다는 것을 손 모양으로 알립니다 — 표시가
-   없으면 올려 볼 생각을 안 합니다. 조각은 올렸을 때 살짝 밝아집니다. */
-.rtime-seg, .rtime-key { cursor: help; }
-.rtime-seg { transition: filter 0.15s; }
-.rtime-seg:hover { filter: brightness(1.12); }
-@media (prefers-reduced-motion: reduce) {
-  .rtime-seg { transition: none; }
-}
-.rtime-note {
-  margin: 8px 0 0;
-  font-size: 12px;
-  color: var(--text-sub);
-}
-.rtime-note strong { color: var(--primary-dark); }
-.rtime-empty, .rtime-outside {
-  margin: 6px 0 0;
-  font-size: 11.5px;
-  color: var(--text-sub);
-}
 
 /* ── 변화 — 앞 4주 → 최근 4주 (반 전체 과일 흐름 패널) ── */
 .rdelta {
