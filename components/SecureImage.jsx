@@ -1,7 +1,7 @@
 "use client";
 
 // 이미지 보안 3단계 — useSecureImage로 그림을 그리는 공용 <img>.
-// 권한 없음·파일 없음은 빈칸 대신 안내 상자를 보여 줍니다(4단계에서 화면에 연결).
+// 권한 없음·파일 없음은 빈칸 대신 안내 상자를 보여 줍니다.
 import { useSecureImage } from "@/lib/secureImage";
 
 const FALLBACK_TEXT = {

@@ -156,6 +156,10 @@ describe("반 폴더 uploads/{classId}/{uid}/{file}", () => {
     it("6MB 이상 실패", () => assertFails(uploadBytes(ref(st(asStudent(env, "stu1")), "uploads/c1/stu1/big.jpg"), img(6 * 1024 * 1024), jpeg)));
     it("덮어쓰기 실패", () => assertFails(uploadBytes(ref(st(asStudent(env, "stu1")), CF), img(), jpeg)));
     it("담당 교사도 학생 폴더엔 실패", () => assertFails(uploadBytes(ref(st(asTeacher(env, "t1")), P), img(), jpeg)));
+    // 4단계: 담당 교사는 자기 uid 폴더에 그 반 그림을 올릴 수 있습니다(메신저·공지)
+    it("담당 교사는 본인 폴더에 통과", () => assertSucceeds(uploadBytes(ref(st(asTeacher(env, "t1")), "uploads/c1/t1/n.jpg"), img(), jpeg)));
+    it("다른 반 교사는 본인 폴더여도 실패", () => assertFails(uploadBytes(ref(st(asTeacher(env, "t2")), "uploads/c1/t2/n.jpg"), img(), jpeg)));
+    it("담당 교사도 PDF는 실패", () => assertFails(uploadBytes(ref(st(asTeacher(env, "t1")), "uploads/c1/t1/a.pdf"), img(), { contentType: "application/pdf" })));
     it("비로그인 실패", () => assertFails(uploadBytes(ref(st(env.unauthenticatedContext()), "uploads/c1/anon/a.jpg"), img(), jpeg)));
   });
 

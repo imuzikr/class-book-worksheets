@@ -45,10 +45,20 @@ import {
   groupMembers,
   isPeerReviewOpen,
 } from "@/lib/bookGroups";
+import { UploadClassProvider } from "@/lib/uploadClass";
 
 const SAVE_DELAY = 900; // ms — 이만큼 입력이 없으면 저장
 
-export default function RaftForm({ activity, user, onBack }) {
+// 이미지 보안 4단계 — 이 화면의 서식 편집기에 붙여 넣는 그림은 이 반 폴더로 올립니다.
+export default function RaftForm(props) {
+  return (
+    <UploadClassProvider classId={props.activity?.classId}>
+      <RaftFormBody {...props} />
+    </UploadClassProvider>
+  );
+}
+
+function RaftFormBody({ activity, user, onBack }) {
   const [answers, setAnswers] = useState(emptyRaftAnswers);
   const [loaded, setLoaded] = useState(false);
   // 저장 상태는 **칸마다**(선생님 요청 — 머리줄 한 곳이 아니라 고친 카드에).

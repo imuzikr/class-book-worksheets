@@ -51,6 +51,7 @@ import {
 } from "@/lib/mindmap";
 import { IMAGE_ACCEPT } from "@/lib/image";
 import { mindmapEdgeGeometry } from "@/lib/mindmapEdges";
+import SecureImage from "./SecureImage";
 
 const ZOOM_MIN = 0.1;
 const ZOOM_MAX = 2.4;
@@ -644,7 +645,7 @@ export default function MindmapCanvas({
                 {isUploading ? (
                   <span className="mm-node-img mm-node-img--loading">올리는 중…</span>
                 ) : hasImg ? (
-                  <img className="mm-node-img" src={n.image} alt={n.text || "노드 이미지"} draggable={false} />
+                  <SecureImage className="mm-node-img" src={n.image} alt={n.text || "노드 이미지"} draggable={false} />
                 ) : null}
                 {isEditing ? (
                   <input

@@ -97,13 +97,14 @@ service firebase.storage {
     match /uploads/{classId}/{userId}/{fileName} {
       allow get: if isClassMember(classId) || ownsClass(classId) || isAdmin();
       allow list: if false;
-      // 새 파일만(덮어쓰기 금지) · 본인 폴더 · 그 반 소속 · 이미지 6MB 미만
+      // 새 파일만(덮어쓰기 금지) · 본인 폴더 · 그 반 소속(또는 담당 교사) · 이미지 6MB 미만
       allow create: if signedIn()
                     && resource == null   // 에뮬레이터 실측: 덮어쓰기도 create로 판정돼 명시합니다
                     && request.auth.uid == userId
                     && request.resource.contentType.matches('image/.*')
                     && request.resource.size < 6 * 1024 * 1024
-                    && isClassMember(classId);
+                    // 4단계: 담당 교사도 그 반 폴더에 올립니다(메신저·공지에 붙인 그림)
+                    && (isClassMember(classId) || ownsClass(classId));
       allow update: if false;
       allow delete: if signedIn() && (request.auth.uid == userId || ownsClass(classId) || isAdmin());
     }

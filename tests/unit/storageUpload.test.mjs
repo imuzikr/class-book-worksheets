@@ -1,4 +1,4 @@
-// 이미지 보안 1단계 안전망 — lib/storageUpload.js의 **현재** 업로드·삭제 동작.
+// 이미지 보안 안전망 — lib/storageUpload.js의 업로드·삭제 동작(4단계: 반 폴더 + 경로 표식).
 // firebase/storage·DOM이 필요한 파일이라, popoverWindow 시험처럼 원본을 읽어
 // import 줄만 떼고 vm에서 가짜 도구를 끼워 돌립니다(앱 코드는 그대로).
 import { readFileSync } from "node:fs";
@@ -19,15 +19,15 @@ function load({ configured = true, uid = "stu1", now = 1700000000000 } = {}) {
     getCurrentUser: () => (uid ? { uid } : null),
     readImageAsDataUrl: async (file, w) => { calls.push(["dataUrl", file.name, w]); return "data:image/jpeg;base64,DEMO"; },
     ref: (s, path) => { calls.push(["ref", path]); return { path }; },
-    uploadBytes: async (r, blob, meta) => { calls.push(["uploadBytes", r.path, blob.size]); return { ref: r }; },
+    uploadBytes: async (r, blob, meta) => { calls.push(["uploadBytes", r.path, blob.size, meta?.contentType]); return { ref: { ...r, fullPath: r.path } }; },
     uploadBytesResumable: (r, blob) => {
       calls.push(["resumable", r.path, blob.size]);
       return {
-        snapshot: { ref: r },
+        snapshot: { ref: { ...r, fullPath: r.path } },
         on: (_e, prog, _err, done) => { prog({ bytesTransferred: 1, totalBytes: 2 }); done(); },
       };
     },
-    getDownloadURL: async (r) => `https://firebasestorage.googleapis.com/v0/b/x/o/${encodeURIComponent(r.path)}?alt=media&token=t`,
+    getDownloadURL: async (r) => { calls.push(["getDownloadURL", r.path]); return `https://firebasestorage.googleapis.com/v0/b/x/o/${encodeURIComponent(r.path)}?alt=media&token=t`; },
     deleteObject: async (r) => { calls.push(["delete", r.path]); },
     createImageBitmap: async () => ({ width: 2000, height: 1000, close() {} }),
     document: {
@@ -39,9 +39,9 @@ function load({ configured = true, uid = "stu1", now = 1700000000000 } = {}) {
     },
     Date: { now: () => now },
     blobSize: 1000,
-    Promise, String, Math, Error,
+    Promise, String, Math, Error, RegExp,
   };
-  runInNewContext(BODY + "\n;globalThis.api = { uploadImage, deleteUploadedFile, storagePath };", ctx);
+  runInNewContext(BODY + "\n;globalThis.api = { uploadImage, deleteUploadedFile, classImagePath, safeFileName, CLASS_ID_RE, NoClassError };", ctx);
   return { api: ctx.api, calls, ctx };
 }
 
@@ -51,53 +51,73 @@ test("데모 모드: uploadImage는 Storage 없이 폭 900 data URL을 돌려줍
   assert.deepEqual(calls, [["dataUrl", "a.png", 900]]);
 });
 
-test("저장 경로는 uploads/{uid}/{시각}_{정리된 이름} — 반 구분이 없습니다", () => {
+test("저장 경로는 uploads/{반}/{uid}/{시각}_{정리된 이름}", () => {
   const { api } = load({ uid: "stu1", now: 42 });
-  assert.equal(api.storagePath("내 사진 (1).jpg"), "uploads/stu1/42_______1_.jpg"); // 한글도 _로 바뀝니다
-  assert.equal(api.storagePath(""), "uploads/stu1/42_file");
-  assert.equal(api.storagePath("x".repeat(100) + ".jpg").length, "uploads/stu1/42_".length + 80);
-  assert.equal(load({ uid: null, now: 7 }).api.storagePath("a.jpg"), "uploads/anon/7_a.jpg");
+  assert.equal(api.classImagePath("c1", "내 사진 (1).jpg"), "uploads/c1/stu1/42_______1_.jpg"); // 한글도 _로 바뀝니다
+  assert.equal(api.classImagePath("c1", ""), "uploads/c1/stu1/42_file");
+  assert.equal(api.classImagePath("c1", "x".repeat(100) + ".jpg").length, "uploads/c1/stu1/42_".length + 80);
+  assert.equal(api.safeFileName("../../a.jpg"), ".._.._a.jpg");
+  // 로그인 안 했으면 올리지 않습니다(옛 코드는 anon 폴더로 보냈음)
+  assert.throws(() => load({ uid: null }).api.classImagePath("c1", "a.jpg"), (e) => e.code === "upload/no-user");
 });
 
-test("uploadImage: JPEG로 압축해 .jpg 이름으로 올리고, 토큰 붙은 다운로드 URL을 돌려줍니다", async () => {
+test("uploadImage: 반 폴더에 JPEG로 올리고, 다운로드 URL 대신 storage: 경로 표식을 돌려줍니다", async () => {
   const { api, calls } = load({ now: 5 });
   const progress = [];
-  const url = await api.uploadImage({ name: "photo.PNG" }, { maxWidth: 1000, quality: 0.8, onProgress: (p) => progress.push(p) });
+  const ref = await api.uploadImage({ name: "photo.PNG" }, { classId: "c1", maxWidth: 1000, quality: 0.8, onProgress: (p) => progress.push(p) });
   assert.ok(calls.some((c) => c[0] === "toBlob" && c[1] === 1000 && c[2] === 500 && c[3] === "image/jpeg" && c[4] === 0.8));
-  assert.ok(calls.some((c) => c[0] === "uploadBytes" && c[1] === "uploads/stu1/5_photo.jpg"));
-  assert.match(url, /^https:\/\/firebasestorage\.googleapis\.com\/.*uploads%2Fstu1%2F5_photo\.jpg\?alt=media&token=/);
+  assert.ok(calls.some((c) => c[0] === "uploadBytes" && c[1] === "uploads/c1/stu1/5_photo.jpg" && c[3] === "image/jpeg"));
+  assert.equal(ref, "storage:uploads/c1/stu1/5_photo.jpg");
+  assert.ok(!calls.some((c) => c[0] === "getDownloadURL"), "토큰 붙은 다운로드 URL을 만들지 않습니다");
   assert.deepEqual(progress, [0.2, 1]);
+});
+
+test("uploadImage: 반 id가 없거나 이상하면 올리지 않고 NoClassError", async () => {
+  for (const classId of [undefined, null, "", "a/b", "../c", "c 1", 42]) {
+    const { api, calls } = load();
+    await assert.rejects(api.uploadImage({ name: "a.jpg" }, { classId }), (e) => e.code === "upload/no-class", String(classId));
+    assert.ok(!calls.some((c) => c[0] === "uploadBytes" || c[0] === "resumable" || c[0] === "ref"), String(classId));
+  }
+});
+
+test("데모 모드는 반 id가 없어도 data URL(예전 그대로)", async () => {
+  const { api } = load({ configured: false });
+  assert.equal(await api.uploadImage({ name: "a.png" }), "data:image/jpeg;base64,DEMO");
 });
 
 test("uploadImage 기본값: 폭 1080·품질 0.72, 작은 그림은 확대하지 않음", async () => {
   const { api, calls, ctx } = load();
   ctx.createImageBitmap = async () => ({ width: 500, height: 400 });
-  await api.uploadImage({ name: "s.jpg" });
+  await api.uploadImage({ name: "s.jpg" }, { classId: "c1" });
   assert.ok(calls.some((c) => c[0] === "toBlob" && c[1] === 500 && c[2] === 400 && c[4] === 0.72));
 });
 
-test("1MB 이상 압축본은 resumable 업로드로 진행률을 보냅니다", async () => {
+test("1MB 이상 압축본은 resumable 업로드로 진행률을 보내고, 역시 경로 표식을 돌려줍니다", async () => {
   const { api, calls, ctx } = load({ now: 9 });
   ctx.blobSize = 1024 * 1024;
   const progress = [];
-  await api.uploadImage({ name: "big.jpg" }, { onProgress: (p) => progress.push(p) });
-  assert.ok(calls.some((c) => c[0] === "resumable" && c[1] === "uploads/stu1/9_big.jpg"));
+  const out = await api.uploadImage({ name: "big.jpg" }, { classId: "c1", onProgress: (p) => progress.push(p) });
+  assert.ok(calls.some((c) => c[0] === "resumable" && c[1] === "uploads/c1/stu1/9_big.jpg"));
   assert.ok(!calls.some((c) => c[0] === "uploadBytes"));
+  assert.equal(out, "storage:uploads/c1/stu1/9_big.jpg");
   assert.deepEqual(progress, [0.5]);
 });
 
-test("deleteUploadedFile: 파이어베이스 다운로드 URL만 지우고, 나머지는 조용히 건너뜁니다", async () => {
+test("deleteUploadedFile: 옛 다운로드 URL과 반 폴더 경로 표식을 지우고, 나머지는 건너뜁니다", async () => {
   const { api, calls } = load();
   const dl = "https://firebasestorage.googleapis.com/v0/b/x/o/uploads%2Fstu1%2F1_a.jpg?alt=media&token=t";
   await api.deleteUploadedFile(dl);
   assert.deepEqual(calls, [["ref", dl], ["delete", dl]]);
   calls.length = 0;
-  for (const u of [null, "", "data:image/jpeg;base64,x", "https://example.com/a.jpg", "storage:uploads/c/u/a.jpg", "uploads/stu1/a.jpg"]) {
+  await api.deleteUploadedFile("storage:uploads/c1/stu1/1_a.jpg");
+  assert.deepEqual(calls, [["ref", "uploads/c1/stu1/1_a.jpg"], ["delete", "uploads/c1/stu1/1_a.jpg"]]);
+  calls.length = 0;
+  for (const u of [null, "", 42, "data:image/jpeg;base64,x", "https://example.com/a.jpg", "storage:uploads/u/a.jpg",
+    "storage:uploads/c/../a.jpg", "uploads/stu1/a.jpg"]) {
     await api.deleteUploadedFile(u);
   }
   assert.deepEqual(calls, []);
 });
-
 test("deleteUploadedFile: 삭제 실패는 삼키고, 데모 모드는 아무것도 안 합니다", async () => {
   const { api, ctx } = load();
   ctx.deleteObject = async () => { throw new Error("storage/unauthorized"); };

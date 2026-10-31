@@ -36,6 +36,7 @@ import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } f
 import { richHtml, stripHtml } from "@/lib/html";
 import { blocksOf, blockEmpty } from "@/lib/cornell";
 import { marksOf, measureMarks, offsetsOf, quoteOf, sameRects } from "@/lib/cornellMarks";
+import SecureHtml from "./SecureHtml";
 
 export default function CornellNoteSheet({
   note,
@@ -161,9 +162,9 @@ export default function CornellNoteSheet({
               </section>
               <section className="cornell-sheet-notes">
                 {hasNotes ? (
-                  <div
+                  <SecureHtml
                     className="cornell-sheet-rich"
-                    dangerouslySetInnerHTML={{ __html: notesHtml }}
+                    html={notesHtml}
                   />
                 ) : (
                   <p className="cornell-sheet-blank">비어 있어요</p>
