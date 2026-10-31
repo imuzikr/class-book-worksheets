@@ -1,27 +1,5 @@
 
 
-.study-seg-num {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  font-size: 11.5px;
-  color: var(--text-sub);
-  font-family: var(--font-mono);
-  white-space: nowrap;
-}
-
-/* 책방 KWLS 활동에서 넘어온 기록 표시 — 같은 날짜 아래 공부방 하루 성찰과
-   나란히 놓이므로, 어디서 쓴 것인지 밝혀 둡니다. */
-.kwl-entry-src {
-  display: inline-block;
-  font-size: 10.5px;
-  color: #c2c0b6;
-  background: var(--on-dark-08);
-  border-radius: 999px;
-  padding: 2px 8px;
-  margin-bottom: 6px;
-}
-
 /* ── 독서 활동 진행 패널 — 결석 표시 ──
    0칸은 '아직 안 씀'과 '그날 못 옴' 둘 다일 수 있어, 결석은 따로 붙입니다. */
 .book-absent-chip {

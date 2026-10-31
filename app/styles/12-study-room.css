@@ -1,19 +1,5 @@
 
 /* ===================== 공부방 (Study) ===================== */
-.study-shell {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  overflow: hidden;
-}
-
-.study-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  /* padding은 study-head와 study-cols-wrap에서 각각 처리 */
-}
 
 /* ── 오른쪽: 참여 보상 패널 (교사 전용) ── */
 /* 폭을 패널이 아니라 **안쪽 내용에** 줍니다.
