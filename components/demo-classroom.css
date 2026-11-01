@@ -18,6 +18,13 @@
 .demo-classroom-notice small { display: block; }
 .demo-classroom-notice small { color: #65746b; font-size: 11px; }
 .demo-classroom-notice button { flex-shrink: 0; white-space: nowrap; }
-@media (max-width: 600px) {
-  .demo-classroom-notice { margin: 10px 12px 0; padding: 10px 12px; align-items: flex-start; flex-direction: column; gap: 8px; font-size: 12px; }
+/* 휴대폰 — 제목과 버튼만 한 줄로. 설명 두 줄은 숨기고, 넘치는 제목은 …로 줄입니다.
+   이 상자는 스크롤해도 늘 위에 붙어 있어 세로로 쌓으면 화면의 18%를 먹었습니다. */
+@media (max-width: 767.98px) {
+  .demo-classroom-notice { margin: 6px 12px 0; padding: 6px 8px 6px 12px; gap: 8px; font-size: 12px; line-height: 1.4; }
+  .demo-classroom-notice > div { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .demo-classroom-notice strong { display: inline; }
+  .demo-classroom-notice span,
+  .demo-classroom-notice small { display: none; }
+  .demo-classroom-notice button { font-size: 12px; padding: 4px 10px; min-height: 0; }
 }

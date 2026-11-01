@@ -504,8 +504,11 @@
   color: #7a5200; font-size: 12px; font-weight: 700; white-space: nowrap;
 }
 .sample-class-exit { font-size: 12px; padding: 4px 10px; white-space: nowrap; }
-@media (max-width: 640px) {
-  .sample-class-entry { flex-direction: column; align-items: stretch; }
+/* 휴대폰 — 안내 한 줄 + 단추. 넘치는 글은 …로 줄입니다(늘 위에 붙어 있는 줄이라) */
+@media (max-width: 767.98px) {
+  .sample-class-entry { margin: 6px 12px 0; padding: 6px 8px 6px 12px; gap: 8px; font-size: 12px; line-height: 1.4; }
+  .sample-class-entry > span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sample-class-entry .btn-ghost { font-size: 12px; padding: 4px 10px; min-height: 0; }
 }
 
 /* 활동 화면 공통 머리(모든 독서 활동) — 제목 · 활동 목록 · 안내문을 한 줄에.
