@@ -26,5 +26,5 @@
   .demo-classroom-notice strong { display: inline; }
   .demo-classroom-notice span,
   .demo-classroom-notice small { display: none; }
-  .demo-classroom-notice button { font-size: 12px; padding: 4px 10px; min-height: 0; }
+  .demo-classroom-notice button { font-size: 12px; padding: 4px 12px; min-height: 36px; }
 }
