@@ -69,15 +69,6 @@
 .xw-save { margin: 0; min-height: 18px; font-size: 12px; color: var(--text-sub); }
 
 /* ── 퍼즐 판 ── */
-.xw {
-  display: grid;
-  grid-template-columns: minmax(0, auto) minmax(220px, 1fr);
-  gap: 18px;
-  align-items: start;
-}
-@container (max-width: 760px) {
-  .xw { grid-template-columns: minmax(0, 1fr); }
-}
 .xw-grid {
   display: grid;
   grid-template-columns: repeat(var(--xw-cols), minmax(0, 44px));

@@ -11,6 +11,7 @@
     "lint": "npm --prefix tools/lint run lint",
     "css:fingerprint": "node scripts/check-css-fingerprint.mjs --check",
     "css:resolved": "node scripts/check-css-fingerprint.mjs --check --resolved",
+    "css:unused": "node scripts/css-unused-scan.mjs",
     "deploy": "bash scripts/deploy.sh",
     "books:rescue": "node scripts/admin/rescue-activity.mjs",
     "notes:purge-orphans": "node scripts/admin/purge-orphan-cornell-notes.mjs",

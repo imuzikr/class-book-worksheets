@@ -168,9 +168,6 @@
   color: #fff;
 }
 
-@container feed-head (max-width: 779px) {
-}
-
 /* ===================== 내 인사이트 모음 모달 ===================== */
 
 .card-meta {
