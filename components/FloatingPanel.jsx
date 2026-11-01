@@ -69,7 +69,10 @@ export default function FloatingPanel({
     const saved = readSaved(storageKey);
     const x = Number.isFinite(saved?.x) ? saved.x : window.innerWidth - width - 24;
     const y = Number.isFinite(saved?.y) ? saved.y : defaultTop;
-    const wasOpen = typeof saved?.open === "boolean" ? saved.open : true;
+    // 기억해 둔 접힘이 없으면 — 휴대폰처럼 좁은 화면(767.98px 이하)은 접어서 시작합니다.
+    // 펼친 패널이 판을 거의 다 가렸습니다. 넓은 화면은 전처럼 펼쳐서 시작합니다.
+    const narrow = window.matchMedia?.("(max-width: 767.98px)").matches ?? false;
+    const wasOpen = typeof saved?.open === "boolean" ? saved.open : !narrow;
     setPos(clampPos(x, y, width, wasOpen));
     setOpen(wasOpen);
     setVh(window.innerHeight);
