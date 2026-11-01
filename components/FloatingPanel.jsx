@@ -29,10 +29,11 @@ function readSaved(key) {
     return null;
   }
 }
-function writeSaved(key, value) {
+// 바뀐 것만 덧씌워 저장합니다 — 접기만 했으면 자리는, 끌기만 했으면 접힘은 그대로 둡니다
+function writeSaved(key, patch) {
   if (!key) return;
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    localStorage.setItem(key, JSON.stringify({ ...(readSaved(key) || {}), ...patch }));
   } catch {
     /* 저장 못 해도 화면은 그대로 */
   }
@@ -89,11 +90,11 @@ export default function FloatingPanel({
     return () => window.removeEventListener("resize", onResize);
   }, [mounted, width, open]);
 
-  // 자리 · 접힘을 기억 — 끄는 동안은 놓을 때 한 번만
-  useEffect(() => {
-    if (!mounted || !pos || dragRef.current) return;
-    writeSaved(storageKey, { x: pos.x, y: pos.y, open });
-  }, [mounted, pos, open, storageKey]);
+  // 자리 · 접힘은 사람이 직접 바꿀 때만 기억합니다 — 접힘은 단추를 누를 때, 자리는 끌어서
+  // 놓을 때. 처음 뜰 때나 창 크기가 바뀔 때 저장하면, 휴대폰에서 보기만 해도 '접힘'이
+  // 굳어 넓은 화면에서도 접힌 채로 시작했습니다(검수반장).
+  const posRef = useRef(pos);
+  posRef.current = pos;
 
   const onPointerDown = useCallback(
     (e) => {
@@ -109,18 +110,21 @@ export default function FloatingPanel({
     (e) => {
       const d = dragRef.current;
       if (!d) return;
+      d.moved = true;
       setPos(clampPos(e.clientX - d.dx, e.clientY - d.dy, width, open));
     },
     [width, open]
   );
   const onPointerUp = useCallback(
     (e) => {
-      if (!dragRef.current) return;
+      const d = dragRef.current;
+      if (!d) return;
       dragRef.current = null;
       e.currentTarget.releasePointerCapture?.(e.pointerId);
-      setPos((p) => (p ? { ...p } : p)); // 놓은 자리를 기억하도록 한 번 더 그림
+      const p = posRef.current;
+      if (p && d.moved) writeSaved(storageKey, { x: p.x, y: p.y }); // 누르기만 하고 놓으면 저장 안 함
     },
-    []
+    [storageKey]
   );
 
   if (!mounted || !pos) return null;
@@ -153,6 +157,7 @@ export default function FloatingPanel({
           onClick={() => {
             const next = !open;
             setOpen(next);
+            writeSaved(storageKey, { open: next });
             // 바닥에 접어 둔 것을 펴면 몸통이 보이게 위로 올림
             setPos((p) => (p ? clampPos(p.x, p.y, width, next) : p));
           }}
