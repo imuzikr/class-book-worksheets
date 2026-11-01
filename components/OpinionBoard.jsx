@@ -76,6 +76,9 @@ const DRAG_SLOP = 4;
 // 영역 색(바탕 · 경계선) — app/styles/37-opinion-board.css의 .tint-*. 차례는 선생님이 주신 그림대로.
 const ZONE_TINTS = ["mint", "rose", "lime", "peach", "sky"];
 
+// 좁은 화면 기준 — CSS(37-opinion-board.css)의 767.98px와 같은 값
+const NARROW_Q = "(max-width: 767.98px)";
+
 export default function OpinionBoard({
   activity,
   user,
@@ -164,7 +167,20 @@ export default function OpinionBoard({
 
   const isMine = (n) => !!uid && n.authorId === uid;
   const layout = opinionLayout(activity);
-  const isList = layout === "list";
+  // 휴대폰(767px 이하)에서는 메모판 활동도 목록으로 보여 줍니다 — 메모판은
+  // 좁은 폭에서 끌어 옮기기가 어렵습니다. 화면에서만 바꾸고 저장된 layout은
+  // 그대로입니다(CornellNoteDrawer와 같은 방식). 판정 전 첫 그림에서 메모판이
+  // 비치지 않게 CSS(37)가 좁은 폭의 메모판을 숨깁니다.
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return undefined;
+    const mq = window.matchMedia(NARROW_Q);
+    const sync = () => setNarrow(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+  const isList = layout === "list" || narrow;
   const unit = isList ? "글" : "메모";
   // 쓰는 사람 이름표(미리 보기) — 학생은 실명(학번 이름)
   const composeLabel = isTeacher
@@ -377,6 +393,9 @@ export default function OpinionBoard({
         <p className="form-error" role="alert" onClick={() => setError("")}>{error}</p>
       )}
 
+      {isTeacher && narrow && layout === "memo" && (
+        <p className="opinion-mobile-note">휴대폰에서는 목록으로 보여요 · 메모판은 넓은 화면에서 볼 수 있어요</p>
+      )}
       {isList ? (
         <section className="opinion-board is-list" style={{ "--zones": zones.length }} aria-label="생각 목록">
           <div className="opinion-heads">
