@@ -21,8 +21,15 @@
   font-size: 11px;
 }
 .demo-preview-error { flex-basis: 100%; max-width: 250px; font-size: 11px; color: #9b362d; }
-@media (max-width: 760px) {
-  .topbar .user-area:has(> .demo-role-preview) { flex-wrap: wrap; }
-  .demo-role-preview { flex-basis: 100%; max-width: none; justify-content: flex-end; }
-  .demo-role-preview .role-switch button { min-height: 32px; }
+/* 휴대폰 — 체험용 칸(교사/학생 · 체험 학생)을 아이콘과 같은 줄에 세우되, 자리가 모자라면
+   **줄을 바꿉니다**(nowrap이면 360~550px에서 페이지가 가로로 넘쳤습니다 — 검수반장).
+   샘플 반 표시줄(배지 · 나가기)은 제 줄을 차지합니다. 누르는 곳은 36px 이상. */
+@media (max-width: 767.98px) {
+  .topbar .user-area:has(> .demo-role-preview),
+  .topbar .user-area:has(> .sample-class-bar) { flex-wrap: wrap; flex-basis: 100%; min-width: 0; margin-left: 0; justify-content: flex-end; row-gap: 4px; }
+  .topbar .user-area > .sample-class-bar { flex-basis: 100%; justify-content: flex-end; min-width: 0; }
+  .demo-role-preview { flex-wrap: nowrap; max-width: 100%; min-width: 0; gap: 4px; }
+  .demo-role-preview .role-switch button { min-height: 36px; padding: 3px 6px; }
+  .demo-student-select { width: 96px; min-height: 36px; flex-shrink: 1; min-width: 80px; }
+  .sample-class-exit { min-height: 36px; }
 }
