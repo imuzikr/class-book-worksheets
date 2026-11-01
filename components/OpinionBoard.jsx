@@ -29,6 +29,7 @@
 // =============================================================
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { sizeRef } from "@/lib/sizeRef";
 import {
   addOpinionNote,
   deleteOpinionNote,
@@ -76,6 +77,9 @@ const DRAG_SLOP = 4;
 // 영역 색(바탕 · 경계선) — app/styles/37-opinion-board.css의 .tint-*. 차례는 선생님이 주신 그림대로.
 const ZONE_TINTS = ["mint", "rose", "lime", "peach", "sky"];
 
+// 좁은 화면 기준 — CSS(37-opinion-board.css)의 767.98px와 같은 값
+const NARROW_Q = "(max-width: 767.98px)";
+
 export default function OpinionBoard({
   activity,
   user,
@@ -118,7 +122,6 @@ export default function OpinionBoard({
   const realOf = (n) => noteRealLabel(n, rosterById.get(n.authorId) ?? null);
 
   // ── 판 크기 재기 — 자리 셈이 픽셀을 알아야 합니다 ──
-  const bodyRef = useRef(null);
   // 목록 판은 창 바닥까지 — 판이 선 자리에서 창 끝까지를 잽니다. 판 아래에
   // 붙는 것(판 테두리 · 페이지 여백)만큼 빼서 페이지 스크롤이 안 생기게.
   const listRef = useRef(null);
@@ -142,15 +145,13 @@ export default function OpinionBoard({
     return () => window.removeEventListener("resize", measure);
   });
   const [box, setBox] = useState({ w: 0, h: 0 });
-  useEffect(() => {
-    const el = bodyRef.current;
-    if (!el) return undefined;
-    const measure = () => setBox({ w: el.clientWidth, h: el.clientHeight });
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [loaded]);
+  // 판이 붙을 때마다 재고 ResizeObserver를 새로 겁니다(lib/sizeRef). 좁게 열어
+  // 목록으로 그렸다가 넓히면 메모판이 새로 붙는데, 예전 effect([loaded])는 다시
+  // 재지 않아 옛 폭(840px)으로 자리를 셈해 끌면 틀린 x가 저장됐습니다.
+  const bodyRef = useMemo(
+    () => sizeRef((s) => setBox((prev) => (prev.w === s.w && prev.h === s.h ? prev : s))),
+    []
+  );
 
   // 놓은 자리를 저장이 돌아올 때까지 붙들어 둡니다 { [id]: {zone,x,y} }.
   const [pending, setPending] = useState({});
@@ -164,8 +165,24 @@ export default function OpinionBoard({
 
   const isMine = (n) => !!uid && n.authorId === uid;
   const layout = opinionLayout(activity);
-  const isList = layout === "list";
-  const unit = isList ? "글" : "메모";
+  // 휴대폰(767px 이하)에서는 메모판 활동도 목록으로 보여 줍니다 — 메모판은
+  // 좁은 폭에서 끌어 옮기기가 어렵습니다. 화면에서만 바꾸고 저장된 layout은
+  // 그대로입니다(CornellNoteDrawer와 같은 방식). 판정 전 첫 그림에서 메모판이
+  // 비치지 않게 CSS(37)가 좁은 폭의 메모판을 숨깁니다.
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return undefined;
+    const mq = window.matchMedia(NARROW_Q);
+    const sync = () => setNarrow(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+  const isList = layout === "list" || narrow;
+  // 단위 · 쓰기 창(색 고르기 · 단추 이름)은 활동의 원래 판 모양을 따릅니다 —
+  // 휴대폰에서 목록으로 보여도 메모판 활동이면 메모지 색을 고릅니다.
+  const memoActivity = layout !== "list";
+  const unit = memoActivity ? "메모" : "글";
   // 쓰는 사람 이름표(미리 보기) — 학생은 실명(학번 이름)
   const composeLabel = isTeacher
     ? "선생님"
@@ -340,11 +357,11 @@ export default function OpinionBoard({
             {topic && <span className="book-group-topic">{topic}</span>}
             {classPicker ?? (className && <span className="book-group-class">{className}</span>)}
             <span className="paratext-sum">
-              {unit} {notes.length}{isList ? "개" : "장"}
+              {unit} {notes.length}{memoActivity ? "장" : "개"}
               {isTeacher && studentTotal > 0
                 ? ` · 쓴 학생 ${rosterWriters} / ${studentTotal}명`
                 : !isTeacher && myCount > 0
-                  ? ` · 내 ${unit} ${myCount}${isList ? "개" : "장"}`
+                  ? ` · 내 ${unit} ${myCount}${memoActivity ? "장" : "개"}`
                   : ""}
             </span>
             {locked && (
@@ -377,6 +394,9 @@ export default function OpinionBoard({
         <p className="form-error" role="alert" onClick={() => setError("")}>{error}</p>
       )}
 
+      {isTeacher && narrow && layout === "memo" && (
+        <p className="opinion-mobile-note">휴대폰에서는 목록으로 보여요 · 메모판은 넓은 화면에서 볼 수 있어요</p>
+      )}
       {isList ? (
         <section className="opinion-board is-list" style={{ "--zones": zones.length }} aria-label="생각 목록">
           <div className="opinion-heads">
@@ -565,8 +585,8 @@ export default function OpinionBoard({
             />
           }
           authorLabel={composeLabel}
-          showColors={!isList}
-          submitLabel={isList ? "제출" : "메모 붙이기"}
+          showColors={memoActivity}
+          submitLabel={memoActivity ? "메모 붙이기" : "제출"}
           onSave={async (v) => { await createNote(v); setComposeZone(null); }}
           onClose={() => setComposeZone(null)}
         />
@@ -591,7 +611,7 @@ export default function OpinionBoard({
             />
           }
           authorLabel={labelOf(openNote)}
-          showColors={!isList}
+          showColors={memoActivity}
           zoneAllowed={singleStudent ? (k) => k === zoneOfNote(openNote, zones) : undefined}
           canEdit={canEdit(openNote)}
           canRemove={canRemove(openNote)}

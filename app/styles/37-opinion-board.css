@@ -636,3 +636,17 @@ h4.attendance-seat-help { margin-top: 16px; }
   .opinion-zone-inputs,
   .opinion-zone-inputs--row { grid-template-columns: 1fr; grid-auto-flow: row; }
 }
+
+/* 휴대폰(767px 이하) — 메모판 활동도 목록으로 보입니다(OpinionBoard의 matchMedia).
+   목록은 칸마다 280px, 옆으로 밀면 칸 머리에 맞춰 멈춥니다. 칸 머리와 목록은
+   같은 판(.opinion-board) 안에서 함께 구르고, 페이지는 옆으로 구르지 않습니다.
+   matchMedia 판정 전 첫 그림에 메모판이 비치지 않게 좁은 폭의 메모판은 숨깁니다.
+   768px 이상은 그대로입니다. */
+@media (max-width: 767.98px) {
+  .opinion-board:not(.is-list) { visibility: hidden; }
+  .opinion-board.is-list { scroll-snap-type: x proximity; }
+  .opinion-board.is-list .opinion-heads,
+  .opinion-board.is-list .opinion-list-body { min-width: calc(var(--zones, 2) * 280px); }
+  .opinion-board.is-list .opinion-zone-head { scroll-snap-align: start; }
+  .opinion-mobile-note { margin: 0 0 8px; font-size: 12.5px; color: var(--text-sub); }
+}
