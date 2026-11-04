@@ -212,23 +212,30 @@
   .topbar-book-navigation .logo > svg { width: 24px; height: 24px; }
 }
 /* 휴대폰 상단바 — 누르는 곳은 모두 36px 이상(검수반장 지적, 손가락 기준).
-   **글자·아이콘 크기는 그대로** 두고 min-height·min-width로 상자만 키웁니다.
    이동 메뉴(책방·책나눔)는 위 480px 규칙에서 34px → 36px로 맞췄습니다.
-   손든 학생 자리 빈 상자(.question-signal-hold)는 손바닥 단추와 같은 폭이라야
-   손이 오르내릴 때 옆 아이콘이 안 밀립니다(04-notification-signal.css 참고).
+   책봄 홈·과일은 min-height로 상자를 키워도 가로가 늘지 않아 줄이 안 늘어납니다.
+   종·확성기·손들기는 **보이는 상자(main과 같은 ≈28px)는 그대로** 두고
+   ::before로 누르는 곳만 넓힙니다 — 상자를 키우면 알림 종이 있을 때
+   390폭에서 상단바가 두 줄이 됩니다(검수반장 PR #66).
+   돌발 퀴즈 상단 표시(.pq-btn--indicator)는 누르는 단추가 아니라서 키우지 않습니다.
+   예전에 두었던 .pq-btn:not(.pq-btn--indicator) 규칙은 상단바에서 걸리는 곳이
+   없어 뺐습니다(일반 .pq-btn은 떠 있는 동그라미 쪽에서만 씁니다).
    768px 이상은 바꾸지 않습니다. */
 @media (max-width: 767.98px) {
   .topbar-book-navigation .logo-button { min-height: 36px; }
-  .topbar-book-navigation .notice-wrap .notice-btn,
-  .topbar-book-navigation .notif-wrap .notif-btn,
-  .topbar-book-navigation .pq-btn:not(.pq-btn--indicator) {
-    display: inline-grid;
-    place-items: center;
-    min-width: 36px;
-    min-height: 36px;
+  .topbar-book-navigation .notice-wrap .notice-btn::before,
+  .topbar-book-navigation .notif-wrap .notif-btn::before {
+    content: "";
+    position: absolute;
+    /* 실측 약 31×22 → 세로 -7·가로 -3 이면 누르는 곳 최소 36×36.
+       user-area gap 4px라 옆 단추와 살짝만 겹칩니다. */
+    inset: -7px -3px;
   }
-  .topbar-book-navigation .question-signal-btn { width: 36px; height: 36px; }
-  .topbar-book-navigation .question-signal-hold { width: 36px; }
+  .topbar-book-navigation .question-signal-btn::before {
+    content: "";
+    position: absolute;
+    inset: -4px; /* 28×28 → 36×36. hold 폭은 main과 같이 28px 유지 */
+  }
   .topbar-book-navigation .fruit-total-chip--btn { min-height: 36px; }
 }
 
