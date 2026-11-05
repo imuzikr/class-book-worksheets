@@ -236,6 +236,15 @@
     position: absolute;
     inset: -4px; /* 28×28 → 36×36. hold 폭은 main과 같이 28px 유지 */
   }
+  /* 돌발 퀴즈 표시가 오른쪽에 붙어 있으면 손들기가 왼쪽으로 밀려 책나눔과 1~3px까지
+     가까워집니다(학생 400·440폭). 이때는 왼쪽으로 넓히지 않고 오른쪽(누르는 단추가 아닌
+     돌발 퀴즈 표시 위)으로만 8px 넓혀 36×36을 지킵니다. */
+  .topbar-book-navigation .question-signal-wrap:has(+ .pq-btn--indicator) .question-signal-btn {
+    z-index: 1;
+  }
+  .topbar-book-navigation .question-signal-wrap:has(+ .pq-btn--indicator) .question-signal-btn::before {
+    inset: -4px -8px -4px 0;
+  }
   .topbar-book-navigation .fruit-total-chip--btn { min-height: 36px; }
 }
 

@@ -130,7 +130,7 @@
 .eov-nav-chip.done {
   background: var(--green-50);
   border-color: var(--green-200);
-  color: #2f6b47;
+  color: var(--green-800);
 }
 .eov-nav-chip:hover { border-color: var(--primary); }
 .eov-nav-sum {
@@ -178,7 +178,7 @@
 .eov-card.wide { grid-column: 1 / -1; }
 .eov-card.done { border-color: var(--green-200); }
 .eov-card.done .paratext-letter { background: var(--teal-600); }
-.eov-card.empty { background: #fcfbf8; }
+.eov-card.empty { background: var(--bg); }
 .eov-card-head { display: flex; align-items: center; gap: 10px; }
 .eov-state {
   flex-shrink: 0;
@@ -191,7 +191,7 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
-.eov-state.done { background: var(--green-50); color: #2f6b47; }
+.eov-state.done { background: var(--green-50); color: var(--green-800); }
 .eov-prompt {
   margin: 0;
   font-size: 12.5px;
@@ -264,7 +264,7 @@
 }
 .eov-peer-row .peer-card { min-width: 0; background: #fff; box-shadow: var(--shadow-soft); }
 .eov-peer-row .peer-card { min-height: 96px; }
-.eov-peer-row .peer-card.is-empty { background: #fcfbf8; border-style: dashed; box-shadow: none; }
+.eov-peer-row .peer-card.is-empty { background: var(--bg); border-style: dashed; box-shadow: none; }
 .eov-peer-row .peer-card.is-empty header { color: var(--text-sub); }
 .eov-peer-wait { margin: 0; font-size: 13px; color: var(--text-faint); }
 .eov-hint {
@@ -325,7 +325,7 @@
   border-top: 4px solid var(--xwg-c, var(--primary));
   border-radius: 12px;
   background: #fff;
-  box-shadow: 0 8px 24px rgba(46, 36, 26, 0.16);
+  box-shadow: 0 8px 24px rgba(46, 36, 26, 0.14);
   overflow: hidden;
 }
 .xwg-hintpop-head {

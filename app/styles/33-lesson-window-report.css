@@ -43,7 +43,7 @@
 .study-title-row:hover::-webkit-scrollbar-thumb,
 .books-head-title:hover::-webkit-scrollbar-thumb,
 .dash-root > .canvas-head:hover::-webkit-scrollbar-thumb {
-  background: #d6d2c6;
+  background: #d9d5ca;
 }
 
 /* 누가기록 모달 — 날짜 칸과 '이력 보기'를 오른쪽 위에 한 벌로 나란히.

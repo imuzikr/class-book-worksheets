@@ -235,7 +235,7 @@
 
 /* 선생님 승인 대기 목록 */
 .role-pending {
-  background: #fffbf3;
+  background: #fffaf0;
   border: 1.5px solid #e8a817;
   border-radius: 12px;
   padding: 14px 16px;

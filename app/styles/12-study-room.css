@@ -121,7 +121,7 @@
   border: 1px solid var(--border);
   border-radius: 12px;
   background: #fff;
-  box-shadow: 0 8px 24px rgba(46, 36, 26, 0.16);
+  box-shadow: 0 8px 24px rgba(46, 36, 26, 0.14);
 }
 .tally-pop-head {
   display: flex;
@@ -163,7 +163,7 @@
   min-width: 0;
   height: 10px;
   /* 패널 바탕(--bg-deep)보다 한 톤 어두워야 빈 자리가 자리로 읽힙니다 */
-  background: #e6e3da;
+  background: var(--border);
   border-radius: 3px;
   overflow: hidden;
 }
@@ -392,7 +392,7 @@
 /* 다 준 뒤 잠깐 — 이 앱에서 초록은 늘 '됐다' */
 .reward-group-award.done,
 .reward-group-award.done:disabled,
-.reward-group-award.done:hover:not(:disabled) { background: var(--green-50); color: #2f6b47; opacity: 1; }
+.reward-group-award.done:hover:not(:disabled) { background: var(--green-50); color: var(--green-800); opacity: 1; }
 .reward-group-members {
   flex: 1;
   min-width: 0;
@@ -564,7 +564,7 @@
 }
 .broadcast-progress {
   margin-left: auto;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--on-dark-16);
   padding: 3px 12px;
   border-radius: 999px;
   font-size: 13px;

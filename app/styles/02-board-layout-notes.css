@@ -315,7 +315,7 @@
   transition: background 0.15s;
 }
 .profile-btn:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(46, 36, 26, 0.06);
 }
 .profile-caret {
   font-size: 10px;

@@ -109,7 +109,7 @@
 }
 .progress-stage-unassigned-student span { color: var(--text-sub); font-size: 11px; }
 .grass-cell--unassigned, .progress-mark--unassigned,
-.entry-heat-cell--unassigned { background: #eee9df; border: 1px dashed #b9ad98; }
+.entry-heat-cell--unassigned { background: #ede9e0; border: 1px dashed #b9ad98; }
 .entry-heat-cell--none { background: transparent; border: 1px dashed var(--border); }
 .book-group-rail > .progress-stage-filter { flex-shrink: 0; }
 @media (max-width: 760px) {

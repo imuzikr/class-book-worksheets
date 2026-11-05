@@ -363,7 +363,7 @@
 }
 .ltask-out-line { display: block; }
 .ltask-out-line--err { color: #ffb4a2; }
-.ltask-out-line--info { color: #b8b2a6; }
+.ltask-out-line--info { color: #b9b2a6; }
 .ltask-out-line--result { color: #a7d7a7; }
 
 /* input()이 찍은 '입력한 값' — 출력보다 옅게(components/PyLineText.jsx).
