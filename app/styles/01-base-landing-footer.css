@@ -185,7 +185,7 @@ html[data-auth-pending] .site-footer {
      배경이 아니라 가운데 흰 카드 안에 크게 섭니다(public/landing-reading.webp). */
   background:
     radial-gradient(1200px 520px at 50% -120px, #ffffff 0%, rgba(255, 255, 255, 0) 70%),
-    var(--bg-deep);
+    #f1f3ee;
 }
 
 /* 상단 바: 로고(왼쪽) + 로그인/회원가입(오른쪽) — 글래스 바 */
