@@ -172,7 +172,7 @@
   font-weight: 700;
   color: var(--primary-dark);
 }
-.question-signal-error { color: var(--danger, #d64545); line-height: 1.6; }
+.question-signal-error { color: var(--danger); line-height: 1.6; }
 
 /* ── 14칸을 다 채운 사람 수 ──
    진행 패널 제목 옆(.book-progress-done)과 전체 보기 머리말(.dash-done-count).

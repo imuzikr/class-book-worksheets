@@ -332,7 +332,7 @@
   height: 16px;
   padding: 0 4px;
   border-radius: 999px;
-  background: var(--danger, #d64545);
+  background: var(--danger);
   color: #fff;
   font-size: 10px;
   font-weight: 800;
@@ -424,7 +424,7 @@
   height: 16px;
   padding: 0 4px;
   border-radius: 999px;
-  background: var(--danger, #d64545);
+  background: var(--danger);
   color: #fff;
   font-size: 10px;
   font-weight: 800;
@@ -502,7 +502,7 @@
   color: var(--text-sub);
 }
 .notice-pop-left.warn {
-  color: var(--danger, #d64545);
+  color: var(--danger);
   font-weight: 700;
 }
 .notice-pop-send {
@@ -518,7 +518,7 @@
   color: var(--primary-dark);
 }
 .notice-pop-result.bad {
-  color: var(--danger, #d64545);
+  color: var(--danger);
 }
 .notice-pop-hint {
   margin: 8px 0 0;

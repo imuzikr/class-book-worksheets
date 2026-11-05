@@ -94,20 +94,6 @@
     animation: none;
   }
 }
-.attend-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-bottom: 12px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-sub);
-}
-.attend-legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
 .attend-toolbar {
   display: flex;
   align-items: center;
@@ -289,11 +275,6 @@
     animation: none;
   }
 }
-.attend-legend-item--hand {
-  font-weight: 800;
-  color: var(--primary-dark);
-}
-
 /* ── 자리를 누르면 그 옆에 뜨는 과일/누가기록 창 ──
    **모달이 아니라 팝오버입니다**(궁금한 순간의 `.tally-pop`과 같은 성격) —
    뒤를 덮지 않고, 누른 자리 옆에 붙고, 바깥을 누르거나 Esc·×로 닫힙니다.

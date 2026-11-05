@@ -530,7 +530,7 @@
    방송 점을 달아 이 칸이 지금 하라고 온 것임을 말합니다. */
 .ltask-fold.now {
   background: var(--primary-light);
-  color: var(--primary-dark, #c15a2a);
+  color: var(--primary-dark);
   cursor: default;
 }
 .ltask-fold.now .ltask-fold-no {
