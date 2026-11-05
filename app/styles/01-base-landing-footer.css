@@ -286,7 +286,7 @@ html[data-auth-pending] .site-footer {
   padding: 30px 30px 32px;
   background: #fff;
   border-radius: 22px;
-  box-shadow: 0 1px 3px rgba(46, 36, 26, 0.06), 0 10px 32px rgba(46, 60, 46, 0.06);
+  box-shadow: 0 1px 3px rgba(46, 36, 26, 0.06), 0 10px 32px rgba(46, 36, 26, 0.06);
 }
 
 .hero-card-title {
@@ -328,7 +328,7 @@ html[data-auth-pending] .site-footer {
 
 /* 로그인/회원가입 모달도 글래스 스타일 */
 .modal-auth {
-  background: rgba(250, 249, 245, 0.85);
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(20px) saturate(160%);
   -webkit-backdrop-filter: blur(20px) saturate(160%);
   border: 1px solid rgba(255, 255, 255, 0.7);

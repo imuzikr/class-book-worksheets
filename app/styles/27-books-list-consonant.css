@@ -608,7 +608,7 @@
   border: 1px solid var(--primary);
   border-radius: 999px;
   background: #fff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(46, 36, 26, 0.14);
   padding: 4px 11px;
   font-style: normal;
   font-size: 12px;

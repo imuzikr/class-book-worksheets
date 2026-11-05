@@ -96,7 +96,7 @@
   border-color: var(--board-center);
 }
 .canvas-main:not(.dash-root) .consonant-center-label,
-.canvas-embed .consonant-center-label { color: rgba(255, 255, 255, 0.72); }
+.canvas-embed .consonant-center-label { color: rgba(255, 255, 255, 0.75); }
 .canvas-main:not(.dash-root) .canvas-progress-bar span,
 .canvas-embed .canvas-progress-bar span { background: var(--board-center); }
 
@@ -441,7 +441,7 @@
   background: rgba(255, 255, 255, 0.94);
   border: 2px solid var(--primary);
   border-radius: 999px;
-  box-shadow: 0 10px 30px rgba(46, 36, 26, 0.18);
+  box-shadow: 0 10px 30px rgba(46, 36, 26, 0.14);
   /* RewardCelebration의 LIFE_MS(4.2초)와 같은 값 */
   animation: reward-cheer-fade 4.2s ease-out forwards;
 }

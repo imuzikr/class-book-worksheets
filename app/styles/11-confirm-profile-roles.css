@@ -15,7 +15,7 @@
   align-items: center;
   gap: 0;
   text-align: center;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
   animation: confirm-in 0.18s ease;
 }
 
@@ -105,7 +105,7 @@
 }
 
 .confirm-confirm.danger:hover {
-  background: #b91c1c;
+  background: #b42318;
 }
 
 /* ===================== 학생 프로필 편집 모달 ===================== */
@@ -315,7 +315,7 @@
   background: #fff;
   border: 1px solid var(--border);
   border-radius: 10px;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 6px 24px rgba(46, 36, 26, 0.14);
   max-height: 240px;
   overflow-y: auto;
 }
@@ -458,7 +458,7 @@
   border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
   z-index: 1200;
   animation: toast-in 0.22s ease;
 }

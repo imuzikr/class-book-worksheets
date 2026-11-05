@@ -263,7 +263,7 @@
   background: #fff;
 }
 .notif-op-block--reply {
-  border-left-color: #6fbf8a;
+  border-left-color: #6fb98a;
   background: #eef8f1;
 }
 .notif-op-label {
@@ -537,7 +537,7 @@
 .sample-class-bar { display: flex; align-items: center; gap: 6px; }
 .sample-class-badge {
   padding: 4px 10px; border-radius: 999px; background: #fff4d6; border: 1px solid #f0c36d;
-  color: #7a5200; font-size: 12px; font-weight: 700; white-space: nowrap;
+  color: #7d5811; font-size: 12px; font-weight: 700; white-space: nowrap;
 }
 .sample-class-exit { font-size: 12px; padding: 4px 10px; white-space: nowrap; }
 /* 휴대폰 — 안내 한 줄 + 단추. 넘치는 글은 …로 줄입니다(늘 위에 붙어 있는 줄이라) */
