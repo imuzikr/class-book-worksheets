@@ -43,7 +43,14 @@
 // =============================================================
 import { execSync } from "node:child_process";
 
-const PROJECT_ID = "book-sheets-19fd2"; // .firebaserc와 같은 값
+import { DEFAULT_FIREBASE_PROJECT_ID } from "../../lib/firebase-defaults.mjs";
+
+// FIREBASE_PROJECT_ID 또는 NEXT_PUBLIC_FIREBASE_PROJECT_ID 가 있으면 쓰고,
+// 없으면 원작자 기본값(.firebaserc와 같음). 복제해 쓸 때는 환경변수를 넣으세요.
+const PROJECT_ID =
+  process.env.FIREBASE_PROJECT_ID ||
+  process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
+  DEFAULT_FIREBASE_PROJECT_ID;
 const BASE = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
 const APPLY = process.argv.includes("--apply");
 const ONLY_UID = (process.argv.find((a) => a.startsWith("--uid=")) ?? "").slice(6);
