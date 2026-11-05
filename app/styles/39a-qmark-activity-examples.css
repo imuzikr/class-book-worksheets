@@ -132,10 +132,10 @@
 .qmark-ask {
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: #fffaf6;
+  background: var(--bg);
   transition: border-color 0.15s, background 0.15s;
 }
-.qmark-ask.filled { border-color: var(--green-200); background: #f6fbf8; }
+.qmark-ask.filled { border-color: var(--green-200); background: #fbfefc; }
 .qmark-ask.open { border-color: var(--apricot-300); }
 .qmark-ask.open.filled { border-color: var(--green-300); }
 .qmark-ask-head { display: flex; align-items: center; }
@@ -177,7 +177,7 @@
   font-weight: 700;
   color: var(--text-sub);
 }
-.qmark-ask-state.doing { background: #fff1e0; color: #b3621b; }
+.qmark-ask-state.doing { background: #fbf0dc; color: #b3621b; }
 .qmark-ask-state.done { background: var(--green-50); color: var(--green-700); }
 .qmark-ask-body { display: flex; flex-direction: column; gap: 8px; padding: 0 12px 12px; }
 /* ③ 위에 체크한 물음을 한 줄씩 — 무엇을 길잡이로 쓰는지 쓰는 자리에서 보이게 */
@@ -215,7 +215,7 @@
   background: #fff;
   transition: border-color 0.15s, background 0.15s;
 }
-.qmark-prompt.on { border-color: var(--green-200); background: #f6fbf8; }
+.qmark-prompt.on { border-color: var(--green-200); background: #fbfefc; }
 .qmark-check {
   display: flex;
   align-items: flex-start;

@@ -37,7 +37,7 @@
   gap: 6px;
   padding: 12px 16px;
   border-top: 1px solid var(--border);
-  background: #fdfcfa;
+  background: var(--card-bg);
 }
 .cornell-sheet-handout-list {
   display: flex;
@@ -83,7 +83,7 @@
   padding: 5px 12px;
   border: none;
   border-radius: 999px;
-  background: #f1eee8;
+  background: var(--bg-deep);
   color: var(--text-sub);
   font-family: inherit;
   font-size: 12.5px;
@@ -108,7 +108,7 @@
 /* 못 누르는 때(출석 확인 전·받는 중·출석 0명)와 보내는 중. 까닭은 툴팁에
    적혀 있습니다 — 눌러 보고서야 알게 하지 않으려고요. */
 .reward-seat-all:disabled {
-  background: #f1eee8;
+  background: var(--bg-deep);
   color: var(--text-faint);
   cursor: not-allowed;
 }
@@ -354,7 +354,7 @@
   padding: 9px 11px;
   border-radius: 10px;
   background: var(--dark);
-  color: #ede9e0;
+  color: #e8e5dd;
   font-family: var(--font-mono);
   font-size: 12px;
   line-height: 1.6;
@@ -374,7 +374,7 @@
    함께 둡니다 — 안내는 줄 하나를 통째로 쓰고 입력한 값은 줄 안의 조각이라
    자리로도 갈리지만, 짧은 값 하나가 한 줄일 때는 모양이 같아집니다. */
 .py-echo {
-  color: #8f8a80;
+  color: var(--gray-550);
   text-decoration: underline dotted rgba(143, 138, 128, 0.7);
   text-underline-offset: 3px;
 }
@@ -574,7 +574,7 @@
   background: var(--bg-deep);
   color: var(--text-sub);
 }
-.pycell--code .pycell-kind { background: var(--dark); border-color: var(--dark); color: #ede9e0; }
+.pycell--code .pycell-kind { background: var(--dark); border-color: var(--dark); color: #e8e5dd; }
 .pycell-tools { display: flex; gap: 2px; }
 .pycell-tool {
   width: 24px;
@@ -610,6 +610,6 @@
 .pycell-code .cm-gutter { min-height: 216px; }
 .pycell-code .cm-gutters {
   background: var(--bg-deep);
-  color: #a8a69d;
+  color: var(--text-faint);
   border-right: 1px solid var(--border);
 }

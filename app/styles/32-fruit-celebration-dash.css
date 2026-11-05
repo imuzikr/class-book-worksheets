@@ -255,7 +255,7 @@
 .dash-top-bar {
   height: 5px;
   border-radius: 999px;
-  background: #f1eee8;
+  background: var(--bg-deep);
   overflow: hidden;
 }
 .dash-top-bar i {

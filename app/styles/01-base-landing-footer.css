@@ -145,12 +145,12 @@ html[data-auth-pending] .site-footer {
   place-items: center;
   min-height: 100vh;
   min-height: 100dvh;
-  background: var(--bg, #fdfcfa);
+  background: var(--bg, var(--card-bg));
 }
 .auth-gate-spinner {
   width: 26px;
   height: 26px;
-  border: 3px solid var(--border, #e6e1da);
+  border: 3px solid var(--border);
   border-top-color: var(--primary, #d97757);
   border-radius: 50%;
   animation: auth-gate-spin 0.8s linear infinite;
@@ -182,7 +182,7 @@ html[data-auth-pending] .site-footer {
      배경이 아니라 가운데 흰 카드 안에 크게 섭니다(public/landing-reading.webp). */
   background:
     radial-gradient(1200px 520px at 50% -120px, #ffffff 0%, rgba(255, 255, 255, 0) 70%),
-    #f1f3ee;
+    var(--bg-deep);
 }
 
 /* 상단 바: 로고(왼쪽) + 로그인/회원가입(오른쪽) — 글래스 바 */
@@ -224,17 +224,17 @@ html[data-auth-pending] .site-footer {
   font-size: 15px;
   font-weight: 700;
   color: #2f4a37;
-  background: #f6f8f4;
+  background: var(--bg-deep);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
 .landing-actions button:hover {
-  background: #e9efe6;
+  background: #eef8f1;
   border-color: #b3c2b1;
 }
 .landing-actions .btn-primary {
   background: #dde8d8;
-  border-color: #bccbb9;
+  border-color: #b3c2b1;
 }
 .landing-actions .btn-primary:hover {
   background: #cfdecb;
@@ -306,13 +306,13 @@ html[data-auth-pending] .site-footer {
   padding: 13px 22px;
   border-radius: 14px;
   border: 1px solid #c9d3c8;
-  background: #f6f8f4;
+  background: var(--bg-deep);
   color: #2f4a37;
   font-size: 15px;
   font-weight: 700;
 }
 .hero-cta:hover {
-  background: #e9efe6;
+  background: #eef8f1;
   border-color: #b3c2b1;
 }
 
@@ -405,7 +405,7 @@ html[data-auth-pending] .site-footer {
 }
 
 .dev-note {
-  background: #f7f2e4;
+  background: #fffaf0;
   border: 1px solid #e5d9b3;
   border-radius: var(--radius-btn);
   padding: 10px 12px;

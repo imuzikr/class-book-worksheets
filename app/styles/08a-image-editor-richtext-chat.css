@@ -221,7 +221,7 @@ code.rte-code-glyph {
 /* 비어 있을 때 회색 안내 문구 표시 */
 .rte-area:empty::before {
   content: attr(data-placeholder);
-  color: #a8a69d;
+  color: var(--text-faint);
   pointer-events: none;
 }
 
@@ -237,7 +237,7 @@ code.rte-code-glyph {
 .study-card-content pre,
 .study-card-body pre {
   background: var(--dark);
-  color: #ede9e0;
+  color: #e8e5dd;
   font-family: var(--font-mono);
   font-size: 13px;
   line-height: 1.6;

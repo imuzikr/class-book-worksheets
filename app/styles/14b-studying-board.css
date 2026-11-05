@@ -192,11 +192,11 @@
   box-shadow: 0 0 0 2px var(--primary);
 }
 .grass-cell--done { background: #7fb98a; border-color: #6aa877; }
-.grass-cell--open { background: #f6dfd0; border-color: #eccdb7; }
+.grass-cell--open { background: #f8e5da; border-color: #eccdb7; }
 /* 오늘 결석 — '안 낸' 것이 아니라 '낼 수 없었던' 칸이라 주황에서 빼 둡니다.
    잠김(빗금)과 같은 회색 계열이되 빗금은 없습니다. 두 상태가 겹칠 일은
    없습니다(cellState에서 잠김이 이깁니다). */
-.grass-cell--absent { background: #dfdedb; border-color: #cbcac5; }
+.grass-cell--absent { background: #dfdedb; border-color: var(--gray-300); }
 .grass-cell--locked {
   background: var(--neutral);
   border-color: var(--border);
@@ -252,24 +252,24 @@
 }
 /* 10자 이상 씀 */
 .progress-mark--done {
-  background: #d8efdf;
+  background: #cfe4d5;
   border: 1px solid var(--green-200);
 }
 /* 열려 있는데 아직 덜 씀 */
 .progress-mark--open {
-  background: #fbe3d0;
+  background: #ffe2c9;
   border: 1px solid var(--apricot-300);
 }
 /* 오늘 결석이라 못 씀 */
 .progress-mark--absent {
   background: #dfdedb;
-  border: 1px solid #cbcac5;
+  border: 1px solid var(--gray-300);
 }
 /* 아직 열어 주지 않음 — 색만으로는 '주황(작성 전)'과 헷갈릴 수 있어
    대각선을 넣어 모양으로도 구분되게 합니다(색맹·흑백 인쇄에도 안전) */
 .progress-mark--locked {
-  background-color: #e4e4e1;
-  border: 1px solid #cbcac5;
+  background-color: var(--neutral);
+  border: 1px solid var(--gray-300);
   background-image: linear-gradient(
     135deg,
     transparent calc(50% - 1px),

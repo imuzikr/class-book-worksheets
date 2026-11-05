@@ -171,7 +171,7 @@
   background: #fbf0dc;
 }
 .notif-item.unread:hover {
-  background: #fce8c8;
+  background: #fbeacc;
 }
 /* 반 공지처럼 눌러서 갈 곳이 없는 알림 — 손 모양 커서와 hover 반응을 뺍니다.
    누를 수 있는 것처럼 보이는데 아무 일도 안 일어나는 게 제일 나쁩니다. */

@@ -231,7 +231,7 @@
   background: var(--bg);
   border: 1px solid transparent;
 }
-.htc-item.teacher { background: #fdf6ef; }
+.htc-item.teacher { background: #fffaf0; }
 .htc-item.fresh { border-color: #f0cdb8; }
 .htc-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; margin-bottom: 4px; }
 .htc-kind, .htc-kind-btn {
@@ -241,8 +241,8 @@
   padding: 2px 9px;
   line-height: 1.5;
 }
-.htc-kind--like { background: #fdecef; color: #b8475f; }
-.htc-kind--ask { background: #eaf2fd; color: #3f6fa8; }
+.htc-kind--like { background: #fdecea; color: #b8475f; }
+.htc-kind--ask { background: #eef2ff; color: #3f6fa8; }
 .htc-kind--suggest { background: var(--green-50); color: var(--green-700); }
 .htc-who { font-size: 13px; color: var(--dark); }
 .htc-when { font-size: 12px; color: var(--text-faint); }

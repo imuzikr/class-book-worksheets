@@ -233,7 +233,7 @@ body:has(.confirm-backdrop) .cornell-handle {
   border: 1px solid var(--border);
   border-left: 3px solid var(--primary-light);
   border-radius: var(--radius-btn);
-  background: #fdfcfa;
+  background: var(--card-bg);
 }
 .cornell-block-head {
   display: flex;
@@ -413,7 +413,7 @@ body:has(.confirm-backdrop) .cornell-handle {
 /* 코넬 노트의 그 세로선 — 단서와 필기를 가르는 선입니다 */
 .cornell-sheet-cue {
   border-right: 2px solid var(--primary-light);
-  background: #fdfcfa;
+  background: var(--card-bg);
 }
 /* 덩어리마다 한 행. 행을 가르는 가로 줄을 칸 위쪽에 둡니다 — 머리 줄
    (.cornell-sheet-th) 바로 아래도 이 선으로 갈립니다. */
@@ -429,7 +429,7 @@ body:has(.confirm-backdrop) .cornell-handle {
 }
 .cornell-sheet-summary {
   border-top: 1px solid var(--border);
-  background: #fdfcfa;
+  background: var(--card-bg);
 }
 .cornell-sheet h4 {
   font-size: 11.5px;
@@ -492,7 +492,7 @@ body:has(.confirm-backdrop) .cornell-handle {
 .cornell-sheet--edit .cornell-edit-topic:focus,
 .cornell-sheet--edit textarea:focus,
 .cornell-sheet--edit .cornell-edit-rte .rte-area:focus {
-  background: #fffdf6;
+  background: var(--bg-deep);
 }
 .cornell-edit-topic {
   font-size: 15px;

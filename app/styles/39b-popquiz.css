@@ -55,7 +55,7 @@
   background: var(--bg-deep);
   color: var(--text-sub);
 }
-.pq-kind--code { background: var(--dark); color: #ede9e0; }
+.pq-kind--code { background: var(--dark); color: #e8e5dd; }
 .pq-title {
   margin: 0;
   font-size: 17px;
@@ -81,7 +81,7 @@
   padding: 10px 12px;
   border-radius: 8px;
   background: #2b2522;
-  color: #f3eee6;
+  color: #f5f4ef;
   font-family: var(--font-mono);
   font-size: 13px;
   line-height: 1.6;
@@ -111,7 +111,7 @@
   padding: 8px 12px;
   border-left: 3px solid #4caf74;
   border-radius: 0 8px 8px 0;
-  background: #f1eee8;
+  background: var(--bg-deep);
   font-family: var(--font-mono);
   font-size: 13px;
   line-height: 1.55;

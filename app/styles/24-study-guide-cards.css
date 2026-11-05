@@ -205,7 +205,7 @@
 }
 .gc-chip--member.leader {
   border-color: #e0b93c;
-  background: #fdf6e0;
+  background: #fbf0dc;
 }
 .gc-groups {
   min-height: 0;
@@ -326,7 +326,7 @@
 
 /* 학번 — 따뜻한 세이지 그린 */
 .study-sort-btn--studentid {
-  background: #EBF4F1;
+  background: #eef8f1;
   color: #3B7A6A;
   border-color: #B0CECA;
 }

@@ -242,6 +242,6 @@
 .notice-item time {
   font-family: var(--font-mono);
   font-size: 11px;
-  color: #a8a69d;
+  color: var(--text-faint);
 }
 

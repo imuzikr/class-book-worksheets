@@ -71,7 +71,7 @@
 }
 .attend-seat-live--on { background: #4caf6f; }
 .attend-seat-live--away { background: #f0b483; }
-.attend-seat-live--off { background: #b8b4ab; }
+.attend-seat-live--off { background: #b9b2a6; }
 
 /* 과일 바구니 이벤트 — 응모 여부를 골랐는데 선생님이 아직 접수하지 않은
    학생(lib/fruitBasket.js의 isEventPending). 자리 칸 오른쪽 위 모서리에 초록
@@ -304,7 +304,7 @@ button.study-cal-cell:not(:disabled):hover {
   background: var(--neutral);
 }
 button.study-cal-cell.has-record:not(:disabled):hover {
-  background: #d8efdf;
+  background: #cfe4d5;
 }
 
 /* 캘린더형 — 반별 출석/결석 목록 (고른 날짜 기준) */
@@ -421,7 +421,7 @@ button.study-cal-cell.has-record:not(:disabled):hover {
   height: 24px;
   padding: 0 9px;
   border-radius: 999px;
-  background: #f1eee8;
+  background: var(--bg-deep);
   color: var(--text-sub);
   font-size: 12px;
   font-weight: 800;
@@ -531,7 +531,7 @@ button.study-cal-cell.has-record:not(:disabled):hover {
 }
 
 .class-entry-hint code {
-  background: #f1eee8;
+  background: var(--bg-deep);
   border-radius: 6px;
   padding: 2px 6px;
   font-family: var(--font-mono);
