@@ -168,18 +168,3 @@
   white-space: pre-wrap;
   color: var(--text);
 }
-
-/* 다른 사람 말풍선 — 왼쪽, 은은한 크림/그레이 채움 (흰 배경과 구분) */
-.chat-bubble {
-  background: var(--bg-sunken);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  border-top-left-radius: 4px;
-  padding: 9px 13px;
-  max-width: 88%;
-  font-size: 14px;
-  line-height: 1.65;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
