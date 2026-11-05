@@ -50,7 +50,7 @@
   font-size: clamp(30px, 4.6vw, 68px);
   font-weight: 800;
   line-height: 1.28;
-  color: var(--primary-light, #f0cdb8);
+  color: var(--primary-light);
 }
 .broadcast-note-text {
   font-size: clamp(21px, 3.1vw, 46px);

@@ -231,7 +231,6 @@ code.rte-code-glyph {
    저장하고 보면 평범한 글이 되니 '서식이 안 먹는다'로 보입니다. */
 .rte-area pre,
 .qa-content pre,
-.chat-bubble pre,
 .msgr-bubble pre,
 .notice-item pre,
 .study-card-content pre,
@@ -309,8 +308,6 @@ pre code {
 /* 글머리 기호 들여쓰기 (에디터·말풍선·본문·공지 공통) */
 .rte-area ul,
 .rte-area ol,
-.chat-bubble ul,
-.chat-bubble ol,
 .msgr-bubble ul,
 .msgr-bubble ol,
 .qa-content ul,
