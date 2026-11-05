@@ -531,7 +531,7 @@ button.study-cal-cell.has-record:not(:disabled):hover {
 }
 
 .class-entry-hint code {
-  background: #f2efe9;
+  background: #f1eee8;
   border-radius: 6px;
   padding: 2px 6px;
   font-family: var(--font-mono);

@@ -542,5 +542,5 @@
 .attend-seat--pick:hover {
   border-color: var(--primary);
   transform: translateY(-1px);
-  box-shadow: 0 3px 10px rgba(46, 36, 26, 0.12);
+  box-shadow: 0 3px 10px rgba(46, 36, 26, 0.1);
 }

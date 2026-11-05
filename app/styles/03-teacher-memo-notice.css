@@ -168,7 +168,7 @@
   background: var(--primary-light);
 }
 .notif-item.unread {
-  background: #fff4e0;
+  background: #fbf0dc;
 }
 .notif-item.unread:hover {
   background: #fce8c8;
@@ -179,7 +179,7 @@
   cursor: default;
 }
 .notif-item--static:hover {
-  background: #fff4e0;
+  background: #fbf0dc;
 }
 
 /* 알림 한 줄 = 본문 + 오른쪽 '읽음' 버튼.

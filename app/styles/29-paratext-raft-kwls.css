@@ -423,7 +423,7 @@
 /* 그 묶음을 다 채우면 초록으로 — 남은 묶음이 어디인지 바로 보이게 */
 .kwls-guide-step.done {
   border-color: var(--green-300);
-  background: #eaf4ee;
+  background: #eef8f1;
   color: #2f6f57;
 }
 .kwls-guide-step b { font-weight: 800; color: var(--text-sub); }
@@ -484,8 +484,8 @@
   color: #9a6b34;
 }
 .kwls-phase-tag.after {
-  background: #eaf4ee;
-  border-color: #cfe6d8;
+  background: #eef8f1;
+  border-color: #cfe4d5;
   color: #2f6f57;
 }
 /* 교사 상세 — K·W·L·S를 학생 화면과 같은 차례로 한 줄에 넷.
@@ -513,7 +513,7 @@
    바꾸므로, 왼쪽 띠만은 그 뒤에도 남도록 선택자를 한 겹 더 좁혀 둡니다 */
 .kwls-detail-grid .entry-region.kwls-region { border-left-width: 5px; }
 .kwls-detail-grid .entry-region.before { border-left-color: #eeddc4; }
-.kwls-detail-grid .entry-region.after { border-left-color: #cfe6d8; }
+.kwls-detail-grid .entry-region.after { border-left-color: #cfe4d5; }
 
 /* ── 모바일 ── */
 @media (max-width: 1100px) {

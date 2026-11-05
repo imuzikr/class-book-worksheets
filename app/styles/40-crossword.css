@@ -387,7 +387,7 @@
 /* 오른쪽 — 힌트 목록 */
 .xw-clue:disabled { cursor: default; }
 .xw-clue:disabled:hover { background: transparent; }
-.xw-clue.own { background: #fdf7ea; }
+.xw-clue.own { background: #fff8ec; }
 .xw-clue-own {
   font-style: normal;
   display: inline-block;
@@ -451,7 +451,7 @@
 }
 .xwg-stu--done { background: #f3faf5; }
 .xwg-stu--done .xwg-stu-state { background: var(--green-50); color: #2f7a45; }
-.xwg-stu--doing .xwg-stu-state { background: #fdf0dc; color: #8a5a12; }
+.xwg-stu--doing .xwg-stu-state { background: #fbf0dc; color: #8a5a12; }
 .xwg-stu--free { opacity: 0.6; }
 
 /* 교사 왼쪽 — 모둠별 미니맵(맞힌 순서) */

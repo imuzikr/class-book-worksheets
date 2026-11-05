@@ -111,7 +111,7 @@
   padding: 8px 12px;
   border-left: 3px solid #4caf74;
   border-radius: 0 8px 8px 0;
-  background: #f4f1ea;
+  background: #f1eee8;
   font-family: var(--font-mono);
   font-size: 13px;
   line-height: 1.55;
@@ -318,7 +318,7 @@
   border: 1px solid var(--border);
   border-radius: 14px;
   background: #fff;
-  box-shadow: 0 12px 32px rgba(40, 30, 25, 0.18), 0 2px 6px rgba(40, 30, 25, 0.08);
+  box-shadow: 0 12px 32px rgba(46, 36, 26, 0.18), 0 2px 6px rgba(58, 49, 46, 0.08);
 }
 .pq-pop .pq-review { border: none; border-radius: 14px; }
 

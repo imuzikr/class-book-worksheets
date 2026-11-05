@@ -94,7 +94,7 @@ body:has(.confirm-backdrop) .cornell-handle {
   background: var(--card-bg);
   border-left: 1px solid var(--border);
   /* 검은 발표 화면 위에서도, 흰 일반 화면 위에서도 떠 보이게 */
-  box-shadow: -6px 0 26px rgba(46, 36, 26, 0.16);
+  box-shadow: -6px 0 26px rgba(46, 36, 26, 0.14);
   /* ── 미끄러져 나오고 들어갑니다 ──────────────────────────────────
      기본값이 '화면 밖'이고, 열리면 `.shown`이 제자리로 끌어옵니다. 닫을
      때도 그대로 되감기므로 **여는 길과 닫는 길이 같습니다**.

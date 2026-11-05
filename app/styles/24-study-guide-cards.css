@@ -341,7 +341,7 @@
 .study-sort-btn--time {
   background: var(--primary-light);
   color: var(--primary-dark);
-  border-color: #EDCBB8;
+  border-color: #f0cdb8;
 }
 .study-sort-btn--time:hover,
 .study-sort-btn--time.active {

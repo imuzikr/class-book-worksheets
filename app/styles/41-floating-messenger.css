@@ -56,7 +56,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 6px 20px rgba(217, 119, 87, 0.42), 0 2px 6px rgba(46, 36, 26, 0.12);
+  box-shadow: 0 6px 20px rgba(217, 119, 87, 0.42), 0 2px 6px rgba(46, 36, 26, 0.1);
   cursor: pointer;
   transition: transform 0.18s ease, background 0.18s ease, bottom 0.25s ease;
 }
@@ -229,7 +229,7 @@
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: 20px;
-  box-shadow: 0 18px 48px rgba(46, 36, 26, 0.2), 0 4px 12px rgba(46, 36, 26, 0.08);
+  box-shadow: 0 18px 48px rgba(46, 36, 26, 0.2), 0 4px 12px rgba(58, 49, 46, 0.08);
   overflow: hidden;
   animation: msgr-in 0.22s ease both;
   transform-origin: calc(100% - 28px) calc(100% + 40px);
@@ -269,7 +269,7 @@
   height: 36px;
   flex-shrink: 0;
   border-radius: 50%;
-  background: #e8f3ea;
+  background: #e7f3e9;
   color: var(--green-olive);
   display: flex;
   align-items: center;
@@ -388,7 +388,7 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.msgr-msg--teacher .msgr-bubble { background: #eef6ef; border-color: #cfe5d4; }
+.msgr-msg--teacher .msgr-bubble { background: #eef8f1; border-color: #cfe4d5; }
 .msgr-msg--mine .msgr-bubble {
   border-radius: 16px 16px 6px 16px;
   background: var(--primary-light);
@@ -690,7 +690,7 @@ button.msgr-receipt:hover { color: var(--text-sub); }
 /* 작성·출석 상태는 고른 모둠과 학생에서도 같은 색을 유지합니다. */
 .raft-mate-pill.member-status-done,
 .book-rail-card.on .raft-mate-pill.member-status-done,
-.group-member-status-key.member-status-done { background: var(--green-50); color: #2f6b47; }
+.group-member-status-key.member-status-done { background: var(--green-50); color: var(--green-800); }
 .raft-mate-pill.member-status-doing,
 .book-rail-card.on .raft-mate-pill.member-status-doing,
 .group-member-status-key.member-status-doing { background: #fff2d5; color: #775113; }

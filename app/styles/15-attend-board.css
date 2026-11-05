@@ -325,7 +325,7 @@
   border: 1px solid var(--border);
   border-radius: 12px;
   background: #fff;
-  box-shadow: 0 8px 24px rgba(46, 36, 26, 0.16);
+  box-shadow: 0 8px 24px rgba(46, 36, 26, 0.14);
   /* 과일 흐름을 펼치면 아래로 자랍니다 — 화면 밖으로 나가는 대신 안에서
      구르게 합니다(높이는 컴포넌트가 인라인으로 정합니다). */
   overflow-y: auto;
@@ -423,7 +423,7 @@
 }
 .attend-award-btn--plus {
   background: var(--primary-light);
-  border-color: #edcbb8;
+  border-color: #f0cdb8;
   color: var(--primary-dark);
 }
 .attend-award-btn span {
@@ -434,7 +434,7 @@
   transform: translateY(-1px);
 }
 .attend-award-btn--plus:hover:not(:disabled) {
-  background: #f3d9cb;
+  background: #f2d7c7;
 }
 .attend-tools-maxed {
   margin-top: 8px;

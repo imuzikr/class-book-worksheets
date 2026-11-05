@@ -145,7 +145,7 @@ html[data-auth-pending] .site-footer {
   place-items: center;
   min-height: 100vh;
   min-height: 100dvh;
-  background: var(--bg, #faf9f7);
+  background: var(--bg, #fdfcfa);
 }
 .auth-gate-spinner {
   width: 26px;
@@ -283,7 +283,7 @@ html[data-auth-pending] .site-footer {
   padding: 30px 30px 32px;
   background: #fff;
   border-radius: 22px;
-  box-shadow: 0 1px 3px rgba(46, 60, 46, 0.05), 0 10px 32px rgba(46, 60, 46, 0.06);
+  box-shadow: 0 1px 3px rgba(46, 36, 26, 0.06), 0 10px 32px rgba(46, 60, 46, 0.06);
 }
 
 .hero-card-title {
@@ -468,7 +468,7 @@ html[data-auth-pending] .site-footer {
   cursor: pointer;
 }
 .btn-google:hover {
-  background: var(--neutral, #f3f1ec);
+  background: var(--neutral, var(--bg-deep));
 }
 .btn-google:disabled {
   opacity: 0.6;
@@ -563,7 +563,7 @@ button.footer-link:hover {
   text-decoration: underline;
 }
 .site-footer-bottom {
-  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  border-top: 1px solid var(--on-dark-16);
   max-width: 1100px;
   margin: 0 auto;
   padding: 16px 24px;

@@ -252,14 +252,14 @@ h4.attendance-seat-help { margin-top: 16px; }
 .opinion-board {
   border: 1.5px solid #eee0cb;
   border-radius: 18px;
-  background: #fffaf2;
+  background: #fffaf0;
   /* 영역 하나가 메모지(176px)보다 좁아지면 메모가 옆 영역까지 걸칩니다 —
      그때는 판을 짜부라뜨리지 않고 옆으로 구르게 둡니다(아래 min-width).
      창이 넓어도 양옆에 '오늘'·'멋진 순간' 패널이 서면 가운데가 300px대로
      줄어듭니다(실측 1024px). */
   overflow-x: auto;
   overflow-y: hidden;
-  box-shadow: 0 1px 2px rgba(120, 90, 50, 0.05);
+  box-shadow: 0 1px 2px rgba(90, 60, 30, 0.06);
 }
 .opinion-heads,
 .opinion-body {
@@ -427,7 +427,7 @@ h4.attendance-seat-help { margin-top: 16px; }
   word-break: break-word;
   font-size: 13.5px;
   line-height: 1.5;
-  color: #3d352d;
+  color: #3a322a;
 }
 .opinion-note.is-teacher .opinion-note-who::before { content: "✦ "; }
 /* 이름표 — 익명 닉네임(+ 동물 이모지). 교사에게는 눌러서 실제 학생을 보는
@@ -475,7 +475,7 @@ h4.attendance-seat-help { margin-top: 16px; }
   transform: translateX(-50%) rotate(-2deg);
   background: rgba(255, 255, 255, 0.62);
   border: 1px solid rgba(255, 255, 255, 0.9);
-  box-shadow: 0 1px 3px rgba(90, 60, 30, 0.1);
+  box-shadow: 0 1px 3px rgba(90, 70, 40, 0.12);
 }
 .opinion-modal-head {
   display: flex;
@@ -540,7 +540,7 @@ h4.attendance-seat-help { margin-top: 16px; }
 .opinion-zone-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .opinion-zone-chip {
   padding: 6px 14px;
-  border: 1.5px solid rgba(90, 60, 30, 0.1);
+  border: 1.5px solid rgba(90, 70, 40, 0.12);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.5);
   color: #5a4d40;
@@ -555,7 +555,7 @@ h4.attendance-seat-help { margin-top: 16px; }
   width: 30px;
   height: 30px;
   padding: 0;
-  border: 2px solid rgba(255, 255, 255, 0.95);
+  border: 2px solid rgba(255, 255, 255, 0.94);
   border-radius: 8px;
   background: var(--sw);
   box-shadow: 0 1px 3px rgba(90, 60, 30, 0.2);
