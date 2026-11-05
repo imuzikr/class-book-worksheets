@@ -192,7 +192,7 @@
   box-shadow: 0 0 0 2px var(--primary);
 }
 .grass-cell--done { background: #7fb98a; border-color: #6aa877; }
-.grass-cell--open { background: #f8e5da; border-color: #eccdb7; }
+.grass-cell--open { background: #f8e5da; border-color: #f0cdb8; }
 /* 오늘 결석 — '안 낸' 것이 아니라 '낼 수 없었던' 칸이라 주황에서 빼 둡니다.
    잠김(빗금)과 같은 회색 계열이되 빗금은 없습니다. 두 상태가 겹칠 일은
    없습니다(cellState에서 잠김이 이깁니다). */
@@ -225,7 +225,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   pointer-events: none;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
 }
 
 /* 전광판은 결과만 보는 자리 — 잠금 조작은 수업 화면의 '활동 열기' 줄에서.

@@ -12,7 +12,7 @@
   background: #fff;
   border: 1px solid var(--border);
   border-radius: 18px;
-  box-shadow: 0 12px 32px rgba(58, 49, 46, 0.08);
+  box-shadow: 0 12px 32px rgba(46, 36, 26, 0.06);
   overflow: hidden;
   color: var(--text);
 }
@@ -102,7 +102,7 @@
   object-fit: cover;
   border-radius: 12px;
   border: 3px solid #fff;
-  box-shadow: 0 4px 14px rgba(61, 61, 58, 0.12);
+  box-shadow: 0 4px 14px rgba(46, 36, 26, 0.06);
 }
 .htg-figure figcaption { margin-top: 6px; font-size: 12px; color: var(--text-sub); text-align: center; }
 .htg-empty { margin: 0; padding: 28px 32px; font-size: 14px; color: var(--text-faint); }

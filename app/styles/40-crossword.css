@@ -52,7 +52,7 @@
   font-weight: 700;
   white-space: nowrap;
 }
-.xw-badge.done { background: var(--green-50); color: #2f7a45; }
+.xw-badge.done { background: var(--green-50); color: var(--green-700); }
 .xw-empty { margin: 0; font-size: 13px; color: var(--text-faint); line-height: 1.6; }
 
 .xw-pick-len { font-size: 12px; color: var(--text-sub); }
@@ -65,7 +65,7 @@
   font-size: 14px;
   line-height: 1.5;
 }
-.xw-pick-warn { font-size: 12px; color: #b4472f; }
+.xw-pick-warn { font-size: 12px; color: #b0412e; }
 .xw-save { margin: 0; min-height: 18px; font-size: 12px; color: var(--text-sub); }
 
 /* ── 퍼즐 판 ── */
@@ -176,7 +176,7 @@
   font-size: 11.5px;
   color: var(--text-faint);
 }
-.xw-clue-ok { color: #2f7a45; font-weight: 800; }
+.xw-clue-ok { color: var(--green-700); font-weight: 800; }
 
 /* ── 교사 화면 ── */
 /* 안내가 앞, 단추 묶음이 그 오른쪽. 칸이 좁으면(가운데 칸은 양옆 패널 탓에
@@ -234,7 +234,7 @@
   padding: 0 7px;
   border-radius: 999px;
   background: var(--green-50);
-  color: #2f7a45;
+  color: var(--green-700);
   font-size: 11px;
   font-weight: 700;
 }
@@ -382,7 +382,7 @@
 .xwg-writer { font-style: normal; font-size: 12px; color: var(--text-sub); }
 
 .xwg-bar { height: 8px; border-radius: 999px; background: var(--neutral); overflow: hidden; }
-.xwg-bar > span { display: block; height: 100%; background: #6fbf8a; transition: width 0.3s; }
+.xwg-bar > span { display: block; height: 100%; background: #6fb98a; transition: width 0.3s; }
 
 /* 오른쪽 — 힌트 목록 */
 .xw-clue:disabled { cursor: default; }
@@ -450,7 +450,7 @@
   color: var(--text-sub);
 }
 .xwg-stu--done { background: #eef8f1; }
-.xwg-stu--done .xwg-stu-state { background: var(--green-50); color: #2f7a45; }
+.xwg-stu--done .xwg-stu-state { background: var(--green-50); color: var(--green-700); }
 .xwg-stu--doing .xwg-stu-state { background: #fbf0dc; color: #8a5a12; }
 .xwg-stu--free { opacity: 0.6; }
 
@@ -505,7 +505,7 @@
   background: var(--card-bg, #fff);
   border: 1px solid var(--border);
   border-radius: 14px;
-  box-shadow: 0 12px 32px rgba(58, 49, 46, 0.18), 0 2px 6px rgba(58, 49, 46, 0.08);
+  box-shadow: 0 12px 32px rgba(46, 36, 26, 0.14), 0 2px 6px rgba(46, 36, 26, 0.06);
   overflow: hidden;
 }
 .float-panel-head {

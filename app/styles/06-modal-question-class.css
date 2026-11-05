@@ -120,7 +120,7 @@
   user-select: none;
   transform: translate(-50%, -50%);
   will-change: transform, opacity;
-  filter: drop-shadow(0 2px 2px rgba(58, 49, 46, 0.18));
+  filter: drop-shadow(0 2px 2px rgba(46, 36, 26, 0.14));
 }
 .fb-label { font-size: 12.5px; font-weight: 700; color: var(--text-sub); }
 .fb-total, .fb-mine, .fb-entry, .fb-enter {
@@ -148,7 +148,7 @@
   font-size: 13.5px; font-weight: 700; line-height: 1.5;
 }
 .fb-goal { background: #fbf0dc; color: #9a5a08; }
-.fb-all { background: var(--green-50); color: #276b3d; border: 1px solid var(--green-200); margin-top: 8px; }
+.fb-all { background: var(--green-50); color: var(--green-800); border: 1px solid var(--green-200); margin-top: 8px; }
 .fb-note { margin: 0; font-size: 12.5px; color: var(--text-sub); line-height: 1.6; }
 .fb-entry .fb-note { margin-top: 8px; }
 .fb-mine-stats {
@@ -247,7 +247,7 @@
   padding: 38px 28px 20px;
   background: linear-gradient(180deg, var(--bg-sunken) 0%, var(--bg) 100%);
   border-radius: 0 0 20px 20px;
-  box-shadow: inset 0 24px 18px -14px rgba(38, 31, 28, 0.26), 0 22px 44px rgba(38, 31, 28, 0.22);
+  box-shadow: inset 0 24px 18px -14px rgba(46, 36, 26, 0.26), 0 22px 44px rgba(46, 36, 26, 0.26);
   animation: fb-drawer-open 0.42s cubic-bezier(0.22, 0.8, 0.3, 1) both;
 }
 .fb-door-screen { display: flex; flex-direction: column; min-height: 0; animation: fb-drawer-screen 0.42s ease-out both; }
@@ -291,7 +291,7 @@
 }
 .fb-history-declined { margin: 6px 0 0; font-size: 12px; color: var(--text-sub); line-height: 1.5; }
 .fb-msg { margin: 8px 0 0; font-size: 12.5px; }
-.fb-msg.ok { color: #276b3d; }
+.fb-msg.ok { color: var(--green-800); }
 .fb-msg.err { color: #c0392b; }
 .fb-enter-btn { width: 100%; height: 40px; }
 .fb-enter-wait { text-align: center; }
@@ -305,7 +305,7 @@
    고른 쪽은 다시 눌러도 아무 일이 없어(토글 아님) 손 모양을 안 줍니다. */
 .fb-choice .fb-choice-on,
 .fb-choice .fb-choice-on:hover:not(:disabled) { background: var(--primary-dark); cursor: default; }
-.fb-received { font-size: 12px; color: #276b3d; }
+.fb-received { font-size: 12px; color: var(--green-800); }
 .fb-receive { margin-top: 12px; }
 /* 이벤트 취소 — 접수 아래 옅은 단추(되묻는 창이 뜹니다). 높이는 접수와 같은 40px. */
 .fb-cancel-event { margin-top: 8px; color: #b0412e; }
@@ -424,7 +424,7 @@
 .class-mgr-create .btn-primary {
   background: #f8e5da;
   color: #81523e;
-  border: 1px solid #e9c9b8;
+  border: 1px solid #f0cdb8;
   flex-shrink: 0;
   white-space: nowrap;
 }

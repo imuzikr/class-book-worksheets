@@ -114,7 +114,7 @@
   border-radius: 4px;
   border: 1px solid var(--border);
 }
-.attend-chip--on { background: #d7f0dd; border-color: #8fcea3; }
+.attend-chip--on { background: #d7f0dd; border-color: var(--green-300); }
 .attend-chip--away { background: #ffe2c9; border-color: #f0b483; }
 .attend-chip--off { background: var(--bg-sunken); }
 .attend-chip--absent { background: #f9dbdb; border-color: #dc9b9b; }
@@ -197,7 +197,7 @@
 }
 .attend-desk--on {
   background: #d7f0dd;
-  border-color: #8fcea3;
+  border-color: var(--green-300);
 }
 .attend-desk--away {
   background: #ffe2c9;
@@ -258,7 +258,7 @@
   margin-top: 2px;
   padding: 1px 7px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.85);
   font-family: var(--font-mono);
   font-size: 10.5px;
   font-weight: 800;

@@ -109,7 +109,7 @@
 .pq-answer-out pre {
   margin: 0;
   padding: 8px 12px;
-  border-left: 3px solid #4caf74;
+  border-left: 3px solid #4caf6f;
   border-radius: 0 8px 8px 0;
   background: var(--bg-sunken);
   font-family: var(--font-mono);
@@ -318,7 +318,7 @@
   border: 1px solid var(--border);
   border-radius: 14px;
   background: #fff;
-  box-shadow: 0 12px 32px rgba(46, 36, 26, 0.18), 0 2px 6px rgba(58, 49, 46, 0.08);
+  box-shadow: 0 12px 32px rgba(46, 36, 26, 0.14), 0 2px 6px rgba(46, 36, 26, 0.06);
 }
 .pq-pop .pq-review { border: none; border-radius: 14px; }
 
@@ -411,7 +411,7 @@
 .pq-field textarea { font-family: inherit; font-size: 14px; font-weight: 500; }
 .pq-field textarea { resize: vertical; min-height: 110px; font-family: var(--font-mono); font-size: 13px; line-height: 1.6; }
 .pq-compose-from { margin: 0; font-size: 12px; color: var(--text-sub); }
-.pq-compose-warn { margin: 0; padding: 7px 10px; border-radius: 8px; background: #fff4d6; font-size: 12.5px; color: #7a5600; }
+.pq-compose-warn { margin: 0; padding: 7px 10px; border-radius: 8px; background: #fff4d6; font-size: 12.5px; color: #7d5811; }
 .pq-compose-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .pq-compose-btns > :only-child { grid-column: 1 / -1; }
 .pq-review-head { display: flex; align-items: center; gap: 8px; }

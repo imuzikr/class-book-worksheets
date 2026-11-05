@@ -15,7 +15,7 @@
 
 .kwl-badge-k { background: #3d5a80; color: #d0e4f7; }
 .kwl-badge-w { background: #6b4c2a; color: #eeddc4; }
-.kwl-badge-l { background: #276b3d; color: #c2eacb; }
+.kwl-badge-l { background: var(--green-800); color: #c2eacb; }
 .kwl-badge-s { background: #604c8b; color: #e8ddff; }
 
 /* 기록 탭의 요약 딱지 — 같은 팔레트를 작게 쓴 것. 색은 위 네 줄이 그대로

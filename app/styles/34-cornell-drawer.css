@@ -44,7 +44,7 @@
   font-weight: 700;
   letter-spacing: 1px;
   cursor: pointer;
-  box-shadow: -2px 0 10px rgba(46, 36, 26, 0.1);
+  box-shadow: -2px 0 10px rgba(46, 36, 26, 0.06);
   writing-mode: vertical-rl;
   justify-content: center;
   /* 서랍과 **나란히** 미끄러집니다 — 서랍은 transform으로, 손잡이는
@@ -346,7 +346,7 @@ body:has(.confirm-backdrop) .cornell-handle {
     border-left: none;
     border-top: 1px solid var(--border);
     border-radius: 16px 16px 0 0;
-    box-shadow: 0 -6px 26px rgba(46, 36, 26, 0.18);
+    box-shadow: 0 -6px 26px rgba(46, 36, 26, 0.14);
     /* **아래에서 올라옵니다** — 여기서는 시트라 오른쪽이 아니라 바닥이
        들어오는 쪽입니다. 미끄러지는 방향은 서랍이 붙어 있는 가장자리를
        따라갑니다. `.shown`은 `translateX(0)`이라 축이 무엇이든 제자리로
