@@ -101,7 +101,7 @@
   background: var(--bg);
   font-size: 13px;
   font-weight: 700;
-  color: var(--primary-dark, #c15a2a);
+  color: var(--primary-dark);
   font-family: var(--font-serif);
 }
 .activity-title {
