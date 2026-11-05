@@ -421,7 +421,7 @@ button.study-cal-cell.has-record:not(:disabled):hover {
   height: 24px;
   padding: 0 9px;
   border-radius: 999px;
-  background: var(--bg-deep);
+  background: var(--bg-sunken);
   color: var(--text-sub);
   font-size: 12px;
   font-weight: 800;
@@ -531,7 +531,7 @@ button.study-cal-cell.has-record:not(:disabled):hover {
 }
 
 .class-entry-hint code {
-  background: var(--bg-deep);
+  background: var(--bg-sunken);
   border-radius: 6px;
   padding: 2px 6px;
   font-family: var(--font-mono);

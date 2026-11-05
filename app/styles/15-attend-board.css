@@ -116,7 +116,7 @@
 }
 .attend-chip--on { background: #d7f0dd; border-color: #8fcea3; }
 .attend-chip--away { background: #ffe2c9; border-color: #f0b483; }
-.attend-chip--off { background: var(--bg-deep); }
+.attend-chip--off { background: var(--bg-sunken); }
 .attend-chip--absent { background: #f9dbdb; border-color: #dc9b9b; }
 .attend-toolbar {
   display: flex;
@@ -204,7 +204,7 @@
   border-color: #f0b483;
 }
 .attend-desk--off {
-  background: var(--bg-deep);
+  background: var(--bg-sunken);
   color: var(--text-sub);
 }
 .attend-desk--absent {

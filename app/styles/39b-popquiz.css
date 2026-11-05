@@ -111,7 +111,7 @@
   padding: 8px 12px;
   border-left: 3px solid #4caf74;
   border-radius: 0 8px 8px 0;
-  background: var(--bg-deep);
+  background: var(--bg-sunken);
   font-family: var(--font-mono);
   font-size: 13px;
   line-height: 1.55;

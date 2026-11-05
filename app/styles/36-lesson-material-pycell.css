@@ -83,7 +83,7 @@
   padding: 5px 12px;
   border: none;
   border-radius: 999px;
-  background: var(--bg-deep);
+  background: var(--bg-sunken);
   color: var(--text-sub);
   font-family: inherit;
   font-size: 12.5px;
@@ -108,7 +108,7 @@
 /* 못 누르는 때(출석 확인 전·받는 중·출석 0명)와 보내는 중. 까닭은 툴팁에
    적혀 있습니다 — 눌러 보고서야 알게 하지 않으려고요. */
 .reward-seat-all:disabled {
-  background: var(--bg-deep);
+  background: var(--bg-sunken);
   color: var(--text-faint);
   cursor: not-allowed;
 }

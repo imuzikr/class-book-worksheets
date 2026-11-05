@@ -10,6 +10,9 @@
   /* 따뜻한 오프화이트/크림 배경 */
   --bg: #faf9f5;
   --bg-deep: #f5f4ef;
+  /* 페이지 배경(--bg) 위에 바로 놓이는 한 단계 들어간 면(말풍선·꺼진 칩·코드 칸 등).
+     --bg-deep은 --bg와 너무 가까워(ΔE≈1.2) 구분되지 않으므로 따로 둡니다. */
+  --bg-sunken: #f1eee8;
   --card-bg: #ffffff;
   --border: #e8e5dd;
   --neutral: #ebe9e2;

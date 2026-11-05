@@ -215,7 +215,7 @@
 .study-attendance-live {
   padding: 0 10px;
   border-radius: 999px;
-  background: var(--bg-deep);
+  background: var(--bg-sunken);
   color: var(--text-sub);
   font-size: 12px;
   font-weight: 800;
@@ -368,7 +368,7 @@
   flex-shrink: 0;
   padding: 5px 12px;
   border-radius: 999px;
-  background: var(--bg-deep);
+  background: var(--bg-sunken);
   color: var(--text-sub);
   font-size: 12.5px;
   font-weight: 800;
