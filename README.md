@@ -6,8 +6,9 @@
 여섯 개의 해시태그 · 물음표로 책 읽기 · 가로세로 낱말 퀴즈 · 브레인 라이팅 열 가지 활동과
 반 관리 · 출석 · 과일(참여 격려) · 학급 방송을 담고 있습니다.
 
-> 지금은 Firebase 설정값이 자리표시자라 **데모 모드**로 돕니다.
-> 새 Firebase 프로젝트를 연결하는 차례는 `CLAUDE.md`의 '새 Firebase 프로젝트 연결'을 보세요.
+> 기본값은 원작자 Firebase 프로젝트에 연결되어 **실서비스 모드**로 돕니다.
+> 나만의 책봄을 띄우려면 `.env.example`을 보고 Firebase 값을 넣고,
+> 자세한 연결 차례는 `CLAUDE.md`의 '새 Firebase 프로젝트 연결'을 보세요.
 
 ## 원본 독서 활동 업데이트
 
@@ -30,6 +31,22 @@ npm run dev   # http://localhost:3000
 npm run build # 프로덕션 빌드
 ```
 
+Node.js 22 이상을 권장합니다(`.nvmrc` · CI와 같음).
+
+### Firebase 환경변수
+
+웹 설정은 `NEXT_PUBLIC_FIREBASE_*` 환경변수로 넣습니다. 목록과 설명은
+[`.env.example`](.env.example)을 보세요.
+
+- **로컬**: `cp .env.example .env.local` 후 값을 채웁니다(`.env.local`은 Git에 안 올립니다).
+- **Vercel**: Project Settings → Environment Variables에 같은 이름으로 넣습니다.
+- 값을 비워 두면 원작자 프로젝트 기본값(`lib/firebase-defaults.mjs`)으로 돕니다.
+  **복제해 쓸 때는 반드시 자기 Firebase 값을 넣으세요.**
+- apiKey를 `YOUR_...`로 두면 **데모 모드**로 돕니다.
+- `.firebaserc`의 프로젝트 id는 Firebase CLI용이라 환경변수를 못 씁니다.
+  `firebase use --add`로 자기 프로젝트를 고르세요.
+- 서버 키(`FIREBASE_ADMIN_*`, `NAVER_*`)는 Vercel에만 넣고 GitHub에는 올리지 마세요.
+
 ## 동작 모드
 
 상단 **대시보드**에서 교사는 반·활동 진행과 독서 흐름을, 학생은 개인 독서 달력·성장·성찰을 확인합니다. 기간·권한·집계 기준은 [DASHBOARD.md](DASHBOARD.md)를 참고하세요.
@@ -39,7 +56,7 @@ npm run build # 프로덕션 빌드
 - **실서비스 모드** (Firebase 설정됨): Firebase Authentication으로
   실제 로그인/회원가입하고, 데이터는 Firestore에 저장됩니다. 권한은
   Firestore · Storage 보안 규칙이 서버에서 강제합니다(서버 함수는 없습니다).
-- **데모 모드** (Firebase 미설정 · 현재 상태): 테스트 유저로 자동 입장합니다.
+- **데모 모드** (apiKey가 `YOUR_...`로 시작): 테스트 유저로 자동 입장합니다.
   **책봄 체험반(학생 15명)**에는 10가지 독서 활동과 학생별 서재 1~2권이 준비됩니다.
   상단 역할 전환과 **체험 학생** 선택으로 교사·각 학생 화면을 확인할 수 있습니다.
   체험 자료의 사용법과 범위는 [DEMO_CLASSROOM.md](DEMO_CLASSROOM.md)를 참고하세요.
@@ -135,7 +152,7 @@ broadcasts/{cId}            학급 화면 방송
 app/page.js          랜딩 + 로그인/회원가입(역할 선택)
 app/books/page.js    책방 (활동 목록 → 활동 · 반 관리 · 출석 · 과일 바구니)
 app/dashboard/page.js 교사·학생 대시보드 (활동 현황 · 성찰 · 독서 흐름)
-lib/firebase.js      Firebase 초기화 (config — 지금은 자리표시자)
+lib/firebase.js      Firebase 초기화 (NEXT_PUBLIC_FIREBASE_* · 기본값)
 lib/auth.js          인증 (구글) + 프로필/역할
 lib/user.js          현재 사용자 캐시 + 역할 헬퍼
 lib/store.js         데이터 레이어 입구 (Firestore ↔ 데모 모드 자동 전환)

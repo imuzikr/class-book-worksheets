@@ -23,7 +23,8 @@
 ## 배움나눔과 무엇이 다른가
 
 - **Firebase 프로젝트가 따로입니다.** 계정 · 반 · 기록을 배움나눔과 나누지
-  않습니다. 설정값은 실제 프로젝트(`book-sheets-19fd2`)에 연결되어 있습니다(자리표시자 `YOUR_...`로 되돌리면 **데모 모드**).
+  않습니다. 기본값은 원작자 프로젝트(`book-sheets-19fd2`, `lib/firebase-defaults.mjs`)이며,
+  `NEXT_PUBLIC_FIREBASE_*` 환경변수로 덮어씁니다(apiKey를 `YOUR_...`로 두면 **데모 모드**).
   실서비스로 바꾸려면 아래 '새 Firebase 프로젝트 연결'.
 - **기본 화면은 `/`(랜딩) · `/books`(책방) · `/dashboard` · `/privacy` · `/terms`**입니다.
   `/dashboard`는 책봄 전용 교사·학생 분석입니다. 질문방(`/board`) · 공부방(`/study`) · 원본 관리자 대시보드(`/admin`) · 학습 리포트
@@ -101,10 +102,13 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
 1. [Firebase 콘솔](https://console.firebase.google.com)에서 프로젝트를 만들고 웹 앱을 등록합니다.
    Authentication(**Google만**) · Firestore · Storage를 켭니다. Functions · App Check는 안 씁니다.
    (2024년 10월 이후 만든 프로젝트는 Storage에 Blaze가 필요할 수 있습니다 — 그림 첨부만 막힙니다.)
-2. 프로젝트 id를 **세 곳에 같은 값으로** 적습니다 — `lib/firebase.js`의 `FIREBASE_PROJECT_ID`
-   (+ `firebaseConfig`의 apiKey · messagingSenderId · appId), `next.config.mjs`의
-   `FIREBASE_PROJECT_ID`, `.firebaserc`의 `default`. 관리용 스크립트(`scripts/admin/*.mjs`)의
-   `PROJECT_ID`도 함께.
+2. Firebase 웹 설정은 **환경변수**로 넣습니다(`.env.example` 참고).
+   로컬은 `.env.local`, Vercel은 Project Settings → Environment Variables.
+   `NEXT_PUBLIC_FIREBASE_API_KEY` · `AUTH_DOMAIN` · `PROJECT_ID` · `STORAGE_BUCKET` ·
+   `MESSAGING_SENDER_ID` · `APP_ID`를 채우면 `lib/firebase.js`와 `next.config.mjs`가
+   그 값을 씁니다(비우면 원작자 기본값). `.firebaserc`는 CLI용이라 `firebase use --add`로
+   자기 프로젝트를 고르세요. 관리 스크립트는 `FIREBASE_PROJECT_ID` 또는
+   `NEXT_PUBLIC_FIREBASE_PROJECT_ID`를 읽습니다.
 3. 배포 차례는 **색인 · 규칙 → 앱**입니다.
 
    ```bash

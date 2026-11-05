@@ -72,6 +72,9 @@ test("저장소가 없거나 막혀 있어도 터지지 않는다", () => {
 // lib/firebase.js를 Firebase SDK 없이 실행해, 탭의 표시에 따라 데모 전환이
 // 정해지는지 봅니다(실제 반 동작은 표시가 없을 때 그대로).
 const source = await readFile(new URL("../../lib/firebase.js", import.meta.url), "utf8");
+// data: URL로 돌리면 상대 import가 안 되므로, 기본값 파일을 읽어 export만 떼고 붙여 넣습니다.
+const defaultsInline = (await readFile(new URL("../../lib/firebase-defaults.mjs", import.meta.url), "utf8"))
+  .replace(/^export /gm, "");
 let serial = 0;
 async function firebaseModule(win) {
   globalThis.window = win;
@@ -79,7 +82,8 @@ async function firebaseModule(win) {
     .replace(/import \{[^}]*\} from "firebase\/app";/, "const initializeApp = () => ({}); const getApps = () => [];")
     .replace(/import \{[^}]*\} from "firebase\/firestore";/, "const getFirestore = () => ({});")
     .replace(/import \{[^}]*\} from "firebase\/auth";/, "const getAuth = () => ({});")
-    .replace(/import \{[^}]*\} from "firebase\/storage";/, "const getStorage = () => ({});");
+    .replace(/import \{[^}]*\} from "firebase\/storage";/, "const getStorage = () => ({});")
+    .replace(/import \{[\s\S]*?\} from "\.\/firebase-defaults\.mjs";/, defaultsInline);
   const encoded = Buffer.from(`${injected}\n// instance ${serial++}`).toString("base64");
   try {
     return await import(`data:text/javascript;base64,${encoded}`);
