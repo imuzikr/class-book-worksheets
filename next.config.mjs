@@ -2,8 +2,8 @@
 
 import { DEFAULT_FIREBASE_PROJECT_ID } from "./lib/firebase-defaults.mjs";
 
-// 새 Firebase 프로젝트 id — lib/firebase.js · .firebaserc와 같은 값
-// NEXT_PUBLIC_FIREBASE_PROJECT_ID 가 있으면 원작자 기본값을 씁니다.
+// 프로젝트 id: NEXT_PUBLIC_FIREBASE_PROJECT_ID 를 쓰고, 비어 있으면 원작자 기본값(lib/firebase-defaults.mjs)을 씁니다.
+// .firebaserc 도 같은 프로젝트를 가리키게 맞춰 주세요.
 const FIREBASE_PROJECT_ID =
   process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || DEFAULT_FIREBASE_PROJECT_ID;
 const FIREBASE_APP_HOST = `https://${FIREBASE_PROJECT_ID}.firebaseapp.com`;
