@@ -116,8 +116,8 @@
 }
 .attend-chip--on { background: #d7f0dd; border-color: #8fcea3; }
 .attend-chip--away { background: #ffe2c9; border-color: #f0b483; }
-.attend-chip--off { background: #ececea; }
-.attend-chip--absent { background: #f3d8d8; border-color: #dc9b9b; }
+.attend-chip--off { background: var(--bg-sunken); }
+.attend-chip--absent { background: #f9dbdb; border-color: #dc9b9b; }
 .attend-toolbar {
   display: flex;
   align-items: center;
@@ -204,18 +204,18 @@
   border-color: #f0b483;
 }
 .attend-desk--off {
-  background: #ececea;
+  background: var(--bg-sunken);
   color: var(--text-sub);
 }
 .attend-desk--absent {
-  background: #f3d8d8;
+  background: #f9dbdb;
   color: #7f2b2b;
 }
 /* 빈 자리 — 테두리만 옅게 남겨 '자리는 있으나 학생이 없음'을 표시 */
 .attend-desk--empty {
   background: transparent;
   border-style: dashed;
-  border-color: #e2e0da;
+  border-color: var(--border);
 }
 .attend-desk-no {
   font-family: var(--font-mono);
@@ -590,7 +590,7 @@
   min-height: 74px;
   min-width: 0;
   padding: 8px 4px;
-  border: 1px dashed #d8d5ce;
+  border: 1px dashed #d9d5ca;
   border-radius: 9px;
   background: var(--bg);
   font-family: inherit;

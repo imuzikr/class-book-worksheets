@@ -367,7 +367,7 @@
   z-index: 1;
   background: #fff;
 }
-.modal-cornell-viewer .cornell-sheet-cue.cornell-sheet-th { background: #fdfcfa; }
+.modal-cornell-viewer .cornell-sheet-cue.cornell-sheet-th { background: var(--card-bg); }
 /* 제목·요약·한 마디는 줄어들지 않습니다 — 늘 보여야 하는 줄입니다 */
 .modal-cornell-viewer .cornell-sheet-topic,
 .modal-cornell-viewer .cornell-sheet-summary,
@@ -438,7 +438,7 @@
 .kwls-sheet-cell--l, .kwls-sheet-cell--s { border-bottom: none; }
 /* 읽기 전 두 칸에만 옅은 바탕 — 코넬의 단서 칸과 같은 색입니다.
    '읽기 전 / 읽은 뒤'가 색으로도 갈립니다. */
-.kwls-sheet-cell--k, .kwls-sheet-cell--w { background: #fdfcfa; }
+.kwls-sheet-cell--k, .kwls-sheet-cell--w { background: var(--card-bg); }
 .kwls-sheet-cell h4 {
   display: flex;
   align-items: center;

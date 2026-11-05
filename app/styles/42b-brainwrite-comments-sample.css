@@ -118,7 +118,7 @@
 }
 .bw-row:last-child { border-bottom: none; }
 .bw-row.filled { border-left: 4px solid var(--green-300); padding-left: 14px; }
-.bw-row.mine { background: #fffaf6; border-left: 4px solid var(--primary); padding-left: 14px; }
+.bw-row.mine { background: var(--bg); border-left: 4px solid var(--primary); padding-left: 14px; }
 .bw-row-who {
   display: flex;
   align-items: center;
@@ -380,7 +380,7 @@
   word-break: break-word;
   font-size: 16px;
   line-height: 1.6;
-  color: #2b3a2f;
+  color: #2f3a31;
 }
 .opinion-reply-add {
   margin-top: 8px;
@@ -411,7 +411,7 @@
 
 /* 학생이 여는 브레인 라이팅: 첫 칸은 답변 목록의 제목입니다. */
 .bw-row.bw-question-row {
-  background: #edf7ec;
+  background: #eef8f1;
   border-left: 4px solid #79a973;
   border-bottom: 2px solid #c8dfc4;
   padding: 22px 18px;
@@ -442,7 +442,7 @@
   border: 1px solid #c8dfc4;
   border-left: 5px solid #79a973;
   border-radius: 14px;
-  background: #edf7ec;
+  background: #eef8f1;
   color: #294c2d;
   overflow-wrap: anywhere;
 }
@@ -531,12 +531,12 @@
 .sample-class-entry {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   margin: 8px 16px 0; padding: 10px 14px; border-radius: 12px;
-  background: #f4f1ff; border: 1px dashed #b7a8f0; font-size: 14px; color: #3b2f6b;
+  background: #f2edf9; border: 1px dashed #b7a8f0; font-size: 14px; color: #3b2f6b;
 }
 .sample-class-entry .btn-ghost { white-space: nowrap; }
 .sample-class-bar { display: flex; align-items: center; gap: 6px; }
 .sample-class-badge {
-  padding: 4px 10px; border-radius: 999px; background: #fff3cd; border: 1px solid #f0c36d;
+  padding: 4px 10px; border-radius: 999px; background: #fff4d6; border: 1px solid #f0c36d;
   color: #7a5200; font-size: 12px; font-weight: 700; white-space: nowrap;
 }
 .sample-class-exit { font-size: 12px; padding: 4px 10px; white-space: nowrap; }

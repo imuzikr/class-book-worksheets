@@ -299,7 +299,7 @@
   gap: 5px;
   padding: 7px 10px;
   border-radius: 10px;
-  background: var(--bg-deep, var(--bg-deep));
+  background: var(--bg-deep);
   font-size: 12.5px;
   line-height: 1.55;
   color: var(--text);

@@ -301,13 +301,13 @@
 .xw-grid--mini .xw-cell {
   border-width: 1px;
   border-radius: 1px;
-  border-color: #d5cfc5;
+  border-color: #d9d5ca;
   background: #fff;
   cursor: default;
 }
 .xw-grid--mini .xw-cell--void { border: none; background: transparent; }
-.xw-grid--mini .xw-cell.key { background: #f0e2c4; border-color: #e0cfa8; }
-.xw-grid--mini .xw-cell.filled { background: #e9e6e1; }
+.xw-grid--mini .xw-cell.key { background: #fbeacc; border-color: #e0cfa8; }
+.xw-grid--mini .xw-cell.filled { background: #e8e5dd; }
 /* 학생 왼쪽 칸의 미니맵 — 칸 5px까지(22px → 15px → 10px → 5px, 선생님 요청 — 교사
    미니맵과 같은 크기), 카드 폭 안에서 칸이 함께 줄어듭니다(21칸이어도 넘치지 않게).
    지금 고른 낱말은 살구 테두리. */
@@ -341,7 +341,7 @@
 .xwg-swatch:first-child { margin-left: 0; }
 .xwg-swatch.key { background: #fbf0dc; border-color: #d9b77a; }
 .xwg-swatch.right { background: var(--green-50); border-color: var(--green-200); }
-.xwg-swatch.filled { background: #e9e6e1; border-color: #d5cfc5; }
+.xwg-swatch.filled { background: #e8e5dd; border-color: #d9d5ca; }
 .xwg-legend { font-size: 12px; }
 
 /* 왼쪽 — 우리 모둠 낱말 */
@@ -355,7 +355,7 @@
   border-radius: 10px;
   background: var(--bg);
 }
-.xwg-words > li.done { border-color: var(--green-200); background: #f3faf5; }
+.xwg-words > li.done { border-color: var(--green-200); background: #eef8f1; }
 .xwg-word-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .xwg-word-head strong { font-size: 15px; color: var(--text); }
 .xwg-word-head .xw-badge { margin-left: auto; height: 22px; }
@@ -387,13 +387,13 @@
 /* 오른쪽 — 힌트 목록 */
 .xw-clue:disabled { cursor: default; }
 .xw-clue:disabled:hover { background: transparent; }
-.xw-clue.own { background: #fff8ec; }
+.xw-clue.own { background: #fffaf0; }
 .xw-clue-own {
   font-style: normal;
   display: inline-block;
   padding: 0 6px;
   border-radius: 999px;
-  background: #f0e2c4;
+  background: #fbeacc;
   color: #7d5811;
   font-size: 11px;
   font-weight: 700;
@@ -449,7 +449,7 @@
   background: var(--neutral);
   color: var(--text-sub);
 }
-.xwg-stu--done { background: #f3faf5; }
+.xwg-stu--done { background: #eef8f1; }
 .xwg-stu--done .xwg-stu-state { background: var(--green-50); color: #2f7a45; }
 .xwg-stu--doing .xwg-stu-state { background: #fbf0dc; color: #8a5a12; }
 .xwg-stu--free { opacity: 0.6; }

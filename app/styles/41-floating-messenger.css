@@ -269,7 +269,7 @@
   height: 36px;
   flex-shrink: 0;
   border-radius: 50%;
-  background: #e7f3e9;
+  background: #eef8f1;
   color: var(--green-olive);
   display: flex;
   align-items: center;
@@ -693,7 +693,7 @@ button.msgr-receipt:hover { color: var(--text-sub); }
 .group-member-status-key.member-status-done { background: var(--green-50); color: var(--green-800); }
 .raft-mate-pill.member-status-doing,
 .book-rail-card.on .raft-mate-pill.member-status-doing,
-.group-member-status-key.member-status-doing { background: #fff2d5; color: #775113; }
+.group-member-status-key.member-status-doing { background: #fbeacc; color: #775113; }
 .raft-mate-pill.member-status-empty,
 .book-rail-card.on .raft-mate-pill.member-status-empty,
 .group-member-status-key.member-status-empty { background: #eef0f3; color: #52606e; }

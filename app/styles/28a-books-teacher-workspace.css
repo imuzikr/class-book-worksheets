@@ -362,7 +362,7 @@
   padding: 10px 12px;
   border: 1px solid var(--primary-light);
   border-radius: 10px;
-  background: #fdf6ef;
+  background: #fffaf0;
 }
 .book-rail-missing-head {
   display: flex;
