@@ -6,9 +6,26 @@
 여섯 개의 해시태그 · 물음표로 책 읽기 · 가로세로 낱말 퀴즈 · 브레인 라이팅 열 가지 활동과
 반 관리 · 출석 · 과일(참여 격려) · 학급 방송을 담고 있습니다.
 
-> 기본값은 원작자 Firebase 프로젝트에 연결되어 **실서비스 모드**로 돕니다.
-> 나만의 책봄을 띄우려면 `.env.example`을 보고 Firebase 값을 넣고,
-> 자세한 연결 차례는 `CLAUDE.md`의 '새 Firebase 프로젝트 연결'을 보세요.
+## 라이선스
+
+이 저장소는 [Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)](https://creativecommons.org/licenses/by-nc/4.0/)로 제공합니다.
+출처를 밝히면 **비상업적** 목적(학교 수업·교내 배포 등)으로 자유롭게 사용·수정·공유할 수 있습니다.
+상업적 이용은 허용되지 않습니다. 전문은 [`LICENSE`](LICENSE)를 보세요.
+
+## 빠른 시작 — 나만의 책봄 띄우기
+
+> 이 저장소를 그대로 배포하지 마세요. **내 Firebase 프로젝트**로 바꿔야 합니다.
+
+1. **가져오기**: Fork → `npm install` → `npm run dev` (Node 22)
+2. **Firebase**: 새 프로젝트 + 웹 앱 등록. Authentication(Google), Firestore, (그림) Storage
+3. **내 값 넣기**: `cp .env.example .env.local` 후 `NEXT_PUBLIC_FIREBASE_*` 채우기. 같은 값을 Vercel에도. `.firebaserc`는 `firebase use --add`
+4. **규칙 배포**: `npx firebase-tools login` → `npm run deploy` (Storage 권한 질문에는 Y)
+5. **Vercel**: Fork Import → Deploy. 주소를 Firebase **승인된 도메인**에 추가
+6. **콘솔**: `config/teacherSignup`에 `code`(문자열, 4자 이상), 내 `users/{uid}.role`을 `admin`
+7. **확인**: 선생님으로 반 만들기 → 다른 계정으로 참여
+
+규칙 파일을 바꾸면 `npm run deploy`를 다시 하세요. Vercel만으로는 규칙이 바뀌지 않습니다.
+자세한 안내: [docs/공유-시나리오.md](docs/공유-시나리오.md)
 
 ## 원본 독서 활동 업데이트
 
