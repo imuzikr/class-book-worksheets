@@ -23,6 +23,26 @@ const book = (id, title = "우리 책") => ({ id, title, author: "시험 작가"
 const log = (id, bookId, classId, date, startPage, endPage) => ({ id, bookId, classId, date, startPage, endPage, notes: "비공개 독서 감상 원문", createdAt: `${date}T01:00:00Z` });
 const reading = (books, logs, reviews = []) => ({ version: 1, books, logs, reviews, featuredBadge: null });
 
+test("활동 보고서 원문은 명시적인 개인 보고서 생성에서만 포함한다", () => {
+  const student = classroom.students[0];
+  const source = demo({ role: "student", uid: student.uid, roster: [student] });
+  const normal = buildDashboardData(source, fullRange);
+  assert.equal(normal.studentActivities.length, 11);
+  assert.ok(normal.studentActivities.every((activity) => !Object.hasOwn(activity, "report")));
+  const personal = buildDashboardData(source, { ...fullRange, activityReport: true });
+  assert.equal(personal.studentActivities.length, 11);
+  assert.ok(personal.studentActivities.every((activity) => activity.report && typeof activity.report === "object"));
+  const map = personal.studentActivities.find((activity) => activity.type === "mindmap").report.map;
+  assert.equal(map.nodes.length, 6);
+  assert.equal(map.nodes[0].text, "바람을 모으는 도서관");
+  const bingo = personal.studentActivities.find((activity) => activity.type === "bingo").report.bingo;
+  assert.equal(bingo.filled, 25);
+  assert.equal(bingo.goal, 2);
+  assert.equal(bingo.groupResult, true);
+  const classroomReport = buildDashboardData(demo(), { ...fullRange, activityReport: true });
+  assert.deepEqual(classroomReport.studentActivities, []);
+});
+
 test("한국 시간 월요일과 월간 비교는 같은 경과 일수로 제한한다", () => {
   const week = dashboardPeriod("weekly", "2026-10-25T15:01:00Z");
   assert.deepEqual(week, { key: "weekly", start: "2026-10-26", end: "2026-10-26", label: "이번 주", previous: { start: "2026-10-19", end: "2026-10-19" } });

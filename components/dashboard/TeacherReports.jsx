@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
+import ActivityReport from "./ActivityReport";
 import {
   Section, Empty, Metric, WeeklyChart, Feedback,
-  fmt, fullDate, asArray, stateLabels,
+  fmt, fullDate, asArray,
 } from "./DashboardParts";
 import "./TeacherReports.css";
 
@@ -39,31 +39,6 @@ function ReadingFlow({ reading, title, note, overall = false }) {
   </Section>;
 }
 
-function TeacherActivityList({ activities }) {
-  return <Section title="학생의 독서 활동 모음" note="진행 상태는 현재 저장된 내용을 기준으로 합니다. 활동을 펼쳐 작성 내용 요약을 확인하세요.">
-    {activities.length ? <div className="bb-report-activity-list">
-      {activities.map((activity) => <details key={activity.id} className="bb-report-activity-row">
-        <summary className="bb-report-activity-summary">
-          <span className="bb-dash-type">{activity.label}</span>
-          <span className="bb-report-activity-title">{activity.title}</span>
-          <span className="bb-report-activity-indicators">
-            <span className={"bb-dash-state is-" + activity.state}>{activity.labelStatus || stateLabels[activity.state]}</span>
-            {activity.locked && <span className="bb-report-activity-lock">잠김</span>}
-            <span className="bb-report-activity-chevron" aria-hidden="true" />
-          </span>
-        </summary>
-        <div className="bb-report-activity-body">
-          {activity.preview ? <p className="bb-report-activity-preview">{activity.preview}</p>
-            : <p className="bb-report-activity-empty">{activity.state === "waiting"
-              ? `${activity.labelStatus || stateLabels.waiting}입니다. 활동을 열어 배정 상태를 확인할 수 있습니다.`
-              : "표시할 작성 내용 요약이 없습니다. 활동을 열어 기록을 확인할 수 있습니다."}</p>}
-          <Link className="bb-dash-text-link" href={activity.href}>활동 열기 →</Link>
-        </div>
-      </details>)}
-    </div> : <Empty>아직 이 반에 독서 활동이 없습니다.</Empty>}
-  </Section>;
-}
-
 export function TeacherPersonalReport({ data }) {
   if (!data) return null;
   const activities = asArray(data.studentActivities);
@@ -91,7 +66,7 @@ export function TeacherPersonalReport({ data }) {
         <Metric label="배정 대기 활동" value={activities.filter((activity) => activity.state === "waiting").length} unit="개" hint="모둠·담당 배정 대기" />
       </div>
     </>}
-    <TeacherActivityList key={`${data.class?.id}:${student?.uid}`} activities={activities} />
+    <ActivityReport key={`${data.class?.id}:${student?.uid}`} activities={activities} subject={student} classroom={data.class} />
     {reading && <div className="bb-report-reading-grid">
       <ReadingFlow reading={reading} title="학생의 독서 흐름" note="선택한 반과 기간에 속하는 독서 날짜를 기준으로 합산합니다." />
       <ReportBooks books={asArray(reading.books)} title="학생이 읽은 책" note="선택한 반과 기간에 독서 기록을 남긴 도서입니다." />
