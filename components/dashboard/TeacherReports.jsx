@@ -7,9 +7,9 @@ import {
 } from "./DashboardParts";
 import "./TeacherReports.css";
 
-function ReportHeading({ eyebrow, title, children, aside }) {
+function ReportHeading({ eyebrow, title, titleAction, children, aside }) {
   return <header className="bb-report-heading">
-    <div><span className="bb-report-eyebrow">{eyebrow}</span><h2>{title}</h2><p>{children}</p></div>
+    <div><span className="bb-report-eyebrow">{eyebrow}</span>{titleAction ? <div className="bb-report-title-row"><h2>{title}</h2>{titleAction}</div> : <h2>{title}</h2>}<p>{children}</p></div>
     {aside && <span className="bb-report-heading-tag">{aside}</span>}
   </header>;
 }
@@ -39,7 +39,7 @@ function ReadingFlow({ reading, title, note, overall = false }) {
   </Section>;
 }
 
-export function TeacherPersonalReport({ data }) {
+export function TeacherPersonalReport({ data, onEditProfile }) {
   if (!data) return null;
   const activities = asArray(data.studentActivities);
   const reading = data.reading;
@@ -48,7 +48,9 @@ export function TeacherPersonalReport({ data }) {
   const started = activities.filter((activity) => activity.state === "doing" || activity.state === "done").length;
 
   return <div className="bb-report-document bb-report-personal">
-    <ReportHeading eyebrow="개인별 보고서" title={(student?.name || "학생") + "의 독서 기록"} aside={data.class?.name}>
+    <ReportHeading eyebrow="개인별 보고서" title={(student?.name || "학생") + "의 독서 기록"}
+      titleAction={onEditProfile && <button type="button" className="bb-dash-small-button bb-report-edit" onClick={onEditProfile} aria-label={(student?.name || "학생") + " 프로필 편집"}>편집</button>}
+      aside={data.class?.name}>
       {student?.studentId && <span className="bb-report-student-number">{student.studentId}</span>}
       선택한 반에서의 독서 활동과 생각의 기록을 살펴봅니다.
     </ReportHeading>
