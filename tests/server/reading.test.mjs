@@ -4,7 +4,7 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { initializeApp, deleteApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
-import { getReading, mutateReading, getReadingRankings, readingPrincipal, refreshReadingMember } from "../../lib/server/readingService.js";
+import { getReading, mutateReading, getReadingRankings, readingPrincipal, refreshReadingMember, saveReadingCharacter } from "../../lib/server/readingService.js";
 import { FRUIT_XP, READING_FORMULA } from "../../lib/reading.js";
 
 const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID || "demo-reading-api";
@@ -166,4 +166,48 @@ test("계산 기준이 바뀐 옛 집계는 랭킹을 읽을 때 다시 셈", as
   const row = (await getReadingRankings(principal("teacher"), "api-class", "all-time")).rankings[0];
   assert.notEqual(row.xp, 99999);
   assert.equal((await db.doc(`classes/api-class/readingMembers/${ids.student}`).get()).data().formula, READING_FORMULA);
+});
+
+test("journey appearance changes only the authenticated student's public character", async () => {
+  const profileRef = db.doc(`users/${ids.student}`);
+  const beforeProfile = (await profileRef.get()).data();
+  const beforeReading = await getReading(principal("student"), "api-class");
+  const character = { number: 9, style: "advanced" };
+  assert.deepEqual(await saveReadingCharacter(principal("student"), { classId: "api-class", character }), { character });
+  assert.deepEqual((await profileRef.get()).data(), { ...beforeProfile, readingCharacter: character });
+  const afterReading = await getReading(principal("student"), "api-class");
+  assert.deepEqual(afterReading.state, beforeReading.state);
+  assert.equal(afterReading.summary.xp, beforeReading.summary.xp);
+  const row = (await getReadingRankings(principal("teacher"), "api-class", "all-time")).rankings[0];
+  assert.deepEqual(row.character, character);
+  assert.equal(row.totalXp, beforeReading.summary.xp);
+  assert.equal(Object.hasOwn(row, "email"), false);
+  assert.equal(Object.hasOwn(row, "state"), false);
+});
+
+test("journey appearance rejects other UIDs, malformed choices, teachers and disabled access", async () => {
+  const character = { number: 1, style: "intermediate" };
+  for (const body of [null, [], { classId: "api-class", uid: ids.other, character },
+    { classId: "api-class", character: { ...character, role: "admin" } },
+    { classId: "api-class", character: { number: 11, style: "advanced" } }]) {
+    await assert.rejects(() => saveReadingCharacter(principal("student"), body), (error) => error.status === 400);
+  }
+  await assert.rejects(() => saveReadingCharacter(principal("other"), { classId: "api-class", character }), (error) => error.status === 403);
+  await assert.rejects(() => saveReadingCharacter(principal("teacher"), { classId: "api-class", character }), (error) => error.status === 403);
+  await assert.rejects(() => saveReadingCharacter(principal("admin"), { classId: "api-class", character }), (error) => error.status === 403);
+  await assert.rejects(() => saveReadingCharacter(principal("student"), { classId: "api-off", character }), (error) => error.status === 403);
+  await db.doc("classes/api-class").update({ rankingEnabled: false });
+  try {
+    await assert.rejects(() => saveReadingCharacter(principal("student"), { classId: "api-class", character }), (error) => error.code === "reading/ranking-disabled");
+  } finally { await db.doc("classes/api-class").update({ rankingEnabled: true }); }
+});
+
+test("same-formula projections missing global XP are repaired rather than treated as a starting student", async () => {
+  await db.doc(`classes/api-class/readingMembers/${ids.student}`).set({ uid: ids.student, level: 1, events: [], formula: READING_FORMULA });
+  const canonical = await getReading(principal("student"), "api-class");
+  const row = (await getReadingRankings(principal("teacher"), "api-class", "all-time")).rankings[0];
+  assert.equal(row.totalXp, canonical.summary.xp);
+  assert.deepEqual(row.badges, canonical.summary.earnedBadges.map((badge) => badge.id));
+  await db.doc(`users/${ids.student}`).update({ readingCharacter: { number: 11, style: "advanced" } });
+  assert.equal((await getReadingRankings(principal("teacher"), "api-class", "all-time")).rankings[0].character, null);
 });
