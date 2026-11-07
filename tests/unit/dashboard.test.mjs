@@ -52,7 +52,7 @@ test("10종의 실제 진행 기준을 적용하고 공동 완성은 개인 완�
     assert.equal(data.activity.done, done, type);
     assert.equal(data.activity.rows.length, 15, type);
     assert.equal(data.activity.completionSupported, !["consonant", "mindmap", "opinion"].includes(type), type);
-    assert.ok(data.activity.rows.every((row) => typeof row.preview === "string" && !row.preview.includes("<p>")));
+    assert.ok(data.activity.rows.every((row) => typeof row.preview === "string" && !row.preview.includes("<p>") && row.sections === undefined));
   }
 });
 
@@ -163,6 +163,7 @@ test("학생은 본인의 누적 성장·서재와 선택 반의 기간 활동�
   assert.equal(result.activity.rows.length, 1); assert.equal(result.activity.rows[0].uid, uid);
   assert.equal(result.activity.rows[0].total, 5); assert.equal(result.activity.rows[0].filled, 5);
   assert.equal(result.studentActivities.length, 10);
+  assert.ok(result.studentActivities.every((activity) => Array.isArray(activity.sections) && activity.sections.length > 0));
   assert.equal(result.reading.members.length, 1); assert.equal(result.reading.personal.library.length, 2);
   assert.equal(result.reading.personal.level, deriveReading(states[uid], NOW).level);
   assert.equal(result.reading.personal.badges.length, 18); assert.ok(result.reading.personal.nextBadges.length <= 3);

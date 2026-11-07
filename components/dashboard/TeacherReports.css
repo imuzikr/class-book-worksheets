@@ -28,15 +28,100 @@
 
 .bb-report-reading-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 22px; min-width: 0; }
 
-.bb-report-activity-list { min-width: 0; border-top: 1px solid var(--border, #e8e5dd); }
-.bb-report-activity-row { min-width: 0; border-bottom: 1px solid var(--border, #e8e5dd); }
+.bb-report-sample {
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border: 1px solid #e6cfc0;
+  border-radius: 12px;
+  background: #fbf6ef;
+  color: #6d4b34;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.6;
+}
+.bb-report-overview { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; margin-bottom: 14px; }
+.bb-report-filters { display: flex; flex-wrap: wrap; gap: 8px; }
+.bb-report-filters button,
+.bb-report-tools button {
+  min-height: 44px;
+  border: 1px solid var(--border, #e8e5dd);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text, #3d3d3a);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+.bb-report-filters button strong { margin-left: 6px; color: #8a684d; font-variant-numeric: tabular-nums; }
+.bb-report-filters button[aria-pressed="true"] { background: var(--primary-light, #f8ece5); border-color: #e6cfc0; color: var(--primary-dark, #b85c3f); }
+.bb-report-filters button:focus-visible,
+.bb-report-tools button:focus-visible,
+.bb-report-jump a:focus-visible { outline: 2px solid var(--primary-dark, #b85c3f); outline-offset: 2px; }
+.bb-report-filter-status { flex: 1 1 180px; margin: 0; color: #5e594f; font-size: 13px; line-height: 1.5; }
+.bb-report-tools { display: flex; flex-wrap: wrap; gap: 8px; }
+.bb-report-jump { display: flex; gap: 8px; overflow-x: auto; margin: 0 0 14px; padding-bottom: 4px; scroll-snap-type: x proximity; }
+.bb-report-jump a {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 44px;
+  max-width: 220px;
+  padding: 8px 12px;
+  border: 1px solid var(--border, #e8e5dd);
+  border-radius: 12px;
+  background: #fff;
+  color: #6d4b34;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.4;
+  text-decoration: none;
+  scroll-snap-align: start;
+}
+.bb-report-jump a span { color: var(--text, #3d3d3a); font-weight: 500; overflow-wrap: anywhere; }
+.bb-report-facts { display: flex; flex-direction: column; gap: 6px; margin: 0 0 12px; padding: 0; list-style: none; }
+.bb-report-facts li { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 8px; align-items: baseline; }
+.bb-report-facts span { color: #6d5c4e; font-size: 12px; line-height: 1.5; }
+.bb-report-facts strong { color: var(--text, #3d3d3a); font-size: 14px; font-weight: 600; line-height: 1.6; overflow-wrap: anywhere; }
+.bb-report-book-link { margin: 0 0 12px; }
+.bb-report-aside-note { margin: 0 0 12px; color: #5e594f; font-size: 13px; line-height: 1.6; }
+.bb-report-part { margin: 0 0 14px; padding-top: 10px; border-top: 1px solid #f0ebe3; }
+.bb-report-part-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 10px; margin-bottom: 8px; }
+.bb-report-part-head h4 { margin: 0; color: #3d3d3a; font-size: 15px; line-height: 1.5; }
+.bb-report-part-head span { color: #6d5c4e; font-size: 12px; }
+.bb-report-answers { margin: 0; }
+.bb-report-answer { display: grid; grid-template-columns: minmax(88px, 160px) minmax(0, 1fr); gap: 8px 12px; padding: 8px 0; }
+.bb-report-answer dt { margin: 0; color: #6d5c4e; font-size: 13px; font-weight: 650; line-height: 1.5; overflow-wrap: anywhere; }
+.bb-report-answer dd { margin: 0; min-width: 0; }
+.bb-report-answer dd p { margin: 0; color: var(--text, #3d3d3a); font-size: 15px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; word-break: keep-all; }
+.bb-report-answer.is-missing dd p,
+.bb-report-answer.is-optional dd p,
+.bb-report-answer.is-selected dd p,
+.bb-report-answer.is-attached dd p { color: #5c564c; font-size: 14px; }
+.bb-report-answer-note { margin-top: 4px !important; color: #5c564c !important; font-size: 13px !important; }
+.bb-report-feedback { margin: 4px 0 14px; padding: 12px; border-radius: 12px; background: #fbf8f3; }
+.bb-report-feedback h4 { margin: 0 0 8px; font-size: 14px; }
+.bb-report-feedback ul { margin: 0; padding: 0; list-style: none; }
+.bb-report-feedback li + li { margin-top: 10px; padding-top: 10px; border-top: 1px solid #efe8dc; }
+.bb-report-feedback-meta { display: flex; flex-wrap: wrap; gap: 6px 10px; margin: 0 0 4px; color: #6d5c4e; font-size: 12px; }
+.bb-report-feedback-meta .is-teacher { color: var(--primary-dark, #b85c3f); font-weight: 700; }
+.bb-report-feedback li > p:last-child { margin: 0; font-size: 14px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+.bb-report-feedback-empty { margin: 0; color: #5c564c; font-size: 13px; }
+.bb-report-activity-list { display: flex; flex-direction: column; gap: 12px; min-width: 0; border-top: 0; }
+.bb-report-activity-row { min-width: 0; border: 1px solid var(--border, #e8e5dd); border-left-width: 4px; border-radius: 14px; background: #fff; scroll-margin-top: 16px; }
+.bb-report-activity-row.is-done { border-left-color: #5c9e68; }
+.bb-report-activity-row.is-doing { border-left-color: #d4a15a; }
+.bb-report-activity-row.is-empty { border-left-color: #b7b7ad; }
+.bb-report-activity-row.is-waiting { border-left-color: #8aa0b8; }
 .bb-report-activity-summary {
   display: grid;
   grid-template-columns: 132px minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
   min-height: 56px;
-  padding: 13px 2px;
+  padding: 14px 16px;
   list-style: none;
   cursor: pointer;
 }
@@ -50,9 +135,10 @@
 .bb-report-activity-lock { color: var(--text-sub); font-size: 10px; }
 .bb-report-activity-chevron { width: 7px; height: 7px; margin: 0 5px 3px 4px; border-right: 1.5px solid #9b826a; border-bottom: 1.5px solid #9b826a; transform: rotate(45deg); flex-shrink: 0; }
 .bb-report-activity-row[open] .bb-report-activity-chevron { transform: rotate(225deg); margin-bottom: -3px; }
-.bb-report-activity-body { min-width: 0; padding: 0 2px 17px 146px; }
-.bb-report-activity-preview { margin: 0 0 12px; color: #69766e; font-size: 12px; line-height: 1.9; white-space: pre-wrap; overflow-wrap: anywhere; }
-.bb-report-activity-empty { margin: 0 0 12px; color: var(--text-sub); font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; }
+.bb-report-activity-body { min-width: 0; padding: 0 16px 16px; }
+.bb-report-activity-title { font-size: 15px; }
+.bb-report-activity-preview { margin: 0 0 12px; color: #3d3d3a; font-size: 15px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+.bb-report-activity-empty { margin: 0 0 12px; color: #5c564c; font-size: 14px; line-height: 1.7; overflow-wrap: anywhere; }
 .bb-report-reading-grid > *,
 .bb-report-detail-grid > * { min-width: 0; }
 .bb-report-reading-facts { display: flex; flex-wrap: wrap; gap: 9px 18px; margin-bottom: 20px; color: #77776c; font-size: 11px; line-height: 1.7; }
@@ -105,15 +191,18 @@
 }
 
 @media (max-width: 620px) {
-  .bb-report-activity-summary { grid-template-columns: minmax(0, 1fr) auto; gap: 7px 10px; padding: 12px 2px; }
+  .bb-report-activity-summary { grid-template-columns: minmax(0, 1fr) auto; gap: 7px 10px; padding: 12px 14px; }
   .bb-report-activity-summary > .bb-dash-type { grid-column: 1; grid-row: 1; }
-  .bb-report-activity-title { grid-column: 1 / -1; grid-row: 2; font-size: 12px; }
+  .bb-report-activity-title { grid-column: 1 / -1; grid-row: 2; font-size: 15px; }
   .bb-report-activity-indicators { grid-column: 2; grid-row: 1; }
-  .bb-report-activity-body { padding: 0 2px 16px; }
+  .bb-report-activity-body { padding: 0 14px 16px; }
+  .bb-report-answer { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .bb-report-facts li { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .bb-report-sample { font-size: 13px; }
   .bb-report-heading { gap: 10px; margin-bottom: 16px; padding: 16px; }
-  .bb-report-heading p { font-size: 10px; }
+  .bb-report-heading p { font-size: 13px; }
   .bb-report-current-note,
-  .bb-report-period-note { font-size: 10px; }
+  .bb-report-period-note { font-size: 13px; }
   .bb-report-document .bb-dash-metric { padding: 14px 12px; }
   .bb-report-document .bb-dash-metric > strong { font-size: 28px; }
 }

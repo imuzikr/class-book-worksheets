@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import {
-  Section, Empty, Metric, WeeklyChart, Feedback,
-  fmt, fullDate, asArray, stateLabels,
+  Section, Empty, Metric, WeeklyChart,
+  fmt, fullDate, asArray,
 } from "./DashboardParts";
+import StudentActivityReport from "./StudentActivityReport";
 import "./TeacherReports.css";
 
 function ReportHeading({ eyebrow, title, children, aside }) {
@@ -39,65 +39,35 @@ function ReadingFlow({ reading, title, note, overall = false }) {
   </Section>;
 }
 
-function TeacherActivityList({ activities }) {
-  return <Section title="학생의 독서 활동 모음" note="진행 상태는 현재 저장된 내용을 기준으로 합니다. 활동을 펼쳐 작성 내용 요약을 확인하세요.">
-    {activities.length ? <div className="bb-report-activity-list">
-      {activities.map((activity) => <details key={activity.id} className="bb-report-activity-row">
-        <summary className="bb-report-activity-summary">
-          <span className="bb-dash-type">{activity.label}</span>
-          <span className="bb-report-activity-title">{activity.title}</span>
-          <span className="bb-report-activity-indicators">
-            <span className={"bb-dash-state is-" + activity.state}>{activity.labelStatus || stateLabels[activity.state]}</span>
-            {activity.locked && <span className="bb-report-activity-lock">잠김</span>}
-            <span className="bb-report-activity-chevron" aria-hidden="true" />
-          </span>
-        </summary>
-        <div className="bb-report-activity-body">
-          {activity.preview ? <p className="bb-report-activity-preview">{activity.preview}</p>
-            : <p className="bb-report-activity-empty">{activity.state === "waiting"
-              ? `${activity.labelStatus || stateLabels.waiting}입니다. 활동을 열어 배정 상태를 확인할 수 있습니다.`
-              : "표시할 작성 내용 요약이 없습니다. 활동을 열어 기록을 확인할 수 있습니다."}</p>}
-          <Link className="bb-dash-text-link" href={activity.href}>활동 열기 →</Link>
-        </div>
-      </details>)}
-    </div> : <Empty>아직 이 반에 독서 활동이 없습니다.</Empty>}
-  </Section>;
-}
-
-export function TeacherPersonalReport({ data }) {
+export function TeacherPersonalReport({ data, sample = false }) {
   if (!data) return null;
   const activities = asArray(data.studentActivities);
   const reading = data.reading;
   const summary = reading?.summary;
   const student = data.subject;
-  const started = activities.filter((activity) => activity.state === "doing" || activity.state === "done").length;
+  const feedback = asArray(data.feedback);
 
   return <div className="bb-report-document bb-report-personal">
-    <ReportHeading eyebrow="개인별 보고서" title={(student?.name || "학생") + "의 독서 기록"} aside={data.class?.name}>
+    {sample && <p className="bb-report-sample" role="note">샘플 데이터 / 가상 학생 · 화면에 보이는 이름과 답안은 체험용으로 만든 기록입니다. 실제 학생 자료가 아니며 저장되지 않습니다.</p>}
+    <ReportHeading eyebrow="개인별 보고서" title={(student?.name || "학생") + "의 독서 활동"} aside={data.class?.name}>
       {student?.studentId && <span className="bb-report-student-number">{student.studentId}</span>}
-      선택한 반에서의 독서 활동과 생각의 기록을 살펴봅니다.
+      이 반의 독서 활동 열 가지를 한 자리에서 읽습니다. 답안은 지금 저장된 내용이고, 피드백은 선택한 기간에 남긴 기록입니다.
     </ReportHeading>
-    {reading ? <div className="bb-dash-metrics is-four">
-      <Metric label="읽은 쪽수" value={summary?.pages} unit="쪽" previous={reading.previous?.pages} />
-      <Metric label="독서한 날짜" value={summary?.days} unit="일" previous={reading.previous?.days} />
-      <Metric label="완독 기록" value={summary?.completed} unit="건" previous={reading.previous?.completed} />
-      <Metric label="감상문" value={summary?.reviews} unit="건" previous={reading.previous?.reviews} />
-    </div> : <>
-      <p className="bb-report-current-note">활동 수와 진행 상태는 조회 기간과 관계없이 현재 저장된 내용을 기준으로 합니다.</p>
+    <Section title="활동별 답안" note="활동을 펼치면 칸마다 적은 글과 비어 있는 칸, 받은 피드백을 함께 볼 수 있습니다. 내용이 있는 활동은 펼쳐 두고, 아직 시작하지 않은 활동은 접어 둡니다.">
+      <StudentActivityReport key={`${data.class?.id}:${student?.uid}`} activities={activities} feedback={feedback} />
+    </Section>
+    {reading ? <>
       <div className="bb-dash-metrics is-four">
-        <Metric label="전체 활동" value={activities.length} unit="개" hint="선택한 반의 모든 독서 활동" />
-        <Metric label="참여한 활동" value={started} unit="개" hint="작성 중이거나 기준을 충족한 활동" />
-        <Metric label="미시작 활동" value={activities.filter((activity) => activity.state === "empty").length} unit="개" hint="현재 저장 상태" />
-        <Metric label="배정 대기 활동" value={activities.filter((activity) => activity.state === "waiting").length} unit="개" hint="모둠·담당 배정 대기" />
+        <Metric label="읽은 쪽수" value={summary?.pages} unit="쪽" previous={reading.previous?.pages} />
+        <Metric label="독서한 날짜" value={summary?.days} unit="일" previous={reading.previous?.days} />
+        <Metric label="완독 기록" value={summary?.completed} unit="건" previous={reading.previous?.completed} />
+        <Metric label="감상문" value={summary?.reviews} unit="건" previous={reading.previous?.reviews} />
       </div>
-    </>}
-    <TeacherActivityList key={`${data.class?.id}:${student?.uid}`} activities={activities} />
-    {reading && <div className="bb-report-reading-grid">
-      <ReadingFlow reading={reading} title="학생의 독서 흐름" note="선택한 반과 기간에 속하는 독서 날짜를 기준으로 합산합니다." />
-      <ReportBooks books={asArray(reading.books)} title="학생이 읽은 책" note="선택한 반과 기간에 독서 기록을 남긴 도서입니다." />
-    </div>}
-    <Feedback rows={asArray(data.feedback)} teacher note="선택한 반의 여러 활동에서 학생이 받은 피드백을 모았습니다." />
-    {!reading && <p className="bb-dash-feature-off">이 반은 책나눔을 사용하지 않아 책방의 독서 활동 기록을 보여줍니다.</p>}
+      <div className="bb-report-reading-grid">
+        <ReadingFlow reading={reading} title="학생의 독서 흐름" note="선택한 반과 기간에 속하는 독서 날짜를 기준으로 합산합니다." />
+        <ReportBooks books={asArray(reading.books)} title="학생이 읽은 책" note="선택한 반과 기간에 독서 기록을 남긴 도서입니다. 감상 원문은 포함하지 않습니다." />
+      </div>
+    </> : <p className="bb-dash-feature-off">이 반은 책나눔을 사용하지 않아 책방의 독서 활동 기록을 보여줍니다.</p>}
   </div>;
 }
 
