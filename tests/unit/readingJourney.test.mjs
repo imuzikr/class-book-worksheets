@@ -151,3 +151,15 @@ test("과일 경험치로 레벨이 오르면 레벨 뱃지도", () => {
   assert.equal(summary.level, 3);
   assert.ok(summary.earnedBadges.some((b) => b.id === "level_1"));
 });
+
+import { READING_BADGES } from "../../lib/reading.js";
+import { badgeHint } from "../../lib/readingJourney.js";
+test("뱃지 툴팁 — 18종 모두 조건 숫자와 보상을 말함", () => {
+  for (const b of READING_BADGES) {
+    const lines = badgeHint(b);
+    assert.ok(lines.length >= 2, b.id);
+    assert.ok(lines[0].includes(String(b.threshold)), b.id);
+    assert.equal(lines.at(-1), `받으면 +${b.expReward} EXP`);
+  }
+  assert.match(badgeHint(READING_BADGES.find((b) => b.id === "streak_2"))[0], /하루 5쪽 이상 읽은 날이 7일 연속/);
+});
