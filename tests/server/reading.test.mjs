@@ -93,6 +93,14 @@ test("idempotent retry returns current state after later edits", async () => {
   assert.equal(retried.state.logs[0].endPage, 20);
 });
 
+test("ranking switch off blocks rankings only (admin settings)", async () => {
+  await db.doc("classes/api-class").update({ rankingEnabled: false });
+  await assert.rejects(() => getReadingRankings(principal("teacher"), "api-class", "weekly"), (e) => e.status === 403 && e.code === "reading/ranking-disabled");
+  assert.ok((await getReading(principal("student"), "api-class")).state);
+  await db.doc("classes/api-class").update({ rankingEnabled: true });
+  assert.ok((await getReadingRankings(principal("teacher"), "api-class", "weekly")).rankings);
+});
+
 test("disabling a class immediately blocks private reads, rankings and writes, retaining state", async () => {
   await db.doc("classes/api-class").update({ readingEnabled: false });
   await assert.rejects(() => getReading(principal("student"), "api-class"), (e) => e.status === 403);

@@ -163,3 +163,11 @@ test("뱃지 툴팁 — 18종 모두 조건 숫자와 보상을 말함", () => {
   }
   assert.match(badgeHint(READING_BADGES.find((b) => b.id === "streak_2"))[0], /하루 5쪽 이상 읽은 날이 7일 연속/);
 });
+
+import { rankingEnabled } from "../../lib/reading.js";
+test("랭킹 시스템 — 책나눔이 켜져 있고 끄지 않았을 때만", () => {
+  assert.equal(rankingEnabled({ readingEnabled: true }), true);
+  assert.equal(rankingEnabled({ readingEnabled: true, rankingEnabled: false }), false);
+  assert.equal(rankingEnabled({ readingEnabled: false }), false);
+  assert.equal(rankingEnabled(null), false);
+});
