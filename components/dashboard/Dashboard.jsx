@@ -177,7 +177,7 @@ function DashboardSession({ user }) {
   else if (teacher && tab === "personal" && !selectedUid) content = <Section title="개인별 분석 리포트"><Empty>이 반의 학생이 등록되면 왼쪽에서 선택할 수 있습니다.</Empty></Section>;
   else if (data) content = <>
     <div className="bb-dash-scope-line"><span>{data.period.label} · {periodText}</span>{reading?.previous && data.period.previous && <span>비교 {fullDate(data.period.previous.start)} — {fullDate(data.period.previous.end)}</span>}</div>
-    {teacher ? tab === "personal" ? <TeacherPersonalReport data={data} /> : tab === "overall" ? <OverallReport data={data} onSelectClass={(id) => { selectClass(id); setTab("class"); }} /> : <>
+    {teacher ? tab === "personal" ? <TeacherPersonalReport data={data} onEditProfile={() => { const entry = directory.find((item) => item.uid === selectedUid); if (entry) setProfileStudent(entry); }} /> : tab === "overall" ? <OverallReport data={data} onSelectClass={(id) => { selectClass(id); setTab("class"); }} /> : <>
       <p className="bb-dash-roster-note">현재 반 명부를 기준으로 집계합니다. 학생을 고르면 개인별 분석으로 이동합니다.</p>
       {/* 학급별 분석에는 KWLS(생각의 기록)를 두지 않습니다 — 개인별 · 전체 분석에도 따로 없어
           이 탭에만 서 있었습니다(선생님 요청). KWLS는 개인별 분석의 활동 목록에 듭니다. */}
@@ -210,7 +210,7 @@ function DashboardSession({ user }) {
         {teacher && tab === "class" && <label className="bb-dash-activity-control">살펴볼 활동<select aria-label="살펴볼 독서 활동" disabled={!activityOptions.length} value={selectedActivity || classData?.selectedActivityId || ""} onChange={(event) => setActivityChoice({ classId, id: event.target.value })}><option value="" disabled>{activityOptions.length ? "활동 선택" : classReport.loading ? "활동을 불러오는 중" : "등록된 활동 없음"}</option>{activityOptions.map((item) => <option key={item.id} value={item.id}>{item.label} · {item.title}</option>)}</select></label>}
         {teacher && classId && (tab !== "overall" || period === "semester") && <button type="button" className="bb-dash-secondary bb-dash-semester-trigger" onClick={() => setSemesterChoice({ classId, uid: user.uid })}>학기 기간 설정</button>}
       </div>}
-      {teacher ? <TeacherReportShell tab={tab} onTabChange={changeTab} students={directory} selectedUid={tab === "personal" ? selectedUid : null} onSelectStudent={(student) => { selectStudent(student); setProfileStudent(student); }} loading={directoryLoading || !ready}>{content}</TeacherReportShell> : content}
+      {teacher ? <TeacherReportShell tab={tab} onTabChange={changeTab} students={directory} selectedUid={tab === "personal" ? selectedUid : null} onSelectStudent={selectStudent} loading={directoryLoading || !ready}>{content}</TeacherReportShell> : content}
     </main>
     {selectedDay && reading && <Dialog title={fullDate(selectedDay.date) + " 독서 기록"} onClose={() => setDayChoice(null)}><div className="bb-dash-day-total"><strong>{fmt(selectedDay.pages)}<small>쪽</small></strong><p>{selectedDay.pages > 0 ? "이 반에서 이날 읽었다고 기록한 쪽수입니다." : "이날 남긴 독서 기록이 없습니다."}</p></div><div className="bb-dash-day-records">{asArray(reading.dayRecords).filter((record) => record.date === selectedDay.date).map((record) => <article key={record.id}><h3>{record.title}</h3><span>{fmt(record.startPage)}–{fmt(record.endPage)}쪽 · {fmt(record.pages)}쪽 기록</span>{record.notes && <p>{record.notes}</p>}<Link className="bb-dash-text-link" href={libraryHref(record.bookId)}>이 책 기록 보기 →</Link></article>)}</div><Link className="bb-dash-primary" href={libraryHref()}>내 서재에서 기록 확인</Link></Dialog>}
     {teacher && profileStudent && <StudentProfileDialog

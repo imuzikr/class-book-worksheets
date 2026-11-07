@@ -18,6 +18,9 @@
 }
 
 .bb-report-heading > div { min-width: 0; }
+/* 개인별 보고서 — 학생 이름 옆 '편집'(학생 프로필 창을 엶) */
+.bb-report-title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.bb-report-edit { flex-shrink: 0; }
 .bb-report-eyebrow { display: block; margin-bottom: 5px; color: var(--primary-dark); font-size: 10px; font-weight: 600; line-height: 1.6; }
 .bb-report-heading h2 { margin: 0; color: var(--text, #3d3d3a); font-size: clamp(18px, 2vw, 23px); line-height: 1.5; overflow-wrap: anywhere; }
 .bb-report-heading p { margin: 6px 0 0; color: #73736a; font-size: 11px; line-height: 1.8; overflow-wrap: anywhere; }
