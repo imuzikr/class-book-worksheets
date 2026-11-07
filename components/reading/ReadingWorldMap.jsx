@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { READING_BADGES } from "@/lib/reading";
 import { journeyTitle } from "@/lib/readingJourney";
 import {
@@ -20,7 +20,6 @@ const growthOf = (row) => {
 
 /** The map consumes the same public snapshot as the rankings, never a peer's library. */
 export default function ReadingWorldMap({ rows, uid, isTeacher, onOpenDetails, onSaveCharacter }) {
-  const titleId = useId();
   const viewport = useRef(null);
   const pointer = useRef(null);
   const suppressClick = useRef(false);
@@ -176,13 +175,9 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, onOpenDetails, o
     }
   }
 
-  return <section className="rwm" aria-labelledby={titleId}>
-    <div className="rwm-heading">
-      <div><span className="rwm-eyebrow">BOOKBOM · READING ODYSSEY</span><h3 id={titleId}>한 장씩, 더 넓은 세상으로</h3><p>숲에서 폭풍 너머까지, 우리 반의 독서 여정</p></div>
-      <span className="rwm-basis">개인 누적 성장 기준</span>
-    </div>
-
-
+  return <section className="rwm" aria-label="우리 반 독서 여정 지도">
+    {/* 제목 줄(영문 머리 · 큰 제목 · 설명 · '개인 누적 성장 기준')은 걷었습니다 — 지도를
+        최대한 크게 보이게, 위에는 이 한 줄(여정 지도 · 인원 · 단추)만 둡니다(선생님 요청). */}
     <div className="rwm-toolbar">
       <label className="rwm-chapter"><span>여정 지도</span><select aria-label="여정 지도" value={activeChapter} onChange={(event) => { setChapter(Number(event.target.value)); setClusterId(null); setZoom(1); }}>
         {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => <option value={value} key={value}>{chapterLabel(value)}</option>)}

@@ -1,5 +1,5 @@
 /* The terrain and all positions share one coordinate system; avatars remain readable at every zoom. */
-.rwm { --rwm-gold:#e9c980; --rwm-ink:#eaf0e8; color:var(--rwm-ink); border:1px solid #3c514c; border-radius:20px; background:#102c2e; overflow:hidden; margin-bottom:24px; box-shadow:0 10px 32px #153d3112; }
+.rwm { --rwm-h:clamp(440px, min(56vw, calc(100vh - 150px)), 820px); --rwm-gold:#e9c980; --rwm-ink:#eaf0e8; color:var(--rwm-ink); border:1px solid #3c514c; border-radius:20px; background:#102c2e; overflow:hidden; margin-bottom:24px; box-shadow:0 10px 32px #153d3112; }
 .rwm button,.rwm select { font:inherit; }
 .rwm button { cursor:pointer; }
 .rwm button:disabled { cursor:default; opacity:.5; }
@@ -34,7 +34,7 @@
 .rwm-hud-badges strong { color:#f8e1a6; font-size:17px; white-space:nowrap; margin-left:6px; }
 .rwm-hud-badges button { color:#dce3c9; background:none; border:0; text-align:left; font-size:10px; padding:4px 0; line-height:1.5; }
 .rwm-hud-badges button:hover { color:#ffe4a2; text-decoration:underline; }
-.rwm-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:12px; padding:0 22px 15px; }
+.rwm-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:10px 12px; padding:10px 16px; }
 .rwm-chapter { display:flex; align-items:center; gap:9px; }
 .rwm-chapter>span { font-size:11px; color:#b0c4b9; white-space:nowrap; }
 .rwm-chapter select { max-width:100%; border:1px solid #526d61; background:#203f3e; color:#f0e8cb; padding:8px 11px; border-radius:7px; font-size:12px; }
@@ -47,7 +47,7 @@
 .rwm-map-panel { position:relative; min-width:0; background:#052629; }
 /* 스크롤 막대를 감춥니다 — 확대하면 막대가 생겨 칸이 10px 줄고, 그 폭으로 배율을
    다시 재어 지도가 출렁였습니다(축소할 때 막대가 사라지며 또 한 번). 이동은 드래그 · 방향키. */
-.rwm-viewport { overflow:auto; height:clamp(440px,48vw,700px); scrollbar-width:none; cursor:grab; }
+.rwm-viewport { overflow:auto; height:var(--rwm-h); scrollbar-width:none; cursor:grab; }
 .rwm-viewport::-webkit-scrollbar { display:none; }
 .rwm-viewport:active { cursor:grabbing; }
 .rwm-canvas { position:relative; isolation:isolate; }
@@ -74,7 +74,7 @@
 .rwm-zoom>span { color:#cbd6b8; font-size:10px; min-width:34px; text-align:center; }
 .rwm-map-hint { position:absolute; bottom:0; left:0; right:0; font-size:10px; text-align:center; margin:0; padding:8px 12px; color:#d1dbbe; background:#103531e8; pointer-events:none; }
 .rwm-roster { background:#153632; min-width:0; border-left:1px solid #3d5b50; }
-.rwm-roster-list { max-height:calc(clamp(440px,48vw,700px) - 49px); overflow-y:auto; padding:0 7px 10px; scrollbar-width:thin; scrollbar-color:#788a66 #153632; }
+.rwm-roster-list { max-height:calc(var(--rwm-h) - 49px); overflow-y:auto; padding:0 7px 10px; scrollbar-width:thin; scrollbar-color:#788a66 #153632; }
 .rwm-person { display:flex; align-items:center; gap:7px; width:100%; min-height:67px; text-align:left; background:transparent; color:inherit; padding:7px 6px; border:1px solid transparent; border-radius:8px; }
 .rwm-person:hover { background:#23473b; }
 .rwm-person[aria-pressed=true] { background:#2b5040; border-color:#c1ab70; }
@@ -143,7 +143,7 @@
   .rwm-growth-values>span { flex-direction:row; align-items:center; gap:8px; }
   .rwm-growth-values strong { font-size:21px; }
   .rwm-hud-badges { grid-column:1 / -1; }
-  .rwm-toolbar { padding:0 12px 12px; gap:10px; }
+  .rwm-toolbar { padding:10px 12px; gap:8px 10px; }
   .rwm-chapter>span { display:none; }
   .rwm-map-actions { width:100%; margin-left:0; }
   .rwm-map-actions button { flex:1; min-height:34px; padding:6px; }
@@ -175,7 +175,7 @@
 /* 오른쪽 칸 — 위에 고른 학생의 성장 정보, 아래에 함께 걷는 친구들(목록만 구름).
    지도 칸과 같은 높이라 지도 옆에서 한눈에 보입니다. 위의 가로 HUD 규칙을 이 칸에 맞게 덮습니다. */
 .rwm-layout { grid-template-columns:minmax(0,1fr) 300px; }
-.rwm-side { display:flex; flex-direction:column; min-width:0; height:clamp(440px,48vw,700px); background:#153632; border-left:1px solid #3d5b50; }
+.rwm-side { display:flex; flex-direction:column; min-width:0; height:var(--rwm-h); background:#153632; border-left:1px solid #3d5b50; }
 .rwm-side .rwm-roster { flex:1; min-height:0; display:flex; flex-direction:column; border-left:0; }
 .rwm-side .rwm-roster-list { flex:1; min-height:0; max-height:none; }
 .rwm-roster-head { display:flex; align-items:center; gap:6px; width:100%; padding:12px 14px; border:0; background:none; color:#e9d8ab; font-size:12px; font-weight:700; text-align:left; }
