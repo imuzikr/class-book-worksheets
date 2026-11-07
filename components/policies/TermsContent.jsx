@@ -8,7 +8,7 @@ export default function TermsContent() {
   return (
     <>
         <h1>이용약관</h1>
-        <p className="policy-updated">시행일: 2026년 7월 16일</p>
+        <p className="policy-updated">시행일: 2026년 11월 7일</p>
 
         <p>
           본 이용약관(이하 &lsquo;약관&rsquo;)은 책봄(이하 &lsquo;본
@@ -91,8 +91,9 @@ export default function TermsContent() {
 
         <h2>제7조 (회원 탈퇴)</h2>
         <p>
-          회원은 서비스 내 [회원탈퇴] 기능으로 언제든지 탈퇴를 요청할 수
-          있으며, 서비스는 즉시 회원탈퇴를 처리합니다. 탈퇴 시 개인정보와
+          회원은 언제든지 담당 교사에게 말이나 글(서비스 내 메신저 포함)로
+          탈퇴를 요청할 수 있으며, 담당 교사는 지체 없이 서비스의 관리자
+          대시보드에서 탈퇴를 처리합니다. 탈퇴 시 프로필(이름·학번·이메일)과
           작성한 게시물·활동 기록은 개인정보처리방침에 따라 지체 없이
           파기됩니다.
         </p>
@@ -147,7 +148,7 @@ export default function TermsContent() {
         </p>
 
         <h2>부칙</h2>
-        <p>이 약관은 2026년 7월 16일부터 시행됩니다.</p>
+        <p>이 약관은 2026년 11월 7일부터 시행됩니다.</p>
     </>
   );
 }
