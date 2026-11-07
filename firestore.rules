@@ -314,6 +314,33 @@ service cloud.firestore {
     function wdOnlyMember(list) {
       return list is list && list.size() == 1 && wdUid(list[0]);
     }
+    // 이름 맞추기 — 교사가 학생 프로필의 이름 · 학번을 고친 뒤, 내 반 기록에 적혀 있던
+    // 옛 이름표를 새 값으로 바꿉니다(lib/data/nameSync.js). 바꿀 수 있는 칸은 이름표뿐
+    // (authorName · fromName · toName · writerName · name · studentId)이고, 새 값은
+    // **그 기록이 가리키는 학생의 지금 프로필**과 같아야 합니다 — 아무 이름이나 못 적습니다.
+    function profileOf(v) {
+      return get(/databases/$(database)/documents/users/$(v)).data;
+    }
+    function nameFieldOk(d0, d1, nameKey, uidKey) {
+      return d1.get(nameKey, null) == d0.get(nameKey, null)
+             || (d0.get(uidKey, null) is string
+                 && d1.get(nameKey, null) == profileOf(d0.get(uidKey, '')).get('realName', ''));
+    }
+    function isNameSync() {
+      let d0 = resource.data;
+      let d1 = request.resource.data;
+      let who = d0.get('authorId', d0.get('uid', ''));
+      return d1.diff(d0).affectedKeys()
+               .hasOnly(['authorName', 'fromName', 'toName', 'writerName', 'name', 'studentId'])
+             && nameFieldOk(d0, d1, 'authorName', 'authorId')
+             && nameFieldOk(d0, d1, 'fromName', 'fromUid')
+             && nameFieldOk(d0, d1, 'toName', 'toUid')
+             && nameFieldOk(d0, d1, 'writerName', 'writerUid')
+             && nameFieldOk(d0, d1, 'name', 'uid')
+             && (d1.get('studentId', null) == d0.get('studentId', null)
+                 || (who is string && who != ''
+                     && d1.get('studentId', null) == profileOf(who).get('studentId', null)));
+    }
     function teacherMayWithdraw(userId, data) {
       let ids = data.get('classIds', []);
       return isTeacher() && userId != uid()
@@ -468,6 +495,8 @@ service cloud.firestore {
         allow read: if canPurgeClass(cId);
         allow delete: if canPurgeClass(cId)
                       || (ownsClass(cId) && resource != null && isWithdrawnRecord(resource.data));
+        // 이름 맞추기 — 운영 중인 내 반 기록의 이름표만(isNameSync)
+        allow update: if ownsClassEditable(cId) && isNameSync();
       }
 
       // ── 언제든 질문하기(손들기) ─────────────────────────────
@@ -1132,6 +1161,8 @@ service cloud.firestore {
       allow delete: if canPurgeClass(bookActivityClassId(aId))
                     || (ownsClass(bookActivityClassId(aId)) && resource != null
                         && isWithdrawnRecord(resource.data));
+      // 이름 맞추기 — 운영 중인 내 반 활동 아래 기록의 이름표만(isNameSync)
+      allow update: if ownsClassEditable(bookActivityClassId(aId)) && isNameSync();
     }
 
     match /bookActivities/{aId} {
@@ -1405,11 +1436,12 @@ service cloud.firestore {
       //   (entries는 본인·교사만인 것과 반대).
       // [쓰기] 쓴 사람은 글·색·자리를, 담당 교사는 자리와 댓글을 고칩니다. 누가 썼는지(authorId·이름표·byTeacher)는 아무도
       //   못 바꿉니다. 잠긴 활동은 교사만 손댑니다.
-      // [이름표] 활동의 nameMode가 정합니다 — 익명(nick: 학생이 적은 닉네임 ·
-      //   studentId 없음 · anon: true)이면 반 전체가 읽는 문서에 실명이 안
-      //   남고, 실명(real)이면 학번·이름을 적습니다. 학번을 적으면 아래 검사가
-      //   제 학번·이름과 같은지 봅니다(옛 앱의 메모도 같은 검사). 누가 썼는지는
-      //   교사가 authorId로 명단에서 찾습니다. 학생은 '선생님' 이름표를 못 씁니다.
+      // [이름표] 늘 실명입니다(책봄은 모든 활동이 실명 — 익명 닉네임 기능은 없앴습니다).
+      //   학생 메모는 real: true에 **제 학번 · 제 실명**이어야 합니다(아래 검사 —
+      //   화면을 거치지 않고 남의 이름으로 붙일 수 없게). 프로필에 학번이 없고 실명
+      //   칸이 '20512김하윤'처럼 학번을 품은 계정은 앱이 둘로 갈라 적으므로 그 모양도
+      //   받습니다(lib/user.js의 splitWorkspaceName). 학생은 '선생님' 이름표를 못 씁니다.
+      //   익명 시절의 예전 메모는 화면이 명단의 실명으로 바꿔 보여 줍니다.
       // 글자 수 천장 500은 lib/opinion.js의 OPINION_TEXT_MAX와 같아야 합니다.
       match /opinionNotes/{nId} {
         function validNote(d) {
@@ -1422,11 +1454,15 @@ service cloud.firestore {
         }
         function noteIdentityOk(d) {
           let prof = get(/databases/$(database)/documents/users/$(uid())).data;
-          return d.authorName != '선생님'
-                 && (d.get('studentId', null) == null
-                     || prof.get('studentId', null) == null
-                     || (d.get('studentId', null) == prof.get('studentId', null)
-                         && d.authorName == prof.get('realName', d.authorName)));
+          let pName = prof.get('realName', '');
+          let pSid = prof.get('studentId', null);
+          let dSid = d.get('studentId', null);
+          return d.authorName != '선생님' && d.get('real', false) == true
+                 && ((dSid == pSid
+                      && (d.authorName == pName
+                          || (pName == '' && d.authorName == prof.get('displayName', ''))))
+                     || (pSid == null && dSid is string
+                         && (dSid + d.authorName == pName || dSid + ' ' + d.authorName == pName)));
         }
 
         allow read: if signedIn() && (

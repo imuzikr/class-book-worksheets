@@ -10,7 +10,7 @@
 // 다른 선생님 반에도 있는 학생은 탈퇴를 막고 '반에서 빼기'를 안내합니다.
 // =============================================================
 import { useEffect, useState } from "react";
-import { checkWithdraw, fetchStudentProfile, updateStudentProfile, withdrawStudent } from "@/lib/store";
+import { checkWithdraw, fetchStudentProfile, syncStudentName, updateStudentProfile, withdrawStudent } from "@/lib/store";
 import { purgeNameMatches } from "@/lib/classPurge";
 import { Dialog, fullDate } from "./DashboardParts";
 
@@ -56,7 +56,8 @@ export default function StudentProfileDialog({ student, myClasses, onClose, onWi
   const [draft, setDraft] = useState(null); // null = 보기, 객체 = 편집 중
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
-  const [saved, setSaved] = useState(false);
+  const [saved, setSaved] = useState(""); // 저장한 뒤 한 줄 안내
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -95,7 +96,7 @@ export default function StudentProfileDialog({ student, myClasses, onClose, onWi
   function startEdit() {
     setDraft({ realName: profile.realName || student.name || "", studentId: profile.studentId || student.studentId || "", email: profile.email || "" });
     setSaveError("");
-    setSaved(false);
+    setSaved("");
   }
   const problem = draft ? draftProblem(draft) : "";
   async function save() {
@@ -103,11 +104,24 @@ export default function StudentProfileDialog({ student, myClasses, onClose, onWi
     setSaving(true);
     setSaveError("");
     try {
+      const before = { name: profile.realName || "", sid: profile.studentId ?? null };
       const patch = await updateStudentProfile(student.uid, draft);
       setProfile((p) => ({ ...p, ...patch }));
       setDraft(null);
-      setSaved(true);
       onUpdated?.();
+      // 이름 · 학번이 바뀌었으면 내 반 기록에 적혀 있던 옛 이름표도 맞춥니다
+      if (patch.realName !== before.name || (patch.studentId ?? null) !== before.sid) {
+        setSaved("저장했어요. 내 반 기록의 이름도 맞추는 중…");
+        setSyncing(true);
+        const r = await syncStudentName(student.uid, patch, myClasses).catch(() => ({ updated: 0, failed: 1 }));
+        setSyncing(false);
+        setSaved(r.failed
+          ? `저장했어요. 기록 ${r.updated}곳의 이름을 바꿨고, ${r.failed}곳은 바꾸지 못했어요.`
+          : `저장했어요. 내 반 기록 ${r.updated}곳의 이름도 바꿨어요.`);
+        onUpdated?.();
+      } else {
+        setSaved("저장했어요.");
+      }
     } catch (e) {
       console.warn("[학생 프로필] 저장 실패:", e?.code, e?.message);
       setSaveError("저장하지 못했어요. 잠시 후 다시 시도해 주세요.");
@@ -125,7 +139,7 @@ export default function StudentProfileDialog({ student, myClasses, onClose, onWi
     ["가입일", toDateText(profile.createdAt)],
   ].filter(([, v]) => v) : [];
 
-  return <Dialog title="학생 프로필" onClose={running ? () => {} : onClose}>
+  return <Dialog title="학생 프로필" onClose={running || syncing ? () => {} : onClose}>
     <div className="bb-profile-head">
       <span className="bb-profile-avatar" aria-hidden="true">{profile?.emoji || student.emoji || "📖"}</span>
       <div>
@@ -153,7 +167,7 @@ export default function StudentProfileDialog({ student, myClasses, onClose, onWi
               /></dd>
             </div>)}
           </dl>
-          <p className="bb-profile-note">이름을 바꾸면 화면의 표시 이름(닉네임)도 같은 이름이 됩니다. 이미 실명으로 남긴 기록(실명 메모 등)은 그때 이름 그대로예요.</p>
+          <p className="bb-profile-note">저장하면 내 반 기록(모둠 · 글 · 메모 · 댓글 · 메신저 …)에 적혀 있던 이름도 새 이름으로 맞춥니다. 다른 선생님 반 · 보관된 반의 기록은 그대로예요.</p>
           {(problem || saveError) && <p className="bb-profile-block" role="alert">{saveError || problem}</p>}
           <div className="bb-profile-actions">
             <button type="button" className="bb-dash-secondary" disabled={saving} onClick={() => { setDraft(null); setSaveError(""); }}>취소</button>
@@ -163,8 +177,8 @@ export default function StudentProfileDialog({ student, myClasses, onClose, onWi
           : <>
             <dl className="bb-profile-rows">{rows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
             <div className="bb-profile-edit-row">
-              {saved && <span role="status">저장했어요.</span>}
-              <button type="button" className="bb-dash-secondary" onClick={startEdit} disabled={running}>편집</button>
+              {saved && <span role="status">{saved}</span>}
+              <button type="button" className="bb-dash-secondary" onClick={startEdit} disabled={running || syncing}>편집</button>
             </div>
           </>}
 
@@ -172,7 +186,7 @@ export default function StudentProfileDialog({ student, myClasses, onClose, onWi
       {!confirming ? <>
         <p>탈퇴하면 내 반에 남은 이 학생의 글 · 기록 · 과일 · 출석과 프로필이 모두 지워지고 되돌릴 수 없습니다.</p>
         {check && !check.ok && <p className="bb-profile-block">{blockText(check.reason, check.classNames)}</p>}
-        <button type="button" className="bb-profile-withdraw" disabled={!check?.ok} onClick={() => setConfirming(true)}>탈퇴</button>
+        <button type="button" className="bb-profile-withdraw" disabled={!check?.ok || syncing} onClick={() => setConfirming(true)}>탈퇴</button>
       </> : <>
         <label htmlFor="bb-withdraw-name">확인하려면 학생 이름 <b>{name}</b>을(를) 그대로 적어 주세요.</label>
         <input
