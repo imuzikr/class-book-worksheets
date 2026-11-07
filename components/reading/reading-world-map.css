@@ -3,7 +3,7 @@
 .rwm button,.rwm select { font:inherit; }
 .rwm button { cursor:pointer; }
 .rwm button:disabled { cursor:default; opacity:.5; }
-.rwm button:focus-visible,.rwm select:focus-visible,.rwm summary:focus-visible,.rwm-viewport:focus-visible { outline:3px solid #ffdd8f; outline-offset:-3px; }
+.rwm button:focus-visible,.rwm select:focus-visible,.rwm-viewport:focus-visible { outline:3px solid #ffdd8f; outline-offset:-3px; }
 .rwm-heading { padding:24px 28px 19px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
 .rwm-eyebrow { font-size:10px; letter-spacing:.2em; color:#cbb780; font-weight:700; }
 .rwm-heading h3 { font-size:25px; letter-spacing:-.045em; color:#fff4d6; margin:7px 0 5px; }
@@ -74,8 +74,6 @@
 .rwm-zoom>span { color:#cbd6b8; font-size:10px; min-width:34px; text-align:center; }
 .rwm-map-hint { position:absolute; bottom:0; left:0; right:0; font-size:10px; text-align:center; margin:0; padding:8px 12px; color:#d1dbbe; background:#103531e8; pointer-events:none; }
 .rwm-roster { background:#153632; min-width:0; border-left:1px solid #3d5b50; }
-.rwm-roster summary { cursor:pointer; padding:16px 14px; color:#e9d8ab; font-size:12px; font-weight:700; }
-.rwm-roster summary>span { float:right; padding:2px 6px; color:#18352c; background:#d1c38d; border-radius:4px; font-size:10px; }
 .rwm-roster-list { max-height:calc(clamp(440px,48vw,700px) - 49px); overflow-y:auto; padding:0 7px 10px; scrollbar-width:thin; scrollbar-color:#788a66 #153632; }
 .rwm-person { display:flex; align-items:center; gap:7px; width:100%; min-height:67px; text-align:left; background:transparent; color:inherit; padding:7px 6px; border:1px solid transparent; border-radius:8px; }
 .rwm-person:hover { background:#23473b; }
@@ -173,3 +171,29 @@
   .rwm-hud-badges button { width:100%; }
 }
 @media (prefers-reduced-motion:reduce) { .rwm-exp-bar>span,.rwm-token img { transition:none; } }
+
+/* 오른쪽 칸 — 위에 고른 학생의 성장 정보, 아래에 함께 걷는 친구들(목록만 구름).
+   지도 칸과 같은 높이라 지도 옆에서 한눈에 보입니다. 위의 가로 HUD 규칙을 이 칸에 맞게 덮습니다. */
+.rwm-layout { grid-template-columns:minmax(0,1fr) 300px; }
+.rwm-side { display:flex; flex-direction:column; min-width:0; height:clamp(440px,48vw,700px); background:#153632; border-left:1px solid #3d5b50; }
+.rwm-side .rwm-roster { flex:1; min-height:0; display:flex; flex-direction:column; border-left:0; }
+.rwm-side .rwm-roster-list { flex:1; min-height:0; max-height:none; }
+.rwm-roster-head { display:flex; align-items:center; gap:6px; width:100%; padding:12px 14px; border:0; background:none; color:#e9d8ab; font-size:12px; font-weight:700; text-align:left; }
+.rwm-roster-head>span { font-size:9px; }
+.rwm-roster-head>b { margin-left:auto; padding:2px 6px; color:#18352c; background:#d1c38d; border-radius:4px; font-size:10px; }
+.rwm-side .rwm-hud { flex:none; display:grid; grid-template-columns:72px minmax(0,1fr); gap:8px 12px; margin:10px 10px 4px; padding:10px 12px; }
+.rwm-side .rwm-portrait,.rwm-side .rwm-portrait img { width:72px; height:84px; }
+.rwm-side .rwm-identity { gap:4px; }
+.rwm-side .rwm-identity strong { font-size:19px; }
+.rwm-side .rwm-growth { grid-column:1 / -1; border-left:0; border-top:1px solid #47635a; padding:10px 0 0; }
+.rwm-side .rwm-growth-values { margin:0 0 8px; justify-content:space-between; gap:12px; }
+.rwm-side .rwm-growth-values strong { font-size:18px; }
+.rwm-side .rwm-hud-badges { grid-column:1 / -1; border-left:0; border-top:1px solid #47635a; padding:8px 0 0; flex-direction:row; flex-wrap:wrap; align-items:center; gap:4px 10px; }
+.rwm-side .rwm-hud-badges>div { margin-left:auto; min-height:30px; }
+.rwm-side .rwm-hud-badges button { width:100%; text-align:left; }
+@media (max-width:1100px) { .rwm-layout { grid-template-columns:minmax(0,1fr) 260px; } }
+@media (max-width:760px) {
+  .rwm-layout { grid-template-columns:minmax(0,1fr); }
+  .rwm-side { height:auto; border-left:0; border-top:1px solid #3d5b50; }
+  .rwm-side .rwm-roster-list { max-height:240px; }
+}
