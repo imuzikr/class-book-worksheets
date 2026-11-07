@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { READING_BADGES } from "@/lib/reading";
 import { journeyTitle } from "@/lib/readingJourney";
 import {
@@ -38,15 +38,12 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, onOpenDetails, o
   const [choosing, setChoosing] = useState(false);
   const [imageError, setImageError] = useState(false);
   const pendingCenter = useRef(null);
-  // 휠 확대 — 연달아 오는 휠 이벤트가 렌더를 기다리지 않게 지금 배율과 맞출
-  // 스크롤 자리를 ref로 들고, 그린 직후(useLayoutEffect)에 스크롤을 맞춥니다.
+  // 확대 · 축소 — 지금 배율과 맞출 스크롤 자리를 ref로 들고, 그린 직후
+  // (useLayoutEffect)에 스크롤을 맞춥니다. 마우스 휠로는 확대하지 않습니다 —
+  // 휠은 지도(확대했을 때)와 페이지를 굴립니다(선생님 요청).
   const zoomRef = useRef(1);
   const pendingScroll = useRef(null);
-  const zoomToRef = useRef(null);
-  // 지도 칸은 자료가 온 뒤에야 그려져, 처음 효과가 돌 때는 아직 없습니다 —
-  // 칸이 생기고 사라지는 것을 상태로 따라가 휠 처리기를 그때 겁니다.
-  const [viewportEl, setViewportEl] = useState(null);
-  const viewportRef = useCallback((el) => { viewport.current = el; setViewportEl(el); }, []);
+
   const initialView = useRef(false);
   const previousGrowth = useRef(null);
 
@@ -149,7 +146,6 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, onOpenDetails, o
     zoomRef.current = bounded;
     setZoom(bounded);
   }
-  zoomToRef.current = zoomTo;
   useLayoutEffect(() => {
     zoomRef.current = zoom;
     const element = viewport.current;
@@ -160,26 +156,6 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, onOpenDetails, o
     element.scrollTop = target.top;
   }, [zoom]);
 
-  // 마우스 휠 — 지도 위에서는 확대 · 축소(마우스가 있는 자리를 중심으로).
-  // 100%에서 더 줄이거나 400%에서 더 키우려 하면 막지 않아 페이지가 그대로 구릅니다.
-  // React의 onWheel은 passive라 기본 동작을 못 막아, 직접 { passive: false }로 겁니다.
-  useEffect(() => {
-    const element = viewportEl;
-    if (!element) return;
-    function onWheel(event) {
-      const dy = event.deltaY;
-      if (!dy) return;
-      const current = zoomRef.current;
-      if ((dy > 0 && current <= 1) || (dy < 0 && current >= 4)) return;
-      event.preventDefault();
-      const unit = event.deltaMode === 1 ? 33 : event.deltaMode === 2 ? 400 : 1;
-      const step = Math.max(-120, Math.min(120, dy * unit));
-      const rect = element.getBoundingClientRect();
-      zoomToRef.current?.(current * Math.exp(-step * 0.002), { x: event.clientX - rect.left, y: event.clientY - rect.top });
-    }
-    element.addEventListener("wheel", onWheel, { passive: false });
-    return () => element.removeEventListener("wheel", onWheel);
-  }, [viewportEl]);
 
   function startPan(event) {
     if (event.pointerType !== "mouse" || event.button !== 0) return;
@@ -239,7 +215,7 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, onOpenDetails, o
 
     <div className="rwm-layout">
       <div className="rwm-map-panel">
-        <div ref={viewportRef} className="rwm-viewport" tabIndex={0} aria-label="독서 여정 지도. 마우스 휠로 확대·축소하고, 확대 후 드래그하거나 방향키로 지도를 이동하세요." onPointerDown={startPan} onPointerMove={movePan} onPointerUp={() => { pointer.current = null; }} onPointerCancel={() => { pointer.current = null; }} onClickCapture={(event) => { if (suppressClick.current) { event.preventDefault(); event.stopPropagation(); suppressClick.current = false; } }}>
+        <div ref={viewport} className="rwm-viewport" tabIndex={0} aria-label="독서 여정 지도. 확대 후 드래그하거나 방향키로 지도를 이동하세요." onPointerDown={startPan} onPointerMove={movePan} onPointerUp={() => { pointer.current = null; }} onPointerCancel={() => { pointer.current = null; }} onClickCapture={(event) => { if (suppressClick.current) { event.preventDefault(); event.stopPropagation(); suppressClick.current = false; } }}>
           <div className="rwm-canvas" style={{ width: canvasWidth, height: canvasHeight }}>
             <div className="rwm-terrain" style={{ left: offset.x, top: offset.y, width: WORLD_MAP.width * scale, height: WORLD_MAP.height * scale }}>
               <img className="rwm-background" src="/reading-journey/map.webp" alt="울창한 숲에서 사막과 급류 계곡, 설산과 폭풍 해안으로 이어지는 독서 여정 지도" width={WORLD_MAP.width} height={WORLD_MAP.height} draggable={false} onError={() => setImageError(true)} />
@@ -256,7 +232,7 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, onOpenDetails, o
         {imageError && <p className="rwm-map-message" role="alert">지도 이미지를 불러오지 못했어요. 오른쪽 학생 목록에서 성장 기록을 확인할 수 있어요.</p>}
         {!shownCount && !imageError && <p className="rwm-map-message">이 여정에 있는 학생은 아직 없어요. 학생 목록에서 친구의 현재 여정으로 이동해 보세요.</p>}
         <div className="rwm-zoom" role="group" aria-label="지도 크기 조절"><button type="button" onClick={() => zoomTo(zoom - 0.5)} disabled={zoom <= 1} aria-label="지도 축소">−</button><span>{Math.round(zoom * 100)}%</span><button type="button" onClick={() => zoomTo(zoom + 0.5)} disabled={zoom >= 4} aria-label="지도 확대">+</button><button type="button" onClick={() => { zoomRef.current = 1; pendingScroll.current = null; setZoom(1); viewport.current?.scrollTo({ left: 0, top: 0 }); }}>전체 보기</button></div>
-        <p className="rwm-map-hint">캐릭터를 누르면 상단에 성장 정보가 나타나요. 마우스 휠로 확대 · 축소하고, 드래그해서 둘러보세요.</p>
+        <p className="rwm-map-hint">캐릭터를 누르면 상단에 성장 정보가 나타나요. + · − 로 확대하고, 드래그해서 둘러보세요.</p>
       </div>
 
       <details className="rwm-roster" open>
