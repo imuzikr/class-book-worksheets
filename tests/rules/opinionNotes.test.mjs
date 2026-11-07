@@ -24,6 +24,7 @@ const note = (authorId, extra = {}) => ({
   authorName: authorId === "stu1" ? "김하윤" : "이도윤",
   studentId: authorId === "stu1" ? "30101" : "30102",
   byTeacher: false,
+  real: authorId.startsWith("teacher") ? false : true,
   text: "주인공의 선택에 찬성해요",
   zone: "z1",
   x: 0.2,
@@ -101,18 +102,15 @@ describe("내 생각은요 메모 규칙", () => {
     await assertFails(setDoc(ref(db, "act1", "fake2"), note("stu1")));
   });
 
-  it("익명 메모(지금 앱) — 학번 없이 익명 닉네임으로 붙인다", async () => {
+  it("익명 · 닉네임 메모는 못 붙인다(책봄은 늘 실명) — 학번을 비우거나 real을 빼도", async () => {
     const db = asStudent(env, "stu2").firestore();
-    await assertSucceeds(
-      setDoc(ref(db, "act1", "anon1"), note("stu2", { authorName: "용감한 수달", authorEmoji: "🦦", studentId: null, anon: true }))
+    await assertFails(
+      setDoc(ref(db, "act1", "anon1"), note("stu2", { authorName: "용감한 수달", authorEmoji: "🦦", studentId: null, anon: true, real: false }))
     );
-  });
-
-  it("닉네임 활동(nameMode nick) — 학생이 적은 닉네임 · 학번 없이 붙인다", async () => {
-    const db = asStudent(env, "stu2").firestore();
-    await assertSucceeds(
-      setDoc(ref(db, "act1", "nick1"), note("stu2", { authorName: "생각하는 고양이", authorEmoji: null, studentId: null, anon: true, nick: true }))
+    await assertFails(
+      setDoc(ref(db, "act1", "nick1"), note("stu2", { authorName: "생각하는 고양이", studentId: null, anon: true, nick: true }))
     );
+    await assertFails(setDoc(ref(db, "act1", "noreal"), note("stu2", { real: false })));
   });
 
   it("실명 활동(nameMode real) — 제 학번·이름이면 붙고, 이름이 다르면 거부", async () => {
@@ -123,7 +121,7 @@ describe("내 생각은요 메모 규칙", () => {
 
   it("학생은 '선생님' 이름표로 못 붙인다(익명 메모여도)", async () => {
     const db = asStudent(env, "stu2").firestore();
-    await assertFails(setDoc(ref(db, "act1", "t2"), note("stu2", { authorName: "선생님", studentId: null, anon: true })));
+    await assertFails(setDoc(ref(db, "act1", "t2"), note("stu2", { authorName: "선생님", studentId: null })));
   });
 
   it("학번 칸이 없는 옛 계정은 화면이 가른 학번·이름으로 붙일 수 있다", async () => {

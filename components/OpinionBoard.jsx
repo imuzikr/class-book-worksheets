@@ -25,7 +25,7 @@
 // 자료는 같은 opinionNotes라 메모지 ↔ 목록을 오가도 글이 그대로입니다
 // (목록에서 쓴 글도 자리 x·y를 함께 적어 둡니다).
 // [이름표] 학생은 늘 실명(학번 이름)입니다 — 익명 닉네임 기능은 없앴습니다.
-// 예전에 붙은 익명 메모는 문서의 이름표 그대로 보입니다.
+// 예전에 붙은 익명 메모도 지금 명단(프로필)의 실명으로 보입니다(noteAuthorLabel).
 // =============================================================
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -38,6 +38,7 @@ import {
   setOpinionReply,
   subscribeOpinionNotes,
   updateOpinionNote,
+  fetchClassRosterProfiles,
 } from "@/lib/store";
 import {
   OPINION_COLORS,
@@ -49,7 +50,6 @@ import {
   nextNoteSpot,
   noteAuthorLabel,
   noteReplyText,
-  noteRealLabel,
   noteStackTime,
   noteTilt,
   normalizeZones,
@@ -65,7 +65,7 @@ import {
 import { safeBookUrl } from "@/lib/paratext";
 import { backdropClose } from "@/lib/modal";
 import ConfirmModal from "./ConfirmModal";
-import { IconAnswer, IconBook, IconLock, IconUnlock } from "./StatusIcons";
+import { IconAnswer, IconBook, IconLock } from "./StatusIcons";
 import { BookLockToggle } from "./BookHeadParts";
 
 const randomColor = () => OPINION_COLORS[Math.floor(Math.random() * OPINION_COLORS.length)].key;
@@ -104,23 +104,26 @@ export default function OpinionBoard({
     });
   }, [activity.id]);
 
-  // 이름표는 **누구에게나 익명**입니다(질문방과 같습니다). 교사만 이름표를
-  // 눌러 실제 학생을 봅니다 — 그때는 **명단의 이름**을 씁니다(메모에 적힌
-  // 것은 붙일 때의 것이라). 연 이름표는 메모 id로 기억해 판과 크게 보기 창이
-  // 함께 따라갑니다.
+  // 이름표는 **늘 실명**입니다(책봄은 모든 활동이 실명). 새 메모는 붙일 때의
+  // 학번 · 실명을 적어 두고(real), 익명 기능이 있던 때의 예전 메모(anon · 표시 없음)는
+  // **지금 명단의 실명**으로 보여 줍니다 — 교사는 반 명단(roster), 학생은 명단이 없어
+  // 그 메모를 쓴 친구의 프로필만 한 번 읽습니다(급우 프로필 읽기는 규칙이 엶).
   const rosterById = useMemo(() => new Map(roster.map((s) => [s.uid, s])), [roster]);
-  const [revealed, setRevealed] = useState(() => new Set());
-  const canReveal = (n) => isTeacher && !n.byTeacher;
-  const isRevealed = (n) => canReveal(n) && revealed.has(n.id);
-  const toggleReveal = (n) =>
-    setRevealed((prev) => {
-      const next = new Set(prev);
-      if (next.has(n.id)) next.delete(n.id);
-      else next.add(n.id);
-      return next;
-    });
-  const labelOf = (n) => noteAuthorLabel(n);
-  const realOf = (n) => noteRealLabel(n, rosterById.get(n.authorId) ?? null);
+  const legacyIds = useMemo(
+    () => [...new Set(notes.filter((n) => !n.byTeacher && !n.real && n.authorId && !rosterById.has(n.authorId)).map((n) => n.authorId))].sort(),
+    [notes, rosterById]
+  );
+  const legacyKey = legacyIds.join(",");
+  const [legacyNames, setLegacyNames] = useState(() => new Map());
+  useEffect(() => {
+    if (!legacyKey) return undefined;
+    let alive = true;
+    fetchClassRosterProfiles(legacyKey.split(","))
+      .then((list) => { if (alive) setLegacyNames(new Map(list.map((p) => [p.uid, p]))); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [legacyKey]);
+  const labelOf = (n) => noteAuthorLabel(n, rosterById.get(n.authorId) ?? legacyNames.get(n.authorId) ?? null);
 
   // ── 판 크기 재기 — 자리 셈이 픽셀을 알아야 합니다 ──
   // 목록 판은 창 바닥까지 — 판이 선 자리에서 창 끝까지를 잽니다. 판 아래에
@@ -479,10 +482,7 @@ export default function OpinionBoard({
                               <span className="opinion-list-text">{n.text}</span>
                               <span className="opinion-list-meta">
                                 <NoteWho
-                                  note={n}
                                   label={labelOf(n)}
-                                  real={isRevealed(n) ? realOf(n) : null}
-                                  onToggle={canReveal(n) ? () => toggleReveal(n) : null}
                                   className="opinion-list-who"
                                 />
                                 {noteReplyText(n) && <ReplyMark />}
@@ -578,10 +578,7 @@ export default function OpinionBoard({
                 >
                   {isMine(n) && <span className="opinion-note-pin" aria-hidden="true" />}
                   <NoteWho
-                    note={n}
                     label={labelOf(n)}
-                    real={isRevealed(n) ? realOf(n) : null}
-                    onToggle={canReveal(n) ? () => toggleReveal(n) : null}
                   />
                   <p className="opinion-note-text">{n.text}</p>
                   {noteReplyText(n) && <ReplyMark compact />}
@@ -601,7 +598,6 @@ export default function OpinionBoard({
           zoneAllowed={canPostIn}
           who={
             <NoteWho
-              note={isTeacher ? { byTeacher: true } : {}}
               label={composeLabel}
               className="opinion-modal-who"
             />
@@ -625,10 +621,7 @@ export default function OpinionBoard({
           zones={zones}
           who={
             <NoteWho
-              note={openNote}
               label={labelOf(openNote)}
-              real={isRevealed(openNote) ? realOf(openNote) : null}
-              onToggle={canReveal(openNote) ? () => toggleReveal(openNote) : null}
               className="opinion-modal-who"
             />
           }
@@ -951,39 +944,9 @@ function NoteReply({ note, canReply = false, onReply, onBusyChange }) {
   );
 }
 
-// ─── 이름표 — 익명 닉네임 · 교사는 눌러서 실제 학생 ─────────────────
-// 질문방의 AuthorBadge와 같은 약속입니다: 학생에게는 익명만, 교사가 누르면
-// 🔓와 함께 학번·이름으로 바뀌고 다시 누르면 가려집니다.
-// 메모지 위에서는 누르기가 곧 '크게 보기'·끌기라, 이름표를 누른 것은 메모로
-// 번지지 않게 막습니다(pointerdown을 멈추면 끌기가 시작되지 않습니다).
-function NoteWho({ note, label, real = null, onToggle = null, className = "opinion-note-who" }) {
-  const emoji = note?.byTeacher ? null : note?.anon ? note?.authorEmoji : null;
-  const body = real ? (
-    <>
-      <IconUnlock size={12} /> {real}
-    </>
-  ) : (
-    <>
-      {emoji && <span className="opinion-who-emoji" aria-hidden="true">{emoji}</span>}
-      {label}
-    </>
-  );
-  if (!onToggle) return <span className={className}>{body}</span>;
-  return (
-    <button
-      type="button"
-      className={`${className} opinion-who-btn${real ? " is-real" : ""}`}
-      onPointerDown={(e) => e.stopPropagation()}
-      onPointerUp={(e) => e.stopPropagation()}
-      onKeyDown={(e) => e.stopPropagation()}
-      onClick={(e) => {
-        e.stopPropagation();
-        onToggle();
-      }}
-      title={real ? "눌러서 다시 가리기" : "눌러서 누가 썼는지 보기 (교사 전용)"}
-      aria-pressed={!!real}
-    >
-      {body}
-    </button>
-  );
+// ─── 이름표 — 실명('30105 홍길동') · 교사 메모는 '선생님' ─────────────────
+// 예전에는 익명 닉네임 + 동물 이모지였고 교사만 눌러서 실명을 봤는데, 책봄은 모든
+// 활동이 실명이라 걷었습니다(이름표를 눌러도 아무 일 없음 — 메모를 누르면 크게 보기).
+function NoteWho({ label, className = "opinion-note-who" }) {
+  return <span className={className}>{label}</span>;
 }

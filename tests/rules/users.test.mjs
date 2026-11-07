@@ -98,6 +98,13 @@ describe("사용자 프로필 규칙", () => {
       );
     });
 
+    it("대시보드 프로필 창 — 이름 · 학번 · 이메일을 merge로 고치고, 학번을 비울 수 있다", async () => {
+      const db = asTeacher(env, "teacherA").firestore();
+      await assertSucceeds(setDoc(doc(db, "users", "stu1"),
+        { displayName: "홍길동", realName: "홍길동", email: "hong@example.com", studentId: null }, { merge: true }));
+      await assertFails(setDoc(doc(db, "users", "stu1"), { role: "teacher" }, { merge: true }));
+    });
+
     it("학생의 탈퇴 신청을 거절(해제)할 수 있다", async () => {
       const db = asTeacher(env, "teacherA").firestore();
       await assertSucceeds(updateDoc(doc(db, "users", "stu1"), { withdrawRequested: false }));
