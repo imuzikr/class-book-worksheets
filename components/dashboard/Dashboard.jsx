@@ -179,10 +179,12 @@ function DashboardSession({ user }) {
     <div className="bb-dash-scope-line"><span>{data.period.label} · {periodText}</span>{reading?.previous && data.period.previous && <span>비교 {fullDate(data.period.previous.start)} — {fullDate(data.period.previous.end)}</span>}</div>
     {teacher ? tab === "personal" ? <TeacherPersonalReport data={data} /> : tab === "overall" ? <OverallReport data={data} onSelectClass={(id) => { selectClass(id); setTab("class"); }} /> : <>
       <p className="bb-dash-roster-note">현재 반 명부를 기준으로 집계합니다. 학생을 고르면 개인별 분석으로 이동합니다.</p>
-      <div className="bb-dash-metrics"><Metric label="활동 참여" value={activity?.started || 0} unit="명" hint={"대상 " + fmt(activity?.eligible) + "명 · 현재 진행"} /><Metric label="알게 된 점을 남긴 학생" value={reflections?.learned || 0} unit="명" hint="선택 기간의 KWLS L 기록" />{reading ? <Metric label="독서를 기록한 학생" value={readingSummary?.readers} unit="명" previous={reading.previous?.readers} hint={"읽은 쪽수 " + fmt(readingSummary?.pages) + "쪽"} /> : <Metric label="활동 피드백" value={asArray(data.feedback).length} unit="건" hint="선택한 활동에서 나눈 기록" />}</div>
+      {/* 학급별 분석에는 KWLS(생각의 기록)를 두지 않습니다 — 개인별 · 전체 분석에도 따로 없어
+          이 탭에만 서 있었습니다(선생님 요청). KWLS는 개인별 분석의 활동 목록에 듭니다. */}
+      <div className={"bb-dash-metrics" + (reading ? "" : " is-two")}><Metric label="활동 참여" value={activity?.started || 0} unit="명" hint={"대상 " + fmt(activity?.eligible) + "명 · 현재 진행"} />{reading && <Metric label="독서를 기록한 학생" value={readingSummary?.readers} unit="명" previous={reading.previous?.readers} hint={"읽은 쪽수 " + fmt(readingSummary?.pages) + "쪽"} />}<Metric label="활동 피드백" value={asArray(data.feedback).length} unit="건" hint="선택한 활동에서 나눈 기록" /></div>
       <Snapshot key={activity?.id || "empty"} activity={activity} onSelectStudent={selectStudent} showStudents={false} />
       {reading && <TeacherReading reading={reading} onSelectStudent={selectStudent} showStudents={false} />}
-      <div className="bb-dash-two-columns bb-dash-align-start"><Reflections data={reflections} teacher /><Feedback rows={asArray(data.feedback)} teacher /></div>
+      <Feedback rows={asArray(data.feedback)} teacher />
     </> : <>
       {reading && <div className="bb-dash-metrics is-four"><Metric label="읽은 쪽수" value={readingSummary?.pages} unit="쪽" previous={reading.previous?.pages} /><Metric label="독서한 날짜" value={readingSummary?.days} unit="일" previous={reading.previous?.days} /><Metric label="완독 기록" value={readingSummary?.completed} unit="건" previous={reading.previous?.completed} /><Metric label="감상문" value={readingSummary?.reviews} unit="건" previous={reading.previous?.reviews} /></div>}
       <NextActions activities={asArray(data.studentActivities)} personal={reading?.personal} />
