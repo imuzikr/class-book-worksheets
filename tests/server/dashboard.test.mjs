@@ -30,6 +30,7 @@ const privateMarkers = [
   "PRIVATE_ALICE_CURRENT_NOTE", "PRIVATE_ALICE_OTHER_NOTE", "PRIVATE_ALICE_REVIEW", "PRIVATE_OTHER_CLASS_BOOK",
   "PRIVATE_OTHER_REVIEW", "PRIVATE_BOB_NOTE", "PRIVATE_BOB_REVIEW", "PRIVATE_FORMER_BOOK", "PRIVATE_PROFILE_EMAIL",
 ];
+const reportWriting = `학생 본인의 RAFT 글\n\n${"같은 장면을 친구의 입장에서 다시 읽어 본다. ".repeat(180)}\n\n보고서 원문의 마지막 문장`;
 
 function stateFor(uid, definition) {
   let state = initialReadingState();
@@ -86,8 +87,10 @@ before(async () => {
     batch.set(db.doc(`kwl/${uid}_${classes.own}_act_${acts.kwls}`), { classId: classes.own, userId: uid, activityId: acts.kwls, activityTitle: "독서 성찰", date: day(2), answers: content, createdAt: new Date(at(2)) });
   }
   batch.set(db.doc(`kwl/${ids.alice}_${classes.other}_act_${acts.other}`), { classId: classes.other, userId: ids.alice, activityId: acts.other, date: day(2), answers: answers("다른 반 성찰 원문"), createdAt: new Date(at(2)) });
-  batch.set(db.doc(`bookActivities/${acts.raft}/entries/${ids.alice}`), { activityId: acts.raft, authorId: ids.alice, answers: { role: "책 속 인물", audience: "친구", format: "편지", topic: "생각 나눔", writing: "학생 본인의 RAFT 글" }, updatedAt: new Date(at(1)) });
+  batch.set(db.doc(`bookActivities/${acts.raft}/entries/${ids.alice}`), { activityId: acts.raft, authorId: ids.alice, answers: { role: "책 속 인물", audience: "친구", format: "편지", topic: "생각 나눔", writing: reportWriting, privateExtra: "REPORT_PRIVATE_EXTRA" }, updatedAt: new Date(at(1)) });
   batch.set(db.doc(`bookActivities/${acts.raft}/entries/${ids.bob}`), { activityId: acts.raft, authorId: ids.bob, answers: { role: "다른 인물", audience: "친구", format: "편지", topic: "다른 생각", writing: "다른 학생의 RAFT 글은 본인 화면에 나오면 안 됨" }, updatedAt: new Date(at(1)) });
+  batch.set(db.doc(`bookActivities/${acts.raft}/entries/${ids.alice}/raftFeedback/own`), { start: 0, end: 10, quote: reportWriting.slice(0, 10), text: "공개된 선생님 피드백", updatedAt: new Date(at(1)), privateExtra: "FEEDBACK_PRIVATE_EXTRA" });
+  batch.set(db.doc(`bookActivities/${acts.raft}/entries/${ids.bob}/raftFeedback/other`), { start: 0, end: 4, quote: "다른 학생", text: "OTHER_STUDENT_FEEDBACK_MUST_NOT_APPEAR", updatedAt: new Date(at(1)) });
   batch.set(db.doc(`users/${ids.alice}/reading/main`), { state: aliceState });
   batch.set(db.doc(`users/${ids.bob}/reading/main`), { state: bobState });
   batch.set(db.doc(`users/${ids.former}/reading/main`), { state: { ...initialReadingState(), books: [{ id: "dash-former-private", title: "PRIVATE_FORMER_BOOK", author: "비공개", totalPages: 10 }] } });
@@ -155,6 +158,26 @@ test("teacher personal reports follow the current student roster and include all
       await assert.rejects(() => getDashboard(principal(actor), options({ view: "personal", studentUid })), (error) => [400, 403].includes(error.status));
     }
   }
+});
+
+test("activity reports expose complete class work and public feedback only in the authorized teacher personal view", async () => {
+  const data = await getDashboard(principal("teacher"), options({ view: "personal", studentUid: ids.alice }));
+  const raft = data.studentActivities.find((activity) => activity.id === acts.raft);
+  assert.ok(raft.report);
+  assert.equal(raft.report.sections.find((section) => section.id === "writing").entries[0].text, reportWriting);
+  assert.equal(raft.preview.length, 3000);
+  assert.equal(raft.report.feedback.length, 1);
+  assert.equal(raft.report.feedback[0].quote, reportWriting.slice(0, 10));
+  assert.equal(raft.report.feedback[0].text, "공개된 선생님 피드백");
+  assert.deepEqual([raft.report.feedback[0].start, raft.report.feedback[0].end], [0, 10]);
+  const serialized = JSON.stringify(data);
+  for (const marker of ["REPORT_PRIVATE_EXTRA", "FEEDBACK_PRIVATE_EXTRA", "OTHER_STUDENT_FEEDBACK_MUST_NOT_APPEAR", ...privateMarkers]) {
+    assert.equal(serialized.includes(marker), false, marker);
+  }
+  const own = await getDashboard(principal("alice"), options({ activityReport: true }));
+  assert.ok(own.studentActivities.every((activity) => !Object.hasOwn(activity, "report")));
+  const classroom = await getDashboard(principal("teacher"), options({ activityReport: true }));
+  assert.deepEqual(classroom.studentActivities, []);
 });
 
 test("overall reports aggregate every authorized active class and deduplicate students", async () => {
@@ -283,6 +306,10 @@ test("reading default-off preserves class activities without loading private rea
   const student = await getDashboard(principal("alice"), offOptions);
   assert.equal(student.reading, null);
   assert.equal(student.studentActivities.length, 1);
+  const personal = await getDashboard({ ...principal("teacher"), db: observed }, { ...offOptions, view: "personal", studentUid: ids.alice });
+  assert.equal(personal.reading, null);
+  assert.ok(personal.studentActivities[0].report);
+  assert.equal(touched.some((path) => /\/reading(?:\/|$)/.test(path)), false);
 });
 
 test("selected activities cannot cross class boundaries or resurrect deleted work", async () => {
