@@ -1,0 +1,5 @@
+/* Preserve the public size contract, including compact 24px journey HUDs. */
+img.reading-badge-art { display:inline-block; object-fit:contain; vertical-align:middle; user-select:none; }
+img.reading-badge-art.is-earned { filter:drop-shadow(0 2px 2px #132a2818); }
+img.reading-badge-art.is-locked { filter:grayscale(1) brightness(.95); opacity:.42; }
+@media (forced-colors:active) { img.reading-badge-art.is-locked { opacity:.7; } }
