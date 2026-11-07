@@ -4,12 +4,13 @@
 // 관리자 대시보드 — 학생 프로필 창 (왼쪽 사용자 목록에서 학생을 누르면)
 // -------------------------------------------------------------
 // users/{uid} 한 건을 읽어 이름 · 학번 · 이메일 · 닉네임 · 소속 반을 보여 주고,
+// '편집'으로 이름 · 학번 · 이메일을 고칩니다(updateStudentProfile — 프로필 한 장만),
 // 아래 '탈퇴'로 그 학생을 탈퇴시킵니다(lib/data/withdraw.js — 서버 없이).
 // 탈퇴는 학생 이름을 그대로 적어야 실행되고, 되돌릴 수 없습니다.
 // 다른 선생님 반에도 있는 학생은 탈퇴를 막고 '반에서 빼기'를 안내합니다.
 // =============================================================
 import { useEffect, useState } from "react";
-import { checkWithdraw, fetchStudentProfile, withdrawStudent } from "@/lib/store";
+import { checkWithdraw, fetchStudentProfile, updateStudentProfile, withdrawStudent } from "@/lib/store";
 import { purgeNameMatches } from "@/lib/classPurge";
 import { Dialog, fullDate } from "./DashboardParts";
 
@@ -31,7 +32,20 @@ function toDateText(v) {
   return fullDate(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
 }
 
-export default function StudentProfileDialog({ student, myClasses, onClose, onWithdrawn }) {
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const PROFILE_NAME_MAX = 30;
+export const PROFILE_ID_MAX = 20;
+
+// 고친 값이 저장할 만한가 — 막히면 그 까닭(빈 문자열이면 저장 가능)
+function draftProblem(d) {
+  if (!d.realName.trim()) return "이름을 적어 주세요.";
+  if (d.realName.trim().length > PROFILE_NAME_MAX) return `이름은 ${PROFILE_NAME_MAX}자까지 적을 수 있어요.`;
+  if (d.studentId.trim().length > PROFILE_ID_MAX) return `학번은 ${PROFILE_ID_MAX}자까지 적을 수 있어요.`;
+  if (d.email.trim() && !EMAIL_RE.test(d.email.trim())) return "이메일 주소 모양을 확인해 주세요.";
+  return "";
+}
+
+export default function StudentProfileDialog({ student, myClasses, onClose, onWithdrawn, onUpdated }) {
   const [profile, setProfile] = useState(undefined); // undefined = 읽는 중, null = 없음
   const [check, setCheck] = useState(null);
   const [confirming, setConfirming] = useState(false);
@@ -39,6 +53,10 @@ export default function StudentProfileDialog({ student, myClasses, onClose, onWi
   const [running, setRunning] = useState(false);
   const [step, setStep] = useState(null);
   const [error, setError] = useState("");
+  const [draft, setDraft] = useState(null); // null = 보기, 객체 = 편집 중
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -74,6 +92,30 @@ export default function StudentProfileDialog({ student, myClasses, onClose, onWi
     }
   }
 
+  function startEdit() {
+    setDraft({ realName: profile.realName || student.name || "", studentId: profile.studentId || student.studentId || "", email: profile.email || "" });
+    setSaveError("");
+    setSaved(false);
+  }
+  const problem = draft ? draftProblem(draft) : "";
+  async function save() {
+    if (!draft || problem || saving) return;
+    setSaving(true);
+    setSaveError("");
+    try {
+      const patch = await updateStudentProfile(student.uid, draft);
+      setProfile((p) => ({ ...p, ...patch }));
+      setDraft(null);
+      setSaved(true);
+      onUpdated?.();
+    } catch (e) {
+      console.warn("[학생 프로필] 저장 실패:", e?.code, e?.message);
+      setSaveError("저장하지 못했어요. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   const rows = profile ? [
     ["이름", profile.realName || student.name],
     ["학번", profile.studentId || student.studentId],
@@ -95,9 +137,38 @@ export default function StudentProfileDialog({ student, myClasses, onClose, onWi
 
     {profile === undefined ? <p className="bb-profile-note" role="status">프로필을 불러오는 중입니다.</p>
       : profile === null ? <p className="bb-profile-note">프로필을 찾지 못했어요. 이미 탈퇴한 학생일 수 있어요.</p>
-        : <dl className="bb-profile-rows">{rows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>}
+        : draft ? <form className="bb-profile-edit" onSubmit={(e) => { e.preventDefault(); save(); }}>
+          <dl className="bb-profile-rows">
+            {[["realName", "이름", "text", PROFILE_NAME_MAX], ["studentId", "학번", "text", PROFILE_ID_MAX], ["email", "이메일", "email", 120]].map(([key, label, type, max]) => <div key={key}>
+              <dt><label htmlFor={`bb-profile-${key}`}>{label}</label></dt>
+              <dd><input
+                id={`bb-profile-${key}`}
+                type={type}
+                value={draft[key]}
+                maxLength={max}
+                autoFocus={key === "realName"}
+                autoComplete="off"
+                disabled={saving}
+                onChange={(e) => setDraft((d) => ({ ...d, [key]: e.target.value }))}
+              /></dd>
+            </div>)}
+          </dl>
+          <p className="bb-profile-note">이름을 바꾸면 화면의 표시 이름(닉네임)도 같은 이름이 됩니다. 이미 실명으로 남긴 기록(실명 메모 등)은 그때 이름 그대로예요.</p>
+          {(problem || saveError) && <p className="bb-profile-block" role="alert">{saveError || problem}</p>}
+          <div className="bb-profile-actions">
+            <button type="button" className="bb-dash-secondary" disabled={saving} onClick={() => { setDraft(null); setSaveError(""); }}>취소</button>
+            <button type="submit" className="bb-dash-primary" disabled={!!problem || saving}>{saving ? "저장 중…" : "저장"}</button>
+          </div>
+        </form>
+          : <>
+            <dl className="bb-profile-rows">{rows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
+            <div className="bb-profile-edit-row">
+              {saved && <span role="status">저장했어요.</span>}
+              <button type="button" className="bb-dash-secondary" onClick={startEdit} disabled={running}>편집</button>
+            </div>
+          </>}
 
-    {profile && <section className="bb-profile-danger" aria-label="탈퇴">
+    {profile && !draft && <section className="bb-profile-danger" aria-label="탈퇴">
       {!confirming ? <>
         <p>탈퇴하면 내 반에 남은 이 학생의 글 · 기록 · 과일 · 출석과 프로필이 모두 지워지고 되돌릴 수 없습니다.</p>
         {check && !check.ok && <p className="bb-profile-block">{blockText(check.reason, check.classNames)}</p>}

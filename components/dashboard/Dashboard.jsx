@@ -216,6 +216,7 @@ function DashboardSession({ user }) {
       student={profileStudent}
       myClasses={myClasses}
       onClose={() => setProfileStudent(null)}
+      onUpdated={() => setRefresh((value) => value + 1)}
       onWithdrawn={(name) => {
         setProfileStudent(null);
         setStudentChoice(null);

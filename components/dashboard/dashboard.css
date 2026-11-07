@@ -363,3 +363,9 @@
 .bb-profile-withdraw { min-height: 38px; padding: 8px 13px; border: 0; border-radius: 10px; background: #dc2626; color: #fff; font-weight: 700; font-size: 13px; cursor: pointer; }
 .bb-profile-withdraw:hover:not(:disabled) { background: #b42318; }
 .bb-profile-danger > .bb-profile-withdraw { align-self: flex-end; min-width: 120px; }
+.bb-profile-edit { display: flex; flex-direction: column; gap: 10px; margin-bottom: 4px; }
+.bb-profile-edit .bb-profile-rows { margin: 0; }
+.bb-profile-edit .bb-profile-rows > div { align-items: center; }
+.bb-profile-edit input { width: 100%; min-height: 34px; padding: 6px 10px; border: 1px solid #d9e0d5; border-radius: 8px; background: #fff; color: #2f4436; font-size: 13px; }
+.bb-profile-edit-row { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin: -8px 0 16px; }
+.bb-profile-edit-row span { font-size: 12px; color: #3f7a52; }
