@@ -19,12 +19,20 @@
 1. **가져오기**: Fork → `npm install` → `npm run dev` (Node 22)
 2. **Firebase**: 새 프로젝트 + 웹 앱 등록. Authentication(Google), Firestore, (그림) Storage
 3. **내 값 넣기**: `cp .env.example .env.local` 후 `NEXT_PUBLIC_FIREBASE_*` 채우기. 같은 값을 Vercel에도. `.firebaserc`는 `firebase use --add`
-4. **규칙 배포**: `npx firebase-tools login` → `npm run deploy` (Storage 권한 질문에는 Y)
+4. **규칙 · 색인 배포**: `npx firebase-tools login` → `npm run deploy` (Storage 권한 질문에는 Y)
+   - 이 명령이 **보안 규칙과 색인(`firestore.indexes.json`)을 함께** 올립니다.
+   - 콘솔에서 손으로 할 때는 **색인도 꼭 따로 만드세요** — 아래 '터미널 없이 콘솔에서 하기'의 표 두 줄.
 5. **Vercel**: Fork Import → Deploy. 주소를 Firebase **승인된 도메인**에 추가
 6. **콘솔**: `config/teacherSignup`에 `code`(문자열, 4자 이상), 내 `users/{uid}.role`을 `admin`
 7. **확인**: 선생님으로 반 만들기 → 다른 계정으로 참여
 
+> **⚠️ 색인을 빠뜨리지 마세요.** Firestore는 필요한 색인이 없는 조회를 **아예 거부**합니다(느려지는 것이
+> 아니라 결과가 안 옵니다). 색인이 빠지면 앱은 멀쩡해 보이는데 **학생 알림 벨의 일부 알림만 조용히 안 옵니다.**
+> 규칙 붙여넣기만으로는 색인이 생기지 않습니다.
+
 규칙 파일을 바꾸면 `npm run deploy`를 다시 하세요. Vercel만으로는 규칙이 바뀌지 않습니다.
+원작 저장소의 새 변경을 받아 왔을 때도 같습니다 — 새 기능이 **규칙이나 색인을 더했을 수 있어** 앱보다 먼저
+올려야 합니다(`firestore.rules` · `firestore.indexes.json`이 바뀌었는지 보세요).
 
 ### 터미널 없이 콘솔에서 하기
 

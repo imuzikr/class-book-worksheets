@@ -169,23 +169,31 @@ export default function BingoBoard({ activity, onBack, onToast, user, roster = [
 
   return (
     <main className="canvas-main dash-root xw-main bingo-main">
-      <div className="canvas-head">
-        <strong className="canvas-head-name">{activity.title}</strong>
-        <button type="button" className="btn-ghost" onClick={onBack}>← 활동 목록</button>
-        <BookLockToggle activity={activity} />
-        {classPicker}
-        <span className="canvas-head-stats">
-          {activity.sourceTitle ? `낱말: ${activity.sourceTitle} · ` : ""}
-          {solo ? "개별 활동" : `모둠 ${liveGroups.length}개`} · 학생 {studentCount}명 · 낱말 {words.length}개
-        </span>
-        <span className={`xw-badge xwg-stage${playing ? " done" : ""}`}>
-          {playing ? `빙고 중 · ${goal}줄 빙고` : "판 채우는 중"}
-        </span>
-        {activity.locked && (
-          <span className="book-locked-note book-locked-chip">
-            <IconLock size={14} /> {BOOK_LOCKED_TEACHER}
-          </span>
-        )}
+      {/* 머리 — 다른 독서 활동과 같은 짜임(제목 · 활동 목록 / 둘째 줄에 열림·잠김 ·
+          반 고르개 · 진행 요약). 가로세로 낱말 퀴즈와 같은 모양입니다. */}
+      <div className="books-head">
+        <div className="books-head-title activity-head-title">
+          <h1 className="book-group-title">{activity.title}</h1>
+          <button type="button" className="btn-ghost" onClick={onBack}>← 활동 목록</button>
+        </div>
+        <div className="books-head-row">
+          <div className="books-head-main activity-head-main">
+            <BookLockToggle activity={activity} />
+            {classPicker}
+            <span className="paratext-sum">
+              {activity.sourceTitle ? `낱말: ${activity.sourceTitle} · ` : ""}
+              {solo ? "개별 활동" : `모둠 ${liveGroups.length}개`} · 학생 {studentCount}명 · 낱말 {words.length}개
+            </span>
+            <span className={`xw-badge xwg-stage${playing ? " done" : ""}`}>
+              {playing ? `빙고 중 · ${goal}줄 빙고` : "판 채우는 중"}
+            </span>
+            {activity.locked && (
+              <span className="book-locked-note book-locked-chip">
+                <IconLock size={14} /> {BOOK_LOCKED_TEACHER}
+              </span>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="xwg xwg--teacher">

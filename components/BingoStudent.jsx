@@ -135,13 +135,17 @@ export default function BingoStudent({ activity, groupId, onBack }) {
 
   const head = (
     <>
-      <div className="canvas-head">
-        <div className="canvas-head-title">
-          <strong>낱말 빙고</strong>
-          <span>{activity.title}{myGroup?.groupName && !solo ? ` · ${myGroup.groupName}` : ""}</span>
-        </div>
-        <div className="canvas-head-pair">
+      {/* 머리 — 다른 독서 활동과 같은 짜임(제목 · 활동 목록 / 둘째 줄 배지) */}
+      <div className="books-head">
+        <div className="books-head-title activity-head-title">
+          <h1 className="book-group-title">{activity.title}</h1>
           <button type="button" className="btn-ghost" onClick={onBack}>← 활동 목록</button>
+        </div>
+        <div className="books-head-row">
+          <div className="books-head-main activity-head-main">
+            <span className="book-group-topic">낱말 빙고</span>
+            {myGroup?.groupName && !solo && <span className="book-group-class">{myGroup.groupName}</span>}
+          </div>
         </div>
       </div>
       {locked && <BookLockedNote />}
