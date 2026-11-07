@@ -88,3 +88,66 @@ test("나의 독서 여정 이야기", () => {
   assert.ok(lines.some((l) => /1권을 완독/.test(l)));
   assert.ok(lines.some((l) => /레벨 \d/.test(l)));
 });
+
+// ---- 경험치 균형: 연속 보너스 상한 · 최소 쪽수 · 과일 ----
+import { readingFruitGains, FRUIT_XP, STREAK_MIN_PAGES } from "../../lib/reading.js";
+
+function dailyReads(days, pagesPerDay) {
+  let s = applyReadingAction(initialReadingState(), { type: "addBook", title: "긴 책", author: "작가", totalPages: 1000 }, ctx("b1"));
+  let page = 1;
+  for (let i = 0; i < days; i += 1) {
+    const date = new Date(Date.UTC(2026, 9, 1 + i)).toISOString().slice(0, 10);
+    s = applyReadingAction(s, { type: "addLog", bookId: "b1", date, startPage: page, endPage: page + pagesPerDay - 1, notes: "읽었어요." }, ctx(`l${i}`));
+    page += pagesPerDay;
+  }
+  return deriveReading(s, new Date(NOW));
+}
+const streakXp = (summary) => summary.events.filter((e) => e.kind === "streak").reduce((t, e) => t + e.xp, 0);
+
+test("연속 보너스는 7일째부터 하루 105로 고정", () => {
+  const s = dailyReads(10, 5);
+  assert.equal(s.longestStreak, 10);
+  assert.equal(streakXp(s), 15 * (1 + 2 + 3 + 4 + 5 + 6 + 7) + 105 * 3);
+});
+
+test(`하루에 ${STREAK_MIN_PAGES}쪽이 안 되면 연속일이 아님`, () => {
+  const s = dailyReads(5, 4);
+  assert.equal(s.longestStreak, 0);
+  assert.equal(streakXp(s), 0);
+  assert.equal(s.xp, 20 + 20); // 쪽 20 + 서재의 시작 초급 뱃지 20
+});
+
+test("같은 날 나눠 읽은 쪽은 합쳐서 셈", () => {
+  let s = applyReadingAction(initialReadingState(), { type: "addBook", title: "책", author: "작가", totalPages: 100 }, ctx("b1"));
+  s = applyReadingAction(s, { type: "addLog", bookId: "b1", date: "2026-10-28", startPage: 1, endPage: 3, notes: "읽었어요." }, ctx("l1"));
+  s = applyReadingAction(s, { type: "addLog", bookId: "b1", date: "2026-10-28", startPage: 4, endPage: 6, notes: "읽었어요." }, ctx("l2"));
+  assert.equal(deriveReading(s, new Date(NOW)).longestStreak, 1);
+});
+
+test("과일 — 받은 누계의 최고치만큼만, 바로잡은 −1은 두 번 세지 않음", () => {
+  const at = (d, h = 3) => new Date(`2026-10-${d}T0${h}:00:00Z`);
+  const gains = readingFruitGains([
+    { classId: "c", delta: 1, at: at(27) },
+    { classId: "c", delta: 1, at: at(27, 4) },
+    { classId: "c", delta: -1, at: at(28) },
+    { classId: "c", delta: 1, at: at(28, 4) },
+    { classId: "c", delta: 2, at: at(29) },
+    { classId: "d", delta: 3, at: at(29) },
+  ], new Date(NOW));
+  assert.deepEqual(gains, [
+    { classId: "c", date: "2026-10-27", count: 2 },
+    { classId: "c", date: "2026-10-29", count: 2 },
+    { classId: "d", date: "2026-10-29", count: 3 },
+  ]);
+  const summary = deriveReading(initialReadingState(), new Date(NOW), { fruits: gains });
+  assert.equal(summary.fruitCount, 7);
+  assert.equal(summary.xp, 7 * FRUIT_XP);
+  assert.equal(summary.classScores.c.allTime, 4 * FRUIT_XP);
+  assert.equal(summary.longestStreak, 0);
+});
+
+test("과일 경험치로 레벨이 오르면 레벨 뱃지도", () => {
+  const summary = deriveReading(initialReadingState(), new Date(NOW), { fruits: [{ classId: "c", date: "2026-10-29", count: 25 }] });
+  assert.equal(summary.level, 3);
+  assert.ok(summary.earnedBadges.some((b) => b.id === "level_1"));
+});

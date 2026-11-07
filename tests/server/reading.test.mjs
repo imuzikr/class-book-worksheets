@@ -4,7 +4,8 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { initializeApp, deleteApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
-import { getReading, mutateReading, getReadingRankings, readingPrincipal } from "../../lib/server/readingService.js";
+import { getReading, mutateReading, getReadingRankings, readingPrincipal, refreshReadingMember } from "../../lib/server/readingService.js";
+import { FRUIT_XP, READING_FORMULA } from "../../lib/reading.js";
 
 const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID || "demo-reading-api";
 if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST || !projectId.startsWith("demo-")) {
@@ -134,4 +135,27 @@ test("oversized Korean state is rejected before any transaction writes", async (
   assert.deepEqual((await stateRef.get()).data().state, state);
   assert.equal((await db.doc(`users/${uid}/readingRequests/api-large-request`).get()).exists, false);
   assert.equal((await db.doc(`classes/${classId}/readingMembers/${uid}`).get()).exists, false);
+});
+
+test("과일 — 선생님이 준 과일이 다시 세기(refresh) 뒤 랭킹 경험치에 들어가고, 학생은 다시 세기를 못 부름", async () => {
+  const before = (await getReadingRankings(principal("teacher"), "api-class", "all-time")).rankings[0];
+  const at = new Date();
+  await db.collection("classes/api-class/rewardEvents").add({ classId: "api-class", uid: ids.student, delta: 3, count: 3, byUid: ids.teacher, at });
+  await db.collection("classes/api-class/rewardEvents").add({ classId: "api-class", uid: ids.student, delta: -1, count: 2, byUid: ids.teacher, at: new Date(at.getTime() + 1000) });
+  await assert.rejects(() => refreshReadingMember(principal("student"), "api-class", ids.student), (e) => e.status === 403);
+  await refreshReadingMember(principal("teacher"), "api-class", ids.student);
+  const after = (await getReadingRankings(principal("teacher"), "api-class", "all-time")).rankings[0];
+  assert.equal(after.xp, before.xp + 3 * FRUIT_XP);
+  const snap = (await db.doc(`classes/api-class/readingMembers/${ids.student}`).get()).data();
+  assert.equal(snap.formula, READING_FORMULA);
+  assert.deepEqual(snap.fruits.map((f) => f.count), [3]);
+  const own = await getReading(principal("student"), "api-class");
+  assert.equal(own.summary.fruitCount, 3);
+});
+
+test("계산 기준이 바뀐 옛 집계는 랭킹을 읽을 때 다시 셈", async () => {
+  await db.doc(`classes/api-class/readingMembers/${ids.student}`).set({ uid: ids.student, level: 9, events: [{ date: today, xp: 99999 }], formula: 1 });
+  const row = (await getReadingRankings(principal("teacher"), "api-class", "all-time")).rankings[0];
+  assert.notEqual(row.xp, 99999);
+  assert.equal((await db.doc(`classes/api-class/readingMembers/${ids.student}`).get()).data().formula, READING_FORMULA);
 });

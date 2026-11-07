@@ -235,7 +235,7 @@ function LogForm({ book, log, today, busy, onSave, onClose }) {
       <label>읽은 날짜<input data-initial-focus required type="date" max={today} value={form.date} onChange={(e) => change("date", e.target.value)} /></label>
       <div className="reading-form-row"><label>시작 쪽<input required type="number" min={1} max={book.totalPages} step={1} value={form.startPage} onChange={(e) => change("startPage", e.target.value)} inputMode="numeric" /></label><label>마지막 쪽<input required type="number" min={Math.max(1, Number(form.startPage) || 1)} max={book.totalPages} step={1} value={form.endPage} onChange={(e) => change("endPage", e.target.value)} inputMode="numeric" /></label></div>
       <label>오늘의 짧은 감상<textarea required maxLength={2000} rows={4} value={form.notes} onChange={(e) => change("notes", e.target.value)} placeholder="마음에 남은 장면이나 새롭게 떠오른 생각을 적어 보세요." /><span className="reading-field-count">{form.notes.length} / 2,000</span></label>
-      <p className="reading-help">1쪽당 1 EXP. 연속 독서 보너스는 하루 한 번만 받아요. 이미 기록한 페이지는 중복 적립하지 않아요.</p>
+      <p className="reading-help">1쪽당 1 EXP. 그날 5쪽 이상 읽으면 연속 독서일로 쳐서 하루 한 번 보너스(연속일 × 15, 7일째부터 105)를 받아요. 이미 기록한 페이지는 중복 적립하지 않아요.</p>
       <div className="reading-form-actions"><button type="button" className="btn-ghost" onClick={onClose} disabled={busy}>취소</button><button type="submit" className="btn-primary" disabled={busy || !form.notes.trim()}>{busy ? "저장 중…" : "독서 기록 저장"}</button></div>
     </form>
   </Modal>;

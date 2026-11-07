@@ -135,7 +135,7 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, o
                         <span className="rlb-row-face" aria-hidden="true">{journeyAvatar(r.level)}</span>
                         <span className="rlb-row-main">
                           <span className="rlb-row-name">{nameOf(r)}{me && <span className="reading-me-label">나</span>}</span>
-                          <span className="rlb-row-sub">Lv.{r.level || 1} {journeyTitle(r.level)} · 누적 {number(xpOf(r))} EXP</span>
+                          <span className="rlb-row-sub">Lv.{r.level || 1} {journeyTitle(r.level)} · {period === "all-time" ? `다음 레벨까지 ${number(p.toNext)} EXP` : `누적 ${number(xpOf(r))} EXP`}</span>
                           <Bar percent={p.percent} label={`${r.name} 다음 레벨까지 진행률`} />
                         </span>
                         <span className="rlb-row-side">
@@ -175,6 +175,7 @@ function MyJourney({ mine, row, today }) {
       <div><dt>읽은 쪽수</dt><dd>{number(mine.totalPages)}쪽</dd></div>
       <div><dt>완독</dt><dd>{number(mine.totalBooks)}권</dd></div>
       <div><dt>연속 독서</dt><dd>{number(mine.currentStreak)}일</dd></div>
+      <div><dt>받은 과일</dt><dd>🍊 {number(mine.fruitCount)}개</dd></div>
       <div><dt>뱃지</dt><dd>{mine.earnedBadges.length} / {READING_BADGES.length}개</dd></div>
     </dl>
     <Bar percent={p.percent} label="다음 레벨까지 진행률" />
@@ -228,6 +229,7 @@ function StudentJourneyModal({ row, me, onClose }) {
         <div><dt>감상문</dt><dd>{orDash(row.reviewCount, "편")}</dd></div>
         <div><dt>연속 독서</dt><dd>{orDash(row.currentStreak, "일")}</dd></div>
         <div><dt>가장 긴 연속</dt><dd>{orDash(row.longestStreak, "일")}</dd></div>
+        <div><dt>받은 과일</dt><dd>{row.fruitCount === null || row.fruitCount === undefined ? "—" : `🍊 ${number(row.fruitCount)}개`}</dd></div>
         <div><dt>뱃지</dt><dd>{known ? `${earned.size} / ${READING_BADGES.length}개` : "—"}</dd></div>
       </dl>
       <Bar percent={p.percent} label="다음 레벨까지 진행률" />
