@@ -43,7 +43,6 @@ export function TeacherPersonalReport({ data, sample = false }) {
   if (!data) return null;
   const activities = asArray(data.studentActivities);
   const reading = data.reading;
-  const summary = reading?.summary;
   const student = data.subject;
   const feedback = asArray(data.feedback);
 
@@ -51,18 +50,10 @@ export function TeacherPersonalReport({ data, sample = false }) {
     {sample && <p className="bb-report-sample" role="note">샘플 데이터 / 가상 학생 · 화면에 보이는 이름과 답안은 체험용으로 만든 기록입니다. 실제 학생 자료가 아니며 저장되지 않습니다.</p>}
     <ReportHeading eyebrow="개인별 보고서" title={(student?.name || "학생") + "의 독서 활동"} aside={data.class?.name}>
       {student?.studentId && <span className="bb-report-student-number">{student.studentId}</span>}
-      이 반의 독서 활동 열 가지를 한 자리에서 읽습니다. 답안은 지금 저장된 내용이고, 피드백은 선택한 기간에 남긴 기록입니다.
+      활동마다 질문, 학생이 적은 답, 이미 있는 피드백을 차례로 읽습니다.
     </ReportHeading>
-    <Section title="활동별 답안" note="활동을 펼치면 칸마다 적은 글과 비어 있는 칸, 받은 피드백을 함께 볼 수 있습니다. 내용이 있는 활동은 펼쳐 두고, 아직 시작하지 않은 활동은 접어 둡니다.">
-      <StudentActivityReport key={`${data.class?.id}:${student?.uid}`} activities={activities} feedback={feedback} />
-    </Section>
+    <StudentActivityReport key={`${data.class?.id}:${student?.uid}`} activities={activities} feedback={feedback} />
     {reading ? <>
-      <div className="bb-dash-metrics is-four">
-        <Metric label="읽은 쪽수" value={summary?.pages} unit="쪽" previous={reading.previous?.pages} />
-        <Metric label="독서한 날짜" value={summary?.days} unit="일" previous={reading.previous?.days} />
-        <Metric label="완독 기록" value={summary?.completed} unit="건" previous={reading.previous?.completed} />
-        <Metric label="감상문" value={summary?.reviews} unit="건" previous={reading.previous?.reviews} />
-      </div>
       <div className="bb-report-reading-grid">
         <ReadingFlow reading={reading} title="학생의 독서 흐름" note="선택한 반과 기간에 속하는 독서 날짜를 기준으로 합산합니다." />
         <ReportBooks books={asArray(reading.books)} title="학생이 읽은 책" note="선택한 반과 기간에 독서 기록을 남긴 도서입니다. 감상 원문은 포함하지 않습니다." />
