@@ -357,8 +357,8 @@ export default function CrosswordGroupBoard({ activity, onBack, onToast, classPi
         </div>
         <div className="books-head-row">
           <div className="books-head-main activity-head-main">
-            {classPicker}
             <BookLockToggle activity={activity} />
+            {classPicker}
             <span className="paratext-sum">
               {activity.sourceTitle ? `낱말: ${activity.sourceTitle} · ` : ""}
               {solo ? "개별 활동" : `모둠 ${liveGroups.length}개`} · 학생 {studentCount}명

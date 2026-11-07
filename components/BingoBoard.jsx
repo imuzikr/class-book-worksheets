@@ -172,8 +172,8 @@ export default function BingoBoard({ activity, onBack, onToast, user, roster = [
       <div className="canvas-head">
         <strong className="canvas-head-name">{activity.title}</strong>
         <button type="button" className="btn-ghost" onClick={onBack}>← 활동 목록</button>
-        {classPicker}
         <BookLockToggle activity={activity} />
+        {classPicker}
         <span className="canvas-head-stats">
           {activity.sourceTitle ? `낱말: ${activity.sourceTitle} · ` : ""}
           {solo ? "개별 활동" : `모둠 ${liveGroups.length}개`} · 학생 {studentCount}명 · 낱말 {words.length}개

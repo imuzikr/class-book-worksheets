@@ -210,8 +210,8 @@ export default function HashtagBoard({
         </div>
         <div className="books-head-row">
           <div className="books-head-main activity-head-main">
-            {classPicker ?? (className && <span className="book-group-class">{className}</span>)}
             <BookLockToggle activity={activity} />
+            {classPicker ?? (className && <span className="book-group-class">{className}</span>)}
             <span className="paratext-sum">
               시작 {startedCount}명 · 완성 {doneCount}명 / 전체 {cards.length}명
             </span>

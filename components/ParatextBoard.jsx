@@ -241,6 +241,12 @@ export default function ParatextBoard({
         </div>
         <div className="books-head-row">
           <div className="books-head-main activity-head-main">
+            {/* 주제어를 비워 두면 학생마다 제 책을 적습니다 —
+                빈 배지를 두는 대신 그 사실을 적어 둡니다 */}
+            <span className={`book-group-topic${(activity.topic ?? "").trim() ? "" : " soft"}`}>
+              {(activity.topic ?? "").trim() || "학생마다 다른 책"}
+            </span>
+            <BookLockToggle activity={activity} />
             {/* 모둠 짜기 — 닿소리 머리말과 **같은 자리·같은 말**입니다.
                 모둠으로 진행하는 활동인데 짜는 길이 만들기 창에만 있어,
                 한 번 만들고 나면 교사가 모둠을 고칠 수 없었습니다. */}
@@ -249,12 +255,6 @@ export default function ParatextBoard({
                 <IconPeople size={15} /> 활동 모둠
               </button>
             )}
-            {/* 주제어를 비워 두면 학생마다 제 책을 적습니다 —
-                빈 배지를 두는 대신 그 사실을 적어 둡니다 */}
-            <span className={`book-group-topic${(activity.topic ?? "").trim() ? "" : " soft"}`}>
-              {(activity.topic ?? "").trim() || "학생마다 다른 책"}
-            </span>
-            <BookLockToggle activity={activity} />
             {/* 반 표시 — 고를 반이 둘 이상이면 고르개(반을 바꾸면 그 반의
                 활동 목록으로 갑니다), 하나면 이름 배지입니다. */}
             {classPicker ?? (className && <span className="book-group-class">{className}</span>)}

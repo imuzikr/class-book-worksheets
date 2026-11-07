@@ -221,16 +221,16 @@ export default function BookGroupBoard({
       </div>
       <div className="books-head-row">
         <div className="books-head-main activity-head-main">
-          {isTeacher && !freeMode && !perStudent && (
-            <button type="button" className="btn-ghost" onClick={() => setComposing(true)}>
-              <IconPeople size={15} /> 활동 모둠
-            </button>
-          )}
           {/* 개별 활동은 주제어를 비워 둘 수 있습니다(학생이 자기 판에 적음) */}
           {(activity.topic ?? "").trim() && (
             <span className="book-group-topic">{activity.topic}</span>
           )}
           {isTeacher && <BookLockToggle activity={activity} />}
+          {isTeacher && !freeMode && !perStudent && (
+            <button type="button" className="btn-ghost" onClick={() => setComposing(true)}>
+              <IconPeople size={15} /> 활동 모둠
+            </button>
+          )}
           {/* 이 활동이 어느 반 것인지 — 학생에게 안 보이면 반이 다른 경우가 많아 표시 */}
           {/* 반 표시 — 고를 반이 둘 이상이면 고르개(반을 바꾸면 그 반의
               활동 목록으로 갑니다), 하나면 이름 배지입니다. */}

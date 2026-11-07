@@ -417,8 +417,14 @@ export default function RaftBoard({
         </div>
         <div className="books-head-row">
           <div className="books-head-main activity-head-main">
-            {/* 차례: 반 · 활동 모둠 · 동료 평가 · 주제어 · 진행 요약(선생님 요청) —
-                고르고 누르는 것이 앞에, 읽기만 하는 배지가 뒤에 섭니다. */}
+            {/* 차례: 주제어(도서명) · 활동 열림/잠김 · 반 · 활동 모둠 · 동료 평가 · 진행 요약
+                (선생님 요청 — 무엇을 읽는 활동이고 지금 열려 있나가 맨 앞). */}
+            {/* 주제어를 비워 두면 학생마다 제 책으로 씁니다 —
+                빈 배지를 두는 대신 그 사실을 적어 둡니다 */}
+            <span className={`book-group-topic${(activity.topic ?? "").trim() ? "" : " soft"}`}>
+              {(activity.topic ?? "").trim() || "학생마다 다른 책"}
+            </span>
+            <BookLockToggle activity={activity} />
             {/* 반 표시 — 고를 반이 둘 이상이면 고르개(반을 바꾸면 그 반의
                 활동 목록으로 갑니다), 하나면 이름 배지입니다. */}
             {classPicker ?? (className && <span className="book-group-class">{className}</span>)}
@@ -449,12 +455,6 @@ export default function RaftBoard({
                 {reviews.length > 0 && <em>{reviews.length}</em>}
               </button>
             )}
-            {/* 주제어를 비워 두면 학생마다 제 책으로 씁니다 —
-                빈 배지를 두는 대신 그 사실을 적어 둡니다 */}
-            <span className={`book-group-topic${(activity.topic ?? "").trim() ? "" : " soft"}`}>
-              {(activity.topic ?? "").trim() || "학생마다 다른 책"}
-            </span>
-            <BookLockToggle activity={activity} />
             {/* 진행 요약도 이 줄에 — 배지 두어 개뿐이라 오른쪽이 비어 있는데
                 아래에 제 줄을 차지하고 있었습니다(곁텍스트는 처음부터 이
                 자리였습니다 — 네 화면의 머리말이 같아야 합니다). */}

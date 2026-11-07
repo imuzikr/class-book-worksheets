@@ -188,14 +188,14 @@ export default function BrainWriteBoard({
         </div>
         <div className="books-head-row">
           <div className="books-head-main activity-head-main">
+            {(activity.topic ?? "").trim() && <span className="book-group-topic">{activity.topic}</span>}
+            <BookLockToggle activity={activity} />
             {classPicker ?? (className && <span className="book-group-class">{className}</span>)}
             {!freeMode && (
               <button type="button" className="btn-ghost" onClick={() => setComposing(true)}>
                 <IconPeople size={15} /> 활동 모둠
               </button>
             )}
-            {(activity.topic ?? "").trim() && <span className="book-group-topic">{activity.topic}</span>}
-            <BookLockToggle activity={activity} />
             <span className="paratext-sum">
               시작 {startedCount}명 · 완성 {doneCount}명 / 전체 {cards.length}명
             </span>
