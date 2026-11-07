@@ -2,11 +2,15 @@
 
 // 반 공지는 기존 classNotices/chatReads 구독을 유지합니다.
 // 교사 댓글은 내 opinionNotes를 구독해 합치고, 메모의 replySeenAt으로 읽음을 표시합니다.
+// RAFT 글쓰기의 선생님 피드백 메모도 같은 방식입니다 — 내 글에 달린 안 본 메모
+// (subscribeMyNewRaftFeedback · 읽음은 그 메모의 seenRev = rev, 배움나눔과 같음).
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   subscribeMyOpinionReplies,
   markOpinionReplySeen,
+  subscribeMyNewRaftFeedback,
+  markRaftFeedbackSeen,
   subscribeClassNotices,
   subscribeChatReads,
   markChatRoomSeen,
@@ -24,6 +28,7 @@ const NOTICE_SEEN_KEY = "notice"; // chatReads.rooms의 칸 이름(방 열쇠 dm
 export default function NotificationBell({ uid, classId = null, isStudent = false }) {
   const router = useRouter();
   const [replies, setReplies] = useState([]);
+  const [feedbacks, setFeedbacks] = useState([]);
   const [notices, setNotices] = useState([]);
   const [seen, setSeen] = useState({});
   const [open, setOpen] = useState(false);
@@ -42,6 +47,10 @@ export default function NotificationBell({ uid, classId = null, isStudent = fals
   useEffect(() => {
     if (!uid) { setReplies([]); return; }
     return subscribeMyOpinionReplies(uid, setReplies);
+  }, [uid]);
+  useEffect(() => {
+    if (!uid) { setFeedbacks([]); return; }
+    return subscribeMyNewRaftFeedback(uid, setFeedbacks);
   }, [uid]);
   const seenNotice = Number(seen?.[NOTICE_SEEN_KEY]) || 0;
   const unreadNotices = useMemo(
@@ -65,11 +74,24 @@ export default function NotificationBell({ uid, classId = null, isStudent = fals
       activityId: r.activityId, createdAt: r.replyAt ?? r.updatedAt ?? r.createdAt,
       text: String(r.reply ?? ""), original: String(r.text ?? ""),
     })),
+    // RAFT 피드백 메모 — 줄에는 칠한 부분(내 글)과 메모 글(선생님 댓글과 같은 모양)
+    ...feedbacks.map((f) => ({
+      id: f.id, _src: "raft", type: "raft_feedback",
+      activityId: f.activityId, createdAt: f.updatedAt ?? f.createdAt, rev: f.rev,
+      text: String(f.text ?? ""), original: String(f.quote ?? ""),
+    })),
   ].sort((a, b) => (toDate(b.createdAt)?.getTime() ?? 0) - (toDate(a.createdAt)?.getTime() ?? 0)),
-  [unreadNotices, replies]);
+  [unreadNotices, replies, feedbacks]);
 
   function handleOpen(n) {
-    if (n._src !== "opinion" || !n.activityId) return;
+    if (!n.activityId) return;
+    // RAFT 피드백 — 그 활동(내 글)으로 갑니다. 읽음은 그 화면에서 메모를 열 때
+    if (n._src === "raft") {
+      setOpen(false);
+      router.push(`/books?activity=${encodeURIComponent(n.activityId)}`);
+      return;
+    }
+    if (n._src !== "opinion") return;
     setOpen(false);
     router.push(`/books?activity=${encodeURIComponent(n.activityId)}&note=${encodeURIComponent(n.id)}`);
   }
@@ -98,6 +120,7 @@ export default function NotificationBell({ uid, classId = null, isStudent = fals
   function handleRead(e, n) {
     e.stopPropagation();
     if (n._src === "opinion") markOpinionReplySeen(n.activityId, n.id).catch(() => {});
+    else if (n._src === "raft") markRaftFeedbackSeen(n.activityId, uid, n.id, n.rev).catch(() => {});
     else markNoticeSeen(n._ms).catch(() => {});
   }
 
@@ -108,6 +131,7 @@ export default function NotificationBell({ uid, classId = null, isStudent = fals
       await Promise.all([
         markNoticeSeen(Math.max(0, ...unreadNotices.map((n) => n._ms))),
         ...replies.map((r) => markOpinionReplySeen(r.activityId, r.id)),
+        ...feedbacks.map((f) => markRaftFeedbackSeen(f.activityId, uid, f.id, f.rev)),
       ]);
     } catch {
       /* 실패하면 목록이 그대로 남습니다 — 다시 누르면 됩니다 */
@@ -132,7 +156,7 @@ export default function NotificationBell({ uid, classId = null, isStudent = fals
       </button>
 
       {open && (
-        <div className={`notif-dropdown${replies.length ? " notif-dropdown--wide" : ""}`} role="menu">
+        <div className={`notif-dropdown${replies.length || feedbacks.length ? " notif-dropdown--wide" : ""}`} role="menu">
           {items.length === 0 ? (
             <p className="notif-empty">읽지 않은 알림이 없어요.</p>
           ) : (
@@ -150,8 +174,9 @@ export default function NotificationBell({ uid, classId = null, isStudent = fals
             </div>
             <ul className="notif-list">
               {items.map((n) => {
-                const label = n.type === "opinion_reply" ? { icon: "💬", text: "내 생각에 선생님 댓글" } : NOTICE_LABEL;
-                const isReply = n._src === "opinion";
+                const label = n.type === "opinion_reply" ? { icon: "💬", text: "내 생각에 선생님 댓글" }
+                  : n.type === "raft_feedback" ? { icon: "📝", text: "내 글에 선생님 피드백" } : NOTICE_LABEL;
+                const isReply = n._src === "opinion" || n._src === "raft";
                 // 공지와 교사 댓글의 본문을 알림에서 바로 읽을 수 있습니다.
                 const isNotice = n.type === "class_notice" || isReply;
                 // 반 공지는 열어 볼 글이 없어 눌러도 갈 곳이 없습니다 —
@@ -169,7 +194,7 @@ export default function NotificationBell({ uid, classId = null, isStudent = fals
                       <span className="notif-op-text">{n.original || "(내용 없음)"}</span>
                     </span>
                     <span className="notif-op-block notif-op-block--reply">
-                      <span className="notif-op-label">선생님 댓글</span>
+                      <span className="notif-op-label">{n._src === "raft" ? "선생님 피드백" : "선생님 댓글"}</span>
                       <span className="notif-op-text">{n.text}</span>
                     </span>
                   </>

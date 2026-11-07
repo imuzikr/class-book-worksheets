@@ -382,7 +382,6 @@
   gap: 10px;
 }
 .raft-write-head strong { font-size: 15px; font-weight: 800; color: var(--text); }
-.raft-write-count { font-size: 12px; font-weight: 800; color: var(--text-sub); }
 
 /* 지금 방송 중인 학생 카드 */
 .paratext-student-card.casting { border-color: var(--primary); background: var(--primary-light); }

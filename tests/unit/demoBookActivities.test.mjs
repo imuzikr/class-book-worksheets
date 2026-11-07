@@ -173,3 +173,15 @@ test("낱말 빙고 — 모둠마다 판 하나, 낱말은 상자 안에서 겹�
   assert.equal(first.bingo, true);
   assert.equal(first.count, 2);
 });
+
+test("RAFT 선생님 피드백 메모 — 첫 학생의 글에서 칠한 자리가 그 글 그대로이고, 하나는 새 피드백", async () => {
+  const { isRaftFeedbackNew } = await import("../../lib/raftFeedback.js");
+  const data = fixture();
+  const notes = data.bookRaftFeedback;
+  assert.equal(notes.length, 2);
+  for (const note of notes) {
+    const entry = data.bookEntries.find((e) => e.activityId === note.activityId && e.authorId === note.studentUid);
+    assert.equal(entry.answers.writing.slice(note.start, note.end), note.quote);
+  }
+  assert.equal(notes.filter(isRaftFeedbackNew).length, 1);
+});
