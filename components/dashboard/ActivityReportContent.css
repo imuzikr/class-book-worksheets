@@ -1,17 +1,24 @@
-.bb-ar-content { min-width: 0; color: var(--text); }
+.bb-ar-content { min-width: 0; color: var(--text); container-type: inline-size; }
+.bb-ar-section-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 16px; min-width: 0; }
+.bb-ar-content-section { min-width: 0; padding: 20px; border: 1px solid var(--ar-line, var(--border)); border-radius: 12px; background: #fcfbf8; }
+.bb-ar-content-section.is-wide { grid-column: 1 / -1; }
+.bb-ar-content-section.is-prompt { background: #f0f5ef; border-color: #d8e4d5; }
+.bb-ar-content-section.is-prose { background: #fffdf9; padding: 24px; }
+.bb-ar-content-section.is-plan,
+.bb-ar-content-section.is-reflection,
+.bb-ar-content-section.is-word-board { padding: 0; border: 0; border-radius: 0; background: transparent; }
 .bb-ar-report-image { min-width: 0; margin: 0 0 26px; }
 .bb-ar-report-image-media { display: block; width: auto; height: auto; max-width: 100%; max-height: 480px; margin: 0 auto; object-fit: contain; border-radius: 10px; }
 .bb-ar-report-image figcaption { margin-top: 10px; color: var(--ar-muted, #696a60); font-size: 13px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
 .bb-ar-report-image figcaption span,
 .bb-ar-report-image figcaption small { display: block; }
 .bb-ar-report-image figcaption small { margin-top: 3px; font-size: 11px; }
-.bb-ar-content-section + .bb-ar-content-section { margin-top: 26px; }
 .bb-ar-content-section > h4,
 .bb-ar-feedback > h4,
 .bb-ar-bingo-words > h4 {
-  margin: 0 0 12px;
+  margin: 0 0 16px;
   color: var(--text);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 650;
   line-height: 1.7;
   overflow-wrap: anywhere;
@@ -41,16 +48,33 @@
   overflow-wrap: anywhere;
 }
 .bb-ar-answer-row dd.is-empty { color: var(--ar-muted, #696a60); font-size: 14px; }
-.bb-ar-answer-rows.is-plan { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; border-block: 1px solid var(--border); }
-.bb-ar-answer-rows.is-plan .bb-ar-answer-row { padding: 12px; border-top: 0; }
-.bb-ar-answer-rows.is-plan .bb-ar-answer-row + .bb-ar-answer-row { border-left: 1px solid var(--border); }
-.bb-ar-answer-rows.is-plan dd { font-size: 14px; line-height: 1.8; }
-.bb-ar-answer-rows.is-kwls .bb-ar-answer-row { display: grid; grid-template-columns: minmax(125px, .28fr) minmax(0, 1fr); gap: 20px; padding: 18px 0; }
-.bb-ar-answer-rows.is-kwls .bb-ar-answer-row:first-child { padding-top: 0; }
-.bb-ar-answer-rows.is-kwls dt { margin: 0; color: var(--primary-dark); font-size: 13px; }
+.bb-ar-answer-rows.is-plan,
+.bb-ar-answer-rows.is-source,
+.bb-ar-answer-rows.is-paired,
+.bb-ar-answer-rows.is-kwls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 20px; }
+.bb-ar-answer-rows:is(.is-plan, .is-source, .is-paired, .is-kwls) .bb-ar-answer-row { padding: 0; border: 0; }
+.bb-ar-answer-row.is-wide { grid-column: 1 / -1; }
+.bb-ar-answer-rows:is(.is-plan, .is-kwls) { gap: 14px; }
+.bb-ar-answer-rows:is(.is-plan, .is-kwls) .bb-ar-answer-row { padding: 18px 20px; border: 1px solid var(--ar-line, var(--border)); border-radius: 10px; background: #fcfbf8; }
+.bb-ar-answer-rows.is-kwls .bb-ar-answer-row { border-top: 3px solid #aac2a3; background: #f5f8f1; }
+.bb-ar-answer-rows.is-kwls dt { margin-bottom: 10px; color: #496344; font-size: 13px; }
+.bb-ar-answer-rows.is-kwls.is-long { grid-template-columns: minmax(0, 1fr); }
+.bb-ar-content-section.is-tag { border-top: 3px solid #a8bd9f; background: #f7f9f3; }
+.bb-ar-tag-number { display: block; margin-bottom: 5px; color: var(--ar-muted, #696a60); font-size: 11px; font-weight: 500; }
+.bb-ar-tag-name { display: block; color: #45633e; font-size: 19px; line-height: 1.6; white-space: pre-wrap; }
+.bb-ar-word-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin: 0; }
+.bb-ar-word-grid .bb-ar-word-cell { min-height: 110px; padding: 14px 12px; border: 1px solid #d5e2d3; border-radius: 10px; background: #f0f6ee; }
+.bb-ar-word-cell dt { margin-bottom: 8px; color: #42613d; font-size: 20px; font-weight: 700; line-height: 1.3; }
+.bb-ar-word-cell dd { font-size: 14px; line-height: 1.8; word-break: normal; }
+.bb-ar-word-grid .bb-ar-word-cell.is-blank { border-color: var(--ar-line, var(--border)); background: #f7f6f2; }
+.bb-ar-word-cell.is-blank dt { color: #888a80; }
+.bb-ar-word-cell dd.is-empty { font-size: 11px; }
+.bb-ar-word-topic { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 0; padding: 14px 12px; border-radius: 10px; color: white; background: #47694f; text-align: center; }
+.bb-ar-word-topic dt { margin-bottom: 6px; color: #e3ebdf; font-size: 10px; line-height: 1.6; }
+.bb-ar-word-topic dd { margin: 0; color: white; font-size: 14px; font-weight: 600; line-height: 1.7; word-break: keep-all; overflow-wrap: anywhere; }
 .bb-ar-content .raft-fb-text { margin: 0; font-size: 16px; line-height: 1.95; font-weight: 400; white-space: pre-wrap; word-break: keep-all; overflow-wrap: anywhere; }
 .bb-ar-content .raft-fb-mark { cursor: text; }
-.bb-ar-feedback { margin-top: 25px; padding-left: 16px; border-left: 3px solid #9fbea8; }
+.bb-ar-feedback { margin-top: 20px; padding: 20px; border: 1px solid #d5e2d3; border-left: 4px solid #9fbea8; border-radius: 10px; background: #f4f8f1; }
 .bb-ar-feedback > h4 { color: #496650; }
 .bb-ar-feedback ol { margin: 0; padding: 0; list-style: none; }
 .bb-ar-feedback li { display: flex; align-items: flex-start; gap: 12px; min-width: 0; padding: 11px 0; }
@@ -86,17 +110,29 @@
 .bb-ar-bingo-words { margin-top: 20px; }
 .bb-ar-bingo-words p { margin: 0; color: var(--text); font-size: 15px; line-height: 1.95; overflow-wrap: anywhere; }
 
-@media (max-width: 900px) {
-  .bb-ar-answer-rows.is-plan { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .bb-ar-answer-rows.is-plan .bb-ar-answer-row:nth-child(3) { border-left: 0; }
-  .bb-ar-answer-rows.is-plan .bb-ar-answer-row:nth-child(n+3) { border-top: 1px solid var(--border); }
-  .bb-ar-answer-rows.is-kwls .bb-ar-answer-row { grid-template-columns: minmax(100px, .28fr) minmax(0, 1fr); gap: 16px; }
+@container (max-width: 610px) {
+  .bb-ar-word-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@container (max-width: 560px) {
+  .bb-ar-section-grid,
+  .bb-ar-answer-rows.is-kwls { grid-template-columns: minmax(0, 1fr); }
+}
+@container (max-width: 460px) {
+  .bb-ar-content-section,
+  .bb-ar-content-section.is-prose,
+  .bb-ar-feedback { padding: 16px; }
+  .bb-ar-content-section:is(.is-plan, .is-reflection, .is-word-board) { padding: 0; }
+  .bb-ar-answer-rows:is(.is-plan, .is-source, .is-paired) { grid-template-columns: minmax(0, 1fr); }
+  .bb-ar-answer-rows:is(.is-plan, .is-kwls) .bb-ar-answer-row { padding: 16px; }
+  .bb-ar-word-grid { gap: 8px; }
+  .bb-ar-word-grid .bb-ar-word-cell,
+  .bb-ar-word-topic { min-height: 100px; padding: 12px 9px; }
+  .bb-ar-word-cell dd,
+  .bb-ar-word-topic dd { font-size: 13px; }
 }
 @media (max-width: 620px) {
-  .bb-ar-answer-row dd,
+  .bb-ar-answer-row:not(.bb-ar-word-cell) dd,
   .bb-ar-content .raft-fb-text { font-size: 15px; line-height: 1.9; }
-  .bb-ar-answer-rows.is-kwls .bb-ar-answer-row { display: block; padding: 16px 0; }
-  .bb-ar-answer-rows.is-kwls dt { margin-bottom: 8px; }
   .bb-ar-map-caption { align-items: flex-start; }
   .bb-ar-map-caption p { flex-basis: 100%; }
   .bb-ar-content-map .mm-viewport { height: 360px; }
@@ -106,14 +142,11 @@
   .bb-ar-content-map-large { padding: 0 10px; }
   .bb-ar-content-map-large .mm-viewport { height: calc(100dvh - 220px); min-height: 240px; }
   .bb-ar-map-help { padding: 10px 14px 14px; font-size: 11px; }
-  .bb-ar-feedback { padding-left: 12px; }
   .bb-ar-bingo-facts > div { padding: 12px 5px; }
   .bb-ar-bingo-facts dt { font-size: 10px; }
   .bb-ar-bingo-facts dd { font-size: 18px; }
 }
 @media (max-width: 380px) {
-  .bb-ar-answer-rows.is-plan { grid-template-columns: minmax(0, 1fr); }
-  .bb-ar-answer-rows.is-plan .bb-ar-answer-row + .bb-ar-answer-row { border-left: 0; border-top: 1px solid var(--border); }
   .bb-ar-bingo-facts { grid-template-columns: minmax(0, 1fr); }
   .bb-ar-bingo-facts > div { display: flex; justify-content: space-between; align-items: center; text-align: left; padding: 10px 12px; }
   .bb-ar-bingo-facts > div + div { border-left: 0; border-top: 1px solid var(--border); }

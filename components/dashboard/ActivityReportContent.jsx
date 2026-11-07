@@ -5,6 +5,7 @@ import MindmapCanvas from "../MindmapCanvas";
 import SecureImage from "../SecureImage";
 import { RaftFeedbackText } from "../RaftFeedback";
 import { placeFeedbackNotes } from "@/lib/raftFeedback";
+import { CONSONANT_LABELS, GRID_SLOTS } from "@/lib/consonants";
 import "./ActivityReportContent.css";
 
 const list = (value) => Array.isArray(value) ? value : [];
@@ -12,12 +13,56 @@ const text = (value) => typeof value === "string" || typeof value === "number" ?
 const hasText = (value) => text(value).trim().length > 0;
 const number = (value) => typeof value === "number" && Number.isFinite(value) ? String(value) : "—";
 
+// Pair adjacent short sections without changing reading order. A long section
+// or an unpaired last card uses the full row, keeping the two sides balanced.
+function pairedWidths(items, compact) {
+  const widths = items.map(() => " is-wide");
+  for (let index = 0; index < items.length - 1; index += 1) {
+    if (compact(items[index]) && compact(items[index + 1])) {
+      widths[index] = widths[index + 1] = "";
+      index += 1;
+    }
+  }
+  return widths;
+}
+
+function shortEntries(entries, limit = 320) {
+  return list(entries).reduce((length, entry) => length + text(entry.text).length, 0) <= limit
+    && list(entries).every((entry) => text(entry.text).split("\n").length <= 5);
+}
+
+function compactSection(section, type) {
+  if (!shortEntries(section.entries)) return false;
+  if (type === "paratext") return list(section.entries).length <= 2;
+  if (type === "hashtag") return section.id?.startsWith("tag-");
+  if (type === "qmark") return section.id?.startsWith("question-");
+  if (type === "brainwrite") return section.id?.startsWith("contribution-") && section.title !== "내가 만든 질문";
+  if (type === "opinion") return section.id?.startsWith("note-");
+  return type === "crossword";
+}
+
 function AnswerRows({ entries, kind = "" }) {
-  return <dl className={`bb-ar-answer-rows${kind ? ` is-${kind}` : ""}`}>
-    {list(entries).map((entry, index) => <div className="bb-ar-answer-row" key={entry.id || entry.label || index}>
+  const items = list(entries);
+  const columns = ["plan", "source", "paired"].includes(kind);
+  const widths = columns ? pairedWidths(items, (entry) => shortEntries([entry], 240)) : [];
+  const wideKwls = kind === "kwls" && !items.every((entry) => shortEntries([entry], 400));
+  return <dl className={`bb-ar-answer-rows${kind ? ` is-${kind}` : ""}${wideKwls ? " is-long" : ""}`}>
+    {items.map((entry, index) => <div className={`bb-ar-answer-row${widths[index] || ""}`} key={entry.id || entry.label || index}>
       {hasText(entry.label) && <dt>{text(entry.label)}</dt>}
       <dd className={hasText(entry.text) ? "" : "is-empty"}>{hasText(entry.text) ? text(entry.text) : "작성하지 않음"}</dd>
     </div>)}
+  </dl>;
+}
+
+function ConsonantWords({ entries, topic }) {
+  const items = list(entries);
+  return <dl className="bb-ar-word-grid">
+    {GRID_SLOTS.map((slot) => slot === null
+      ? <div key="topic" className="bb-ar-word-topic"><dt>도서·주제</dt><dd>{topic || "내가 모은 낱말"}</dd></div>
+      : <div key={slot} className={`bb-ar-answer-row bb-ar-word-cell${hasText(items[slot]?.text) ? " is-filled" : " is-blank"}`}>
+        <dt>{text(items[slot]?.label) || CONSONANT_LABELS[slot]}</dt>
+        <dd className={hasText(items[slot]?.text) ? "" : "is-empty"}>{hasText(items[slot]?.text) ? text(items[slot].text) : "작성하지 않음"}</dd>
+      </div>)}
   </dl>;
 }
 
@@ -106,6 +151,7 @@ export default function ActivityReportContent({ activity, studentName = "", scop
   const writingText = list(writing?.entries).map((entry) => text(entry.text)).join("\n\n");
   const notes = useMemo(() => placeFeedbackNotes(writingText, list(report?.feedback)), [writingText, report?.feedback]);
   const hasMap = report?.map && list(report.map.nodes).length > 0;
+  const sectionWidths = pairedWidths(sections, (section) => compactSection(section, activity.type));
 
   if (!report) return null;
 
@@ -119,15 +165,22 @@ export default function ActivityReportContent({ activity, studentName = "", scop
       </figcaption>}
     </figure>}
     {report.bingo && <BingoResult result={report.bingo} />}
-    {sections.map((section, index) => {
+    <div className="bb-ar-section-grid">{sections.map((section, index) => {
       const plan = activity.type === "raft" && section.id === "plan";
       const prose = activity.type === "raft" && section.id === "writing";
-      return <section key={section.id || index} className={`bb-ar-content-section${plan ? " is-plan" : ""}${prose ? " is-prose" : ""}`}>
-        {hasText(section.title) && <h4>{text(section.title)}</h4>}
-        {prose ? <RaftFeedbackText text={writingText} notes={notes} emptyText="작성하지 않음" />
-          : <AnswerRows entries={section.entries} kind={plan ? "plan" : activity.type === "kwls" ? "kwls" : ""} />}
+      const words = activity.type === "consonant";
+      const tag = activity.type === "hashtag" && section.id?.startsWith("tag-");
+      const tagEntry = tag ? list(section.entries).find((entry) => entry.label === "해시태그" && hasText(entry.text)) : null;
+      const kind = plan ? "plan" : activity.type === "kwls" ? "kwls"
+        : activity.type === "hashtag" && section.id === "source" ? "source"
+          : activity.type === "crossword" && sections.length === 1 ? "paired" : "";
+      return <section key={section.id || index} className={`bb-ar-content-section${sectionWidths[index]}${plan ? " is-plan" : ""}${prose ? " is-prose" : ""}${words ? " is-word-board" : ""}${tag ? " is-tag" : ""}${kind === "kwls" ? " is-reflection" : ""}${section.id === "prompt" ? " is-prompt" : ""}`}>
+        {hasText(section.title) && <h4>{tagEntry ? <><span className="bb-ar-tag-number">{text(section.title)}</span><span className="bb-ar-tag-name">{text(tagEntry.text)}</span></> : text(section.title)}</h4>}
+        {words ? <ConsonantWords entries={section.entries} topic={report.topic} />
+          : prose ? <RaftFeedbackText text={writingText} notes={notes} emptyText="작성하지 않음" />
+            : <AnswerRows entries={tagEntry ? section.entries.filter((entry) => entry !== tagEntry) : section.entries} kind={kind} />}
       </section>;
-    })}
+    })}</div>
     <FeedbackNotes notes={notes} />
   </div>;
 }
