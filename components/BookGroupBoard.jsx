@@ -34,7 +34,7 @@ import { barTint, memberLegend, rowColor } from "@/lib/bookColors";
 import GroupComposer from "./GroupComposer";
 import ConsonantCanvas from "./ConsonantCanvas";
 import "./BookActivityGroupRail.css";
-import "./ProgressStageFilter.css";
+import "./ProgressStages.css";
 import { IconPeople, IconLock } from "./StatusIcons";
 import { BookInfoLink, BookLockToggle } from "./BookHeadParts";
 

@@ -19,10 +19,10 @@
 // 여기 학생들은 모둠 안 자리가 없어 '모둠 색'을 쓸 수 없고, 붙어 있는 줄끼리만
 // 달라도 목록을 훑는 데 충분합니다.
 // =============================================================
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { barTint, rowColor } from "@/lib/bookColors";
-import { PROGRESS_STAGE_LABELS, filterProgressCards, getProgressStageRows, getProgressStageStates } from "@/lib/progressStageFilter";
-import ProgressStageFilter from "./ProgressStageFilter";
+import { PROGRESS_STAGE_LABELS } from "@/lib/progressStages";
+import "./ProgressStages.css";
 
 export default function EntryProgressPanel({
   title = "학생별 진행",
@@ -40,13 +40,6 @@ export default function EntryProgressPanel({
   labels = null,
 }) {
   const total = rows.length;
-  const [filterStage, setFilterStage] = useState("");
-  const [filterState, setFilterState] = useState("");
-  const filterRows = getProgressStageRows(cards, { rows, rowsOf });
-  const stageKey = filterRows.some((row) => String(row.key) === filterStage) ? filterStage : "";
-  const filterOptions = { rows, rowsOf, cellState, stageKey, state: filterState };
-  const shownUids = new Set(filterProgressCards(cards, filterOptions).map((card) => card.uid));
-  const filterStates = getProgressStageStates(cards, filterOptions);
 
   const list = useMemo(
     () =>
@@ -83,20 +76,11 @@ export default function EntryProgressPanel({
           </b>
         )}
       </h3>
-      <ProgressStageFilter
-        rows={filterRows} states={filterStates} labels={labels} stageKey={stageKey}
-        state={stageKey ? filterState : ""} total={list.length} shown={shownUids.size}
-        onStageChange={(key) => { setFilterStage(key); setFilterState(""); }}
-        onStateChange={setFilterState}
-        onReset={() => { setFilterStage(""); setFilterState(""); }}
-      />
       {list.length === 0 ? (
         <p className="dash-side-empty">{emptyText}</p>
       ) : (
-        <>
-        {shownUids.size === 0 && <p className="progress-stage-empty">조건에 맞는 학생이 없습니다. 필터를 바꾸거나 초기화해 주세요.</p>}
         <ul className="dash-progress-list">
-          {list.filter((m) => shownUids.has(m.uid)).map((m) => (
+          {list.map((m) => (
             <li key={m.uid} className={m.uid === pickedUid ? "is-picked" : ""}>
               <button type="button" className="dash-progress-name progress-stage-name-button" onClick={() => onPick?.(m.uid)} aria-label={`${m.name} 화면 열기`}>
                 <i className="dash-dot" style={{ background: m.color.border }} />
@@ -136,7 +120,6 @@ export default function EntryProgressPanel({
             </li>
           ))}
         </ul>
-        </>
       )}
     </aside>
   );

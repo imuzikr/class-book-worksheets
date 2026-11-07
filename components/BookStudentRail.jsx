@@ -33,10 +33,10 @@
 // 줄 색은 **반 전체 차례**(allCards)로 매깁니다. 모둠으로 좁힌 목록의 차례로
 // 매기면 같은 학생이 왼쪽과 오른쪽에서 다른 색이 됩니다.
 // =============================================================
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { barTint, rowColor } from "@/lib/bookColors";
-import { PROGRESS_STAGE_LABELS, filterProgressCards, getProgressStageStates } from "@/lib/progressStageFilter";
-import ProgressStageFilter from "./ProgressStageFilter";
+import { PROGRESS_STAGE_LABELS } from "@/lib/progressStages";
+import "./ProgressStages.css";
 
 export default function BookStudentRail({
   cards = [],
@@ -51,12 +51,6 @@ export default function BookStudentRail({
   unit = "칸",      // `n/N` 뒤의 말 — 가로세로 낱말 풀이는 '개'
   labels = null,
 }) {
-  const [filterStage, setFilterStage] = useState("");
-  const [filterState, setFilterState] = useState("");
-  const stageKey = rows.some((row) => String(row.key) === filterStage) ? filterStage : "";
-  const options = { rows, cellState, stageKey, state: filterState };
-  const shownCards = filterProgressCards(cards, options);
-  const filterStates = getProgressStageStates(cards, options);
   const colorIdx = useMemo(
     () => new Map((allCards ?? cards).map((c, i) => [c.uid, i])),
     [allCards, cards]
@@ -65,15 +59,7 @@ export default function BookStudentRail({
 
   return (
     <aside className="book-group-rail" aria-label="학생 목록">
-      <ProgressStageFilter
-        rows={rows} states={filterStates} labels={labels} stageKey={stageKey}
-        state={stageKey ? filterState : ""} total={cards.length} shown={shownCards.length}
-        onStageChange={(key) => { setFilterStage(key); setFilterState(""); }}
-        onStateChange={setFilterState}
-        onReset={() => { setFilterStage(""); setFilterState(""); }}
-      />
-      {cards.length > 0 && shownCards.length === 0 && <p className="progress-stage-empty">조건에 맞는 학생이 없습니다. 필터를 바꾸거나 초기화해 주세요.</p>}
-      {shownCards.map((c) => {
+      {cards.map((c) => {
         const answers = c.entry?.answers ?? {};
         const on = c.uid === pickedUid;
         const color = rowColor(colorIdx.get(c.uid) ?? 0);

@@ -35,8 +35,7 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { backdropClose } from "@/lib/modal";
 import { IconLockState } from "./StatusIcons";
-import { filterProgressCards, getProgressStageStates } from "@/lib/progressStageFilter";
-import ProgressStageFilter from "./ProgressStageFilter";
+import "./ProgressStages.css";
 
 // 범례에 적는 말 — 상태 이름은 네 화면이 같아야 합니다.
 const STATE_LABEL = {
@@ -63,12 +62,6 @@ export default function BookProgressBoard({
   onClose,
 }) {
   const [tip, setTip] = useState(null);
-  const [filterStage, setFilterStage] = useState("");
-  const [filterState, setFilterState] = useState("");
-  const stageKey = rows.some((row) => String(row.key) === filterStage) ? filterStage : "";
-  const filterOptions = { rows, cellState, stageKey, state: filterState };
-  const shownCards = filterProgressCards(cards, filterOptions);
-  const filterStates = getProgressStageStates(cards, filterOptions);
 
   useEffect(() => {
     function onKey(e) { if (e.key === "Escape") { e.preventDefault(); onClose?.(); } }
@@ -125,13 +118,6 @@ export default function BookProgressBoard({
           </p>
         ) : (
           <>
-            <ProgressStageFilter
-              rows={rows} states={filterStates} labels={labels} stageKey={stageKey}
-              state={stageKey ? filterState : ""} total={cards.length} shown={shownCards.length}
-              onStageChange={(key) => { setFilterStage(key); setFilterState(""); setTip(null); }}
-              onStateChange={(state) => { setFilterState(state); setTip(null); }}
-              onReset={() => { setFilterStage(""); setFilterState(""); setTip(null); }}
-            />
             <div className="progress-legend">
               {states.map((st) => (
                 <span key={st} className="progress-legend-item">
@@ -141,11 +127,9 @@ export default function BookProgressBoard({
               {summary && <span className="progress-legend-sum">{summary}</span>}
             </div>
 
-            {shownCards.length === 0 ? (
-              <p className="progress-stage-empty">조건에 맞는 학생이 없습니다. 필터를 바꾸거나 초기화해 주세요.</p>
-            ) : rows.length === 0 ? (
+            {rows.length === 0 ? (
               <div className="progress-stage-unassigned-list">
-                {shownCards.map((card) => (
+                {cards.map((card) => (
                   <button type="button" key={card.uid} className="progress-stage-unassigned-student" onClick={() => onOpenStudent?.(card.uid)}>
                     <strong>{card.studentId ? `${card.studentId} ` : ""}{card.name}</strong>
                     <span>{card.unassigned ? "모둠 배정 대기" : "확인할 단계가 없습니다"}</span>
@@ -154,11 +138,11 @@ export default function BookProgressBoard({
               </div>
             ) : (
             <div className="progress-scroll" onScroll={() => setTip(null)}>
-              <div className="progress-grass" style={{ "--students": shownCards.length }}>
+              <div className="progress-grass" style={{ "--students": cards.length }}>
                 {/* 이름 줄 — 세로쓰기. 세로로 구를 때 위에 붙어 있어야
                     어느 칸이 누구인지 잃지 않습니다(sticky). */}
                 <span className="grass-act grass-corner" aria-hidden="true" />
-                {shownCards.map((c) => (
+                {cards.map((c) => (
                   <button
                     key={c.uid}
                     type="button"
@@ -191,7 +175,7 @@ export default function BookProgressBoard({
                         {doneCounts[i]}/{cards.length}
                       </span>
                     </span>
-                    {shownCards.map((c) => {
+                    {cards.map((c) => {
                       const answers = c.entry?.answers ?? {};
                       const st = cellState(row, answers, c);
                       const text = cellTip(row, c, answers, i);

@@ -59,14 +59,10 @@ import CrosswordGrid from "./CrosswordGrid";
 import ConfirmModal from "./ConfirmModal";
 import FloatingPanel from "./FloatingPanel";
 import XwGroupHintPopover, { pointAnchor } from "./XwGroupHintPopover";
-import ProgressStageFilter from "./ProgressStageFilter";
-import { filterProgressCards, getProgressStageStates } from "@/lib/progressStageFilter";
 import { useProgressStageFocus } from "@/lib/useProgressStageFocus";
 import { BookLockToggle } from "./BookHeadParts";
 
-const HINT_STEP = [{ key: "hint", label: "힌트 작성" }];
 const HINT_STATE_LABELS = { done: "제출", doing: "일부 작성", empty: "미작성", none: "맡은 낱말 없음" };
-const hintCellState = (_row, _answers, student) => student.progressState;
 
 const DIR_LABEL = { across: "가로", down: "세로" };
 
@@ -102,8 +98,6 @@ export default function CrosswordGroupBoard({ activity, onBack, onToast, classPi
   // 모둠 카드를 누르면 마우스 옆에 그 모둠의 낱말 · 힌트(사람별) — { gId, anchor }
   const [hintPop, setHintPop] = useState(null);
   const [hintSelection, setHintSelection] = useState(null);
-  const [filterStage, setFilterStage] = useState("");
-  const [filterState, setFilterState] = useState("");
   const focusScope = `${activity.id}:${hintSelection?.idx ?? ""}`;
   const stageFocus = useProgressStageFocus(focusScope);
   // 팝오버를 연 모둠의 '누가 맞혔나' — 그 모둠 하나만 구독합니다
@@ -200,13 +194,6 @@ export default function CrosswordGroupBoard({ activity, onBack, onToast, classPi
   })), [liveGroups, hintsOf]);
   const submitted = studentRows.reduce((n, x) => n + x.rows.filter((r) => r.state === "done").length, 0);
   const hintsDone = allHints.filter(xwHintDone).length;
-  const filterOptions = { rows: HINT_STEP, cellState: hintCellState, stageKey: filterStage, state: filterState };
-  const hintStudents = studentRows.flatMap(({ rows }) => rows);
-  const filterStates = getProgressStageStates(hintStudents, filterOptions);
-  const visibleStudentRows = studentRows.map((group) => ({
-    ...group, rows: filterProgressCards(group.rows, filterOptions),
-  }));
-  const visibleHintCount = visibleStudentRows.reduce((count, group) => count + group.rows.length, 0);
   const selectedHint = hintSelection
     ? (hintsOf[hintSelection.groupId] ?? []).find((hint) => hint.idx === hintSelection.idx && hint.writerUid === hintSelection.uid) ?? null
     : null;
@@ -214,7 +201,7 @@ export default function CrosswordGroupBoard({ activity, onBack, onToast, classPi
     ? new Set(entryCellKeys(puzzle.entries[selectedHint.idx])) : null, [selectedHint, puzzle]);
 
   useEffect(() => {
-    setFilterStage(""); setFilterState(""); setHintSelection(null);
+    setHintSelection(null);
   }, [activity.id, activity.crossword?.createdAt]);
 
   function openStudentHint(group, student) {
@@ -479,19 +466,11 @@ export default function CrosswordGroupBoard({ activity, onBack, onToast, classPi
                 )}
               </header>
               {!puzzle && <p className="xw-card-note">퀴즈를 만들면 학생마다 힌트를 냈는지 여기에 떠요.</p>}
-              {puzzle && <ProgressStageFilter
-                rows={HINT_STEP} states={filterStates} labels={HINT_STATE_LABELS}
-                stageKey={filterStage} state={filterState}
-                onStageChange={(key) => { setFilterStage(key); setFilterState(""); }}
-                onStateChange={setFilterState} total={hintStudents.length} shown={visibleHintCount}
-                onReset={() => { setFilterStage(""); setFilterState(""); }}
-              />}
-              {puzzle && visibleHintCount === 0 && <p className="xw-card-note">선택한 단계와 상태에 해당하는 학생이 없어요.</p>}
               {solo ? (
                 <ul className="xwg-solo-list">
-                  {visibleStudentRows.map(({ group, rows }) => rows.map((student) => studentHintRow(group, student)))}
+                  {studentRows.map(({ group, rows }) => rows.map((student) => studentHintRow(group, student)))}
                 </ul>
-              ) : visibleStudentRows.filter(({ rows }) => rows.length > 0).map(({ group, rows, unassigned }, gi) => (
+              ) : studentRows.filter(({ rows }) => rows.length > 0).map(({ group, rows, unassigned }, gi) => (
                 <div key={group.id} className="xwg-subgroup" style={{ "--xwg-c": colorOf(group.id).border }}>
                   <div className="xwg-subgroup-head">
                     <strong>{group.groupName || `${group.groupIndex ?? gi + 1}모둠`}</strong>
