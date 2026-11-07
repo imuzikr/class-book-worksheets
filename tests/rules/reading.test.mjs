@@ -70,6 +70,18 @@ describe("책나눔 활성화와 서버 전용 보상 자료", () => {
     await assertSucceeds(updateDoc(doc(db, "classes", "archived"), { archived: true }));
   });
 
+  it("랭킹 시스템 스위치(관리자 설정) — 담당 교사 · 관리자만, 참·거짓만, 운영 중인 반에서만", async () => {
+    const ref = doc(asTeacher(env, "teacherA").firestore(), "classes", "active");
+    await assertSucceeds(updateDoc(ref, { rankingEnabled: false }));
+    await assertSucceeds(updateDoc(ref, { rankingEnabled: true }));
+    await assertSucceeds(updateDoc(doc(asAdmin(env, "admin").firestore(), "classes", "active"), { rankingEnabled: false }));
+    for (const value of ["false", 0, null, deleteField()]) await assertFails(updateDoc(ref, { rankingEnabled: value }));
+    for (const ctx of [asStudent(env, "studentA"), asTeacher(env, "teacherB")]) {
+      await assertFails(updateDoc(doc(ctx.firestore(), "classes", "active"), { rankingEnabled: true }));
+    }
+    await assertFails(updateDoc(doc(asTeacher(env, "teacherA").firestore(), "classes", "archived"), { rankingEnabled: false }));
+  });
+
   it("새 설정과 무관한 기존 반 이름·출석 수정은 유지", async () => {
     const db = asTeacher(env, "teacherA").firestore();
     await assertSucceeds(updateDoc(doc(db, "classes", "legacy"), { name: "새 이름", attendanceOpen: true }));

@@ -51,12 +51,14 @@ function Modal({ title, onClose, children, wide = false, busy = false }) {
   </div>;
 }
 
-export default function ReadingHub({ classId, user, isTeacher = false, onDisabled, activities = [], onOpenActivity, initialBookId = null, initialTab = "library" }) {
+export default function ReadingHub({ classId, user, isTeacher = false, rankingOn = true, onDisabled, activities = [], onOpenActivity, initialBookId = null, initialTab = "library" }) {
   const [raw, setRaw] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState(["library", "growth", "ranking"].includes(initialTab) ? initialTab : "library");
+  const [tab, setTab] = useState(["library", "growth", ...(rankingOn ? ["ranking"] : [])].includes(initialTab) ? initialTab : "library");
+  // 관리자 설정에서 랭킹을 끄면 그 탭을 걷고, 보던 중이면 내 서재로 돌아갑니다.
+  useEffect(() => { if (!rankingOn && tab === "ranking") setTab("library"); }, [rankingOn, tab]);
   const [filter, setFilter] = useState("all");
   const [dialog, setDialog] = useState(null);
   const [confirm, setConfirm] = useState(null);
@@ -135,7 +137,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, onDisable
       {featured?.earned && <div className="reading-featured"><ReadingBadge badge={featured} size={70} /><span>나의 대표 뱃지<strong>{featured.name}</strong></span></div>}
     </div>
     <nav className="reading-tabs" aria-label="책나눔 메뉴">
-      {[["library", "내 서재"], ["growth", "성장·뱃지"], ["ranking", "우리 반 랭킹"]].map(([key, label]) => <button type="button" key={key} className={tab === key ? "active" : ""} aria-current={tab === key ? "page" : undefined} onClick={() => { setTab(key); setDialog(null); setError(""); }}>{label}</button>)}
+      {[["library", "내 서재"], ["growth", "성장·뱃지"], ...(rankingOn ? [["ranking", "우리 반 랭킹"]] : [])].map(([key, label]) => <button type="button" key={key} className={tab === key ? "active" : ""} aria-current={tab === key ? "page" : undefined} onClick={() => { setTab(key); setDialog(null); setError(""); }}>{label}</button>)}
     </nav>
     {error && !dialog && !confirm && <div className="reading-error" role="alert">{error}<button type="button" onClick={() => setError("")} aria-label="오류 안내 닫기">×</button></div>}
     {notice && <div className="reading-notice" role="status">{notice}</div>}
@@ -152,7 +154,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, onDisable
         {visibleBooks.length ? <div className="reading-library-grid">{visibleBooks.map((b, i) => <BookCard key={b.id} book={b} index={i} busy={busy} onOpen={() => setDialog({ type: "detail", bookId: b.id })} onLog={() => setDialog({ type: "log", bookId: b.id })} onRestore={() => run({ type: "archiveBook", bookId: b.id, archived: false }, "책을 서재로 돌려놓았어요.")} />)}</div> : <div className="reading-empty"><BookIcon size={44} /><h3>{filter === "all" ? "나의 첫 책을 기다리고 있어요." : "아직 이곳에 놓인 책이 없어요."}</h3><p>{filter === "all" ? "읽고 싶은 책을 등록하고 오늘 읽은 순간을 남겨 보세요." : "책을 읽고 기록하면 서재의 풍경도 달라져요."}</p>{filter === "all" && <button type="button" className="btn-primary" onClick={() => setDialog({ type: "book" })}>첫 책 등록하기</button>}</div>}
       </>}
       {tab === "growth" && <Growth stats={stats} busy={busy} onSelect={(badgeId) => run({ type: "setFeaturedBadge", badgeId }, "대표 뱃지를 바꿨어요.")} />}
-      {tab === "ranking" && <Rankings key={classId} classId={classId} uid={user.uid} isTeacher={isTeacher} onDisabled={onDisabled} revision={raw} />}
+      {rankingOn && tab === "ranking" && <Rankings key={classId} classId={classId} uid={user.uid} isTeacher={isTeacher} onDisabled={onDisabled} revision={raw} />}
     </>}
 
     {dialog?.type === "book" && <BookForm key={selected?.id || "new"} book={selected} pagesLocked={!!selected && [...(raw?.logs || []), ...(raw?.reviews || [])].some((r) => r.bookId === selected.id)} activities={activities} busy={busy} onClose={() => setDialog(null)} onSave={async (values) => { const ok = await run({ type: selected ? "updateBook" : "addBook", ...(selected ? { bookId: selected.id } : {}), ...values }, selected ? "책 정보를 고쳤어요." : "새 책을 서재에 놓았어요."); if (ok) setDialog(null); }} />}

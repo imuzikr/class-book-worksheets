@@ -19,7 +19,8 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ReadingHub from "@/components/reading/ReadingHub";
 import ReadingLeaderboard from "@/components/reading/ReadingLeaderboard";
-import { readingEnabled } from "@/lib/reading";
+import AdminSettingsPanel from "@/components/AdminSettingsPanel";
+import { readingEnabled, rankingEnabled } from "@/lib/reading";
 import {
   subscribeBookActivities,
   subscribeBookGroups,
@@ -89,7 +90,7 @@ import QmarkBoard from "@/components/QmarkBoard";
 import QmarkForm from "@/components/QmarkForm";
 import BrainWriteBoard from "@/components/BrainWriteBoard";
 import BrainWriteForm from "@/components/BrainWriteForm";
-import { IconBook, IconTrophy, IconTrash, IconLockState } from "@/components/StatusIcons";
+import { IconBook, IconTrophy, IconSettings, IconTrash, IconLockState } from "@/components/StatusIcons";
 import PageTagline from "@/components/PageTagline";
 import ClassManagerModal from "@/components/ClassManagerModal";
 import SeatGroupSetupModal from "@/components/SeatGroupSetupModal";
@@ -333,7 +334,10 @@ function BooksPageInner() {
   const growthEnabled = readingEnabled(currentClass);
   const readingOpen = growthEnabled && !openActivityId && searchParams.get("area") === "reading";
   // 리더보드 — 책나눔의 경험치 · 뱃지를 '독서 여정'으로(상단바 '리더보드')
-  const leaderboardOpen = growthEnabled && !openActivityId && searchParams.get("area") === "leaderboard";
+  const rankingOn = rankingEnabled(currentClass);
+  const leaderboardOpen = rankingOn && !openActivityId && searchParams.get("area") === "leaderboard";
+  // 관리자 설정 — 교사에게만(학생이 주소로 와도 책방 목록이 섭니다)
+  const settingsOpen = admin && !openActivityId && searchParams.get("area") === "settings";
 
   useEffect(() => subscribeBookActivities(classId, setActivities), [classId]);
 
@@ -690,7 +694,7 @@ function BooksPageInner() {
 
   return (
     <div className="board-shell">
-      <TopNav key={myUid} active="books" growthEnabled={growthEnabled} readingOpen={readingOpen} leaderboardOpen={leaderboardOpen} />
+      <TopNav key={myUid} active="books" growthEnabled={growthEnabled} rankingOn={rankingOn} readingOpen={readingOpen} leaderboardOpen={leaderboardOpen} settingsOpen={settingsOpen} />
       {showSampleEntry && !activeActivity && (
         <aside className="sample-class-entry" aria-label="체험용 샘플 반">
           <span>가상의 학생 15명과 활동이 준비된 <strong>체험용 샘플 반</strong>에서 기능을 마음껏 시험해 보세요. 여기서 한 일은 저장되지 않아요.</span>
@@ -960,7 +964,7 @@ function BooksPageInner() {
             <PageTagline />
             <div className="books-head-main">
               <h1>
-                {leaderboardOpen ? <IconTrophy size={26} /> : <IconBook size={26} />} {leaderboardOpen ? "리더보드" : readingOpen ? "책나눔" : "책방"}
+                {settingsOpen ? <IconSettings size={26} /> : leaderboardOpen ? <IconTrophy size={26} /> : <IconBook size={26} />} {settingsOpen ? "관리자 설정" : leaderboardOpen ? "리더보드" : readingOpen ? "책나눔" : "책방"}
               </h1>
               {admin && myClasses.length > 0 && (
                 <select
@@ -1019,11 +1023,13 @@ function BooksPageInner() {
             </div>
           </div>
 
-          {leaderboardOpen ? (
+          {settingsOpen ? (
+            <AdminSettingsPanel classes={myClasses} onToast={setToast} />
+          ) : leaderboardOpen ? (
             <ReadingLeaderboard key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin}
               onDisabled={() => patchBooksQuery({ area: null }, { replace: true })} />
           ) : readingOpen ? (
-            <ReadingHub key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin}
+            <ReadingHub key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin} rankingOn={rankingOn}
               activities={liveActivities} onOpenActivity={goToActivity}
               initialBookId={searchParams.get("book")} initialTab={searchParams.get("tab") || "library"}
               onDisabled={() => patchBooksQuery({ area: null }, { replace: true })} />

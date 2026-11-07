@@ -39,9 +39,9 @@ import FloatingHub from "./FloatingHub";
 import AppMarquee from "./AppMarquee";
 import { useRewardCelebration } from "@/lib/useRewardCelebration";
 import { useClassMembers } from "@/lib/useClassRoster";
-import { IconLogo, IconBook, IconTrophy } from "./StatusIcons";
+import { IconLogo, IconBook, IconTrophy, IconSettings } from "./StatusIcons";
 
-export default function TopNav({ active, growthEnabled = false, readingOpen = false, leaderboardOpen = false, onStudyExport = null }) {
+export default function TopNav({ active, growthEnabled = false, rankingOn = true, readingOpen = false, leaderboardOpen = false, settingsOpen = false, onStudyExport = null }) {
   const router = useRouter();
   const user = useCurrentUser();
   const admin = user ? isTeacher(user) : false;      // 교사+관리자 (대시보드 접근)
@@ -247,8 +247,8 @@ export default function TopNav({ active, growthEnabled = false, readingOpen = fa
         <span className="topbar-divider" aria-hidden="true" />
         <nav className="topnav-menu" aria-label="주요 메뉴">
           <button type="button"
-            className={`btn-ghost ${active === "books" && !readingOpen && !leaderboardOpen ? "nav-active" : ""}`}
-            aria-current={active === "books" && !readingOpen && !leaderboardOpen ? "page" : undefined}
+            className={`btn-ghost ${active === "books" && !readingOpen && !leaderboardOpen && !settingsOpen ? "nav-active" : ""}`}
+            aria-current={active === "books" && !readingOpen && !leaderboardOpen && !settingsOpen ? "page" : undefined}
             onClick={() => go("/books")} title="책방">
             <IconBook size={20} /> <span className="nav-label">책방</span>
           </button>
@@ -258,12 +258,19 @@ export default function TopNav({ active, growthEnabled = false, readingOpen = fa
             onClick={() => go("/books?area=reading")} title="책나눔">
             <IconBook size={20} /> <span className="nav-label">책나눔</span>
           </button>}
-          {/* 리더보드 — 책나눔과 같은 조건(반의 성장 기능이 켜졌을 때)에만 섭니다 */}
-          {growthEnabled && <button type="button"
+          {/* 리더보드 — 책나눔이 켜지고 관리자 설정에서 랭킹을 끄지 않은 반에만 섭니다 */}
+          {growthEnabled && rankingOn && <button type="button"
             className={`btn-ghost ${leaderboardOpen ? "nav-active" : ""}`}
             aria-current={leaderboardOpen ? "page" : undefined}
             onClick={() => go("/books?area=leaderboard")} title="리더보드">
             <IconTrophy size={20} /> <span className="nav-label">리더보드</span>
+          </button>}
+          {/* 관리자 설정 — 교사(관리자 포함)에게만. 반별 기능 스위치를 모아 둔 화면 */}
+          {admin && <button type="button"
+            className={`btn-ghost ${settingsOpen ? "nav-active" : ""}`}
+            aria-current={settingsOpen ? "page" : undefined}
+            onClick={() => go("/books?area=settings")} title="관리자 설정">
+            <IconSettings size={20} /> <span className="nav-label">관리자 설정</span>
           </button>}
         </nav>
       </div>

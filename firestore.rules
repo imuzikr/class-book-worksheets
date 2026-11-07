@@ -465,11 +465,15 @@ service cloud.firestore {
     match /classes/{cId} {
       allow read: if signedIn();
       // 새 반은 기본 꺼짐. 켜기는 운영 중인 반의 담당 교사/관리자만 합니다.
+      // 관리자 설정 화면의 반별 스위치(책나눔 성장 · 랭킹 시스템)도 같은 판정 —
+      // 참·거짓만, 운영 중인 반에서만 바꿉니다.
       function readingSettingValid() {
-        return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['readingEnabled'])
-               || (request.resource.data.get('readingEnabled', null) is bool
-                   && resource.data.get('archived', false) != true
-                   && request.resource.data.get('archived', false) != true);
+        let changed = request.resource.data.diff(resource.data).affectedKeys();
+        return (!changed.hasAny(['readingEnabled']) || request.resource.data.get('readingEnabled', null) is bool)
+               && (!changed.hasAny(['rankingEnabled']) || request.resource.data.get('rankingEnabled', null) is bool)
+               && (!changed.hasAny(['readingEnabled', 'rankingEnabled'])
+                   || (resource.data.get('archived', false) != true
+                       && request.resource.data.get('archived', false) != true));
       }
       allow create: if isTeacher() && request.resource.data.createdBy == uid()
                     && request.resource.data.get('readingEnabled', false) == false;
