@@ -43,8 +43,9 @@ test("학기는 명시적으로 설정하고 직접 선택은 양끝을 포함�
   assert.throws(() => dashboardPeriod("semester", NOW, { semesterStart: "2026-11-01", semesterEnd: "2027-01-01" }));
 });
 
-test("10종의 실제 진행 기준을 적용하고 공동 완성은 개인 완성으로 올리지 않는다", () => {
-  const expected = { consonant: 0, paratext: 9, raft: 14, kwls: 9, mindmap: 0, opinion: 0, hashtag: 10, qmark: 11, crossword: 15, brainwrite: 5 };
+test("11종의 실제 진행 기준을 적용하고 공동 완성은 개인 완성으로 올리지 않는다", () => {
+  // 낱말 빙고 — 판을 다 채운 두 모둠(10명)이 완성, 18칸인 셋째 모둠은 작성 중
+  const expected = { consonant: 0, paratext: 9, raft: 14, kwls: 9, mindmap: 0, opinion: 0, hashtag: 10, qmark: 11, crossword: 15, brainwrite: 5, bingo: 10 };
   for (const [type, done] of Object.entries(expected)) {
     const data = buildDashboardData(demo(), { ...fullRange, activityId: DEMO_ACTIVITY_IDS[type] });
     assert.equal(data.activity.started, 15, type);
@@ -154,7 +155,7 @@ test("책나눔 OFF는 성장만 제거하고 수업 활동과 성찰을 유지�
   const source = demo({ classDoc: { ...classroom.classDoc, readingEnabled: false } });
   Object.defineProperty(source, "readingStates", { get() { throw new Error("OFF 상태에서 원본 서재를 읽으면 안 됨"); } });
   const result = buildDashboardData(source, { ...fullRange, activityId: DEMO_ACTIVITY_IDS.kwls });
-  assert.equal(result.reading, null); assert.equal(result.activities.length, 10); assert.equal(result.activity.started, 15); assert.equal(result.reflections.learned, 13);
+  assert.equal(result.reading, null); assert.equal(result.activities.length, 11); assert.equal(result.activity.started, 15); assert.equal(result.reflections.learned, 13);
 });
 
 test("학생은 본인의 누적 성장·서재와 선택 반의 기간 활동만 받는다", () => {
@@ -162,7 +163,7 @@ test("학생은 본인의 누적 성장·서재와 선택 반의 기간 활동�
   const result = buildDashboardData(demo({ role: "student", uid }), { ...fullRange, activityId: DEMO_ACTIVITY_IDS.brainwrite });
   assert.equal(result.activity.rows.length, 1); assert.equal(result.activity.rows[0].uid, uid);
   assert.equal(result.activity.rows[0].total, 5); assert.equal(result.activity.rows[0].filled, 5);
-  assert.equal(result.studentActivities.length, 10);
+  assert.equal(result.studentActivities.length, 11);
   assert.equal(result.reading.members.length, 1); assert.equal(result.reading.personal.library.length, 2);
   assert.equal(result.reading.personal.level, deriveReading(states[uid], NOW).level);
   assert.equal(result.reading.personal.badges.length, 18); assert.ok(result.reading.personal.nextBadges.length <= 3);

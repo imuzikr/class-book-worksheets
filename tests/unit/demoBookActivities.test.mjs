@@ -16,7 +16,7 @@ const studentIds = DEMO_STUDENTS.map((s) => s.uid).sort();
 const sortedIds = (records, field) => [...new Set(records.map((r) => r[field]))].sort();
 const fixture = () => createDemoBookActivities(NOW);
 
-test("체험반 15명 전원은 10종 활동마다 실제 확인할 기록이 있음", () => {
+test("체험반 15명 전원은 11종 활동마다 실제 확인할 기록이 있음", () => {
   const data = fixture();
   assert.deepEqual(data.bookActivities.map((a) => a.type).sort(), Object.keys(DEMO_ACTIVITY_IDS).sort());
   assert.ok(data.bookActivities.every((a) => a.classId === DEMO_CLASS_ID));
@@ -34,7 +34,7 @@ test("체험반 15명 전원은 10종 활동마다 실제 확인할 기록이 �
 test("활동 모둠은 3개씩 5명이며 낱말·평가·이어쓰기의 학생 귀속이 정확함", () => {
   const data = fixture();
   const groups = new Map(data.bookGroups.map((g) => [`${g.activityId}:${g.id}`, g]));
-  for (const type of ["consonant", "paratext", "raft", "crossword", "brainwrite"]) {
+  for (const type of ["consonant", "paratext", "raft", "crossword", "brainwrite", "bingo"]) {
     const rows = data.bookGroups.filter((g) => g.activityId === DEMO_ACTIVITY_IDS[type]);
     assert.equal(rows.length, 3);
     assert.ok(rows.every((g) => g.members.length === 5 && g.memberUids.length === 5));
@@ -153,4 +153,23 @@ test("날짜는 미래가 아니며 생성은 결정적이고 반환값은 서�
   first.bookGroups[0].members[0].name = "changed";
   assert.notEqual(first.bookEntries[0].answers.covers, second.bookEntries[0].answers.covers);
   assert.notEqual(first.bookGroups[0].members[0].name, second.bookGroups[0].members[0].name);
+});
+
+test("낱말 빙고 — 모둠마다 판 하나, 낱말은 상자 안에서 겹치지 않고, 빙고 중에 첫 모둠이 목표 2줄", async () => {
+  const { bingoProgress, normalizeBingo } = await import("../../lib/bingo.js");
+  const data = fixture();
+  const activity = data.bookActivities.find((a) => a.type === "bingo");
+  const bingo = normalizeBingo(activity.bingo);
+  assert.equal(bingo.stage, "play");
+  const groups = data.bookGroups.filter((g) => g.activityId === DEMO_ACTIVITY_IDS.bingo);
+  assert.deepEqual(data.bookBingoBoards.map((b) => b.groupId).sort(), groups.map((g) => g.id).sort());
+  const pool = new Set(bingo.words);
+  for (const board of data.bookBingoBoards) {
+    const words = Object.values(board.cells);
+    assert.equal(new Set(words).size, words.length);
+    assert.ok(words.every((w) => pool.has(w)));
+  }
+  const first = bingoProgress(data.bookBingoBoards[0].cells, bingo.called, bingo.goal);
+  assert.equal(first.bingo, true);
+  assert.equal(first.count, 2);
 });

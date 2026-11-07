@@ -70,6 +70,8 @@ import ConsonantCanvas from "@/components/ConsonantCanvas";
 import ConsonantDashboard from "@/components/ConsonantDashboard";
 import CrosswordGroupBoard from "@/components/CrosswordGroupBoard";
 import CrosswordGroupStudent from "@/components/CrosswordGroupStudent";
+import BingoBoard from "@/components/BingoBoard";
+import BingoStudent from "@/components/BingoStudent";
 import ParatextBoard from "@/components/ParatextBoard";
 import ParatextForm from "@/components/ParatextForm";
 import RaftBoard from "@/components/RaftBoard";
@@ -108,6 +110,7 @@ const ACTIVITY_KINDS = [
   { key: "qmark", label: "물음표로 책 읽기" },
   { key: "crossword", label: "가로세로 낱말 퀴즈" },
   { key: "brainwrite", label: "브레인 라이팅" },
+  { key: "bingo", label: "낱말 빙고" },
 ];
 
 const ACTIVITY_KIND_BY_KEY = new Map(ACTIVITY_KINDS.map((k) => [k.key, k]));
@@ -527,6 +530,8 @@ function BooksPageInner() {
   const isQmark = activeActivity?.type === "qmark";
   // 가로세로 낱말 퀴즈 — 닿소리의 판(모둠)을 베껴 온 활동이라 모둠 구독은 그대로 겁니다
   const isCrossword = activeActivity?.type === "crossword";
+  // 낱말 빙고 — 가로세로처럼 판(모둠) 문서를 갖는 활동이라 모둠 구독을 그대로 겁니다
+  const isBingo = activeActivity?.type === "bingo";
   // 브레인 라이팅 — 늘 모둠 활동이지만 모둠은 화면이 스스로 구독합니다
   const isBrainwrite = activeActivity?.type === "brainwrite";
   const isSolo = isParatext || isRaft || isKwls || isMindmap || isOpinion || isHashtag || isQmark || isBrainwrite;
@@ -690,7 +695,7 @@ function BooksPageInner() {
         </aside>
       )}
       {!isFirebaseConfigured && <aside className="demo-classroom-notice" aria-label="체험 데이터 안내">
-        <div><strong>책봄 체험반 · 학생 15명</strong><span>10가지 독서 활동과 학생별 서재 1~2권이 준비되어 있어요. 상단에서 체험 학생을 골라 볼 수 있어요.</span>
+        <div><strong>책봄 체험반 · 학생 15명</strong><span>11가지 독서 활동과 학생별 서재 1~2권이 준비되어 있어요. 상단에서 체험 학생을 골라 볼 수 있어요.</span>
           <small>{sampleMode
             ? "모두 가상의 기록입니다. 이 체험용 샘플 반에서 한 일은 어디에도 저장되지 않고, 새로고침하면 처음으로 돌아가요. 상단의 '샘플 반 나가기'로 실제 반에 돌아갑니다."
             : "모두 가상의 기록입니다. 활동·독서 기록을 수정한 내용은 새로고침하면 샘플로 돌아가고, 반 설정은 유지됩니다."}</small></div>
@@ -860,6 +865,39 @@ function BooksPageInner() {
           user={user}
           onBack={goToList}
         />
+      ) : /* 낱말 빙고 — 교사는 판별 진행 · 낱말 부르기, 학생은 제 판(모둠 판) 채우기 · 빙고 */
+      isBingo && admin ? (
+        <BingoBoard
+          activity={activeActivity}
+          classPicker={classPicker}
+          user={user}
+          roster={roster}
+          onBack={goToList}
+          onToast={setToast}
+        />
+      ) : isBingo && studentCanvasGroupId ? (
+        <BingoStudent
+          activity={activeActivity}
+          groupId={studentCanvasGroupId}
+          onBack={goToList}
+        />
+      ) : isBingo ? (
+        <main className="canvas-main xw-main">
+          <div className="canvas-head">
+            <div className="canvas-head-title">
+              <strong>낱말 빙고</strong>
+              <span>{activeActivity.title}</span>
+            </div>
+            <div className="canvas-head-pair">
+              <button type="button" className="btn-ghost" onClick={goToList}>← 활동 목록</button>
+            </div>
+          </div>
+          <section className="xw-card">
+            <p className="xw-empty">
+              이 빙고에서 {activeActivity.groupMode === "solo" ? "내 판이" : "들어간 모둠이"} 아직 없어요. 선생님께 말씀해 주세요.
+            </p>
+          </section>
+        </main>
       ) : isCrossword ? (
         <main className="canvas-main xw-main">
           <div className="canvas-head">
@@ -1104,6 +1142,8 @@ function BooksPageInner() {
               ? "이 활동의 모둠과 모아둔 단어가 모두 지워집니다.\n되돌릴 수 없습니다."
               : confirmPurge.type === "crossword"
               ? "이 퀴즈의 힌트와 풀이가 모두 지워집니다(닿소리 채우기의 낱말은 그대로).\n되돌릴 수 없습니다."
+              : confirmPurge.type === "bingo"
+              ? "이 빙고의 판이 모두 지워집니다(닿소리 채우기의 낱말은 그대로).\n되돌릴 수 없습니다."
               : "학생들이 쓴 내용이 모두 지워집니다.\n되돌릴 수 없습니다."
           }
           confirmLabel="완전 삭제"
@@ -1312,7 +1352,7 @@ function ActivityCard({ activity, isTeacher, uid, onOpen, onEdit, onDelete, onTo
   //  · KWLS·마인드맵 — 없음
   // 종류만 보고 판정하면 **모둠으로 연 RAFT가 카드에 '개인 활동'으로**
   // 적힙니다(실제로 그랬습니다). 모둠 구독도 안 걸려 '모둠 n개'도 못 셉니다.
-  const hasGroups = activity.type === "consonant" || isGroupedActivity(activity) || activity.type === "crossword";
+  const hasGroups = activity.type === "consonant" || isGroupedActivity(activity) || activity.type === "crossword" || activity.type === "bingo";
   const solo = !hasGroups;
   const [groups, setGroups] = useState([]);
   // 개인 활동은 모둠이 없으므로 모둠 구독 자체를 걸지 않습니다.
