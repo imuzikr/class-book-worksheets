@@ -46,19 +46,21 @@ export function TeacherPersonalReport({ data, sample = false }) {
   const student = data.subject;
   const feedback = asArray(data.feedback);
 
+  const pages = reading?.summary?.pages;
   return <div className="bb-report-document bb-report-personal">
-    {sample && <p className="bb-report-sample" role="note">샘플 데이터 / 가상 학생 · 화면에 보이는 이름과 답안은 체험용으로 만든 기록입니다. 실제 학생 자료가 아니며 저장되지 않습니다.</p>}
-    <ReportHeading eyebrow="개인별 보고서" title={(student?.name || "학생") + "의 독서 활동"} aside={data.class?.name}>
-      {student?.studentId && <span className="bb-report-student-number">{student.studentId}</span>}
-      활동마다 질문, 학생이 적은 답, 이미 있는 피드백을 차례로 읽습니다.
-    </ReportHeading>
+    <header className="bb-sheet-id">
+      {sample && <strong className="bb-sheet-sample">샘플 데이터 / 가상 학생</strong>}
+      <h2>{student?.name || "학생"}{student?.studentId ? <span>{student.studentId}</span> : null}</h2>
+      <p>{[data.class?.name, reading ? `${fmt(pages)}쪽 · ${fmt(reading.summary?.days)}일` : ""].filter(Boolean).join(" · ")}</p>
+    </header>
     <StudentActivityReport key={`${data.class?.id}:${student?.uid}`} activities={activities} feedback={feedback} />
-    {reading ? <>
+    {reading ? <details className="bb-sheet-reading">
+      <summary>이 기간의 독서 기록 · {fmt(pages)}쪽 · 도서 {fmt(reading.summary?.books)}종 · 완독 {fmt(reading.summary?.completed)}</summary>
       <div className="bb-report-reading-grid">
-        <ReadingFlow reading={reading} title="학생의 독서 흐름" note="선택한 반과 기간에 속하는 독서 날짜를 기준으로 합산합니다." />
-        <ReportBooks books={asArray(reading.books)} title="학생이 읽은 책" note="선택한 반과 기간에 독서 기록을 남긴 도서입니다. 감상 원문은 포함하지 않습니다." />
+        <ReadingFlow reading={reading} title="독서 흐름" note="선택한 반과 기간의 독서 날짜입니다." />
+        <ReportBooks books={asArray(reading.books)} title="읽은 책" note="감상 원문은 포함하지 않습니다." />
       </div>
-    </> : <p className="bb-dash-feature-off">이 반은 책나눔을 사용하지 않아 책방의 독서 활동 기록을 보여줍니다.</p>}
+    </details> : <p className="bb-dash-feature-off">이 반은 책나눔을 사용하지 않아 독서 활동 기록만 보여 줍니다.</p>}
   </div>;
 }
 
