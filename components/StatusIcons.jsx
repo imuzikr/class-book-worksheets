@@ -398,6 +398,18 @@ export function IconBlackboard({ size = 20, className = "" }) {
 }
 
 // 책방 — 펼쳐진 책
+// 리더보드 — 손잡이 달린 우승컵(상단바 '리더보드')
+export function IconTrophy({ size = 20, className = "" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+      <path d="M7.2 4.6h9.6v4.2a4.8 4.8 0 0 1-9.6 0V4.6Z" fill="#FFF1C9" stroke="#3A312E" strokeWidth="1.5" strokeLinejoin="round"/>
+      <path d="M7.2 6.2H5.1c0 2.3 1.1 3.8 2.6 4.2M16.8 6.2h2.1c0 2.3-1.1 3.8-2.6 4.2" stroke="#3A312E" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M12 13.6v3.1M8.6 19.4h6.8M9.6 19.4l.6-2.7h3.6l.6 2.7" stroke="#3A312E" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M10.4 7.2l.9 1.5 1.6-2.4" stroke="#8A6258" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
 export function IconBook({ size = 20, className = "" }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
