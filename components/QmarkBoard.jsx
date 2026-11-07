@@ -41,6 +41,7 @@ import QmarkProgressBoard from "./QmarkProgressBoard";
 import BookStudentRail from "./BookStudentRail";
 import CastStageModal from "./CastStageModal";
 import EntryOverviewModal from "./EntryOverviewModal";
+import { BookLockToggle } from "./BookHeadParts";
 
 const REGIONS = QMARK_REGIONS;
 const REGION_COUNT = REGIONS.length; // 2
@@ -182,6 +183,7 @@ export default function QmarkBoard({
             <span className={`book-group-topic${(activity.topic ?? "").trim() ? "" : " soft"}`}>
               {(activity.topic ?? "").trim() || "학생마다 다른 주제"}
             </span>
+            <BookLockToggle activity={activity} />
             {classPicker ?? (className && <span className="book-group-class">{className}</span>)}
             <span className="paratext-sum">
               시작 {startedCount}명 · 물음표 {askedCount}명 · 완성 {doneCount}명 /

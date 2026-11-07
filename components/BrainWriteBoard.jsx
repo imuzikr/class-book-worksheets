@@ -39,6 +39,7 @@ import { IconBook, IconLock, IconPeople } from "./StatusIcons";
 import EntryProgressPanel from "./EntryProgressPanel";
 import GroupComposer from "./GroupComposer";
 import GroupMemberPill, { GroupMemberStatusLegend } from "./GroupMemberPill";
+import { BookLockToggle } from "./BookHeadParts";
 
 export default function BrainWriteBoard({
   activity,
@@ -194,6 +195,7 @@ export default function BrainWriteBoard({
               </button>
             )}
             {(activity.topic ?? "").trim() && <span className="book-group-topic">{activity.topic}</span>}
+            <BookLockToggle activity={activity} />
             <span className="paratext-sum">
               시작 {startedCount}명 · 완성 {doneCount}명 / 전체 {cards.length}명
             </span>

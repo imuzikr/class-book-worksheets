@@ -36,7 +36,7 @@ import ConsonantCanvas from "./ConsonantCanvas";
 import "./BookActivityGroupRail.css";
 import "./ProgressStageFilter.css";
 import { IconPeople, IconLock } from "./StatusIcons";
-import { BookInfoLink } from "./BookHeadParts";
+import { BookInfoLink, BookLockToggle } from "./BookHeadParts";
 
 export default function BookGroupBoard({
   activity,
@@ -230,6 +230,7 @@ export default function BookGroupBoard({
           {(activity.topic ?? "").trim() && (
             <span className="book-group-topic">{activity.topic}</span>
           )}
+          {isTeacher && <BookLockToggle activity={activity} />}
           {/* 이 활동이 어느 반 것인지 — 학생에게 안 보이면 반이 다른 경우가 많아 표시 */}
           {/* 반 표시 — 고를 반이 둘 이상이면 고르개(반을 바꾸면 그 반의
               활동 목록으로 갑니다), 하나면 이름 배지입니다. */}

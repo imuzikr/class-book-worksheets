@@ -42,7 +42,7 @@ import {
 import { useEntryCast } from "@/lib/useEntryCast";
 import { useProgressStageFocus } from "@/lib/useProgressStageFocus";
 import { IconLock } from "./StatusIcons";
-import { BookInfoLink } from "./BookHeadParts";
+import { BookInfoLink, BookLockToggle } from "./BookHeadParts";
 import BookStudentRail from "./BookStudentRail";
 import HashtagSlide from "./HashtagSlide";
 import HashtagComments from "./HashtagComments";
@@ -211,6 +211,7 @@ export default function HashtagBoard({
         <div className="books-head-row">
           <div className="books-head-main activity-head-main">
             {classPicker ?? (className && <span className="book-group-class">{className}</span>)}
+            <BookLockToggle activity={activity} />
             <span className="paratext-sum">
               시작 {startedCount}명 · 완성 {doneCount}명 / 전체 {cards.length}명
             </span>

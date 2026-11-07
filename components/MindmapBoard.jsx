@@ -35,6 +35,7 @@ import MindmapCanvas from "./MindmapCanvas";
 import { readImageAsDataUrl } from "@/lib/image";
 import CastBar from "./CastBar";
 import { IconBook, IconLock } from "./StatusIcons";
+import { BookLockToggle } from "./BookHeadParts";
 
 // 방송에서 마인드맵은 통째로 하나 — 나눌 영역이 없어 키를 고정합니다.
 const REGION_KEY = "map";
@@ -152,6 +153,7 @@ export default function MindmapBoard({
             <span className={`book-group-topic${(activity.topic ?? "").trim() ? "" : " soft"}`}>
               {(activity.topic ?? "").trim() || "학생마다 다른 주제"}
             </span>
+            <BookLockToggle activity={activity} />
             {/* 반 표시 — 고를 반이 둘 이상이면 고르개(반을 바꾸면 그 반의
                 활동 목록으로 갑니다), 하나면 이름 배지입니다. */}
             {classPicker ?? (className && <span className="book-group-class">{className}</span>)}

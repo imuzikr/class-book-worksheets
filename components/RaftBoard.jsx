@@ -58,6 +58,7 @@ import BookStudentRail from "./BookStudentRail";
 import EntryProgressPanel from "./EntryProgressPanel";
 import { PeerReviewList, PeerReviewRow, peerReviewSlots } from "./PeerReviewModal";
 import { isGroupedActivity, useBookGroups, isPeerReviewOpen, myBookGroup, groupMembers } from "@/lib/bookGroups";
+import { BookLockToggle } from "./BookHeadParts";
 
 // 방송할 수 있는 영역 — 네 요소 + 글쓰기
 const REGIONS = [
@@ -453,6 +454,7 @@ export default function RaftBoard({
             <span className={`book-group-topic${(activity.topic ?? "").trim() ? "" : " soft"}`}>
               {(activity.topic ?? "").trim() || "학생마다 다른 책"}
             </span>
+            <BookLockToggle activity={activity} />
             {/* 진행 요약도 이 줄에 — 배지 두어 개뿐이라 오른쪽이 비어 있는데
                 아래에 제 줄을 차지하고 있었습니다(곁텍스트는 처음부터 이
                 자리였습니다 — 네 화면의 머리말이 같아야 합니다). */}

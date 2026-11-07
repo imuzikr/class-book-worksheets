@@ -37,6 +37,7 @@ import {
 import { IconBook, IconLock, IconPeople } from "./StatusIcons";
 import CastStageModal from "./CastStageModal";
 import EntryOverviewModal from "./EntryOverviewModal";
+import { BookLockToggle } from "./BookHeadParts";
 
 export default function ParatextBoard({
   activity,
@@ -253,6 +254,7 @@ export default function ParatextBoard({
             <span className={`book-group-topic${(activity.topic ?? "").trim() ? "" : " soft"}`}>
               {(activity.topic ?? "").trim() || "학생마다 다른 책"}
             </span>
+            <BookLockToggle activity={activity} />
             {/* 반 표시 — 고를 반이 둘 이상이면 고르개(반을 바꾸면 그 반의
                 활동 목록으로 갑니다), 하나면 이름 배지입니다. */}
             {classPicker ?? (className && <span className="book-group-class">{className}</span>)}

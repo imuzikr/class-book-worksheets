@@ -66,6 +66,7 @@ import { safeBookUrl } from "@/lib/paratext";
 import { backdropClose } from "@/lib/modal";
 import ConfirmModal from "./ConfirmModal";
 import { IconAnswer, IconBook, IconLock, IconUnlock } from "./StatusIcons";
+import { BookLockToggle } from "./BookHeadParts";
 
 const randomColor = () => OPINION_COLORS[Math.floor(Math.random() * OPINION_COLORS.length)].key;
 
@@ -365,6 +366,7 @@ export default function OpinionBoard({
         <div className="books-head-row">
           <div className="books-head-main activity-head-main">
             {topic && <span className="book-group-topic">{topic}</span>}
+            {isTeacher && <BookLockToggle activity={activity} />}
             {classPicker ?? (className && <span className="book-group-class">{className}</span>)}
             <span className="paratext-sum">
               {unit} {notes.length}{memoActivity ? "장" : "개"}

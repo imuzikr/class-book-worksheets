@@ -62,6 +62,7 @@ import XwGroupHintPopover, { pointAnchor } from "./XwGroupHintPopover";
 import ProgressStageFilter from "./ProgressStageFilter";
 import { filterProgressCards, getProgressStageStates } from "@/lib/progressStageFilter";
 import { useProgressStageFocus } from "@/lib/useProgressStageFocus";
+import { BookLockToggle } from "./BookHeadParts";
 
 const HINT_STEP = [{ key: "hint", label: "힌트 작성" }];
 const HINT_STATE_LABELS = { done: "제출", doing: "일부 작성", empty: "미작성", none: "맡은 낱말 없음" };
@@ -357,6 +358,7 @@ export default function CrosswordGroupBoard({ activity, onBack, onToast, classPi
         <div className="books-head-row">
           <div className="books-head-main activity-head-main">
             {classPicker}
+            <BookLockToggle activity={activity} />
             <span className="paratext-sum">
               {activity.sourceTitle ? `낱말: ${activity.sourceTitle} · ` : ""}
               {solo ? "개별 활동" : `모둠 ${liveGroups.length}개`} · 학생 {studentCount}명
