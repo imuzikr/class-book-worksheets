@@ -50,6 +50,7 @@ test("uploadImage를 부르는 곳은 정해진 파일뿐이고, 모두 classId�
     "components/MindmapForm.jsx",
     "components/RichTextEditor.jsx",
     "lib/data/books.js", // 활동 삭제 때 해시태그 대표 이미지 정리
+    "lib/data/withdraw.js", // 학생 탈퇴 때 그 학생의 해시태그 대표 이미지 정리
     "lib/storageUpload.js",
   ]);
   for (const f of ["components/HashtagForm.jsx", "components/MindmapForm.jsx", "components/RichTextEditor.jsx"]) {

@@ -25,7 +25,7 @@
 // 메신저만 이 자리에서 창을 엽니다. 나머지는 이미 공부방에 있는 창을
 // 주소로 엽니다(`/books?open=attendance|fruit|classes` — 공부방이 열고
 // 주소를 지웁니다). 같은 창을 여기에 한 벌 더 만들면 두 곳이 어긋납니다.
-// 분석 리포트는 `/dashboard`에서 현재 반·역할에 맞는 통계를 보여 줍니다.
+// 분석 리포트(교사는 '관리자 대시보드')는 `/dashboard`에서 현재 반·역할에 맞는 통계를 보여 줍니다.
 //
 // [끌어 옮기기 — 교사만]
 // 학생 화면의 동그라미는 늘 기본 자리(오른쪽 아래)에 고정입니다(선생님 요청) —
@@ -94,7 +94,7 @@ const TEACHER_ITEMS = [
   { key: "attend", label: "출석 관리", hint: "출석을 시작하고 기록을 봐요", href: "/books?open=attendance" },
   { key: "classes", label: "반 관리", hint: "반 · 참여 코드 · 자리와 모둠", href: "/books?open=classes" },
   { key: "fruit", label: "과일 바구니", hint: "바구니 합계와 이벤트 현황", href: "/books?open=fruit" },
-  { key: "report", label: "분석 리포트", hint: "개인·학급·전체 독서 분석을 봐요", href: "/dashboard" },
+  { key: "report", label: "대시보드", hint: "관리자 대시보드 — 학생·학급 분석과 학생 프로필", href: "/dashboard" },
 ];
 
 // 원판 크기(px) — CSS의 `.hub-disc` 폭·높이와 같아야 합니다.

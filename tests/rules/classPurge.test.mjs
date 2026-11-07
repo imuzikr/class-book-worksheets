@@ -74,10 +74,11 @@ describe("반 완전 삭제 규칙", () => {
     await assertSucceeds(deleteDoc(doc(t, "classes", "cOld")));
   });
 
-  it("운영 중인 반은 같은 교사도 이 길로 못 지움", async () => {
+  it("운영 중인 반은 같은 교사도 이 길로 못 지움(학생 탈퇴 표시가 없으면)", async () => {
     const t = asTeacher(env, "teacherA").firestore();
     await assertFails(deleteDoc(doc(t, "classes", "cLive", "rewardEvents", "e1")));
     await assertFails(deleteDoc(doc(t, "classes", "cLive", "chatReads", "stu1")));
+    await assertFails(getDocs(collection(t, "classes", "cLive", "chatReads")));
     await assertFails(deleteDoc(doc(t, "classes", "cLive")));
   });
 

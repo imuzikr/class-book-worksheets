@@ -12,6 +12,7 @@ import { getSelectedClassId, setSelectedClassId } from "@/lib/classroom";
 import { kstToday } from "@/lib/reading";
 import { fetchDashboard } from "@/lib/data/dashboard";
 import TeacherReportShell from "./TeacherReportShell";
+import StudentProfileDialog from "./StudentProfileDialog";
 import { TeacherPersonalReport, OverallReport } from "./TeacherReports";
 import {
   Empty, Section, Metric, Snapshot, Reflections, Feedback, TeacherReading, Calendar,
@@ -71,6 +72,8 @@ function DashboardSession({ user }) {
   const [refresh, setRefresh] = useState(0);
   const [dayChoice, setDayChoice] = useState(null);
   const [semesterChoice, setSemesterChoice] = useState(null);
+  const [profileStudent, setProfileStudent] = useState(null);
+  const [notice, setNotice] = useState("");
 
   useEffect(() => subscribeClasses((list) => { setClasses(list); setClassesLoaded(true); }), []);
   useEffect(() => {
@@ -83,11 +86,23 @@ function DashboardSession({ user }) {
     window.addEventListener("class-change", sync);
     return () => window.removeEventListener("class-change", sync);
   }, []);
+  // 페이지 이름 — 교사는 '관리자 대시보드', 학생은 '나의 독서 기록'. Next가 메타데이터의
+  // 제목을 뒤늦게 다시 적으므로(실측) head가 바뀔 때마다 되돌려 둡니다.
+  useEffect(() => {
+    const want = (teacher ? "관리자 대시보드" : "나의 독서 기록") + " | 책봄";
+    const apply = () => { if (document.title !== want) document.title = want; };
+    apply();
+    const observer = new MutationObserver(apply);
+    observer.observe(document.head, { childList: true, subtree: true, characterData: true });
+    return () => observer.disconnect();
+  }, [teacher]);
   useEffect(() => {
     const timer = setInterval(() => setToday(kstToday()), 60000);
     return () => clearInterval(timer);
   }, []);
 
+  // 탈퇴시킬 수 있는 반 — 내가 맡은 반(보관된 반 포함). 관리자는 모든 반.
+  const myClasses = useMemo(() => classes.filter((item) => admin || item.createdBy === user.uid), [classes, admin, user.uid]);
   const memberIds = useMemo(() => new Set(memberships.map((membership) => membership.classId)), [memberships]);
   const allowedClasses = classes.filter((classroom) => !classroom.archived && (teacher ? admin || classroom.createdBy === user.uid : memberIds.has(classroom.id)));
   const classId = allowedClasses.some((classroom) => classroom.id === selectedClass) ? selectedClass : allowedClasses[0]?.id || null;
@@ -183,7 +198,8 @@ function DashboardSession({ user }) {
   return <div className="bb-dashboard-shell">
     <TopNav key={user.uid} active="dashboard" growthEnabled={readingEnabled} />
     <main className="bb-dashboard-main">
-      <header className="bb-dashboard-heading"><div><h1>{teacher ? "독서 분석 리포트" : "나의 독서 기록"}</h1><p>{teacher ? "학생·학급·전체의 독서 활동을 함께 살펴봅니다." : user.realName + "의 독서 활동과 읽어 온 시간을 살펴봅니다."}</p></div><button type="button" className="bb-dash-secondary" onClick={() => setRefresh((value) => value + 1)} disabled={!ready || report.loading || (!teacher && !classId)}>새로고침</button></header>
+      <header className="bb-dashboard-heading"><div><h1>{teacher ? "관리자 대시보드" : "나의 독서 기록"}</h1><p>{teacher ? "학생·학급·전체의 독서 활동을 함께 살펴봅니다." : user.realName + "의 독서 활동과 읽어 온 시간을 살펴봅니다."}</p></div><button type="button" className="bb-dash-secondary" onClick={() => setRefresh((value) => value + 1)} disabled={!ready || report.loading || (!teacher && !classId)}>새로고침</button></header>
+      {notice && <p className="bb-dash-notice bb-dash-withdraw-notice" role="status">{notice}</p>}
       {!isFirebaseConfigured && <p className="bb-dash-demo">체험 데이터 · {teacher ? "왼쪽 학생 목록과 리포트 탭에서 분석 대상을 바꿀 수 있습니다." : "상단에서 학생을 고르면 각자의 독서 기록을 확인할 수 있습니다."}</p>}
       {ready && <div className="bb-dash-controls" aria-label="대시보드 조회 조건">
         {classId && (!teacher || tab !== "overall" || period === "semester") && <label>{teacher && tab === "overall" ? "학기 기준 반" : "반"}<select aria-label="대시보드 반 선택" value={classId} onChange={(event) => selectClass(event.target.value)}>{allowedClasses.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
@@ -192,9 +208,21 @@ function DashboardSession({ user }) {
         {teacher && tab === "class" && <label className="bb-dash-activity-control">살펴볼 활동<select aria-label="살펴볼 독서 활동" disabled={!activityOptions.length} value={selectedActivity || classData?.selectedActivityId || ""} onChange={(event) => setActivityChoice({ classId, id: event.target.value })}><option value="" disabled>{activityOptions.length ? "활동 선택" : classReport.loading ? "활동을 불러오는 중" : "등록된 활동 없음"}</option>{activityOptions.map((item) => <option key={item.id} value={item.id}>{item.label} · {item.title}</option>)}</select></label>}
         {teacher && classId && (tab !== "overall" || period === "semester") && <button type="button" className="bb-dash-secondary bb-dash-semester-trigger" onClick={() => setSemesterChoice({ classId, uid: user.uid })}>학기 기간 설정</button>}
       </div>}
-      {teacher ? <TeacherReportShell tab={tab} onTabChange={changeTab} students={directory} selectedUid={tab === "personal" ? selectedUid : null} onSelectStudent={selectStudent} loading={directoryLoading || !ready}>{content}</TeacherReportShell> : content}
+      {teacher ? <TeacherReportShell tab={tab} onTabChange={changeTab} students={directory} selectedUid={tab === "personal" ? selectedUid : null} onSelectStudent={(student) => { selectStudent(student); setProfileStudent(student); }} loading={directoryLoading || !ready}>{content}</TeacherReportShell> : content}
     </main>
     {selectedDay && reading && <Dialog title={fullDate(selectedDay.date) + " 독서 기록"} onClose={() => setDayChoice(null)}><div className="bb-dash-day-total"><strong>{fmt(selectedDay.pages)}<small>쪽</small></strong><p>{selectedDay.pages > 0 ? "이 반에서 이날 읽었다고 기록한 쪽수입니다." : "이날 남긴 독서 기록이 없습니다."}</p></div><div className="bb-dash-day-records">{asArray(reading.dayRecords).filter((record) => record.date === selectedDay.date).map((record) => <article key={record.id}><h3>{record.title}</h3><span>{fmt(record.startPage)}–{fmt(record.endPage)}쪽 · {fmt(record.pages)}쪽 기록</span>{record.notes && <p>{record.notes}</p>}<Link className="bb-dash-text-link" href={libraryHref(record.bookId)}>이 책 기록 보기 →</Link></article>)}</div><Link className="bb-dash-primary" href={libraryHref()}>내 서재에서 기록 확인</Link></Dialog>}
+    {teacher && profileStudent && <StudentProfileDialog
+      key={profileStudent.uid}
+      student={profileStudent}
+      myClasses={myClasses}
+      onClose={() => setProfileStudent(null)}
+      onWithdrawn={(name) => {
+        setProfileStudent(null);
+        setStudentChoice(null);
+        setNotice(`${name || "학생"}을(를) 탈퇴시켰어요. 기록과 프로필이 지워졌습니다.`);
+        setRefresh((value) => value + 1);
+      }}
+    />}
     {semesterChoice?.classId === classId && semesterChoice.uid === user.uid && teacher && <SemesterDialog classId={classId} className={classroom.name} start={classroom.dashboardSemesterStart} end={classroom.dashboardSemesterEnd} onClose={() => setSemesterChoice(null)} onSaved={() => { setSemesterChoice(null); setPeriod("semester"); setRefresh((value) => value + 1); }} />}
   </div>;
 }
