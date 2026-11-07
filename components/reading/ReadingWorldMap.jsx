@@ -31,6 +31,7 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, onOpenDetails, o
   const [routeVisible, setRouteVisible] = useState(true);
   const [clusterId, setClusterId] = useState(null);
   const [choosing, setChoosing] = useState(false);
+  const [rosterOpen, setRosterOpen] = useState(true);
   const [imageError, setImageError] = useState(false);
   const pendingCenter = useRef(null);
   // 확대 · 축소 — 지금 배율과 맞출 스크롤 자리를 ref로 들고, 그린 직후
@@ -181,18 +182,6 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, onOpenDetails, o
       <span className="rwm-basis">개인 누적 성장 기준</span>
     </div>
 
-    {selected && <div className="rwm-hud" aria-label="선택한 학생의 성장 정보">
-      <div className="rwm-portrait"><img src={characterImage(characterOf(selected))} alt="" width={110} height={110} /></div>
-      <div className="rwm-identity"><span>선택한 여행자 {selected.uid === uid && <b>나</b>}</span><strong data-testid="journey-selected-name">{selected.name || "이름 미설정"}</strong><small>{selected.studentId || "학번 미설정"} · {growth ? journeyTitle(growth.level) : "성장 정보 확인 중"}</small></div>
-      <div className="rwm-growth">
-        <div className="rwm-growth-values"><span><small>독서 레벨</small><strong data-testid="journey-selected-level">{growth ? `Lv.${growth.level}` : "—"}</strong></span><span><small>누적 경험치</small><strong data-testid="journey-selected-xp">{growth ? number(growth.xp) : "—"}<em> EXP</em></strong></span></div>
-        {growth ? <><div className="rwm-exp-bar" role="progressbar" aria-label="현재 레벨 진행률" aria-valuemin={0} aria-valuemax={100} aria-valuenow={growth.percent}><span style={{ width: `${growth.percent}%` }} /></div><p>{growth.complete ? "모든 여정을 완주했어요" : <>다음 레벨까지 <b>{number(growth.toNext)} EXP</b><span>{growth.percent}%</span></>}</p></> : <p>집계가 완료되면 위치가 표시돼요.</p>}
-      </div>
-      <div className="rwm-hud-badges">
-        <span>모은 뱃지</span><div>{READING_BADGES.filter((badge) => selected.badges?.includes(badge.id)).slice(-3).map((badge) => <span key={badge.id} title={badge.label}><ReadingBadge badge={badge} size={30} /></span>)}<strong>{Array.isArray(selected.badges) ? `${selected.badges.length}개` : "—"}</strong></div>
-        <button type="button" onClick={() => onOpenDetails?.(selected)}>성장 기록·뱃지 보기 <span aria-hidden="true">↗</span></button>
-      </div>
-    </div>}
 
     <div className="rwm-toolbar">
       <label className="rwm-chapter"><span>여정 지도</span><select aria-label="여정 지도" value={activeChapter} onChange={(event) => { setChapter(Number(event.target.value)); setClusterId(null); setZoom(1); }}>
@@ -227,17 +216,36 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, onOpenDetails, o
         {imageError && <p className="rwm-map-message" role="alert">지도 이미지를 불러오지 못했어요. 오른쪽 학생 목록에서 성장 기록을 확인할 수 있어요.</p>}
         {!shownCount && !imageError && <p className="rwm-map-message">이 여정에 있는 학생은 아직 없어요. 학생 목록에서 친구의 현재 여정으로 이동해 보세요.</p>}
         <div className="rwm-zoom" role="group" aria-label="지도 크기 조절"><button type="button" onClick={() => zoomTo(zoom - 0.5)} disabled={zoom <= 1} aria-label="지도 축소">−</button><span>{Math.round(zoom * 100)}%</span><button type="button" onClick={() => zoomTo(zoom + 0.5)} disabled={zoom >= 4} aria-label="지도 확대">+</button><button type="button" onClick={() => { zoomRef.current = 1; pendingScroll.current = null; setZoom(1); viewport.current?.scrollTo({ left: 0, top: 0 }); }}>전체 보기</button></div>
-        <p className="rwm-map-hint">캐릭터를 누르면 상단에 성장 정보가 나타나요. + · − 로 확대하고, 드래그해서 둘러보세요.</p>
+        <p className="rwm-map-hint">캐릭터를 누르면 오른쪽에 성장 정보가 나타나요. + · − 로 확대하고, 드래그해서 둘러보세요.</p>
       </div>
 
-      <details className="rwm-roster" open>
-        <summary>함께 걷는 친구들 <span>{travelers.length}</span></summary>
-        <div className="rwm-roster-list" aria-label="우리 반 전체 학생">
+      {/* 오른쪽 칸 — 위: 고른 학생의 성장 정보(처음엔 나, 목록 · 지도에서 고르면 그 학생으로 바뀜),
+          아래: 함께 걷는 친구들. 한때 지도 위에 가로로 펼쳐 지도가 그만큼 아래로 밀렸습니다(선생님 요청). */}
+      <aside className="rwm-side" aria-label="선택한 학생과 함께 걷는 친구들">
+        {selected && <div className="rwm-hud" aria-label="선택한 학생의 성장 정보">
+          <div className="rwm-portrait"><img src={characterImage(characterOf(selected))} alt="" width={110} height={110} /></div>
+          <div className="rwm-identity"><span>선택한 여행자 {selected.uid === uid && <b>나</b>}</span><strong data-testid="journey-selected-name">{selected.name || "이름 미설정"}</strong><small>{selected.studentId || "학번 미설정"} · {growth ? journeyTitle(growth.level) : "성장 정보 확인 중"}</small></div>
+          <div className="rwm-growth">
+            <div className="rwm-growth-values"><span><small>독서 레벨</small><strong data-testid="journey-selected-level">{growth ? `Lv.${growth.level}` : "—"}</strong></span><span><small>누적 경험치</small><strong data-testid="journey-selected-xp">{growth ? number(growth.xp) : "—"}<em> EXP</em></strong></span></div>
+            {growth ? <><div className="rwm-exp-bar" role="progressbar" aria-label="현재 레벨 진행률" aria-valuemin={0} aria-valuemax={100} aria-valuenow={growth.percent}><span style={{ width: `${growth.percent}%` }} /></div><p>{growth.complete ? "모든 여정을 완주했어요" : <>다음 레벨까지 <b>{number(growth.toNext)} EXP</b><span>{growth.percent}%</span></>}</p></> : <p>집계가 완료되면 위치가 표시돼요.</p>}
+          </div>
+          <div className="rwm-hud-badges">
+            <span>모은 뱃지</span><div>{READING_BADGES.filter((badge) => selected.badges?.includes(badge.id)).slice(-3).map((badge) => <span key={badge.id} title={badge.label}><ReadingBadge badge={badge} size={30} /></span>)}<strong>{Array.isArray(selected.badges) ? `${selected.badges.length}개` : "—"}</strong></div>
+            <button type="button" onClick={() => onOpenDetails?.(selected)}>성장 기록·뱃지 보기 <span aria-hidden="true">↗</span></button>
+          </div>
+        </div>}
+      {/* <details>는 크롬 일부에서 flex 높이를 안 따라 목록이 칸 밖으로 넘쳐, 단추 + 상태로 접고 폅니다. */}
+      <div className="rwm-roster">
+        <button type="button" className="rwm-roster-head" aria-expanded={rosterOpen} onClick={() => setRosterOpen((v) => !v)}>
+          <span aria-hidden="true">{rosterOpen ? "▼" : "▶"}</span> 함께 걷는 친구들 <b>{travelers.length}</b>
+        </button>
+        {rosterOpen && <div className="rwm-roster-list" aria-label="우리 반 전체 학생">
           {travelers.map((row) => <button type="button" className="rwm-person" key={row.uid} aria-pressed={row.uid === selected?.uid} onClick={() => selectTraveler(row, true)}>
             <img src={characterImage(characterOf(row))} alt="" width={47} height={52} loading="lazy" /><span><strong>{row.name || "이름 미설정"}{row.uid === uid && <i>나</i>}</strong><small>{row.studentId}{row.world ? ` · 제${row.world.chapter}여정` : " · 집계 대기"}</small><em>{row.world ? `Lv.${row.world.level} · ${number(row.world.xp)} EXP` : "성장 정보 확인 중"}</em></span>
           </button>)}
-        </div>
-      </details>
+        </div>}
+      </div>
+      </aside>
     </div>
 
     <div className="rwm-footer"><div className="rwm-regions" aria-label="지도 지형 순서">{WORLD_REGIONS.map((region, index) => <span key={region.id} className={growth?.region?.id === region.id && growth.chapter === activeChapter ? "is-current" : ""}><small>0{index + 1}</small>{region.name}</span>)}</div><p>독서 경험치가 쌓이면 길을 따라 나아가요. 캐릭터와 의상은 자유롭게 고를 수 있어요.</p></div>
