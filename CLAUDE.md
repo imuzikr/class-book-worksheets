@@ -56,9 +56,21 @@
     `KwlSemesterHeatmap` · `UploadProgress`도 지웠습니다. 자료층 함수와
     `app/styles/`의 해당 클래스는 남아 있습니다(위 '자료층' 항목과 같은 까닭).
 - 알림 벨은 반 공지만 받습니다(질문 답변 · 모둠 메모로 옮겨 갈 화면이 없음).
-- **자료층(`lib/data/*`) · 규칙(`firestore.rules`)은 통째로 가져왔습니다.** 질문 ·
-  공부방 프로젝트 · 수업 자료 같은 컬렉션의 함수와 규칙이 남아 있지만 화면이 부르지
-  않습니다. 영역끼리 서로 가져다 쓰는 곳이 있어 덜어 내려면 그 고리를 먼저 풀어야 합니다.
+- **자료층(`lib/data/*`)은 통째로 가져왔습니다.** 질문 · 공부방 프로젝트 · 수업 자료
+  같은 컬렉션의 함수가 남아 있지만 화면이 부르지 않습니다. 영역끼리 서로 가져다 쓰는
+  곳이 있어 덜어 내려면 그 고리를 먼저 풀어야 합니다.
+- **규칙(`firestore.rules`)은 지금 화면이 쓰는 컬렉션만 남겼습니다**(2,006 → 1,600줄 남짓).
+  걷은 것: 질문방(`questions` · `answers` · `notices` · `keywords`) · 모둠 메모(`groupMemos`) ·
+  수업 자료(`lessons`) · 프로젝트 원본(`studyTemplates`) · 공부방 카드(`studyBoards/*/cards`) ·
+  수업 메모(`lessonMemos`) · 수업 노트(`classes/*/cornellNotes`), 그 규칙만 쓰던 도우미와 시험.
+  - match가 없으면 아무도 못 읽고 못 씁니다 — **문서는 지워지지 않습니다**(옛 수업 노트 등은
+    그대로 남아 콘솔에서 보입니다).
+  - **`studyBoards`는 남깁니다** — 반을 만들 때 '선생님 보드' 한 장을 함께 만드는 길
+    (`addClass` → `ensureDefaultStudyBoard`)이 있어서입니다. 시험 `tests/rules/studyBoards.test.mjs`.
+  - 화면이 부르는 함수에서 위 컬렉션을 다시 쓰게 되면 규칙을 되살리고 배포한 뒤에 올리세요.
+  - 아래 원본 기록에 나오는 `tests/rules/` 시험 가운데 `questions` · `answerEdit` ·
+    `answerReactions` · `cardReactions` · `studyCards` · `studyTemplates` · `groupMemos` ·
+    `lessonMemos` · `cornellNotes`는 함께 걷었습니다(배움나눔 저장소에 그대로 있습니다).
 - **서버 함수(Cloud Functions)와 App Check가 없습니다** — 비전공 선생님도 무료 요금제로
   배포하게(선생님 요청). 아래 '서버 함수 없이 돌리기' 절.
 - 아래 '첫 화면'부터의 절은 **원본 앱의 기록을 그대로 옮긴 것**입니다. 공부방 ·
