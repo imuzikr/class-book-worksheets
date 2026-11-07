@@ -22,6 +22,8 @@
   - 끄면: 상단바 **리더보드 단추가 사라지고**(`?area=leaderboard`로 와도 책방 목록), 책나눔의 **'우리 반 랭킹' 탭이 빠지며**(보던 중이면 내 서재로), 서버 `getReadingRankings`가 `403 reading/ranking-disabled`로 막습니다(데모 `fetchReadingRankings`도 같음). 내 서재 · 성장 · 뱃지는 그대로이고, 반 집계(`readingMembers`)는 계속 쌓여 다시 켜면 곧바로 보입니다.
 - **학생 캐릭터** — `classes/{cId}.characterEnabled`(값이 없으면 켜짐 · 끈 것만 `false`). 판정은 `lib/readingCharacter.js`의 `characterChoiceEnabled` 한 곳. 리더보드 '캐릭터 꾸미기'(동물 20종 · 두 의상 — `public/reading-journey/`)를 켜고 끕니다. 랭킹이 꺼진 반에서는 스위치가 잠깁니다(리더보드 자체가 없음).
   - 끄면: 학생 화면에서 '캐릭터 꾸미기' 단추가 사라지고(`ReadingLeaderboard`의 `characterOn`), 서버 `saveReadingCharacter`가 `403 reading/character-disabled`로 막으며(데모도 같음), `getReadingRankings`가 고른 값 대신 `character: null`을 보내 모두 **기본 캐릭터**(`defaultWorldAvatar`)로 섭니다. 고른 값(`users/{uid}.readingCharacter`)은 지우지 않아 다시 켜면 돌아옵니다.
+  - **바꾸는 자리는 둘이고 창은 하나**(`components/reading/CharacterChooser.jsx`): 지도의 '캐릭터 꾸미기'와 상단바 **프로필 메뉴 → '👤 내 프로필' → '내 캐릭터' 칸의 '바꾸기'**(그 창을 닫고 고르기 창을 엶 — 창 둘이 겹쳐 Esc가 둘 다 닫지 않게). 상단바 **프로필 동그라미에도 내 캐릭터 얼굴**이 섭니다(고른 적이 없으면 지도와 같은 기본 동물).
+    - 조건은 지도와 같습니다 — 그 반의 책나눔 · 랭킹 · 학생 캐릭터가 모두 켜졌을 때만(`TopNav`가 반 문서 1건 · 내 `users` 문서 1건을 구독, `subscribeMyReadingCharacter`). 저장은 같은 `saveReadingCharacter`(서버 API)라 규칙을 안 건드립니다. 저장하면 `reading-character-change` 창 이벤트로 떠 있는 리더보드가 다시 읽습니다.
 - 규칙(`readingSettingValid`): 세 칸(`readingEnabled` · `rankingEnabled` · `characterEnabled`)은 **참 · 거짓만**(지우기 불가), 보관된 반은 못 바꿈, 담당 교사 · 관리자만. 시험 `tests/rules/reading.test.mjs`('랭킹 시스템 스위치'). **코드보다 규칙을 먼저 배포하세요** — 안 그러면 랭킹 스위치 저장이 권한 오류입니다(책나눔 스위치는 그대로 됩니다).
 - 실측(데모 1440 · 420px): 교사 상단바 `책방 · 책나눔 · 리더보드 · 관리자 설정` · 학생은 관리자 설정 없음 · 체험반 랭킹을 끄면 리더보드 단추와 랭킹 탭이 빠짐 · 가로 넘침 0.
 
