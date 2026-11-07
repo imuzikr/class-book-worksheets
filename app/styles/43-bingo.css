@@ -213,3 +213,10 @@
   cursor: pointer;
 }
 .bingo-missing:disabled { opacity: 0.5; cursor: default; }
+
+/* 빙고 중 학생 판 — 칸을 눌러 낱말을 부른다는 안내 한 줄(판 바로 아래) */
+.bingo-call-hint { margin: 8px 0 0; text-align: center; }
+
+/* 교사 '낱말 부르기' — 떠 있는 패널(FloatingPanel) 안 */
+.bingo-float .xw-card-note { margin: 0 0 10px; }
+.bingo-float .bingo-float-rest { margin: 10px 0 0; }

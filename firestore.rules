@@ -1033,6 +1033,27 @@ service cloud.firestore {
                .data.get('memberUids', []).hasAny([uid()]);
     }
 
+    // 낱말 빙고 — 학생이 제 판의 칸을 눌러 낱말을 부릅니다(lib/data/books.js의 callBingoWord).
+    // 학생에게 열리는 것은 bingo.called 끝에 **낱말 하나를 붙이는 것**뿐입니다:
+    // 빙고 활동 · 빙고 중(play) · 안 잠김 · 다른 칸(활동 문서 · bingo 안)은 그대로 ·
+    // 붙인 낱말은 상자(words)에 있고 아직 안 부른 것. 되돌리기 · 지우기는 교사만.
+    function bingoStudentCall() {
+      let b0 = resource.data.get('bingo', null);
+      let b1 = request.resource.data.get('bingo', null);
+      let c0 = b0 == null ? [] : b0.get('called', []);
+      let c1 = b1 == null ? [] : b1.get('called', []);
+      return resource.data.get('type', '') == 'bingo'
+             && resource.data.get('locked', false) != true
+             && b0 != null && b1 != null
+             && b0.get('stage', '') == 'play'
+             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bingo'])
+             && b1.diff(b0).affectedKeys().hasOnly(['called'])
+             && c1 is list && c1.size() == c0.size() + 1
+             && c1 == c0.concat([c1[c1.size() - 1]])
+             && c1[c1.size() - 1] in b0.get('words', [])
+             && !(c1[c1.size() - 1] in c0);
+    }
+
     match /bookActivities/{aId} {
       // 문서 자신에 classId가 있으므로 get() 없이 바로 판정합니다.
       allow read: if signedIn() && (
@@ -1042,7 +1063,9 @@ service cloud.firestore {
       );
       allow create: if isAdmin()
                     || (isTeacher() && ownsClassEditable(request.resource.data.classId));
-      allow update, delete: if isAdmin() || ownsClassEditable(resource.data.classId);
+      allow update: if isAdmin() || ownsClassEditable(resource.data.classId)
+                    || (isClassMember(resource.data.classId) && bingoStudentCall());
+      allow delete: if isAdmin() || ownsClassEditable(resource.data.classId);
 
       match /groups/{gId} {
         // 모둠 카드는 반 구성원 모두에게 공개 (누가 어느 모둠인지 확인)

@@ -35,6 +35,7 @@ import {
 import { ROW_COLORS } from "@/lib/bookColors";
 import BingoGrid from "./BingoGrid";
 import ConfirmModal from "./ConfirmModal";
+import FloatingPanel from "./FloatingPanel";
 import { BOOK_LOCKED_TEACHER, BookLockToggle } from "./BookHeadParts";
 import { IconLock } from "./StatusIcons";
 
@@ -94,6 +95,11 @@ export default function BingoBoard({ activity, onBack, onToast, user, roster = [
     return m;
   }, [ranks]);
   const calledOrder = useMemo(() => new Map(called.map((w, i) => [w, i + 1])), [called]);
+  // 패널에 세울 낱말 — 판에 놓인 것과 이미 부른 것(상자 차례 그대로)
+  const shownWords = useMemo(
+    () => (bingo?.words ?? []).filter((w) => (boardsWith.get(w) ?? 0) > 0 || calledOrder.has(w)),
+    [bingo, boardsWith, calledOrder],
+  );
 
   // 개별 활동 — 만든 뒤 반에 들어온 학생에게는 판이 없습니다(닿소리와 같음).
   const haveUids = useMemo(() => new Set(groups.filter((g) => !g.retired).flatMap((g) => g.memberUids ?? [])), [groups]);
@@ -351,43 +357,55 @@ export default function BingoBoard({ activity, onBack, onToast, user, roster = [
             )}
           </section>
 
-          {/* 낱말 상자 — 판 채우기 단계에는 보기만, 빙고 중에는 눌러서 부릅니다 */}
-          <section className="xw-card">
-            <header className="xw-card-head">
-              <h3>{playing ? "낱말 부르기" : "낱말 상자"}</h3>
-              <span className="xw-badge">{playing ? `부름 ${called.length} / ${words.length}` : `낱말 ${words.length}개`}</span>
-            </header>
-            <p className="xw-card-note">
-              {playing
-                ? "낱말을 누르면 부릅니다. 숫자는 그 낱말이 놓인 판 수, 동그라미는 부른 차례예요."
-                : "학생이 판을 채울 때 고르는 낱말이에요. 숫자는 지금 그 낱말을 놓은 판 수예요."}
-            </p>
-            {words.length === 0 ? (
-              <p className="xw-empty">낱말이 없어요. 닿소리 채우기에 낱말이 모이면 ‘낱말 새로 가져오기’를 눌러 주세요.</p>
-            ) : (
-              <div className="bingo-chips">
-                {words.map((w) => {
-                  const n = calledOrder.get(w);
-                  return (
-                    <button
-                      key={w}
-                      type="button"
-                      className={`bingo-chip${n ? " called" : ""}${w === lastWord ? " last" : ""}`}
-                      onClick={() => callWord(w)}
-                      disabled={!playing || !!n || busy}
-                      title={n ? `${n}번째로 불렀어요` : playing ? "눌러서 부르기" : undefined}
-                    >
-                      {n && <b className="bingo-chip-no">{n}</b>}
-                      {w}
-                      <em className="bingo-chip-count">{boardsWith.get(w) ?? 0}</em>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </section>
         </div>
       </div>
+
+      {/* 낱말 부르기 — 학생들이 판에 고른 낱말을 화면 위에 떠 있는 패널로(선생님 요청 —
+          가로세로 퀴즈의 '낱말 힌트'와 같은 FloatingPanel). 끌어 옮기고 접었다 펴며,
+          판과 미니맵을 가리지 않습니다. 판에 아무도 안 넣은 낱말은 부를 까닭이 없어
+          빼고(이미 부른 것은 차례를 보이려고 남김) 그 수만 적습니다. */}
+      <FloatingPanel
+        title={playing ? "낱말 부르기" : "학생들이 고른 낱말"}
+        storageKey="bingo_call_float"
+        width={380}
+        maxBody={480}
+        className="bingo-float"
+        badge={<span className="xw-badge">{playing ? `부름 ${called.length} / ${shownWords.length}` : `낱말 ${shownWords.length}개`}</span>}
+      >
+        <p className="xw-card-note">
+          {playing
+            ? "낱말을 누르면 부릅니다. 숫자는 그 낱말이 놓인 판 수, 동그라미는 부른 차례예요. 학생도 제 판의 칸을 눌러 부를 수 있어요."
+            : "학생들이 판에 넣은 낱말이에요. 숫자는 그 낱말을 놓은 판 수예요."}
+        </p>
+        {words.length === 0 ? (
+          <p className="xw-empty">낱말이 없어요. 닿소리 채우기에 낱말이 모이면 ‘낱말 새로 가져오기’를 눌러 주세요.</p>
+        ) : shownWords.length === 0 ? (
+          <p className="xw-empty">아직 학생들이 판에 넣은 낱말이 없어요.</p>
+        ) : (
+          <div className="bingo-chips">
+            {shownWords.map((w) => {
+              const n = calledOrder.get(w);
+              return (
+                <button
+                  key={w}
+                  type="button"
+                  className={`bingo-chip${n ? " called" : ""}${w === lastWord ? " last" : ""}`}
+                  onClick={() => callWord(w)}
+                  disabled={!playing || !!n || busy}
+                  title={n ? `${n}번째로 불렀어요` : playing ? "눌러서 부르기" : undefined}
+                >
+                  {n && <b className="bingo-chip-no">{n}</b>}
+                  {w}
+                  <em className="bingo-chip-count">{boardsWith.get(w) ?? 0}</em>
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {words.length > shownWords.length && (
+          <p className="xw-card-note bingo-float-rest">판에 아무도 넣지 않은 낱말 {words.length - shownWords.length}개는 뺐어요.</p>
+        )}
+      </FloatingPanel>
 
       {confirm === "start" && (
         <ConfirmModal

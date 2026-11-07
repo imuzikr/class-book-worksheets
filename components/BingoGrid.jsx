@@ -9,6 +9,7 @@
 //   lineCells  Set(칸 번호) — 완성된 줄에 든 칸(더 짙게)
 //   lastWord   방금 부른 낱말 — 그 칸에 테두리
 //   sel        고른 칸(판 채우기) · onCellClick(칸 번호)
+//   canClick   (선택) 칸 번호 → 누를 수 있나 — 빙고 중 학생 판은 아직 안 불린 낱말 칸만
 //   mini       미니맵 — 글자 없이 색만, 누를 수 없음 · tint { bg, border }
 // =============================================================
 import { BINGO_CELLS, BINGO_SIZE } from "@/lib/bingo";
@@ -20,6 +21,7 @@ export default function BingoGrid({
   lastWord = "",
   sel = null,
   onCellClick = null,
+  canClick = null,
   mini = false,
   tint = null,
 }) {
@@ -51,7 +53,7 @@ export default function BingoGrid({
         type="button"
         className={cls}
         onClick={onCellClick ? () => onCellClick(i) : undefined}
-        disabled={!onCellClick}
+        disabled={!onCellClick || (canClick ? !canClick(i) : false)}
         aria-pressed={onCellClick ? sel === i : undefined}
         aria-label={`${r}행 ${c}열${word ? ` ${word}` : " 빈칸"}${isMarked ? " (불림)" : ""}${inLine ? " (빙고 줄)" : ""}`}
       >

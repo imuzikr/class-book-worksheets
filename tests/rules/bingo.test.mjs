@@ -8,6 +8,8 @@
 //   ④ 잠긴 활동에서는 못 쓴다
 //   ⑤ 모양을 못 박는다 — 칸 열쇠는 "0"~"24", 다른 칸 · groupId 둔갑은 거부
 //   ⑥ 지우기는 담당 교사만
+//   ⑦ 학생은 빙고 중에 낱말 하나를 부를 수 있다(bingo.called 끝에 하나만 · 상자의 낱말 ·
+//      아직 안 부른 것) — 되돌리기 · 다른 칸 · 잠긴 활동 · 판 채우기 단계 · 반 밖은 거부
 // =============================================================
 import { describe, it, before, after, beforeEach } from "node:test";
 import { assertSucceeds, assertFails } from "@firebase/rules-unit-testing";
@@ -84,5 +86,59 @@ describe("낱말 빙고 규칙", () => {
   it("지우기 — 담당 교사만", async () => {
     await assertFails(deleteDoc(doc(asStudent(env, "stu3").firestore(), ...boardPath("group_2"))));
     await assertSucceeds(deleteDoc(doc(asTeacher(env, "teacherA").firestore(), ...boardPath("group_2"))));
+  });
+
+  describe("학생이 낱말 부르기", () => {
+    const words = ["사과", "배", "감"];
+    const setPlay = (extra = {}) => seed(env, (db) => updateDoc(doc(db, ...actPath), {
+      bingo: { stage: "play", words, called: ["사과"], goal: 3 }, ...extra,
+    }));
+    const call = (db, called, bingoExtra = {}) => updateDoc(doc(db, ...actPath), {
+      bingo: { stage: "play", words, called, goal: 3, ...bingoExtra },
+    });
+
+    it("반 학생은 끝에 낱말 하나를 붙일 수 있음 · 처음 부를 때도", async () => {
+      await setPlay();
+      await assertSucceeds(call(asStudent(env, "stu1").firestore(), ["사과", "배"]));
+      await seed(env, (db) => updateDoc(doc(db, ...actPath), { bingo: { stage: "play", words, called: [], goal: 3 } }));
+      await assertSucceeds(call(asStudent(env, "stu3").firestore(), ["감"]));
+    });
+
+    it("둘 이상 · 되돌리기 · 순서 바꾸기 · 이미 부른 것 · 상자 밖 낱말은 거부", async () => {
+      await setPlay();
+      const s1 = asStudent(env, "stu1").firestore();
+      await assertFails(call(s1, ["사과", "배", "감"]));
+      await assertFails(call(s1, []));
+      await assertFails(call(s1, ["배", "사과"]));
+      await assertFails(call(s1, ["사과", "사과"]));
+      await assertFails(call(s1, ["사과", "귤"]));
+    });
+
+    it("다른 칸을 함께 바꾸면 거부(목표 · 단계 · 활동 칸)", async () => {
+      await setPlay();
+      const s1 = asStudent(env, "stu1").firestore();
+      await assertFails(call(s1, ["사과", "배"], { goal: 1 }));
+      await assertFails(call(s1, ["사과", "배"], { stage: "fill" }));
+      await assertFails(updateDoc(doc(s1, ...actPath), { "bingo.called": ["사과", "배"], title: "바꿈" }));
+    });
+
+    it("판 채우기 단계 · 잠긴 활동 · 반 밖 학생은 거부", async () => {
+      await seed(env, (db) => updateDoc(doc(db, ...actPath), { bingo: { stage: "fill", words, called: [], goal: 3 } }));
+      await assertFails(call(asStudent(env, "stu1").firestore(), ["배"]));
+      await setPlay({ locked: true });
+      await assertFails(call(asStudent(env, "stu1").firestore(), ["사과", "배"]));
+      await setPlay({ locked: false });
+      await assertFails(call(asStudent(env, "outsider").firestore(), ["사과", "배"]));
+    });
+
+    it("빙고가 아닌 활동에서는 학생 갈래가 안 열림", async () => {
+      await seed(env, (db) => setDoc(doc(db, "bookActivities", "act2"), {
+        classId: "cA", type: "raft", title: "RAFT", locked: false,
+        bingo: { stage: "play", words, called: [], goal: 3 },
+      }));
+      await assertFails(updateDoc(doc(asStudent(env, "stu1").firestore(), "bookActivities", "act2"), {
+        bingo: { stage: "play", words, called: ["배"], goal: 3 },
+      }));
+    });
   });
 });

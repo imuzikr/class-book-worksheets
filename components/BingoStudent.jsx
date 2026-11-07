@@ -8,11 +8,12 @@
 //   가운데 — 나의(우리 모둠) 빙고판. 판 채우기 단계에는 오른쪽 낱말을 누르고 넣을 칸을
 //           눌러 채웁니다(칸을 먼저 골라도 됨 · 모둠은 모둠원이 함께 — 칸 하나씩 저장해
 //           서로 안 덮음).
-//           빙고 중에는 굳고, 선생님이 부른 낱말이 저절로 표시됩니다.
+//           빙고 중에는 판이 굳고, 부른 낱말이 저절로 표시됩니다. 학생도 **제 판의 칸을
+//           눌러 그 낱말을 부릅니다**(선생님 요청) — 모든 판에 함께 칠해집니다(callBingoWord).
 //   오른쪽 — 판 채우기: 낱말 상자 · 빙고 중: 불린 낱말(최근 것이 위)
 // =============================================================
 import { useEffect, useMemo, useState } from "react";
-import { subscribeBookGroups, subscribeBingoBoards, writeBingoCells } from "@/lib/store";
+import { callBingoWord, subscribeBookGroups, subscribeBingoBoards, writeBingoCells } from "@/lib/store";
 import {
   BINGO_CELLS,
   BINGO_LINE_COUNT,
@@ -40,6 +41,8 @@ export default function BingoStudent({ activity, groupId, onBack }) {
   const [pick, setPick] = useState("");
   const [note, setNote] = useState("");
   const [confirmClear, setConfirmClear] = useState(false);
+  // 빙고 중 부르는 낱말 — 저장이 돌아올 때까지 같은 칸을 다시 못 누르게
+  const [calling, setCalling] = useState("");
 
   useEffect(() => subscribeBookGroups(activity.id, setGroups), [activity.id]);
   useEffect(() => subscribeBingoBoards(activity.id, setRawBoards), [activity.id]);
@@ -51,6 +54,8 @@ export default function BingoStudent({ activity, groupId, onBack }) {
   const lastWord = called.at(-1) ?? "";
   const locked = !!activity.locked;
   const canEdit = !!bingo && !playing && !locked;
+  // 빙고 중에는 제 판의 칸을 눌러 그 낱말을 부릅니다(아직 안 불린 낱말 칸만)
+  const canCall = !!bingo && playing && !locked;
 
   const myGroup = groups.find((g) => g.id === groupId) ?? null;
   const cellsBy = useMemo(() => new Map(rawBoards.map((b) => [b.id, normalizeBingoCells(b.cells)])), [rawBoards]);
@@ -125,6 +130,25 @@ export default function BingoStudent({ activity, groupId, onBack }) {
     if (del.length) write({}, del);
     setSel(null);
     setPick("");
+  }
+
+  // 빙고 중 칸 누르기 — 그 낱말을 부릅니다. 모든 판에 함께 칠해지고(활동 문서의
+  // bingo.called), 여럿이 동시에 눌러도 트랜잭션이 하나씩 붙입니다.
+  const callable = (i) => !!cells[i] && !called.includes(cells[i]) && !calling;
+  async function callCell(i) {
+    const w = cells[i];
+    if (!canCall || !w || called.includes(w) || calling) return;
+    setCalling(w);
+    setNote("");
+    try {
+      const ok = await callBingoWord(activity.id, w);
+      if (!ok) setNote("이미 불렸거나 지금은 부를 수 없는 낱말이에요.");
+    } catch (e) {
+      console.warn("[빙고] 낱말을 부르지 못했어요:", e?.code, e?.message);
+      setNote("부르지 못했어요 — 잠시 뒤 다시 눌러 주세요.");
+    } finally {
+      setCalling("");
+    }
   }
 
   // 판 위에서 Delete · Backspace로 고른 칸 비우기
@@ -244,7 +268,7 @@ export default function BingoStudent({ activity, groupId, onBack }) {
                 ? <>🎉 <strong>빙고!</strong> {mine.count}줄 완성</>
                 : lastWord
                   ? <>방금 불린 낱말 <strong>{lastWord}</strong> <em>{called.length}번째</em></>
-                  : "선생님이 낱말을 부르기를 기다려요."}
+                  : "판의 칸을 눌러 낱말을 불러 보세요."}
             </p>
           )}
           {/* 칸 버튼이 포커스를 가지므로 Delete · Backspace를 여기서 받습니다 */}
@@ -255,9 +279,15 @@ export default function BingoStudent({ activity, groupId, onBack }) {
               lineCells={mine.lineCells}
               lastWord={playing ? lastWord : ""}
               sel={canEdit ? sel : null}
-              onCellClick={canEdit ? pickCell : null}
+              onCellClick={canEdit ? pickCell : canCall ? callCell : null}
+              canClick={canEdit ? null : canCall ? callable : null}
             />
           </div>
+          {canCall && (
+            <p className="xw-card-note bingo-call-hint">
+              아직 안 불린 칸을 누르면 그 낱말을 불러요 — 모든 친구의 판에 함께 칠해집니다.
+            </p>
+          )}
           {canEdit && (
             <div className="xw-gen-row">
               <div className="xw-gen-inner">
