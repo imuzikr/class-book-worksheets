@@ -84,7 +84,7 @@ export default function BingoStudent({ activity, groupId, onBack }) {
     }
   }
   // 칸 누르기 — 고른 낱말이 있으면 그 칸에 넣고(이미 든 낱말은 바뀜), 없으면 칸을 고릅니다
-  // (고른 칸은 '칸 비우기' · Delete로 비우거나, 다음에 누른 낱말로 채웁니다).
+  // (고른 칸은 '한 칸 비우기' · Delete로 비우거나, 다음에 누른 낱말로 채웁니다).
   function pickCell(i) {
     if (!canEdit) return;
     if (pick) {
@@ -218,7 +218,7 @@ export default function BingoStudent({ activity, groupId, onBack }) {
               <header className="xw-card-head"><h3>이렇게 해요</h3></header>
               <ol className="bingo-how">
                 <li>오른쪽 낱말 상자에서 낱말을 누르고, 판에서 넣을 칸을 누르면 그 칸이 채워져요.</li>
-                <li>이미 채운 칸을 누르면 새 낱말로 바뀌어요. 칸만 눌러 고른 뒤 ‘칸 비우기’로 비울 수도 있어요.</li>
+                <li>이미 채운 칸을 누르면 새 낱말로 바뀌어요. 칸만 눌러 고른 뒤 ‘한 칸 비우기’로 비울 수도 있어요.</li>
                 <li>선생님이 ‘빙고 시작’을 누르면 판이 굳고, 부르는 낱말이 저절로 표시돼요.</li>
                 {!solo && <li>모둠원이 함께 한 판을 채워요 — 친구가 넣은 낱말도 곧바로 보여요.</li>}
               </ol>
@@ -267,11 +267,11 @@ export default function BingoStudent({ activity, groupId, onBack }) {
                     : "오른쪽에서 낱말을 누르고, 넣을 칸을 누르세요."}
               </span>
               <div className="xw-gen-btns">
-                <button type="button" className="xw-gen-btn xw-gen-btn--off" onClick={clearCell} disabled={sel == null || !selWord}>
-                  칸 비우기
-                </button>
                 <button type="button" className="xw-gen-btn xw-gen-btn--step" onClick={fillRandom} disabled={mine.filled === BINGO_CELLS}>
                   빈칸 무작위로 채우기
+                </button>
+                <button type="button" className="xw-gen-btn xw-gen-btn--off" onClick={clearCell} disabled={sel == null || !selWord}>
+                  한 칸 비우기
                 </button>
                 <button type="button" className="xw-gen-btn xw-gen-btn--off" onClick={() => setConfirmClear(true)} disabled={mine.filled === 0}>
                   판 모두 비우기
