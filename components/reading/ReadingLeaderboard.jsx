@@ -16,7 +16,7 @@ import { deriveReading, kstToday, READING_BADGES } from "@/lib/reading";
 import { fetchReadingRankings, subscribeReadingState } from "@/lib/data/reading";
 import {
   journeyAvatar, journeyNarrative, journeyPosition, journeyStage, journeyTitle,
-  journeyTrackMax, levelProgress, sortJourney,
+  journeyTrackMax, levelProgress, sortJourney, badgeHint,
 } from "@/lib/readingJourney";
 import { backdropClose } from "@/lib/modal";
 import ReadingBadge from "./ReadingBadge";
@@ -135,7 +135,7 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, o
                         <span className="rlb-row-face" aria-hidden="true">{journeyAvatar(r.level)}</span>
                         <span className="rlb-row-main">
                           <span className="rlb-row-name">{nameOf(r)}{me && <span className="reading-me-label">나</span>}</span>
-                          <span className="rlb-row-sub">Lv.{r.level || 1} {journeyTitle(r.level)} · 누적 {number(xpOf(r))} EXP</span>
+                          <span className="rlb-row-sub">Lv.{r.level || 1} {journeyTitle(r.level)} · {period === "all-time" ? `다음 레벨까지 ${number(p.toNext)} EXP` : `누적 ${number(xpOf(r))} EXP`}</span>
                           <Bar percent={p.percent} label={`${r.name} 다음 레벨까지 진행률`} />
                         </span>
                         <span className="rlb-row-side">
@@ -175,6 +175,7 @@ function MyJourney({ mine, row, today }) {
       <div><dt>읽은 쪽수</dt><dd>{number(mine.totalPages)}쪽</dd></div>
       <div><dt>완독</dt><dd>{number(mine.totalBooks)}권</dd></div>
       <div><dt>연속 독서</dt><dd>{number(mine.currentStreak)}일</dd></div>
+      <div><dt>받은 과일</dt><dd>🍊 {number(mine.fruitCount)}개</dd></div>
       <div><dt>뱃지</dt><dd>{mine.earnedBadges.length} / {READING_BADGES.length}개</dd></div>
     </dl>
     <Bar percent={p.percent} label="다음 레벨까지 진행률" />
@@ -228,15 +229,26 @@ function StudentJourneyModal({ row, me, onClose }) {
         <div><dt>감상문</dt><dd>{orDash(row.reviewCount, "편")}</dd></div>
         <div><dt>연속 독서</dt><dd>{orDash(row.currentStreak, "일")}</dd></div>
         <div><dt>가장 긴 연속</dt><dd>{orDash(row.longestStreak, "일")}</dd></div>
+        <div><dt>받은 과일</dt><dd>{row.fruitCount === null || row.fruitCount === undefined ? "—" : `🍊 ${number(row.fruitCount)}개`}</dd></div>
         <div><dt>뱃지</dt><dd>{known ? `${earned.size} / ${READING_BADGES.length}개` : "—"}</dd></div>
       </dl>
       <Bar percent={p.percent} label="다음 레벨까지 진행률" />
       <h4 className="rlb-modal-sub">뱃지</h4>
       {known ? <ul className="rlb-badge-grid">
-        {READING_BADGES.map((b) => <li key={b.id} className={earned.has(b.id) ? "is-earned" : ""}>
-          <ReadingBadge badge={b} size={48} earned={earned.has(b.id)} />
-          <span>{b.name}<small>{b.tierName} · {b.description}</small></span>
-        </li>)}
+        {READING_BADGES.map((b, i) => {
+          const got = earned.has(b.id);
+          // 툴팁 자리 — 첫 줄은 아래로, 나머지는 위로 · 왼쪽 칸은 왼쪽에, 오른쪽 칸은 오른쪽에 맞춥니다(창 밖으로 안 나가게)
+          const tipClass = ["rlb-tip", i < 3 ? "is-below" : "", i % 3 === 0 ? "is-start" : i % 3 === 2 ? "is-end" : ""].filter(Boolean).join(" ");
+          return <li key={b.id} className={got ? "is-earned" : ""} tabIndex={0} aria-describedby={`rlb-tip-${b.id}`}>
+            <ReadingBadge badge={b} size={48} earned={got} />
+            <span>{b.name}<small>{b.tierName} · {b.description}</small></span>
+            <span role="tooltip" id={`rlb-tip-${b.id}`} className={tipClass}>
+              <b>{b.label}</b>
+              {badgeHint(b).map((t, k) => <span key={k}>{t}</span>)}
+              <em className={got ? "is-got" : ""}>{got ? "✓ 받았어요" : "아직 도전 중"}</em>
+            </span>
+          </li>;
+        })}
       </ul> : <p className="reading-help">이 학생이 다음에 독서를 기록하면 뱃지가 이곳에 나타나요(리더보드가 생기기 전의 기록이라 아직 모아 두지 않았어요).</p>}
     </div>
   </div>;

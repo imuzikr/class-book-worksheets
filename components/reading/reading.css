@@ -298,6 +298,18 @@
 .rlb-badge-grid { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
 .rlb-badge-grid li { display:flex; align-items:center; gap:8px; padding:8px; border:1px solid #e6eae2; border-radius:10px; background:#fafbf8; opacity:.7; min-width:0; }
 .rlb-badge-grid li.is-earned { opacity:1; background:#fff; border-color:#cfdccd; }
+/* 뱃지 툴팁 — 칸에 마우스를 올리거나(키보드로) 초점을 두면 받는 조건이 뜹니다 */
+.rlb-badge-grid li { position:relative; cursor:help; }
+.rlb-badge-grid li:hover, .rlb-badge-grid li:focus-visible { opacity:1; z-index:5; }
+.rlb-badge-grid li:focus-visible { outline:3px solid #478fbd; outline-offset:2px; }
+.rlb-badge-grid .rlb-tip { position:absolute; left:50%; bottom:calc(100% + 8px); transform:translateX(-50%); width:250px; display:flex; flex-direction:column; gap:4px; padding:11px 13px; border-radius:10px; background:#2c3a33; color:#f3f6f1; font-size:12px; font-weight:400; line-height:1.55; box-shadow:0 8px 24px #0003; opacity:0; visibility:hidden; pointer-events:none; transition:opacity .12s; }
+.rlb-badge-grid .rlb-tip b { font-size:12.5px; color:#fff; }
+.rlb-badge-grid .rlb-tip em { font-style:normal; font-weight:700; color:#f5c98a; margin-top:2px; }
+.rlb-badge-grid .rlb-tip em.is-got { color:#9fe0b3; }
+.rlb-badge-grid .rlb-tip.is-below { bottom:auto; top:calc(100% + 8px); }
+.rlb-badge-grid .rlb-tip.is-start { left:0; transform:none; }
+.rlb-badge-grid .rlb-tip.is-end { left:auto; right:0; transform:none; }
+.rlb-badge-grid li:hover .rlb-tip, .rlb-badge-grid li:focus-visible .rlb-tip { opacity:1; visibility:visible; }
 .rlb-badge-grid li > span { display:flex; flex-direction:column; min-width:0; font-size:12px; font-weight:700; }
 .rlb-badge-grid small { font-weight:400; color:#7c897d; font-size:10.5px; }
 @media (max-width:900px) { .rlb-cols { grid-template-columns:minmax(0,1fr); } .rlb-cols.is-teacher > .rlb-card + .rlb-card { position:static; } }
@@ -312,4 +324,9 @@
   .rlb-row-face { display:none; }
   .rlb-badge-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .rlb-facts { grid-template-columns:minmax(0,1fr); }
+}
+@media (max-width:600px) {
+  .rlb-badge-grid .rlb-tip { width:min(250px, 78vw); }
+  .rlb-badge-grid li:nth-child(odd) .rlb-tip { left:0; right:auto; transform:none; }
+  .rlb-badge-grid li:nth-child(even) .rlb-tip { left:auto; right:0; transform:none; }
 }
