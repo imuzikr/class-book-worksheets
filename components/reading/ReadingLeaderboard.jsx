@@ -50,7 +50,7 @@ function Bar({ percent, label }) {
   </span>;
 }
 
-export default function ReadingLeaderboard({ classId, user, isTeacher = false, onDisabled }) {
+export default function ReadingLeaderboard({ classId, user, isTeacher = false, characterOn = true, onDisabled }) {
   const uid = user?.uid;
   const scope = `${classId || ""}:${uid || ""}`;
   const [period, setPeriod] = useState("weekly");
@@ -150,7 +150,7 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, o
     {!hasSnapshot ? !error && <div className="reading-loading" role="status">우리 반 여정을 모으고 있어요.</div>
       : <>
         {(loading || error) && <p className="reading-help" role="status">{loading ? "순위를 새로 불러오는 중이에요. 맵과 성장 정보는 마지막으로 확인한 누적 기록입니다." : "맵과 성장 정보는 마지막으로 확인한 누적 기록입니다. 새로고침해 주세요."}</p>}
-        <ReadingWorldMap key={classId} rows={list} uid={uid} isTeacher={isTeacher} onOpenDetails={selectStudent} onSaveCharacter={saveCharacter} />
+        <ReadingWorldMap key={classId} rows={list} uid={uid} isTeacher={isTeacher} onOpenDetails={selectStudent} onSaveCharacter={characterOn ? saveCharacter : null} />
 
         {!list.length ? <div className="reading-empty"><h3>아직 함께 걸을 친구가 없어요.</h3><p>반에 학생이 들어오면 이곳에서 독서 여정을 확인할 수 있어요.</p></div>
           : <div className={"rlb-cols" + (isTeacher ? " is-teacher" : "")}>

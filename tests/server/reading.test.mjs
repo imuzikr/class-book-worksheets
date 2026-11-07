@@ -202,6 +202,20 @@ test("journey appearance rejects other UIDs, malformed choices, teachers and dis
   } finally { await db.doc("classes/api-class").update({ rankingEnabled: true }); }
 });
 
+test("character switch off blocks choosing and shows the default character, keeping the saved choice", async () => {
+  const character = { number: 4, style: "intermediate" };
+  await saveReadingCharacter(principal("student"), { classId: "api-class", character });
+  await db.doc("classes/api-class").update({ characterEnabled: false });
+  try {
+    await assert.rejects(() => saveReadingCharacter(principal("student"), { classId: "api-class", character }), (error) => error.status === 403 && error.code === "reading/character-disabled");
+    const off = (await getReadingRankings(principal("teacher"), "api-class", "all-time")).rankings.find((r) => r.uid === ids.student);
+    assert.equal(off.character, null);
+    assert.deepEqual((await db.doc(`users/${ids.student}`).get()).data().readingCharacter, character);
+  } finally { await db.doc("classes/api-class").update({ characterEnabled: true }); }
+  const on = (await getReadingRankings(principal("teacher"), "api-class", "all-time")).rankings.find((r) => r.uid === ids.student);
+  assert.deepEqual(on.character, character);
+});
+
 test("same-formula projections missing global XP are repaired rather than treated as a starting student", async () => {
   await db.doc(`classes/api-class/readingMembers/${ids.student}`).set({ uid: ids.student, level: 1, events: [], formula: READING_FORMULA });
   const canonical = await getReading(principal("student"), "api-class");

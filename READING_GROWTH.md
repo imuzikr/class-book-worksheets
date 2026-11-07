@@ -20,7 +20,9 @@
 - **책나눔 성장 기능** — `classes/{cId}.readingEnabled`(기본 꺼짐). 반 관리하기의 같은 스위치와 **같은 값**입니다(둘 다 `setClassReadingEnabled`).
 - **랭킹 시스템** — `classes/{cId}.rankingEnabled`(값이 없으면 켜짐 · 끈 것만 `false`로 적음). 판정은 `lib/reading.js`의 `rankingEnabled(반)` 한 곳 — 책나눔이 켜져 있고 `rankingEnabled !== false`일 때만 참이라, 책나눔이 꺼지면 스위치도 꺼진 채 잠깁니다.
   - 끄면: 상단바 **리더보드 단추가 사라지고**(`?area=leaderboard`로 와도 책방 목록), 책나눔의 **'우리 반 랭킹' 탭이 빠지며**(보던 중이면 내 서재로), 서버 `getReadingRankings`가 `403 reading/ranking-disabled`로 막습니다(데모 `fetchReadingRankings`도 같음). 내 서재 · 성장 · 뱃지는 그대로이고, 반 집계(`readingMembers`)는 계속 쌓여 다시 켜면 곧바로 보입니다.
-- 규칙(`readingSettingValid`): 두 칸은 **참 · 거짓만**(지우기 불가), 보관된 반은 못 바꿈, 담당 교사 · 관리자만. 시험 `tests/rules/reading.test.mjs`('랭킹 시스템 스위치'). **코드보다 규칙을 먼저 배포하세요** — 안 그러면 랭킹 스위치 저장이 권한 오류입니다(책나눔 스위치는 그대로 됩니다).
+- **학생 캐릭터** — `classes/{cId}.characterEnabled`(값이 없으면 켜짐 · 끈 것만 `false`). 판정은 `lib/readingCharacter.js`의 `characterChoiceEnabled` 한 곳. 리더보드 '캐릭터 꾸미기'(동물 20종 · 두 의상 — `public/reading-journey/`)를 켜고 끕니다. 랭킹이 꺼진 반에서는 스위치가 잠깁니다(리더보드 자체가 없음).
+  - 끄면: 학생 화면에서 '캐릭터 꾸미기' 단추가 사라지고(`ReadingLeaderboard`의 `characterOn`), 서버 `saveReadingCharacter`가 `403 reading/character-disabled`로 막으며(데모도 같음), `getReadingRankings`가 고른 값 대신 `character: null`을 보내 모두 **기본 캐릭터**(`defaultWorldAvatar`)로 섭니다. 고른 값(`users/{uid}.readingCharacter`)은 지우지 않아 다시 켜면 돌아옵니다.
+- 규칙(`readingSettingValid`): 세 칸(`readingEnabled` · `rankingEnabled` · `characterEnabled`)은 **참 · 거짓만**(지우기 불가), 보관된 반은 못 바꿈, 담당 교사 · 관리자만. 시험 `tests/rules/reading.test.mjs`('랭킹 시스템 스위치'). **코드보다 규칙을 먼저 배포하세요** — 안 그러면 랭킹 스위치 저장이 권한 오류입니다(책나눔 스위치는 그대로 됩니다).
 - 실측(데모 1440 · 420px): 교사 상단바 `책방 · 책나눔 · 리더보드 · 관리자 설정` · 학생은 관리자 설정 없음 · 체험반 랭킹을 끄면 리더보드 단추와 랭킹 탭이 빠짐 · 가로 넘침 0.
 
 ## 리더보드 — 독서 여정

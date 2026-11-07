@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { deriveReading, initialReadingState, READING_FORMULA } from "../../lib/reading.js";
 import { memberSnapshot, memberStats } from "../../lib/readingJourney.js";
-import { hasCurrentReadingSnapshot, normalizeReadingCharacter } from "../../lib/readingCharacter.js";
+import { characterChoiceEnabled, hasCurrentReadingSnapshot, normalizeReadingCharacter } from "../../lib/readingCharacter.js";
 
 test("journey appearance accepts only a known numbered character and outfit", () => {
   for (const style of ["intermediate", "advanced"]) {
@@ -49,4 +49,11 @@ test("unknown public numeric statistics do not become zero XP or zero pages", ()
   }
   assert.equal(memberStats({ totalXp: 0 }, "2026-11-07").totalXp, 0);
   assert.equal(memberStats({ totalXp: 2000 }, "2026-11-07").totalXp, 2000);
+});
+
+test("학생 캐릭터 스위치 — 값이 없으면 켜짐, 끈 반만 false", () => {
+  assert.equal(characterChoiceEnabled({}), true);
+  assert.equal(characterChoiceEnabled(null), true);
+  assert.equal(characterChoiceEnabled({ characterEnabled: true }), true);
+  assert.equal(characterChoiceEnabled({ characterEnabled: false }), false);
 });
