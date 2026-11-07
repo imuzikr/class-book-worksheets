@@ -499,3 +499,11 @@
   to { opacity: 1; transform: translate(-50%, 0); }
 }
 
+
+/* 학생 캐릭터 — 상단바 프로필 동그라미의 얼굴 · '내 프로필' 창의 '내 캐릭터' 칸
+   (그림은 public/reading-journey/, 고르기 창은 components/reading/CharacterChooser.jsx) */
+.avatar-character { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; object-position: 50% 18%; background: #fff; }
+.profile-character { display: flex; align-items: center; gap: 12px; }
+.profile-character img { width: 56px; height: 56px; object-fit: contain; border-radius: 12px; background: var(--bg); flex: none; }
+.profile-character-name { flex: 1; min-width: 0; font-weight: 600; color: var(--text); }
+.profile-character-change { flex: none; }

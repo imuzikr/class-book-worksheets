@@ -18,6 +18,7 @@ import {
   subscribeMyMemberships,
   subscribeMyClassRewardCount,
   subscribeBroadcast,
+  subscribeClass,
   fetchClass,
   stopBroadcast,
   reportPresence,
@@ -40,6 +41,10 @@ import AppMarquee from "./AppMarquee";
 import { useRewardCelebration } from "@/lib/useRewardCelebration";
 import { useClassMembers } from "@/lib/useClassRoster";
 import { IconLogo, IconBook, IconTrophy, IconSettings } from "./StatusIcons";
+import { saveReadingCharacter, subscribeMyReadingCharacter } from "@/lib/data/reading";
+import { readingEnabled, rankingEnabled } from "@/lib/reading";
+import { characterChoiceEnabled } from "@/lib/readingCharacter";
+import { characterOf } from "./reading/CharacterChooser";
 
 export default function TopNav({ active, growthEnabled = false, rankingOn = true, readingOpen = false, leaderboardOpen = false, settingsOpen = false, onStudyExport = null }) {
   const router = useRouter();
@@ -139,6 +144,29 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
     if (!isFirebaseConfigured || !broadcastClassId) { setBroadcast(null); return; }
     return subscribeBroadcast(broadcastClassId, setBroadcast);
   }, [broadcastClassId]);
+
+  // 학생 캐릭터 — 프로필 동그라미의 얼굴과 '내 프로필'의 '바꾸기'. 리더보드의
+  // '캐릭터 꾸미기'와 같은 조건(책나눔 · 랭킹 · 학생 캐릭터가 모두 켜진 반)에서만.
+  // 반 문서 1건 · 내 프로필 1건을 구독합니다(학생만).
+  const myUid = user?.uid;
+  const [characterOn, setCharacterOn] = useState(false);
+  const [myCharacter, setMyCharacter] = useState(null);
+  useEffect(() => {
+    setCharacterOn(false);
+    if (admin || !quizClassId) return;
+    return subscribeClass(quizClassId, (c) => setCharacterOn(!!c && readingEnabled(c) && rankingEnabled(c) && characterChoiceEnabled(c)));
+  }, [admin, quizClassId]);
+  useEffect(() => {
+    setMyCharacter(null);
+    if (admin || !myUid || !characterOn) return;
+    return subscribeMyReadingCharacter(myUid, setMyCharacter);
+  }, [admin, myUid, characterOn]);
+  async function saveMyCharacter(next) {
+    const result = await saveReadingCharacter(quizClassId, next);
+    // 리더보드가 떠 있으면 새 캐릭터로 다시 읽게 알립니다(ReadingLeaderboard)
+    window.dispatchEvent(new Event("reading-character-change"));
+    return result;
+  }
 
   // 반 공지 대상 — 지금 보고 있는 반의 이름과 학생 수. 교사가 '몇 명에게
   // 가는지'를 보고 보내도록 버튼에 함께 띄웁니다(잘못된 반에 보내는 실수를
@@ -393,6 +421,8 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
           onOpenRoleMgr={isStrictAdmin ? () => setRoleMgrOpen(true) : null}
           onOpenAdmin={null}
           onStudyExport={admin ? onStudyExport : null}
+          character={characterOn && myUid ? characterOf({ uid: myUid, character: myCharacter }) : null}
+          onSaveCharacter={characterOn ? saveMyCharacter : null}
           onLogout={handleLogout}
         />
       </div>

@@ -96,9 +96,13 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, c
     const timer = setInterval(refresh, 30000);
     window.addEventListener("focus", refresh);
     document.addEventListener("visibilitychange", refresh);
+    // 상단바 '내 프로필'에서 캐릭터를 바꾸면 곧바로 다시 읽습니다(TopNav)
+    const changed = () => setRetry((value) => value + 1);
+    window.addEventListener("reading-character-change", changed);
     return () => {
       clearInterval(timer);
       window.removeEventListener("focus", refresh);
+      window.removeEventListener("reading-character-change", changed);
       document.removeEventListener("visibilitychange", refresh);
     };
   }, [scope]);

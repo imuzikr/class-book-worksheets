@@ -21,6 +21,7 @@ import { useCurrentUser } from "@/lib/useCurrentUser";
 import { isTeacher } from "@/lib/user";
 import { IconTeacher, IconLogout } from "@/components/StatusIcons";
 import ProfileModal from "./ProfileModal";
+import CharacterChooser, { characterImage } from "./reading/CharacterChooser";
 
 export default function UserProfile({
   pendingCount = 0,
@@ -33,12 +34,16 @@ export default function UserProfile({
   // 둘(창을 여는 것)과 섞이지 않게 앞에 세웁니다.
   onOpenAdmin = null,
   onStudyExport = null,
+  // 학생 캐릭터(책나눔 · 랭킹 · 학생 캐릭터가 모두 켜진 반) — { number, style } · 저장 함수
+  character = null,
+  onSaveCharacter = null,
   onLogout = null,
 }) {
   const user = useCurrentUser();
   const teacherRole = isTeacher(user);
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [choosing, setChoosing] = useState(false);
   const wrapRef = useRef(null);
 
   // 메뉴 바깥 클릭/터치 시 닫기 (pointerdown — 마우스·터치 모두 처리)
@@ -66,7 +71,9 @@ export default function UserProfile({
         aria-expanded={menuOpen}
       >
         <span className="avatar" aria-hidden="true">
-          {teacherRole ? <IconTeacher size={20} /> : initial}
+          {teacherRole ? <IconTeacher size={20} />
+            : character ? <img className="avatar-character" src={characterImage(character)} alt="" width={34} height={34} />
+            : initial}
           {pendingCount > 0 && (
             <span className="profile-badge" aria-label={`승인 대기 ${pendingCount}건`}>
               {pendingCount}
@@ -153,7 +160,12 @@ export default function UserProfile({
       )}
 
       {profileOpen && user && (
-        <ProfileModal user={user} onClose={() => setProfileOpen(false)} />
+        <ProfileModal user={user} onClose={() => setProfileOpen(false)} character={character}
+          onChangeCharacter={onSaveCharacter ? () => { setProfileOpen(false); setChoosing(true); } : null} />
+      )}
+      {choosing && character && onSaveCharacter && (
+        <CharacterChooser row={{ uid: user?.uid, character }} onClose={() => setChoosing(false)}
+          onSave={async (next) => { await onSaveCharacter(next); setChoosing(false); }} />
       )}
     </div>
   );

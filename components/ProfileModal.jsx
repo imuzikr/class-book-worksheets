@@ -11,8 +11,11 @@ import { backdropClose } from "@/lib/modal";
 import { useState } from "react";
 import { updateMyProfile } from "@/lib/store";
 import { isTeacher } from "@/lib/user";
+import { characterImage, characterName } from "./reading/CharacterChooser";
 
-export default function ProfileModal({ user, onClose }) {
+// character: 학생 캐릭터를 쓰는 반이면 지금 캐릭터({ number, style }), 아니면 null.
+// onChangeCharacter: '바꾸기' — 이 창을 닫고 고르기 창을 엽니다(UserProfile).
+export default function ProfileModal({ user, onClose, character = null, onChangeCharacter = null }) {
   const teacherRole = isTeacher(user);
   const [realName, setRealName] = useState(user.realName || "");
   const [saving, setSaving] = useState(false);
@@ -75,12 +78,26 @@ export default function ProfileModal({ user, onClose }) {
             <span>이메일</span>
             <div className="student-edit-value">{user.email || "—"}</div>
           </div>
+          {!teacherRole && character && (
+            <div className="student-edit-field">
+              <span>내 캐릭터</span>
+              <div className="profile-character">
+                <img src={characterImage(character)} alt="" width={56} height={56} />
+                <span className="profile-character-name">{characterName(character)}</span>
+                {onChangeCharacter && (
+                  <button type="button" className="btn-ghost profile-character-change" onClick={onChangeCharacter}>
+                    바꾸기
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {!teacherRole && (
           <p className="profile-modal-hint">
             실명·학번은 선생님만 수정할 수 있어요. 게시물과 채팅에는 실명이
-            표시됩니다.
+            표시됩니다.{character && " 캐릭터는 언제든 바꿀 수 있고, 리더보드의 독서 여정 지도에서도 함께 걸어요."}
           </p>
         )}
 
