@@ -21,6 +21,7 @@ import ReadingHub from "@/components/reading/ReadingHub";
 import ReadingLeaderboard from "@/components/reading/ReadingLeaderboard";
 import AdminSettingsPanel from "@/components/AdminSettingsPanel";
 import { readingEnabled, rankingEnabled } from "@/lib/reading";
+import { characterChoiceEnabled } from "@/lib/readingCharacter";
 import {
   subscribeBookActivities,
   subscribeBookGroups,
@@ -335,6 +336,8 @@ function BooksPageInner() {
   const readingOpen = growthEnabled && !openActivityId && searchParams.get("area") === "reading";
   // 리더보드 — 책나눔의 경험치 · 뱃지를 '독서 여정'으로(상단바 '리더보드')
   const rankingOn = rankingEnabled(currentClass);
+  // 학생 캐릭터 고르기(관리자 설정) — 값이 없으면 켜짐
+  const characterOn = characterChoiceEnabled(currentClass);
   const leaderboardOpen = rankingOn && !openActivityId && searchParams.get("area") === "leaderboard";
   // 관리자 설정 — 교사에게만(학생이 주소로 와도 책방 목록이 섭니다)
   const settingsOpen = admin && !openActivityId && searchParams.get("area") === "settings";
@@ -1026,7 +1029,7 @@ function BooksPageInner() {
           {settingsOpen ? (
             <AdminSettingsPanel classes={myClasses} onToast={setToast} />
           ) : leaderboardOpen ? (
-            <ReadingLeaderboard key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin}
+            <ReadingLeaderboard key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin} characterOn={characterOn}
               onDisabled={() => patchBooksQuery({ area: null }, { replace: true })} />
           ) : readingOpen ? (
             <ReadingHub key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin} rankingOn={rankingOn}

@@ -1,13 +1,16 @@
 "use client";
 // =============================================================
 // 관리자 설정 — /books?area=settings (교사만)
-// 반마다 켜고 끄는 기능을 한 화면에 모읍니다. 지금은 둘:
+// 반마다 켜고 끄는 기능을 한 화면에 모읍니다. 지금은 셋:
 //   · 책나눔 성장 기능(readingEnabled — 기본 꺼짐)
 //   · 랭킹 시스템(rankingEnabled — 값이 없으면 켜짐, 책나눔이 켜져 있어야 의미가 있음)
+//   · 학생 캐릭터(characterEnabled — 값이 없으면 켜짐, 리더보드의 '캐릭터 꾸미기'라
+//     랭킹이 켜져 있어야 의미가 있음 · lib/readingCharacter.js)
 // 쓰기는 반 문서 한 칸이고, 규칙(readingSettingValid)이 참·거짓과 보관 안 된 반만 받습니다.
 // =============================================================
 import { useMemo, useState } from "react";
-import { setClassReadingEnabled, setClassRankingEnabled } from "@/lib/store";
+import { setClassReadingEnabled, setClassRankingEnabled, setClassCharacterEnabled } from "@/lib/store";
+import { characterChoiceEnabled } from "@/lib/readingCharacter";
 import { readingEnabled, rankingEnabled } from "@/lib/reading";
 
 const byName = (a, b) => String(a.name || "").localeCompare(String(b.name || ""), "ko", { numeric: true });
@@ -31,13 +34,16 @@ export default function AdminSettingsPanel({ classes = [], onToast }) {
     const k = `${c.id}:${key}`;
     if (busy[k]) return;
     const reading = key === "readingEnabled";
-    const enabled = reading ? !readingEnabled(c) : !rankingEnabled(c);
+    const enabled = reading ? !readingEnabled(c) : key === "rankingEnabled" ? !rankingEnabled(c) : !characterChoiceEnabled(c);
     setBusy((b) => ({ ...b, [k]: true }));
     setError("");
     try {
       if (reading) await setClassReadingEnabled(c.id, enabled);
-      else await setClassRankingEnabled(c.id, enabled);
-      onToast?.(reading
+      else if (key === "rankingEnabled") await setClassRankingEnabled(c.id, enabled);
+      else await setClassCharacterEnabled(c.id, enabled);
+      onToast?.(key === "characterEnabled"
+        ? (enabled ? `'${c.name}' 반 학생이 리더보드에서 캐릭터를 고를 수 있어요.` : `'${c.name}' 반의 캐릭터 고르기를 껐어요. 모두 기본 캐릭터로 보이고, 고른 캐릭터는 보관됩니다.`)
+        : reading
         ? (enabled ? `'${c.name}' 반의 책나눔 성장 기능을 켰어요.` : `'${c.name}' 반의 책나눔 성장 기능을 껐어요. 기존 기록은 보관됩니다.`)
         : (enabled ? `'${c.name}' 반의 랭킹 시스템을 켰어요.` : `'${c.name}' 반의 랭킹 시스템을 껐어요. 리더보드와 우리 반 랭킹이 숨겨져요.`));
     } catch (e) {
@@ -61,9 +67,12 @@ export default function AdminSettingsPanel({ classes = [], onToast }) {
               <small id="adm-hint-reading">내 서재 · 경험치 · 뱃지 · 랭킹. 꺼도 독서 활동은 그대로예요.</small></span>
             <span role="columnheader">랭킹 시스템
               <small id="adm-hint-ranking">상단바 리더보드 · 우리 반 랭킹. 책나눔이 켜져 있어야 써요.</small></span>
+            <span role="columnheader">학생 캐릭터
+              <small id="adm-hint-character">리더보드에서 학생이 동물 캐릭터를 골라요. 끄면 모두 기본 캐릭터예요. 랭킹이 켜져 있어야 써요.</small></span>
           </div>
           {rows.map((c) => {
             const readOn = readingEnabled(c);
+            const rankOn = readOn && rankingEnabled(c);
             return (
               <div className="adm-row" role="row" key={c.id}>
                 <span className="adm-class" role="cell">{c.name}</span>
@@ -74,6 +83,10 @@ export default function AdminSettingsPanel({ classes = [], onToast }) {
                 <span role="cell" title={readOn ? undefined : "책나눔 성장 기능을 먼저 켜 주세요"}>
                   <Switch on={readOn && rankingEnabled(c)} disabled={!readOn} busy={busy[`${c.id}:rankingEnabled`]}
                     describedBy="adm-hint-ranking" label={`${c.name} 랭킹 시스템`} onClick={() => toggle(c, "rankingEnabled")} />
+                </span>
+                <span role="cell" title={rankOn ? undefined : "책나눔과 랭킹 시스템을 먼저 켜 주세요"}>
+                  <Switch on={rankOn && characterChoiceEnabled(c)} disabled={!rankOn} busy={busy[`${c.id}:characterEnabled`]}
+                    describedBy="adm-hint-character" label={`${c.name} 학생 캐릭터`} onClick={() => toggle(c, "characterEnabled")} />
                 </span>
               </div>
             );
