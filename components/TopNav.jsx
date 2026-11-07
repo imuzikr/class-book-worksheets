@@ -39,9 +39,9 @@ import FloatingHub from "./FloatingHub";
 import AppMarquee from "./AppMarquee";
 import { useRewardCelebration } from "@/lib/useRewardCelebration";
 import { useClassMembers } from "@/lib/useClassRoster";
-import { IconLogo, IconBook } from "./StatusIcons";
+import { IconLogo, IconBook, IconTrophy } from "./StatusIcons";
 
-export default function TopNav({ active, growthEnabled = false, readingOpen = false, onStudyExport = null }) {
+export default function TopNav({ active, growthEnabled = false, readingOpen = false, leaderboardOpen = false, onStudyExport = null }) {
   const router = useRouter();
   const user = useCurrentUser();
   const admin = user ? isTeacher(user) : false;      // 교사+관리자 (대시보드 접근)
@@ -247,8 +247,8 @@ export default function TopNav({ active, growthEnabled = false, readingOpen = fa
         <span className="topbar-divider" aria-hidden="true" />
         <nav className="topnav-menu" aria-label="주요 메뉴">
           <button type="button"
-            className={`btn-ghost ${active === "books" && !readingOpen ? "nav-active" : ""}`}
-            aria-current={active === "books" && !readingOpen ? "page" : undefined}
+            className={`btn-ghost ${active === "books" && !readingOpen && !leaderboardOpen ? "nav-active" : ""}`}
+            aria-current={active === "books" && !readingOpen && !leaderboardOpen ? "page" : undefined}
             onClick={() => go("/books")} title="책방">
             <IconBook size={20} /> <span className="nav-label">책방</span>
           </button>
@@ -257,6 +257,13 @@ export default function TopNav({ active, growthEnabled = false, readingOpen = fa
             aria-current={readingOpen ? "page" : undefined}
             onClick={() => go("/books?area=reading")} title="책나눔">
             <IconBook size={20} /> <span className="nav-label">책나눔</span>
+          </button>}
+          {/* 리더보드 — 책나눔과 같은 조건(반의 성장 기능이 켜졌을 때)에만 섭니다 */}
+          {growthEnabled && <button type="button"
+            className={`btn-ghost ${leaderboardOpen ? "nav-active" : ""}`}
+            aria-current={leaderboardOpen ? "page" : undefined}
+            onClick={() => go("/books?area=leaderboard")} title="리더보드">
+            <IconTrophy size={20} /> <span className="nav-label">리더보드</span>
           </button>}
         </nav>
       </div>

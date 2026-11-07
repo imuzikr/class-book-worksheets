@@ -18,6 +18,7 @@ import { enterSampleClass, canUseSampleClass, sampleMode, SAMPLE_CLASS_ID } from
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ReadingHub from "@/components/reading/ReadingHub";
+import ReadingLeaderboard from "@/components/reading/ReadingLeaderboard";
 import { readingEnabled } from "@/lib/reading";
 import {
   subscribeBookActivities,
@@ -88,7 +89,7 @@ import QmarkBoard from "@/components/QmarkBoard";
 import QmarkForm from "@/components/QmarkForm";
 import BrainWriteBoard from "@/components/BrainWriteBoard";
 import BrainWriteForm from "@/components/BrainWriteForm";
-import { IconBook, IconTrash, IconLockState } from "@/components/StatusIcons";
+import { IconBook, IconTrophy, IconTrash, IconLockState } from "@/components/StatusIcons";
 import PageTagline from "@/components/PageTagline";
 import ClassManagerModal from "@/components/ClassManagerModal";
 import SeatGroupSetupModal from "@/components/SeatGroupSetupModal";
@@ -331,6 +332,8 @@ function BooksPageInner() {
   const currentClass = (admin ? myClassesAll : classes).find((c) => c.id === classId) ?? null;
   const growthEnabled = readingEnabled(currentClass);
   const readingOpen = growthEnabled && !openActivityId && searchParams.get("area") === "reading";
+  // 리더보드 — 책나눔의 경험치 · 뱃지를 '독서 여정'으로(상단바 '리더보드')
+  const leaderboardOpen = growthEnabled && !openActivityId && searchParams.get("area") === "leaderboard";
 
   useEffect(() => subscribeBookActivities(classId, setActivities), [classId]);
 
@@ -687,7 +690,7 @@ function BooksPageInner() {
 
   return (
     <div className="board-shell">
-      <TopNav key={myUid} active="books" growthEnabled={growthEnabled} readingOpen={readingOpen} />
+      <TopNav key={myUid} active="books" growthEnabled={growthEnabled} readingOpen={readingOpen} leaderboardOpen={leaderboardOpen} />
       {showSampleEntry && !activeActivity && (
         <aside className="sample-class-entry" aria-label="체험용 샘플 반">
           <span>가상의 학생 15명과 활동이 준비된 <strong>체험용 샘플 반</strong>에서 기능을 마음껏 시험해 보세요. 여기서 한 일은 저장되지 않아요.</span>
@@ -957,7 +960,7 @@ function BooksPageInner() {
             <PageTagline />
             <div className="books-head-main">
               <h1>
-                <IconBook size={26} /> {readingOpen ? "책나눔" : "책방"}
+                {leaderboardOpen ? <IconTrophy size={26} /> : <IconBook size={26} />} {leaderboardOpen ? "리더보드" : readingOpen ? "책나눔" : "책방"}
               </h1>
               {admin && myClasses.length > 0 && (
                 <select
@@ -1016,7 +1019,10 @@ function BooksPageInner() {
             </div>
           </div>
 
-          {readingOpen ? (
+          {leaderboardOpen ? (
+            <ReadingLeaderboard key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin}
+              onDisabled={() => patchBooksQuery({ area: null }, { replace: true })} />
+          ) : readingOpen ? (
             <ReadingHub key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin}
               activities={liveActivities} onOpenActivity={goToActivity}
               initialBookId={searchParams.get("book")} initialTab={searchParams.get("tab") || "library"}

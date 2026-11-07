@@ -1,0 +1,90 @@
+// 리더보드 · 독서 여정의 셈 (lib/readingJourney.js)
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { initialReadingState, applyReadingAction, deriveReading } from "../../lib/reading.js";
+import {
+  journeyAvatar, journeyTitle, journeyStage, levelProgress, journeyTrackMax, journeyPosition,
+  currentStreakOf, memberSnapshot, memberStats, sortJourney, journeyNarrative,
+} from "../../lib/readingJourney.js";
+
+const NOW = "2026-10-29T03:00:00.000Z";
+const ctx = (id) => ({ uid: "s", classId: "c", now: NOW, id });
+
+function sample() {
+  let s = applyReadingAction(initialReadingState(), { type: "addBook", title: "어린 왕자", author: "작가", totalPages: 50 }, ctx("b1"));
+  s = applyReadingAction(s, { type: "addLog", bookId: "b1", date: "2026-10-27", startPage: 1, endPage: 20, notes: "읽었어요." }, ctx("l1"));
+  s = applyReadingAction(s, { type: "addLog", bookId: "b1", date: "2026-10-28", startPage: 21, endPage: 50, notes: "읽었어요." }, ctx("l2"));
+  return deriveReading(s, new Date(NOW));
+}
+
+test("레벨별 모습 · 칭호 · 곳", () => {
+  assert.equal(journeyAvatar(1), "🌱");
+  assert.equal(journeyAvatar(3), "📚");
+  assert.equal(journeyAvatar(7), "🦉");
+  assert.equal(journeyTitle(5), "열정적인 독서가");
+  assert.equal(journeyStage(1), "시작의 마을");
+  assert.equal(journeyStage(99), "마스터의 궁전");
+});
+
+test("레벨 안 진행률과 다음 레벨까지", () => {
+  assert.deepEqual(levelProgress(0), { level: 1, from: 0, to: 100, toNext: 100, percent: 0 });
+  const p = levelProgress(175);
+  assert.equal(p.level, 2);
+  assert.equal(p.percent, 50);
+  assert.equal(p.toNext, 75);
+});
+
+test("트랙 끝 레벨과 자리", () => {
+  assert.equal(journeyTrackMax([{ level: 2 }]), 7);
+  assert.equal(journeyTrackMax([{ level: 9 }]), 10);
+  assert.equal(journeyPosition(0, 7), 4);
+  assert.ok(journeyPosition(175, 7) > journeyPosition(100, 7));
+  assert.equal(journeyPosition(10 ** 9, 7), 96);
+});
+
+test("오늘 기준 연속 독서일 — 어제까지 읽었으면 잇고, 그 전이면 0", () => {
+  assert.equal(currentStreakOf(3, "2026-10-29", "2026-10-29"), 3);
+  assert.equal(currentStreakOf(3, "2026-10-28", "2026-10-29"), 3);
+  assert.equal(currentStreakOf(3, "2026-10-26", "2026-10-29"), 0);
+  assert.equal(currentStreakOf(0, "2026-10-29", "2026-10-29"), 0);
+});
+
+test("반 집계에 적는 값 — 책 제목 없이 수와 뱃지 id만", () => {
+  const summary = sample();
+  const snap = memberSnapshot(summary);
+  assert.equal(snap.totalPages, 50);
+  assert.equal(snap.completedBooks, 1);
+  assert.equal(snap.lastReadDate, "2026-10-28");
+  assert.equal(snap.streakRun, 2);
+  assert.ok(snap.badges.includes("completion_1"));
+  assert.ok(!JSON.stringify(snap).includes("어린 왕자"));
+  const stats = memberStats(snap, "2026-10-29");
+  assert.equal(stats.currentStreak, 2);
+  assert.equal(stats.badgeCount, snap.badges.length);
+});
+
+test("옛 집계(칸이 없음)는 null — 화면이 '—'로", () => {
+  const stats = memberStats({ level: 2, events: [] }, "2026-10-29");
+  assert.equal(stats.totalPages, null);
+  assert.equal(stats.badges, null);
+  assert.equal(stats.currentStreak, null);
+  assert.deepEqual(memberStats({ badges: ["nope", "shelf_1", "shelf_1"] }, "2026-10-29").badges, ["shelf_1"]);
+});
+
+test("트랙 순서 — 누적 경험치 → 최근에 읽은 학생 → 학번", () => {
+  const order = sortJourney([
+    { uid: "a", totalXp: 10, studentId: "3" },
+    { uid: "b", totalXp: 50, studentId: "2" },
+    { uid: "c", totalXp: 10, lastReadDate: "2026-10-28", studentId: "4" },
+    { uid: "d", totalXp: 10, studentId: "1" },
+  ]).map((r) => r.uid);
+  assert.deepEqual(order, ["b", "c", "d", "a"]);
+});
+
+test("나의 독서 여정 이야기", () => {
+  assert.match(journeyNarrative(deriveReading(initialReadingState(), new Date(NOW)), "2026-10-29")[0], /아직 독서 여정이/);
+  const lines = journeyNarrative(sample(), "2026-10-29");
+  assert.match(lines[0], /「어린 왕자」를 펼치며/);
+  assert.ok(lines.some((l) => /1권을 완독/.test(l)));
+  assert.ok(lines.some((l) => /레벨 \d/.test(l)));
+});

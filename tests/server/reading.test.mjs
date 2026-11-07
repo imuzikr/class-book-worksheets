@@ -75,6 +75,12 @@ test("record creation, rank projection and correction are atomic and exclude pri
   assert.equal(ranking.rankings[0].xp, saved.summary.classScores["api-class"].daily);
   assert.equal(JSON.stringify(ranking).includes(log.notes), false);
   assert.equal(JSON.stringify(ranking).includes("익명으로"), false);
+  // 리더보드 — 쪽수 · 완독 · 뱃지는 함께 오고, 책 제목은 오지 않습니다
+  assert.equal(ranking.rankings[0].totalPages, 50);
+  assert.equal(ranking.rankings[0].completedBooks, 1);
+  assert.equal(ranking.rankings[0].totalXp, saved.summary.xp);
+  assert.ok(ranking.rankings[0].badges.includes("completion_1"));
+  assert.equal(JSON.stringify(ranking).includes(saved.state.books[0].title), false);
   const edited = await mutateReading(principal("student"), payload("api-edit-0001", { type: "updateLog", logId: "api-log-0001", endPage: 20 }));
   assert.equal(edited.summary.totalBooks, 0);
   assert.equal((await getReadingRankings(principal("teacher"), "api-class", "daily")).rankings[0].xp, edited.summary.classScores["api-class"].daily);
