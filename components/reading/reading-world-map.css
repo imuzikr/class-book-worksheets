@@ -45,7 +45,10 @@
 .rwm-map-actions button:hover,.rwm-map-actions button[aria-pressed=true] { background:#31524a; border-color:#a0a071; }
 .rwm-layout { display:grid; grid-template-columns:minmax(0,1fr) 228px; border-top:1px solid #3d5b50; border-bottom:1px solid #3d5b50; }
 .rwm-map-panel { position:relative; min-width:0; background:#052629; }
-.rwm-viewport { overflow:auto; height:clamp(440px,48vw,700px); scrollbar-width:thin; scrollbar-color:#7c8b6c #15383a; cursor:grab; }
+/* 스크롤 막대를 감춥니다 — 확대하면 막대가 생겨 칸이 10px 줄고, 그 폭으로 배율을
+   다시 재어 지도가 출렁였습니다(축소할 때 막대가 사라지며 또 한 번). 이동은 드래그 · 방향키. */
+.rwm-viewport { overflow:auto; height:clamp(440px,48vw,700px); scrollbar-width:none; cursor:grab; }
+.rwm-viewport::-webkit-scrollbar { display:none; }
 .rwm-viewport:active { cursor:grabbing; }
 .rwm-canvas { position:relative; isolation:isolate; }
 .rwm-terrain { position:absolute; }
