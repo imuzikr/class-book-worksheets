@@ -162,7 +162,7 @@ function DashboardSession({ user }) {
   else if (teacher && tab === "personal" && !selectedUid) content = <Section title="개인별 분석 리포트"><Empty>이 반의 학생이 등록되면 왼쪽에서 선택할 수 있습니다.</Empty></Section>;
   else if (data) content = <>
     <div className="bb-dash-scope-line"><span>{data.period.label} · {periodText}</span>{reading?.previous && data.period.previous && <span>비교 {fullDate(data.period.previous.start)} — {fullDate(data.period.previous.end)}</span>}</div>
-    {teacher ? tab === "personal" ? <TeacherPersonalReport data={data} /> : tab === "overall" ? <OverallReport data={data} onSelectClass={(id) => { selectClass(id); setTab("class"); }} /> : <>
+    {teacher ? tab === "personal" ? <TeacherPersonalReport data={data} sample={!isFirebaseConfigured} /> : tab === "overall" ? <OverallReport data={data} onSelectClass={(id) => { selectClass(id); setTab("class"); }} /> : <>
       <p className="bb-dash-roster-note">현재 반 명부를 기준으로 집계합니다. 학생을 고르면 개인별 분석으로 이동합니다.</p>
       <div className="bb-dash-metrics"><Metric label="활동 참여" value={activity?.started || 0} unit="명" hint={"대상 " + fmt(activity?.eligible) + "명 · 현재 진행"} /><Metric label="알게 된 점을 남긴 학생" value={reflections?.learned || 0} unit="명" hint="선택 기간의 KWLS L 기록" />{reading ? <Metric label="독서를 기록한 학생" value={readingSummary?.readers} unit="명" previous={reading.previous?.readers} hint={"읽은 쪽수 " + fmt(readingSummary?.pages) + "쪽"} /> : <Metric label="활동 피드백" value={asArray(data.feedback).length} unit="건" hint="선택한 활동에서 나눈 기록" />}</div>
       <Snapshot key={activity?.id || "empty"} activity={activity} onSelectStudent={selectStudent} showStudents={false} />
@@ -184,7 +184,7 @@ function DashboardSession({ user }) {
     <TopNav key={user.uid} active="dashboard" growthEnabled={readingEnabled} />
     <main className="bb-dashboard-main">
       <header className="bb-dashboard-heading"><div><h1>{teacher ? "독서 분석 리포트" : "나의 독서 기록"}</h1><p>{teacher ? "학생·학급·전체의 독서 활동을 함께 살펴봅니다." : user.realName + "의 독서 활동과 읽어 온 시간을 살펴봅니다."}</p></div><button type="button" className="bb-dash-secondary" onClick={() => setRefresh((value) => value + 1)} disabled={!ready || report.loading || (!teacher && !classId)}>새로고침</button></header>
-      {!isFirebaseConfigured && <p className="bb-dash-demo">체험 데이터 · {teacher ? "왼쪽 학생 목록과 리포트 탭에서 분석 대상을 바꿀 수 있습니다." : "상단에서 학생을 고르면 각자의 독서 기록을 확인할 수 있습니다."}</p>}
+      {!isFirebaseConfigured && <p className="bb-dash-demo">샘플 데이터 / 가상 학생 · {teacher ? "왼쪽에서 가상 학생을 고르면 체험용 독서 활동 답을 한 번에 볼 수 있습니다." : "상단에서 가상 학생을 고르면 각자의 체험 기록을 확인할 수 있습니다."}</p>}
       {ready && <div className="bb-dash-controls" aria-label="대시보드 조회 조건">
         {classId && (!teacher || tab !== "overall" || period === "semester") && <label>{teacher && tab === "overall" ? "학기 기준 반" : "반"}<select aria-label="대시보드 반 선택" value={classId} onChange={(event) => selectClass(event.target.value)}>{allowedClasses.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
         <label>기간<select aria-label="조회 기간" value={period} onChange={(event) => setPeriod(event.target.value)}><option value="weekly">이번 주</option><option value="monthly">이번 달</option><option value="semester">이번 학기</option><option value="custom">직접 선택</option></select></label>
