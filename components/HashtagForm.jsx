@@ -66,6 +66,7 @@ import HashtagComments from "./HashtagComments";
 import ConfirmModal from "./ConfirmModal";
 import WordCloud from "./WordCloud";
 import { IconLock } from "./StatusIcons";
+import { BookInfoLink } from "./BookHeadParts";
 import SecureImage from "./SecureImage";
 
 const SAVE_DELAY = 900; // ms — 이만큼 입력이 없으면 저장
@@ -363,6 +364,7 @@ export default function HashtagForm({ activity, user, onBack }) {
               )}
             </div>
           </div>
+          <BookInfoLink url={activity.bookUrl} />
         </div>
       </div>
 

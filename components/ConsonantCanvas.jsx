@@ -55,6 +55,7 @@ import {
 import { memberColor, memberLegend } from "@/lib/bookColors";
 import { eunNeun } from "@/lib/korean";
 import { IconLock } from "./StatusIcons";
+import { BookInfoLink } from "./BookHeadParts";
 import { useProgressStageFocus } from "@/lib/useProgressStageFocus";
 
 export default function ConsonantCanvas({
@@ -263,6 +264,8 @@ export default function ConsonantCanvas({
                 <span className="canvas-progress-text">{filled} / {CELL_COUNT}칸</span>
               </div>
             </div>
+            {/* 도서 정보 — 둘째 줄 오른쪽 끝(다른 독서 활동과 같은 자리) */}
+            <BookInfoLink url={activity.bookUrl} />
           </div>
         </div>
       )}

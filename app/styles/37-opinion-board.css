@@ -650,3 +650,36 @@ h4.attendance-seat-help { margin-top: 16px; }
   .opinion-board.is-list .opinion-zone-head { scroll-snap-align: start; }
   .opinion-mobile-note { margin: 0 0 8px; font-size: 12.5px; color: var(--text-sub); }
 }
+
+/* 보기 전환(메모지형 ↔ 목록형) — 머리말 둘째 줄 오른쪽 끝(배움나눔 ada4c87과 같음).
+   휴대폰 폭에서는 늘 목록이라 단추를 안 그립니다(OpinionBoard의 narrow). */
+.opinion-main .books-head-main { flex-wrap: wrap; }
+.opinion-layout-toggle {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 2px;
+  margin-left: auto;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-deep);
+}
+.opinion-layout-toggle > button {
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-sub);
+  cursor: pointer;
+}
+.opinion-layout-toggle > button[aria-pressed="true"] {
+  background: var(--primary);
+  color: #fff;
+}
+.opinion-layout-toggle > button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}

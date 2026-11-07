@@ -42,6 +42,7 @@ import {
 import { useEntryCast } from "@/lib/useEntryCast";
 import { useProgressStageFocus } from "@/lib/useProgressStageFocus";
 import { IconLock } from "./StatusIcons";
+import { BookInfoLink } from "./BookHeadParts";
 import BookStudentRail from "./BookStudentRail";
 import HashtagSlide from "./HashtagSlide";
 import HashtagComments from "./HashtagComments";
@@ -238,6 +239,7 @@ export default function HashtagBoard({
               </span>
             )}
           </div>
+          <BookInfoLink url={activity.bookUrl} />
         </div>
       </div>
 

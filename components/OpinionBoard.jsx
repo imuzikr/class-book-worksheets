@@ -178,7 +178,17 @@ export default function OpinionBoard({
     mq.addEventListener("change", sync);
     return () => mq.removeEventListener("change", sync);
   }, []);
-  const isList = layout === "list" || narrow;
+  // 보기 전환(메모지형 ↔ 목록형) — 활동의 기본 모양으로 시작하되 이 화면에만 적용합니다
+  // (배움나눔과 같음 · 저장된 layout은 그대로). 휴대폰 폭에서는 위처럼 늘 목록이라
+  // 전환 단추를 안 띄웁니다.
+  const [layoutChoice, setLayoutChoice] = useState(null);
+  const shownLayout = layoutChoice && layoutChoice.activityId === activity.id ? layoutChoice.layout : layout;
+  const isList = shownLayout === "list" || narrow;
+  function pickLayout(next) {
+    dragRef.current = null;
+    setDrag(null);
+    setLayoutChoice({ activityId: activity.id, layout: next });
+  }
   // 단위 · 쓰기 창(색 고르기 · 단추 이름)은 활동의 원래 판 모양을 따릅니다 —
   // 휴대폰에서 목록으로 보여도 메모판 활동이면 메모지 색을 고릅니다.
   const memoActivity = layout !== "list";
@@ -375,6 +385,16 @@ export default function OpinionBoard({
             <a className="btn-primary book-info-btn" href={bookUrl} target="_blank" rel="noopener noreferrer">
               <IconBook size={15} /> 도서 정보
             </a>
+          )}
+          {!narrow && (
+            <div className="opinion-layout-toggle" role="group" aria-label="보기 방식">
+              <button type="button" aria-pressed={!isList} onClick={() => pickLayout("memo")}>
+                메모지형
+              </button>
+              <button type="button" aria-pressed={isList} onClick={() => pickLayout("list")}>
+                목록형
+              </button>
+            </div>
           )}
         </div>
       </div>

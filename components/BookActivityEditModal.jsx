@@ -83,7 +83,7 @@ export default function BookActivityEditModal({ activity, onClose, onDone }) {
         isOpinion
           ? { title: nextTitle, topic, bookUrl, zoneNames, prompt, noteMode, layout: opLayout }
           : isHashtag
-          ? { title: nextTitle, topic: "", bookUrl: "", guide }
+          ? { title: nextTitle, topic: "", bookUrl, guide }
           : isBrainwrite
           ? { title: nextTitle, topic, bookUrl, prompt, questionMode }
           : { title: nextTitle, topic, bookUrl },
@@ -179,7 +179,8 @@ export default function BookActivityEditModal({ activity, onClose, onDone }) {
           </label>
         )}
 
-        {isSolo && !isHashtag && (
+        {/* 도서 정보 주소 — 가로세로(닿소리의 낱말을 가져온 퀴즈)만 받지 않습니다 */}
+        {(isSolo || activity.type === "consonant") && (
           <label className="book-field">
             <span>
               도서 정보 사이트 <em className="book-optional">선택</em>

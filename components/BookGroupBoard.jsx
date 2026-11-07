@@ -36,6 +36,7 @@ import ConsonantCanvas from "./ConsonantCanvas";
 import "./BookActivityGroupRail.css";
 import "./ProgressStageFilter.css";
 import { IconPeople, IconLock } from "./StatusIcons";
+import { BookInfoLink } from "./BookHeadParts";
 
 export default function BookGroupBoard({
   activity,
@@ -242,6 +243,8 @@ export default function BookGroupBoard({
             </span>
           )}
         </div>
+        {/* 도서 정보 — '전체 보기' 앞(주소가 있을 때만) */}
+        <BookInfoLink url={activity.bookUrl} />
         {isTeacher && (
           <button type="button" className="btn-primary book-allview-btn" onClick={onOpenAll}>
             전체 보기

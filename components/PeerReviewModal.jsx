@@ -38,7 +38,7 @@ export default function PeerReviewModal({
   // 것 가운데 내 것을 뺀 나머지를 '다른 친구들이 남긴 한 마디'로 아래에 둡니다.
   groupReviews = [],
   initialUid = null,
-  locked = false, // 교사가 잠갔거나 활동이 잠긴 상태
+  locked = false, // 교사가 동료 평가를 잠근 상태(활동 잠금과 따로 — peerReviewLocked)
   // 친구의 글을 왼쪽에 함께 보여 줄 때(모둠 RAFT — 선생님 요청) — (entry) => 화면.
   // 주면 고른 친구의 기록 한 장을 구독해(subscribeMateEntry) 읽고 감상을 씁니다.
   renderWork = null,

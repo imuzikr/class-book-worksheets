@@ -286,18 +286,21 @@ export default function GroupComposer({
               </div>
             )}
             <div className="gc-foot">
-              <button type="button" className="btn-ghost" onClick={onClose}>취소</button>
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={async () => {
-                  setGroups(basePreview);
-                  await handleSaveGroups(basePreview);
-                }}
-                disabled={saving || basePreview.length === 0}
-              >
-                {saving ? "저장 중…" : "기본 모둠으로 활동 모둠 만들기"}
-              </button>
+              {/* 취소 · 저장은 같은 크기 두 칸(배움나눔과 같음) */}
+              <div className="gc-foot-actions">
+                <button type="button" className="btn-ghost" onClick={onClose}>취소</button>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={async () => {
+                    setGroups(basePreview);
+                    await handleSaveGroups(basePreview);
+                  }}
+                  disabled={saving || basePreview.length === 0}
+                >
+                  {saving ? "저장 중…" : "기본 모둠으로 활동 모둠 만들기"}
+                </button>
+              </div>
             </div>
           </>
         ) : (
@@ -474,11 +477,13 @@ export default function GroupComposer({
           {hasExisting && (
             <span className="gc-foot-note">재구성해도 각 모둠 카드의 작성 내용은 유지됩니다.</span>
           )}
-          <button type="button" className="btn-ghost" onClick={onClose}>취소</button>
-          <button type="button" className="btn-primary" onClick={handleSave}
-            disabled={saving || groups.every((g) => g.members.length === 0)}>
-            {saving ? "저장 중…" : "활동 모둠 저장"}
-          </button>
+          <div className="gc-foot-actions">
+            <button type="button" className="btn-ghost" onClick={onClose}>취소</button>
+            <button type="button" className="btn-primary" onClick={handleSave}
+              disabled={saving || groups.every((g) => g.members.length === 0)}>
+              {saving ? "저장 중…" : "활동 모둠 저장"}
+            </button>
+          </div>
         </div>
           </>
         )}

@@ -91,7 +91,9 @@ function RaftFormBody({ activity, user, onBack }) {
 
   // 동료 평가 — 모둠이 있을 때만. **기본은 잠김**이고, 교사가 열어 주어야
   // 쓸 수 있습니다(잠긴 동안에도 이미 쓴 것과 받은 것은 그대로 보입니다).
-  const peerLocked = !isPeerReviewOpen(activity) || locked;
+  // 동료 평가는 활동 잠금(locked)과 독립 — peerReviewLocked 하나로만 여닫습니다
+  // (배움나눔과 같음: 글쓰기를 잠가 둔 채 발표를 듣고 한 마디를 남기는 수업).
+  const peerLocked = !isPeerReviewOpen(activity);
   const [peerOpen, setPeerOpen] = useState(null); // null | { uid } — 열 때 고를 사람
   const [myReviews, setMyReviews] = useState([]);
   const [gotReviews, setGotReviews] = useState([]);
