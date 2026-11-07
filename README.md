@@ -147,17 +147,16 @@ npm run deploy             # 규칙 시험 → firestore(rules·indexes) + stora
 - 콘솔에서 할 일 두 가지: `config/teacherSignup` 문서에 `code`(4자 이상) 적기 ·
   첫 관리자의 `users/{uid}.role`을 `admin`으로 고치기.
 
-## 지우기 — 앱 안에서는 보관까지
+## 지우기 — 보관한 반은 앱에서 완전 삭제
 
-- **반**은 앱에서 지우지 않고 **보관**합니다. 학생은 '반에서 빼기'로 명단에서만 뺍니다.
-- 완전히 지우려면 Firebase 콘솔을 씁니다 — Firestore에서 `classes/{반}` 문서를
-  지우면 그 아래 하위 컬렉션(그 반의 노트 · 과일 · 메신저 등)까지 함께 지워집니다.
-  CLI로는 `npx firebase-tools firestore:delete classes/<반 id> --recursive`가 같은
-  일을 합니다. 앱 코드(웹 SDK)의 문서 삭제는 그 문서 한 장만 지우고 하위 기록은
-  남기므로, 이 일은 앱 안에 두지 않았습니다.
-  반 바깥에 있는 것(`bookActivities` · `memberships` · `attendanceRecords` ·
-  `kwl` · `joinCodes`)은 `classId`로 따로 지웁니다. 로그인 계정은
-  Authentication 탭에서 지우고, 그 사람의 `users/{uid}` 문서도 함께 지웁니다.
+- **반**은 먼저 **보관**합니다. 보관된 반은 '반 관리하기' 아래 '보관된 반'에서
+  **🗑 완전 삭제**를 누르고 반 이름을 그대로 적으면, 그 반의 독서 활동 · 학생 글 ·
+  출석 · 자리표 · 모둠 · 과일 · 메신저 · 손들기 · 돌발 퀴즈 · 공지가 모두 지워집니다
+  (되돌릴 수 없음 — 서버 함수 없이 앱이 하나씩 찾아 지웁니다). 지우는 동안 창을 닫지
+  마세요. 중간에 멈추면 다시 누르면 남은 것부터 이어서 지웁니다.
+- 학생은 '반에서 빼기'로 명단에서만 뺍니다. **학생 계정은 반을 지워도 남습니다**
+  (다른 반에서도 쓰므로). 아예 지우려면 콘솔의 Authentication 탭에서 계정을 지우고,
+  Firestore의 `users/{uid}` 문서도 함께 지웁니다.
 - 학년도가 바뀌어 통째로 비우려면 `npx firebase-tools firestore:delete --all-collections`
   (되돌릴 수 없음)로 비운 뒤 `config/teacherSignup`과 관리자 role만 다시 적으면 됩니다.
 

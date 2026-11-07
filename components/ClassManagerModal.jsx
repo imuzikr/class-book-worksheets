@@ -7,8 +7,9 @@
 // '보관된 반' 목록에서만 확인·복원할 수 있습니다. 보관 중엔
 // 학생 접근이 완전히 막히고(참여 코드 폐기), 교사도 데이터를 보기만
 // 할 수 있습니다(편집하려면 먼저 복원).
-// '완전 삭제'는 없습니다 — 하위 기록까지 지우려면 서버 함수가 필요해
-// 걷었습니다(비전공자도 배포하게). 학기 정리는 Firebase 콘솔에서 합니다.
+// 보관된 반은 '완전 삭제'로 그 반의 기록을 모두 지웁니다(ClassPurgeModal —
+// 서버 함수 없이 앱이 컬렉션마다 찾아 지움, lib/classPurge.js). 학생 계정은
+// 다른 반에서도 쓰므로 남깁니다.
 // =============================================================
 import { useEffect, useMemo, useState } from "react";
 import { backdropClose } from "@/lib/modal";
@@ -22,6 +23,8 @@ import {
   setClassReadingEnabled,
 } from "@/lib/store";
 import ClassJoinCode from "./ClassJoinCode";
+import ClassPurgeModal from "./ClassPurgeModal";
+import { isAdmin } from "@/lib/user";
 import { IconPen, IconArchive, IconChair } from "./StatusIcons";
 
 export default function ClassManagerModal({
@@ -43,6 +46,7 @@ export default function ClassManagerModal({
   const [regeneratingCodeIds, setRegeneratingCodeIds] = useState([]);
   const [readingBusyIds, setReadingBusyIds] = useState([]);
   const [error, setError] = useState("");
+  const [purging, setPurging] = useState(null);
 
   const active = classes.filter((c) => !c.archived);
   const archived = classes.filter((c) => c.archived);
@@ -345,6 +349,17 @@ export default function ClassManagerModal({
                     >
                       ♻️ 복원
                     </button>
+                    {(c.createdBy === user?.uid || isAdmin(user)) && (
+                      <button
+                        type="button"
+                        className="btn-ghost class-mgr-purge"
+                        onClick={() => setPurging(c)}
+                        disabled={busyId === c.id}
+                        title="이 반의 기록을 모두 지웁니다 — 되돌릴 수 없어요"
+                      >
+                        🗑 완전 삭제
+                      </button>
+                    )}
                   </div>
                 </li>
               ))}
@@ -353,6 +368,16 @@ export default function ClassManagerModal({
         </div>
       </div>
 
+      {purging && (
+        <ClassPurgeModal
+          cls={purging}
+          onClose={() => setPurging(null)}
+          onDone={(c) => {
+            setPurging(null);
+            onToast?.(`'${c.name}' 반을 완전히 지웠어요.`);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -108,6 +108,37 @@
   background: #b42318;
 }
 
+/* 반 완전 삭제(ClassPurgeModal) — 되묻는 창에 이름 칸 · 진행 줄이 더 붙습니다 */
+.class-purge-modal { max-width: 440px; }
+.class-purge-modal .confirm-desc { margin-bottom: 16px; white-space: normal; }
+.class-purge-label {
+  align-self: stretch;
+  text-align: left;
+  font-size: 13px;
+  color: var(--text-sub);
+  margin-bottom: 6px;
+}
+.class-purge-input {
+  align-self: stretch;
+  margin-bottom: 14px;
+}
+.class-purge-step {
+  align-self: stretch;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 14px;
+}
+.class-purge-error { align-self: stretch; text-align: left; margin-bottom: 14px; }
+.confirm-confirm.danger:disabled {
+  background: #e9b4b0;
+  cursor: not-allowed;
+  transform: none;
+}
+.class-mgr-purge { color: #b42318; }
+
 /* ===================== 학생 프로필 편집 모달 ===================== */
 
 .student-edit-modal {

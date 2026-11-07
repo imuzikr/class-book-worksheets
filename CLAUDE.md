@@ -196,11 +196,24 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
 
 ### 서버 함수 없이 돌리기 — 무엇이 바뀌었나
 
-- **반은 보관까지**입니다(반 관리하기에 '완전 삭제' 없음). 하위 기록까지 지우는 일은
-  앱 코드(웹 SDK의 `deleteDoc`은 문서 한 장만 지움)로는 못 해서, 학기 정리는 Firebase
-  콘솔에서 합니다 — 콘솔에서 반 문서를 지우면 하위 컬렉션까지 함께 지워집니다(CLI는
-  `firestore:delete classes/<id> --recursive`). 반 바깥의 `bookActivities` · `memberships` ·
-  `attendanceRecords` · `kwl` · `joinCodes`는 `classId`로 따로.
+- **반 완전 삭제는 보관된 반에서만**입니다(반 관리하기 → 보관된 반 → '🗑 완전 삭제',
+  `ClassPurgeModal` — 반 이름을 그대로 적어야 지워짐). 웹 SDK에는 '아래까지 통째로
+  지우기'가 없어, 앱이 컬렉션마다 찾아 지웁니다(`lib/data/classes.js`의 `purgeClass`).
+  - 차례: 독서 활동(`purgeBookActivity` — 학생 글 · 낱말 · 메모 …) → 반 아래 기록 →
+    반 바깥 기록(`memberships` · `rewards` · `presence` · `studentNotes` · `studyBoards` ·
+    `kwl` · 참여 코드 · 방송) → **반 문서는 맨 마지막**. 규칙 판정(`canPurgeClass`)이 반
+    문서를 읽고, 중간에 끊겨도 반이 남아 다시 누르면 남은 것부터 이어 지웁니다.
+  - **지울 목록은 `lib/classPurge.js` 한 곳**입니다. **반에 딸린 컬렉션을 새로 만들면
+    거기 더하세요** — 빠지면 그 기록만 콘솔에 남습니다. `tests/unit/classPurge.test.mjs`가
+    `firestore.rules`의 match와 목록을 견주어 빠진 이름을 잡습니다(반 아래 · 최상위).
+    독서 활동 아래에 새 컬렉션을 더하면 `purgeBookActivity`에도 더합니다.
+  - 규칙: `canPurgeClass(cId)` = 보관된 반 + (담당 교사 또는 관리자). `classes/{cId}/{rest=**}`와
+    `bookActivities/{aId}/{rest=**}`에 읽기 · 지우기를, 반 바깥 컬렉션에는 지우기 갈래를
+    더했습니다. **쓰기 · 고치기는 그대로 막힙니다**, 운영 중인 반은 먼저 보관해야 합니다.
+    시험 `tests/rules/classPurge.test.mjs`.
+  - **학생 계정(Authentication)과 프로필(`users`)은 안 지웁니다** — 다른 반에서도 쓰고,
+    남의 로그인 계정은 서버 함수 없이는 못 지웁니다. 콘솔에서 지웁니다. 그림 파일(Storage)은
+    해시태그 대표 이미지만 지우기를 시도하고(실패해도 넘어감) 나머지는 남습니다.
 - **학생 탈퇴 대신 '반에서 빼기'** — 명단에서만 빠지고 글은 남습니다. 로그인 계정은
   Authentication 탭에서, 프로필은 `users/{uid}` 문서를 콘솔에서 지웁니다.
 - **반 공지는 교사가 곧바로 씁니다** — `classes/{cId}/classNotices`에 한 장(`sendClassNotice`,

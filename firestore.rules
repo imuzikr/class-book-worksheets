@@ -133,6 +133,13 @@ service cloud.firestore {
     function ownsClassEditable(cId) {
       return ownsClass(cId) && !isClassArchived(cId);
     }
+    // 반 완전 삭제 — 보관된 반의 담당 교사(또는 관리자)만, 그 반의 기록을 읽고
+    // 지웁니다(lib/data/classes.js의 purgeClass). 보관 중이라 위 ownsClassEditable이
+    // 막는 자리를 '지우기'에 한해서만 엽니다. 쓰기·고치기는 그대로 막혀 있습니다.
+    // 반 문서는 맨 마지막에 지웁니다 — 이 판정이 반 문서를 읽기 때문입니다.
+    function canPurgeClass(cId) {
+      return signedIn() && isClassArchived(cId) && (isAdmin() || ownsClass(cId));
+    }
     // 보관된 반은 학생도 접근 불가 — 소속 여부와 별개로 항상 거부.
     function isClassMember(cId) {
       return !isClassArchived(cId)
@@ -405,6 +412,13 @@ service cloud.firestore {
       // 랭킹 요약도 서버 API에서 현재 반 학생에게만 최소 필드를 제공합니다.
       match /readingMembers/{studentUid} {
         allow read, write: if false;
+      }
+
+      // 반 완전 삭제 — 반 아래 모든 기록(앞으로 더할 하위 컬렉션까지)을 보관된 반의
+      // 담당 교사가 읽고 지웁니다. 규칙은 여러 allow 가운데 하나만 맞으면 통과하므로,
+      // 각 컬렉션의 원래 규칙은 그대로입니다. 시험 tests/rules/classPurge.test.mjs.
+      match /{rest=**} {
+        allow read, delete: if canPurgeClass(cId);
       }
 
       // ── 언제든 질문하기(손들기) ─────────────────────────────
@@ -915,6 +929,7 @@ service cloud.firestore {
       // 담당 교사/관리자가 관리합니다.
       allow delete: if signedIn() && (
         isAdmin() || ownsClassEditable(resource.data.classId)
+        || canPurgeClass(resource.data.classId)
       );
     }
 
@@ -930,7 +945,8 @@ service cloud.firestore {
                    && request.resource.data.count >= 0
                    && request.resource.data.count <= 100
                    && rId == (request.resource.data.classId + '_' + request.resource.data.uid);
-      allow delete: if isAdmin() || ownsClassEditable(resource.data.classId);
+      allow delete: if isAdmin() || ownsClassEditable(resource.data.classId)
+                    || canPurgeClass(resource.data.classId);
       // 학생이 제 과일을 바꾸는 길은 과일 바구니뿐입니다 — **내놓으면** 줄고
       // 줄어든 만큼 같은 묶음에서 제 바구니가 늘어야 하며, **기부를 취소하면**
       // 늘고 늘어난 만큼 제 바구니가 줄어야 합니다(바구니 쪽 규칙이 응모 전에만
@@ -955,6 +971,7 @@ service cloud.firestore {
     match /broadcasts/{classId} {
       allow read: if isAdmin() || ownsClass(classId) || isClassMember(classId);
       allow create, update, delete: if isAdmin() || ownsClassEditable(classId);
+      allow delete: if canPurgeClass(classId);
     }
 
     // ── 참여 상태 — 발표 중 학생 화면이 보이는지(교사 전광판용) ──
@@ -969,7 +986,8 @@ service cloud.firestore {
                             && isClassMember(request.resource.data.classId);
       allow delete: if isAdmin()
                     || resource.data.uid == uid()
-                    || ownsClassEditable(resource.data.classId);
+                    || ownsClassEditable(resource.data.classId)
+                    || canPurgeClass(resource.data.classId);
     }
 
     // ── 누가기록(학생 관찰 메모) — 반 소유 교사/관리자 전용 (학생 열람 불가) ──
@@ -983,6 +1001,7 @@ service cloud.firestore {
                     && request.resource.data.studentUid is string;
       allow update, delete: if isAdmin()
                             || (resource.data.classId != null && ownsClassEditable(resource.data.classId));
+      allow delete: if resource.data.classId != null && canPurgeClass(resource.data.classId);
     }
 
     // ── 공부방 보드 — 읽기는 로그인 사용자(메타데이터), 쓰기는 반 소유 교사/관리자 ──
@@ -994,6 +1013,7 @@ service cloud.firestore {
       allow create: if isAdmin()
                     || (isTeacher() && ownsClassEditable(request.resource.data.classId));
       allow update, delete: if isAdmin() || ownsClassEditable(resource.data.classId);
+      allow delete: if canPurgeClass(resource.data.classId);
     }
 
     // ── 책방 활동 — 닿소리 채우기 (반별) ──────────────────────
@@ -1052,6 +1072,11 @@ service cloud.firestore {
              && c1 == c0.concat([c1[c1.size() - 1]])
              && c1[c1.size() - 1] in b0.get('words', [])
              && !(c1[c1.size() - 1] in c0);
+    }
+
+    // 반 완전 삭제 — 보관된 반의 독서 활동과 그 아래 모든 기록(학생 글 · 낱말 · 메모 …).
+    match /bookActivities/{aId}/{rest=**} {
+      allow read, delete: if canPurgeClass(bookActivityClassId(aId));
     }
 
     match /bookActivities/{aId} {
@@ -1603,6 +1628,7 @@ service cloud.firestore {
                        );
       allow delete: if signedIn() && (
         resource.data.userId == uid() || isAdmin() || ownsClassEditable(resource.data.classId)
+        || canPurgeClass(resource.data.classId)
       );
     }
 
