@@ -176,7 +176,19 @@ function BookCard({ book, index, busy, onOpen, onLog, onReview, onRestore }) {
   return <article className={`reading-book-card reading-book-color-${index % 4}`}>
     <button type="button" className="reading-book-open" onClick={onOpen} aria-label={`${book.title} 상세 보기`}>
       <BookCover book={book} />
-      <div className="reading-book-info"><span className={`reading-status reading-status--${book.status}`}>{book.archived ? "보관 중" : status}</span><h4>{book.title}</h4><p>{book.author}</p><div className="reading-book-pages"><strong>{number(book.pagesRead ?? book.currentPage)}</strong> / {number(book.totalPages)}쪽</div><div className="reading-progress"><i style={{ width: `${book.progress || 0}%` }} /></div><span className="reading-book-percent">{Math.round(book.progress || 0)}% 읽었어요</span></div>
+      <div className="reading-book-info">
+        <span className={`reading-status reading-status--${book.status}`}>{book.archived ? "보관 중" : status}</span>
+        <h4>{book.title}</h4>
+        <div className="reading-book-meta">
+          <div className="reading-book-byline">
+            <p>{book.author}</p>
+            <div className="reading-book-pages"><strong>{number(book.pagesRead ?? book.currentPage)}</strong> / {number(book.totalPages)}쪽</div>
+          </div>
+          {book.status === "completed" && <img className="reading-completion-badge" src="/reading-badges/book-completion.webp" alt="완독 축하 배지" width={50} height={50} />}
+        </div>
+        <div className="reading-progress"><i style={{ width: `${book.progress || 0}%` }} /></div>
+        <span className="reading-book-percent">{Math.round(book.progress || 0)}% 읽었어요</span>
+      </div>
     </button>
     <div className="reading-book-actions"><button type="button" className="btn-ghost" onClick={onOpen}>기록 살펴보기</button>{book.status === "completed" && !book.archived ? <button type="button" className="reading-small-review" disabled={busy} onClick={onReview}>한 권의 책</button> : <span aria-hidden="true" />}<button type="button" className="reading-small-primary" disabled={busy} onClick={book.archived ? onRestore : onLog}>{book.archived ? "서재로 복원" : "독서 발자국"}</button></div>
   </article>;

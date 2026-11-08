@@ -32,9 +32,9 @@
 .reading-filters button.active { border-color:#cedbce; background:#eef4e9; color:#315b44; font-weight:750; }
 .reading-filters button:hover { background:#eff3e9; }
 .reading-library-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:16px; }
-.reading-book-card { border:1px solid var(--reading-line); border-radius:14px; background:var(--reading-paper); overflow:hidden; transition:border-color .2s,box-shadow .2s; }
+.reading-book-card { display:flex; flex-direction:column; border:1px solid var(--reading-line); border-radius:14px; background:var(--reading-paper); overflow:hidden; transition:border-color .2s,box-shadow .2s; }
 .reading-book-card:hover { border-color:#b7cbbd; box-shadow:0 5px 20px #29452f08; }
-.reading-book-open { display:flex; align-items:flex-start; gap:18px; width:100%; background:none; border:0; text-align:left; padding:22px; color:inherit; font:inherit; cursor:pointer; }
+.reading-book-open { display:flex; flex:1; align-items:flex-start; gap:18px; width:100%; background:none; border:0; text-align:left; padding:22px; color:inherit; font:inherit; cursor:pointer; }
 .reading-book-cover { position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; color:#dbe8dd; background:linear-gradient(130deg,#345e58,#1c4441); border-radius:2px 7px 7px 2px; width:96px; height:140px; flex-shrink:0; box-shadow:3px 4px 0 #bbc6b867, inset 4px 0 0 #ffffff19; padding:14px 12px 12px 17px; }
 .reading-book-cover-line { position:absolute; left:9px; top:0; bottom:0; width:1px; background:#d2dcb633; }
 .reading-book-cover-title { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; font-size:12px; font-weight:650; text-align:center; line-height:1.45; }
@@ -47,11 +47,18 @@
 .reading-status--completed { color:#8b7126; border-color:#e5d7b1; background:#fbf4dc; }
 .reading-status--paused { color:#85807b; border-color:#e4dfd9; background:#f3f0ea; }
 .reading-book-info h4 { margin:0 0 5px; font-size:15px; color:#233e34; letter-spacing:-.03em; line-height:1.35; overflow-wrap:anywhere; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-.reading-book-info p { margin:0 0 12px; color:#7b877e; font-size:11px; }
+.reading-book-meta { display:flex; flex:1; align-items:stretch; gap:10px; min-height:50px; }
+.reading-book-byline { display:flex; flex:1; min-width:0; flex-direction:column; gap:10px; }
+.reading-book-info p { margin:0; color:#7b877e; font-size:11px; overflow-wrap:anywhere; }
+.reading-completion-badge { display:block; align-self:center; flex-shrink:0; width:50px; height:50px; object-fit:contain; }
 .reading-book-pages { margin-top:auto; font-size:10px; color:#879083; }
 .reading-book-pages strong { color:#3d6854; font-size:13px; font-weight:750; }
 .reading-book-info .reading-progress { margin:7px 0 5px; }
 .reading-book-percent { color:#7d8d7c; font-size:9px; }
+@media (max-width:600px) {
+  .reading-book-meta { min-height:42px; gap:8px; }
+  .reading-completion-badge { width:42px; height:42px; }
+}
 /* 카드 아래 단추 — 같은 크기 세 칸(가운데 '한 권의 책'은 완독한 책에만, 없으면 빈 칸) */
 .reading-book-actions { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); align-items:center; gap:8px; padding:10px 14px; border-top:1px solid #e7ece2; background:#fafbf6; }
 .reading-book-actions button { height:36px; min-height:0; padding:0 6px; font-size:12.5px; font-weight:700; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; box-sizing:border-box; width:100%; }
