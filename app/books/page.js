@@ -18,6 +18,7 @@ import { enterSampleClass, canUseSampleClass, sampleMode, SAMPLE_CLASS_ID } from
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ReadingHub from "@/components/reading/ReadingHub";
+import TeacherReadingView from "@/components/reading/TeacherReadingView";
 import ReadingLeaderboard from "@/components/reading/ReadingLeaderboard";
 import AdminSettingsPanel from "@/components/AdminSettingsPanel";
 import { readingEnabled, rankingEnabled, bookSearchEnabled, fruitBasketOn } from "@/lib/reading";
@@ -1030,6 +1031,10 @@ function BooksPageInner() {
             <AdminSettingsPanel classes={myClasses} onToast={setToast} />
           ) : leaderboardOpen ? (
             <ReadingLeaderboard key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin} characterOn={characterOn}
+              onDisabled={() => patchBooksQuery({ area: null }, { replace: true })} />
+          ) : readingOpen && admin ? (
+            <TeacherReadingView classId={classId} user={user} roster={roster} rankingOn={rankingOn} bookSearchOn={bookSearchEnabled(currentClass)}
+              activities={liveActivities} onOpenActivity={goToActivity}
               onDisabled={() => patchBooksQuery({ area: null }, { replace: true })} />
           ) : readingOpen ? (
             <ReadingHub key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin} rankingOn={rankingOn} bookSearchOn={bookSearchEnabled(currentClass)}

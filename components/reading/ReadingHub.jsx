@@ -51,7 +51,10 @@ function Modal({ title, onClose, children, wide = false, busy = false }) {
   </div>;
 }
 
-export default function ReadingHub({ classId, user, isTeacher = false, rankingOn = true, bookSearchOn = false, onDisabled, activities = [], onOpenActivity, initialBookId = null, initialTab = "library" }) {
+export default function ReadingHub({ classId, user, isTeacher = false, rankingOn = true, bookSearchOn = false, onDisabled, activities = [], onOpenActivity, initialBookId = null, initialTab = "library", student = null }) {
+  // student가 있으면 교사가 그 학생의 책나눔을 보는 읽기 전용 화면입니다(선생님 결정 — 감상·발자국까지 전부 보임).
+  const readOnly = !!student?.uid;
+  const viewUid = readOnly ? student.uid : user?.uid;
   const [raw, setRaw] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -80,9 +83,9 @@ export default function ReadingHub({ classId, user, isTeacher = false, rankingOn
 
   useEffect(() => {
     setRaw(null); setLoading(true); setError(""); setDialog(null); setConfirm(null);
-    if (!classId || !user?.uid) { setLoading(false); return undefined; }
+    if (!classId || !viewUid) { setLoading(false); return undefined; }
     let live = true;
-    const off = subscribeReadingState(classId, user.uid,
+    const off = subscribeReadingState(classId, viewUid,
       (state) => { if (live) { setRaw(state || initialReadingState()); setLoading(false); } },
       (e) => {
         if (!live) return;
@@ -90,7 +93,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, rankingOn
         if (isDisabledError(e)) disabledRef.current?.();
       });
     return () => { live = false; off?.(); };
-  }, [classId, user?.uid, revision]);
+  }, [classId, viewUid, revision]);
 
   useEffect(() => {
     const timer = setInterval(() => setDay(kstToday()), 60000);
@@ -105,10 +108,10 @@ export default function ReadingHub({ classId, user, isTeacher = false, rankingOn
   const previousLevel = useRef(null);
   useEffect(() => {
     if (!raw) return;
-    if (previousLevel.current != null && stats.level > previousLevel.current) setNotice(`레벨 ${stats.level} 달성! 독서의 깊이가 한 단계 더 자랐어요.`);
+    if (!readOnly && previousLevel.current != null && stats.level > previousLevel.current) setNotice(`레벨 ${stats.level} 달성! 독서의 깊이가 한 단계 더 자랐어요.`);
     previousLevel.current = stats.level;
-  }, [raw, stats.level]);
-  useEffect(() => { previousLevel.current = null; }, [classId, user?.uid]);
+  }, [raw, stats.level, readOnly]);
+  useEffect(() => { previousLevel.current = null; }, [classId, viewUid]);
 
   async function run(action, success = "저장했어요.") {
     if (busy) return false;
@@ -133,11 +136,11 @@ export default function ReadingHub({ classId, user, isTeacher = false, rankingOn
 
   return <ReadingErrorContext.Provider value={error}><section className="reading-hub" aria-label="책나눔 성장 기능" aria-busy={loading || busy}>
     <div className="reading-intro">
-      <div><p className="reading-eyebrow">MY READING JOURNEY</p><h2>한 페이지씩, 나의 가능성을 넓히다.</h2><p>읽은 순간을 기록하고 나만의 독서 컬렉션을 완성해 보세요.</p></div>
-      {featured?.earned && <div className="reading-featured"><ReadingBadge badge={featured} size={70} /><span>나의 대표 뱃지<strong>{featured.name}</strong></span></div>}
+      {readOnly ? <div><p className="reading-eyebrow">READING JOURNEY</p><h2>{student.name || "학생"}의 독서 여정</h2><p>학생이 남긴 서재 · 독서 발자국 · 한 권의 책을 읽기만 합니다.</p></div> : <div><p className="reading-eyebrow">MY READING JOURNEY</p><h2>한 페이지씩, 나의 가능성을 넓히다.</h2><p>읽은 순간을 기록하고 나만의 독서 컬렉션을 완성해 보세요.</p></div>}
+      {featured?.earned && <div className="reading-featured"><ReadingBadge badge={featured} size={70} /><span>{readOnly ? "대표 뱃지" : "나의 대표 뱃지"}<strong>{featured.name}</strong></span></div>}
     </div>
     <nav className="reading-tabs" aria-label="책나눔 메뉴">
-      {[["library", "내 서재"], ["growth", "성장·뱃지"], ...(rankingOn ? [["ranking", "우리 반 랭킹"]] : [])].map(([key, label]) => <button type="button" key={key} className={tab === key ? "active" : ""} aria-current={tab === key ? "page" : undefined} onClick={() => { setTab(key); setDialog(null); setError(""); }}>{label}</button>)}
+      {[["library", readOnly ? "서재" : "내 서재"], ["growth", "성장·뱃지"], ...(rankingOn ? [["ranking", "우리 반 랭킹"]] : [])].map(([key, label]) => <button type="button" key={key} className={tab === key ? "active" : ""} aria-current={tab === key ? "page" : undefined} onClick={() => { setTab(key); setDialog(null); setError(""); }}>{label}</button>)}
     </nav>
     {error && !dialog && !confirm && <div className="reading-error" role="alert">{error}<button type="button" onClick={() => setError("")} aria-label="오류 안내 닫기">×</button></div>}
     {notice && <div className="reading-notice" role="status">{notice}</div>}
@@ -149,16 +152,16 @@ export default function ReadingHub({ classId, user, isTeacher = false, rankingOn
         <div><span>지금 이어가는 독서</span><strong>{number(stats.currentStreak)}<small>일</small></strong><span>최장 {number(stats.longestStreak)}일 연속</span></div>
       </div>
       {tab === "library" && <>
-        <div className="reading-section-head"><div><h3>내 서재 <span>{books.filter((b) => !b.archived).length}</span></h3><p>책의 마지막 페이지까지, 나의 속도로.</p></div><button type="button" className="btn-primary" onClick={() => setDialog({ type: "book" })}>＋ 책 등록</button></div>
+        <div className="reading-section-head"><div><h3>{readOnly ? "서재" : "내 서재"} <span>{books.filter((b) => !b.archived).length}</span></h3><p>책의 마지막 페이지까지, 나의 속도로.</p></div>{!readOnly && <button type="button" className="btn-primary" onClick={() => setDialog({ type: "book" })}>＋ 책 등록</button>}</div>
         <div className="reading-filters" aria-label="도서 상태 필터">{FILTERS.map(([key, label]) => <button type="button" key={key} className={filter === key ? "active" : ""} aria-pressed={filter === key} onClick={() => setFilter(key)}>{label}</button>)}</div>
-        {visibleBooks.length ? <div className="reading-library-grid">{visibleBooks.map((b, i) => <BookCard key={b.id} book={b} index={i} busy={busy} onOpen={() => setDialog({ type: "detail", bookId: b.id })} onReview={() => setDialog({ type: "review", bookId: b.id })} onLog={() => setDialog({ type: "log", bookId: b.id })} onRestore={() => run({ type: "archiveBook", bookId: b.id, archived: false }, "책을 서재로 돌려놓았어요.")} />)}</div> : <div className="reading-empty"><BookIcon size={44} /><h3>{filter === "all" ? "나의 첫 책을 기다리고 있어요." : "아직 이곳에 놓인 책이 없어요."}</h3><p>{filter === "all" ? "읽고 싶은 책을 등록하고 오늘 읽은 순간을 남겨 보세요." : "책을 읽고 기록하면 서재의 풍경도 달라져요."}</p>{filter === "all" && <button type="button" className="btn-primary" onClick={() => setDialog({ type: "book" })}>첫 책 등록하기</button>}</div>}
+        {visibleBooks.length ? <div className="reading-library-grid">{visibleBooks.map((b, i) => <BookCard key={b.id} book={b} index={i} busy={busy} readOnly={readOnly} onOpen={() => setDialog({ type: "detail", bookId: b.id })} onReview={() => setDialog({ type: "review", bookId: b.id })} onLog={() => setDialog({ type: "log", bookId: b.id })} onRestore={() => run({ type: "archiveBook", bookId: b.id, archived: false }, "책을 서재로 돌려놓았어요.")} />)}</div> : <div className="reading-empty"><BookIcon size={44} /><h3>{readOnly ? "아직 이곳에 놓인 책이 없어요." : filter === "all" ? "나의 첫 책을 기다리고 있어요." : "아직 이곳에 놓인 책이 없어요."}</h3>{!readOnly && <p>{filter === "all" ? "읽고 싶은 책을 등록하고 오늘 읽은 순간을 남겨 보세요." : "책을 읽고 기록하면 서재의 풍경도 달라져요."}</p>}{filter === "all" && !readOnly && <button type="button" className="btn-primary" onClick={() => setDialog({ type: "book" })}>첫 책 등록하기</button>}</div>}
       </>}
-      {tab === "growth" && <Growth stats={stats} busy={busy} onSelect={(badgeId) => run({ type: "setFeaturedBadge", badgeId }, "대표 뱃지를 바꿨어요.")} />}
-      {rankingOn && tab === "ranking" && <Rankings key={classId} classId={classId} uid={user.uid} isTeacher={isTeacher} onDisabled={onDisabled} revision={raw} />}
+      {tab === "growth" && <Growth stats={stats} busy={busy} readOnly={readOnly} onSelect={(badgeId) => run({ type: "setFeaturedBadge", badgeId }, "대표 뱃지를 바꿨어요.")} />}
+      {rankingOn && tab === "ranking" && <Rankings key={classId} classId={classId} uid={viewUid} isTeacher={isTeacher} onDisabled={onDisabled} revision={raw} />}
     </>}
 
     {dialog?.type === "book" && <BookForm key={selected?.id || "new"} book={selected} searchOn={bookSearchOn} pagesLocked={!!selected && [...(raw?.logs || []), ...(raw?.reviews || [])].some((r) => r.bookId === selected.id)} activities={activities} busy={busy} onClose={() => setDialog(null)} onSave={async (values) => { const ok = await run({ type: selected ? "updateBook" : "addBook", ...(selected ? { bookId: selected.id } : {}), ...values }, selected ? "책 정보를 고쳤어요." : "새 책을 서재에 놓았어요."); if (ok) setDialog(null); }} />}
-    {dialog?.type === "detail" && selected && <BookDetail book={selected} classId={classId} activity={activities.find((a) => a.id === selected.activityId)} onOpenActivity={onOpenActivity} logs={(stats.logs || raw?.logs || []).filter((l) => l.bookId === selected.id)} review={(stats.reviews || raw?.reviews || []).find((r) => r.bookId === selected.id)} busy={busy} onClose={() => setDialog(null)} onEdit={() => setDialog({ type: "book", bookId: selected.id })} onLog={(log) => setDialog({ type: "log", bookId: selected.id, log })} onReview={() => setDialog({ type: "review", bookId: selected.id })} onDeleteLog={(log) => ask("이 독서 기록을 삭제할까요? 경험치와 달성 기록도 다시 계산해요.", { type: "deleteLog", logId: log.id })} onDeleteReview={() => ask("이 ‘한 권의 책’을 삭제할까요? 받은 보상도 함께 정정해요.", { type: "deleteReview", bookId: selected.id })} onArchive={() => ask(selected.archived ? "이 책을 서재로 돌려놓을까요?" : "이 책을 보관함으로 옮길까요? 독서 기록은 그대로 남아요.", { type: "archiveBook", bookId: selected.id, archived: !selected.archived })} />}
+    {dialog?.type === "detail" && selected && <BookDetail book={selected} classId={classId} readOnly={readOnly} activity={activities.find((a) => a.id === selected.activityId)} onOpenActivity={onOpenActivity} logs={(stats.logs || raw?.logs || []).filter((l) => l.bookId === selected.id)} review={(stats.reviews || raw?.reviews || []).find((r) => r.bookId === selected.id)} busy={busy} onClose={() => setDialog(null)} onEdit={() => setDialog({ type: "book", bookId: selected.id })} onLog={(log) => setDialog({ type: "log", bookId: selected.id, log })} onReview={() => setDialog({ type: "review", bookId: selected.id })} onDeleteLog={(log) => ask("이 독서 기록을 삭제할까요? 경험치와 달성 기록도 다시 계산해요.", { type: "deleteLog", logId: log.id })} onDeleteReview={() => ask("이 ‘한 권의 책’을 삭제할까요? 받은 보상도 함께 정정해요.", { type: "deleteReview", bookId: selected.id })} onArchive={() => ask(selected.archived ? "이 책을 서재로 돌려놓을까요?" : "이 책을 보관함으로 옮길까요? 독서 기록은 그대로 남아요.", { type: "archiveBook", bookId: selected.id, archived: !selected.archived })} />}
     {dialog?.type === "log" && selected && <LogForm key={dialog.log?.id || selected.id} book={selected} log={dialog.log} today={day} busy={busy} onClose={() => setDialog({ type: "detail", bookId: selected.id })} onSave={async (values) => { const ok = await run({ type: dialog.log ? "updateLog" : "addLog", bookId: selected.id, ...(dialog.log ? { logId: dialog.log.id } : {}), ...values }, "오늘의 독서를 기록했어요."); if (ok) setDialog({ type: "detail", bookId: selected.id }); }} />}
     {dialog?.type === "review" && selected && <ReviewForm key={selected.id} book={selected} review={(stats.reviews || raw?.reviews || []).find((r) => r.bookId === selected.id)} busy={busy} onClose={() => setDialog({ type: "detail", bookId: selected.id })} onSave={async (values) => { const ok = await run({ type: "saveReview", bookId: selected.id, ...values }, "책을 읽고 남긴 생각을 저장했어요."); if (ok) setDialog({ type: "detail", bookId: selected.id }); }} />}
     {confirm && <Modal title="기록 확인" busy={busy} onClose={() => setConfirm(null)}><p className="reading-confirm-copy">{confirm.title}</p><div className="reading-form-actions"><button type="button" className="btn-ghost" onClick={() => setConfirm(null)} disabled={busy}>취소</button><button type="button" className="reading-danger-button" disabled={busy} onClick={async () => { if (await run(confirm.action, "기록을 정리했어요.")) setConfirm(null); }}>{busy ? "처리 중…" : "확인"}</button></div></Modal>}
@@ -171,7 +174,7 @@ function isDisabledError(e) {
 
 // 카드 아래 단추 셋 — 기록 살펴보기 · 한 권의 책(완독했을 때만, 가운데) · 독서 발자국.
 // 같은 크기 세 칸으로 못 박아(빈 가운데 칸 포함) 카드마다 단추 자리가 같습니다(선생님 요청).
-function BookCard({ book, index, busy, onOpen, onLog, onReview, onRestore }) {
+function BookCard({ book, index, busy, readOnly = false, onOpen, onLog, onReview, onRestore }) {
   const status = book.status === "completed" ? "완독" : book.status === "paused" ? "잠시 멈춤" : "읽는 중";
   return <article className={`reading-book-card reading-book-color-${index % 4}`}>
     <button type="button" className="reading-book-open" onClick={onOpen} aria-label={`${book.title} 상세 보기`}>
@@ -190,7 +193,7 @@ function BookCard({ book, index, busy, onOpen, onLog, onReview, onRestore }) {
         <span className="reading-book-percent">{Math.round(book.progress || 0)}% 읽었어요</span>
       </div>
     </button>
-    <div className="reading-book-actions"><button type="button" className="btn-ghost" onClick={onOpen}>기록 살펴보기</button>{book.status === "completed" && !book.archived ? <button type="button" className="reading-small-review" disabled={busy} onClick={onReview}>한 권의 책</button> : <span aria-hidden="true" />}<button type="button" className="reading-small-primary" disabled={busy} onClick={book.archived ? onRestore : onLog}>{book.archived ? "서재로 복원" : "독서 발자국"}</button></div>
+    <div className="reading-book-actions">{readOnly ? <button type="button" className="btn-ghost" onClick={onOpen}>기록 살펴보기</button> : <><button type="button" className="btn-ghost" onClick={onOpen}>기록 살펴보기</button>{book.status === "completed" && !book.archived ? <button type="button" className="reading-small-review" disabled={busy} onClick={onReview}>한 권의 책</button> : <span aria-hidden="true" />}<button type="button" className="reading-small-primary" disabled={busy} onClick={book.archived ? onRestore : onLog}>{book.archived ? "서재로 복원" : "독서 발자국"}</button></>}</div>
   </article>;
 }
 
@@ -279,18 +282,18 @@ function ReviewForm({ book, review, busy, onSave, onClose }) {
   </Modal>;
 }
 
-function BookDetail({ book, classId, activity, onOpenActivity, logs, review, busy, onClose, onEdit, onLog, onReview, onDeleteLog, onDeleteReview, onArchive }) {
+function BookDetail({ book, classId, readOnly = false, activity, onOpenActivity, logs, review, busy, onClose, onEdit, onLog, onReview, onDeleteLog, onDeleteReview, onArchive }) {
   const sorted = [...logs].sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.createdAt).localeCompare(String(a.createdAt)));
   return <Modal title={book.title} wide busy={busy} onClose={onClose}>
     <div className="reading-detail-overview"><BookCover book={book} /><div className="reading-detail-meta"><span>{book.author}</span>{book.publisher && <span>{book.publisher}</span>}{book.isbn && <span>ISBN {book.isbn}</span>}<span>{number(book.pagesRead ?? book.currentPage)} / {number(book.totalPages)}쪽 읽음</span><span>{book.status === "completed" ? "완독" : book.status === "paused" ? "잠시 멈춤" : "읽는 중"}</span>{book.bookLink && <a href={book.bookLink} target="_blank" rel="noopener noreferrer">도서 정보 보기 ↗</a>}</div></div>
-    <div className="reading-detail-tools"><button type="button" className="btn-ghost" disabled={busy} onClick={onEdit}>책 정보 고치기</button><button type="button" className="btn-ghost" disabled={busy} onClick={onArchive}>{book.archived ? "서재로 복원" : "보관함으로"}</button></div>
-    {activity && onOpenActivity && <div className="reading-linked-activity"><div><span>함께 연결한 독서 활동</span><strong>{activity.title}</strong></div><button type="button" className="btn-ghost" disabled={busy} onClick={() => onOpenActivity(activity)}>활동 열기 →</button></div>}
-    <section className="reading-detail-section"><header><h3>한 권의 책</h3>{!book.archived && <div className="reading-detail-section-actions">{book.status === "completed" && <button type="button" className="btn-ghost" disabled={busy || (review && review.classId !== classId)} onClick={onReview}>{review ? "한 권의 책 고치기" : "한 권의 책"}</button>}<button type="button" className="btn-primary" disabled={busy} onClick={() => onLog(null)}>독서 발자국</button></div>}</header>{review ? <article className="reading-review"><p className="reading-review-rating">나의 별점 {review.rating} / 5</p><p>{review.text}</p>{review.classId !== classId && <p className="reading-help">다른 반에서 작성한 ‘한 권의 책’이에요. 작성한 반에서 고치거나 삭제할 수 있어요.</p>}<button type="button" className="reading-text-danger" disabled={busy || review.classId !== classId} onClick={onDeleteReview}>한 권의 책 삭제</button></article> : <p className="reading-muted">{book.status === "completed" ? "다 읽은 책에 대한 나의 총평을 ‘한 권의 책’으로 남겨 보세요." : "책을 끝까지 읽으면 총평 ‘한 권의 책’을 쓸 수 있어요. 읽은 날마다 ‘독서 발자국’을 남겨 보세요."}</p>}</section>
-    <section className="reading-detail-section"><header><h3>독서의 발자취 <small>{logs.length}</small></h3></header>{sorted.length ? <ol className="reading-log-list">{sorted.map((log) => <li key={log.id}><div className="reading-log-date"><strong>{shortDate(log.date)}</strong><span>{log.startPage}–{log.endPage}쪽 · {number(log.endPage - log.startPage + 1)}쪽</span></div><p>{log.notes}</p>{log.classId !== classId && <p className="reading-help">다른 반에서 작성한 기록 · 작성한 반에서만 수정 가능</p>}<div className="reading-log-tools"><button type="button" className="btn-ghost" disabled={busy || log.classId !== classId} onClick={() => onLog(log)}>고치기</button><button type="button" className="reading-text-danger" disabled={busy || log.classId !== classId} onClick={() => onDeleteLog(log)}>삭제</button></div></li>)}</ol> : <p className="reading-muted">아직 독서 기록이 없어요. 첫 페이지의 생각부터 남겨 보세요.</p>}</section>
+    {!readOnly && <div className="reading-detail-tools"><button type="button" className="btn-ghost" disabled={busy} onClick={onEdit}>책 정보 고치기</button><button type="button" className="btn-ghost" disabled={busy} onClick={onArchive}>{book.archived ? "서재로 복원" : "보관함으로"}</button></div>}
+    {activity && onOpenActivity && !readOnly && <div className="reading-linked-activity"><div><span>함께 연결한 독서 활동</span><strong>{activity.title}</strong></div><button type="button" className="btn-ghost" disabled={busy} onClick={() => onOpenActivity(activity)}>활동 열기 →</button></div>}
+    <section className="reading-detail-section"><header><h3>한 권의 책</h3>{!book.archived && !readOnly && <div className="reading-detail-section-actions">{book.status === "completed" && <button type="button" className="btn-ghost" disabled={busy || (review && review.classId !== classId)} onClick={onReview}>{review ? "한 권의 책 고치기" : "한 권의 책"}</button>}<button type="button" className="btn-primary" disabled={busy} onClick={() => onLog(null)}>독서 발자국</button></div>}</header>{review ? <article className="reading-review"><p className="reading-review-rating">{readOnly ? "별점" : "나의 별점"} {review.rating} / 5</p><p>{review.text}</p>{!readOnly && review.classId !== classId && <p className="reading-help">다른 반에서 작성한 ‘한 권의 책’이에요. 작성한 반에서 고치거나 삭제할 수 있어요.</p>}{!readOnly && <button type="button" className="reading-text-danger" disabled={busy || review.classId !== classId} onClick={onDeleteReview}>한 권의 책 삭제</button>}</article> : readOnly ? <p className="reading-muted">아직 ‘한 권의 책’을 남기지 않았어요.</p> : <p className="reading-muted">{book.status === "completed" ? "다 읽은 책에 대한 나의 총평을 ‘한 권의 책’으로 남겨 보세요." : "책을 끝까지 읽으면 총평 ‘한 권의 책’을 쓸 수 있어요. 읽은 날마다 ‘독서 발자국’을 남겨 보세요."}</p>}</section>
+    <section className="reading-detail-section"><header><h3>독서의 발자취 <small>{logs.length}</small></h3></header>{sorted.length ? <ol className="reading-log-list">{sorted.map((log) => <li key={log.id}><div className="reading-log-date"><strong>{shortDate(log.date)}</strong><span>{log.startPage}–{log.endPage}쪽 · {number(log.endPage - log.startPage + 1)}쪽</span></div><p>{log.notes}</p>{!readOnly && log.classId !== classId && <p className="reading-help">다른 반에서 작성한 기록 · 작성한 반에서만 수정 가능</p>}{!readOnly && <div className="reading-log-tools"><button type="button" className="btn-ghost" disabled={busy || log.classId !== classId} onClick={() => onLog(log)}>고치기</button><button type="button" className="reading-text-danger" disabled={busy || log.classId !== classId} onClick={() => onDeleteLog(log)}>삭제</button></div>}</li>)}</ol> : <p className="reading-muted">{readOnly ? "아직 독서 기록이 없어요." : "아직 독서 기록이 없어요. 첫 페이지의 생각부터 남겨 보세요."}</p>}</section>
   </Modal>;
 }
 
-function Growth({ stats, busy, onSelect }) {
+function Growth({ stats, busy, readOnly = false, onSelect }) {
   const [preview, setPreview] = useState(null);
   const series = useMemo(() => {
     const grouped = new Map();
@@ -300,12 +303,12 @@ function Growth({ stats, busy, onSelect }) {
   const earned = (stats.badges || []).filter((b) => b.earned);
   const featuredId = stats.featuredBadge?.id || stats.featuredBadge;
   return <div className="reading-growth">
-    <div className="reading-section-head"><div><h3>나의 성취 컬렉션 <span>{earned.length} / {(stats.badges || []).length}</span></h3><p>같은 뱃지의 다음 모습까지. 초급에서 고급으로 한 단계씩 모아 보세요.</p></div></div>
+    <div className="reading-section-head"><div><h3>{readOnly ? "성취 컬렉션" : "나의 성취 컬렉션"} <span>{earned.length} / {(stats.badges || []).length}</span></h3><p>같은 뱃지의 다음 모습까지. 초급에서 고급으로 한 단계씩 모아 보세요.</p></div></div>
     <div className="reading-tier-guide">{[[1, "초급", "첫 발걸음"], [2, "중급", "깊어지는 독서"], [3, "고급", "나만의 성취"]].map(([tier, name, text]) => <span key={tier}><i className={`reading-tier-dot reading-tier-dot-${tier}`} /><strong>{name}</strong>{text}</span>)}</div>
     {series.map(({ key, badges }) => { const next = badges.find((b) => !b.earned); return <section key={key} className="reading-badge-series"><header><div><h4>{badges[0]?.seriesName || badges[0]?.name?.replace(/\s*(초급|중급|고급)$/, "") || key}</h4><p>{next ? `${next.description} · ${number(next.current)} / ${number(next.threshold)}` : "세 단계의 성취를 모두 모았어요."}</p></div>{next && <span className="reading-next-goal">다음 목표 · {tierName(next.tier)}</span>}</header><div className="reading-badge-grid">{badges.map((badge) => <article key={badge.id} className={`reading-badge-card${badge.earned ? " is-earned" : ""}${featuredId === badge.id ? " is-featured" : ""}`}>
       <div className="reading-badge-visual"><ReadingBadge badge={badge} size={100} earned={badge.earned} />{badge.earned && <span className="reading-earned-label">획득</span>}</div>
       <span className={`reading-tier-label reading-tier-label-${badgeTier(badge)}`}>{tierName(badge.tier)}</span><h5>{badge.name}</h5><p>{badge.description}</p><span className="reading-badge-exp">＋{badge.expReward} EXP</span>
-      {badge.earned ? <><span className="reading-earned-date">{badge.earnedAt ? `${shortDate(badge.earnedAt)} 달성` : "달성한 성취"}</span><button type="button" className="reading-feature-button" disabled={busy || featuredId === badge.id} onClick={() => onSelect(badge.id)}>{featuredId === badge.id ? "나의 대표 뱃지" : "대표 뱃지로 선택"}</button></> : <><div className="reading-progress" role="progressbar" aria-label={`${badge.name} 달성 진행`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100, Math.round(badge.progress || 0))}><i style={{ width: `${Math.min(100, badge.progress || 0)}%` }} /></div><span className="reading-unearned">{number(badge.current)} / {number(badge.threshold)}</span><button type="button" className="reading-preview-button" onClick={() => setPreview(badge)}>디자인 미리보기</button></>}
+      {badge.earned ? <><span className="reading-earned-date">{badge.earnedAt ? `${shortDate(badge.earnedAt)} 달성` : "달성한 성취"}</span>{readOnly ? (featuredId === badge.id && <span className="reading-feature-button" aria-disabled="true">대표 뱃지</span>) : <button type="button" className="reading-feature-button" disabled={busy || featuredId === badge.id} onClick={() => onSelect(badge.id)}>{featuredId === badge.id ? "나의 대표 뱃지" : "대표 뱃지로 선택"}</button>}</> : <><div className="reading-progress" role="progressbar" aria-label={`${badge.name} 달성 진행`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100, Math.round(badge.progress || 0))}><i style={{ width: `${Math.min(100, badge.progress || 0)}%` }} /></div><span className="reading-unearned">{number(badge.current)} / {number(badge.threshold)}</span><button type="button" className="reading-preview-button" onClick={() => setPreview(badge)}>디자인 미리보기</button></>}
     </article>)}</div></section>; })}
     <p className="reading-help">모든 단계는 한 번씩 받을 수 있어요. 기록을 고치거나 삭제하면 경험치와 성취 조건도 함께 다시 계산해요.</p>
     {preview && <Modal title={`${preview.name} · ${tierName(preview.tier)}`} onClose={() => setPreview(null)}>

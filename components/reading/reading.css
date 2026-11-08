@@ -369,3 +369,23 @@
 .reading-log-tools { gap:8px; margin-top:6px; }
 .reading-review .reading-text-danger { margin-top:10px; }
 .reading-detail-tools { gap:8px; }
+
+/* 교사의 책나눔 — 왼쪽 학생 명단 · 오른쪽 고른 학생의 책나눔(TeacherReadingView) */
+.reading-teacher { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 18px; align-items: start; }
+.reading-teacher-rail { position: sticky; top: 72px; max-height: calc(100vh - 96px); overflow-y: auto; background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 12px; }
+.reading-teacher-rail h3 { margin: 2px 4px 10px; font-size: 14px; color: var(--text-sub); display: flex; gap: 6px; align-items: baseline; }
+.reading-teacher-rail h3 span { font-size: 12.5px; color: var(--text-faint); }
+.reading-teacher-rail ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.reading-teacher-rail button { width: 100%; display: flex; gap: 8px; align-items: center; padding: 8px 10px; border: 1px solid transparent; border-radius: 10px; background: transparent; text-align: left; font: inherit; font-size: 14px; color: var(--text); cursor: pointer; }
+.reading-teacher-rail button:hover { background: var(--bg); }
+.reading-teacher-rail button.on { background: var(--primary-light); border-color: var(--primary); font-weight: 700; }
+.reading-teacher-sid { font-family: var(--font-mono); font-size: 12px; color: var(--text-sub); font-variant-numeric: tabular-nums; }
+.reading-teacher-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reading-teacher-main { min-width: 0; }
+@media (max-width: 900px) {
+  .reading-teacher { grid-template-columns: minmax(0, 1fr); }
+  .reading-teacher-rail { position: static; max-height: none; }
+  .reading-teacher-rail ol { display: flex; gap: 6px; overflow-x: auto; }
+  .reading-teacher-rail li { flex: 0 0 auto; }
+  .reading-teacher-rail button { width: auto; white-space: nowrap; }
+}
