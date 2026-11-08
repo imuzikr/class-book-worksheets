@@ -51,7 +51,7 @@ function Bar({ percent, label }) {
   </span>;
 }
 
-export default function ReadingLeaderboard({ classId, user, isTeacher = false, characterOn = true, onDisabled }) {
+export default function ReadingLeaderboard({ classId, user, isTeacher = false, characterOn = true, onDisabled, onOpenLibrary }) {
   const viewId = useId();
   const tabRefs = useRef([]);
   const [view, setView] = useState("map");
@@ -218,7 +218,7 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, c
           </div>}
     </section>
 
-    {picked && <StudentJourneyModal row={picked} me={picked.uid === uid} onClose={closeStudent} />}
+    {picked && <StudentJourneyModal row={picked} me={picked.uid === uid} onClose={closeStudent} onOpenLibrary={isTeacher && onOpenLibrary && picked.uid !== uid ? () => onOpenLibrary(picked.uid) : null} />}
   </div>;
 }
 
@@ -268,7 +268,7 @@ function ClassSummary({ rows }) {
   </section>;
 }
 
-function StudentJourneyModal({ row, me, onClose }) {
+function StudentJourneyModal({ row, me, onClose, onOpenLibrary = null }) {
   const modalRef = useRef(null);
   const progress = growthOf(row);
   const earned = new Set(row.badges ?? []);
@@ -300,6 +300,8 @@ function StudentJourneyModal({ row, me, onClose }) {
       <div className="rlb-modal-head">
         <Character row={row} className="rlb-mine-face" />
         <div><h3 id="rlb-modal-title">{nameOf(row)}{me && <span className="reading-me-label">나</span>}</h3><p>{progress ? `Lv.${progress.level} ${journeyTitle(progress.level)} · 📍 제${progress.chapter}여정 · ${progress.region.name}` : "누적 성장 정보 집계 중"}</p></div>
+        {/* 교사: 그 학생의 책나눔(읽기 전용 서재)으로 — 선생님 요청 */}
+        {onOpenLibrary && <button type="button" className="btn-ghost rlb-to-library" onClick={onOpenLibrary}>서재로 이동</button>}
         <button type="button" className="btn-close" aria-label="닫기" onClick={onClose}>×</button>
       </div>
       <dl className="rlb-facts">
