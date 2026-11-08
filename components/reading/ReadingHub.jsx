@@ -118,7 +118,8 @@ export default function ReadingHub({ classId, user, isTeacher = false, rankingOn
     setBusy(true); setError("");
     try {
       const result = await mutateReading(classId, action);
-      if (result?.state) setRaw(result.state);
+      // 과일 날들(fruits)은 상태 밖에 따로 오므로 함께 담습니다 — 빠지면 저장 직후 과일 경험치가 빠진 레벨이 보입니다.
+      if (result?.state) setRaw((prev) => ({ ...result.state, fruits: result.fruits ?? prev?.fruits ?? [] }));
       else if (Array.isArray(result?.books) && Array.isArray(result?.logs)) setRaw(result);
       if (success) setNotice(success);
       return true;
@@ -157,7 +158,10 @@ export default function ReadingHub({ classId, user, isTeacher = false, rankingOn
         {visibleBooks.length ? <div className="reading-library-grid">{visibleBooks.map((b, i) => <BookCard key={b.id} book={b} index={i} busy={busy} readOnly={readOnly} onOpen={() => setDialog({ type: "detail", bookId: b.id })} onReview={() => setDialog({ type: "review", bookId: b.id })} onLog={() => setDialog({ type: "log", bookId: b.id })} onRestore={() => run({ type: "archiveBook", bookId: b.id, archived: false }, "책을 서재로 돌려놓았어요.")} />)}</div> : <div className="reading-empty"><BookIcon size={44} /><h3>{readOnly ? "아직 이곳에 놓인 책이 없어요." : filter === "all" ? "나의 첫 책을 기다리고 있어요." : "아직 이곳에 놓인 책이 없어요."}</h3>{!readOnly && <p>{filter === "all" ? "읽고 싶은 책을 등록하고 오늘 읽은 순간을 남겨 보세요." : "책을 읽고 기록하면 서재의 풍경도 달라져요."}</p>}{filter === "all" && !readOnly && <button type="button" className="btn-primary" onClick={() => setDialog({ type: "book" })}>첫 책 등록하기</button>}</div>}
       </>}
       {tab === "growth" && <Growth stats={stats} busy={busy} readOnly={readOnly} onSelect={(badgeId) => run({ type: "setFeaturedBadge", badgeId }, "대표 뱃지를 바꿨어요.")} />}
-      {rankingOn && tab === "ranking" && <Rankings key={classId} classId={classId} uid={viewUid} isTeacher={isTeacher} onDisabled={onDisabled} revision={raw} />}
+      {/* 순위는 탭을 열 때 · 기간을 바꿀 때 · 새로고침을 누를 때만 받습니다(한 번에 반 전체를 읽음).
+          한때 독서 자료 전체(raw)를 신호로 넘겨, 상태를 다시 물을 때마다(10초) 순위를 다시 받았습니다 —
+          저장은 다른 탭에서만 하므로, 저장한 뒤 이 탭을 열면 새로 받습니다. */}
+      {rankingOn && tab === "ranking" && <Rankings key={classId} classId={classId} uid={viewUid} isTeacher={isTeacher} onDisabled={onDisabled} />}
     </>}
 
     {dialog?.type === "book" && <BookForm key={selected?.id || "new"} book={selected} searchOn={bookSearchOn} pagesLocked={!!selected && [...(raw?.logs || []), ...(raw?.reviews || [])].some((r) => r.bookId === selected.id)} activities={activities} busy={busy} onClose={() => setDialog(null)} onSave={async (values) => { const ok = await run({ type: selected ? "updateBook" : "addBook", ...(selected ? { bookId: selected.id } : {}), ...values }, selected ? "책 정보를 고쳤어요." : "새 책을 서재에 놓았어요."); if (ok) setDialog(null); }} />}
@@ -326,31 +330,37 @@ function Growth({ stats, busy, readOnly = false, onSelect }) {
   </div>;
 }
 
-function Rankings({ classId, uid, isTeacher, onDisabled, revision }) {
+function Rankings({ classId, uid, isTeacher, onDisabled }) {
   const [period, setPeriod] = useState("weekly");
   const [rows, setRows] = useState([]);
+  const [rowsKey, setRowsKey] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);
   const disabledRef = useRef(onDisabled); disabledRef.current = onDisabled;
+  const wantKey = `${classId}:${period}`;
   useEffect(() => {
     let live = true;
     setLoading(true); setError("");
     Promise.resolve(fetchReadingRankings(classId, period)).then((result) => {
-      if (live) setRows(Array.isArray(result) ? result : result?.rankings || []);
+      if (!live) return;
+      setRows(Array.isArray(result) ? result : result?.rankings || []);
+      setRowsKey(`${classId}:${period}`);
     }).catch((e) => {
       if (!live) return;
       setError(e?.message || "순위를 불러오지 못했어요.");
       if (isDisabledError(e)) disabledRef.current?.();
     }).finally(() => { if (live) setLoading(false); });
     return () => { live = false; };
-  }, [classId, period, retry, revision]);
-  const mine = rows.find((r) => (r.uid || r.userId) === uid);
+  }, [classId, period, retry]);
+  // 지금 기간의 순위를 이미 그리고 있으면, 다시 받는 동안에도 표를 그대로 둡니다.
+  const showLoading = loading && rowsKey !== wantKey;
+  const mine = rowsKey === wantKey ? rows.find((r) => (r.uid || r.userId) === uid) : null;
   return <section className="reading-rankings"><div className="reading-section-head"><div><h3>우리 반의 독서 발자취</h3><p>각자의 속도로 쌓은 기록을 함께 응원해요.</p></div><button type="button" className="btn-ghost" disabled={loading} onClick={() => setRetry((v) => v + 1)}>새로고침</button></div>
     <div className="reading-filters" aria-label="랭킹 기간">{PERIODS.map(([key, label]) => <button key={key} type="button" className={period === key ? "active" : ""} aria-pressed={period === key} onClick={() => setPeriod(key)}>{label}</button>)}</div>
     <p className="reading-help">한국 시간 기준 · 주간은 월요일 시작 · 같은 점수는 공동 순위 · 현재 반 학생만 표시</p>
     {!isTeacher && mine && <div className="reading-my-rank"><span>이번 기간 나의 기록</span><strong>{mine.rank}위</strong><span>{number(mine.xp ?? mine.totalExp ?? mine.score)} EXP</span><span>Lv. {mine.level || 1}</span></div>}
-    {loading ? <div className="reading-loading" role="status">우리 반 기록을 모으고 있어요.</div> : error ? <div className="reading-error" role="alert">{error}<button type="button" onClick={() => setRetry((v) => v + 1)}>다시 시도</button></div> : !rows.length ? <div className="reading-empty"><BookIcon size={40} /><h3>새로운 독서의 시작을 기다려요.</h3><p>우리 반 학생이 독서를 기록하면 이곳에서 함께 볼 수 있어요.</p></div> : <div className="reading-ranking-scroll"><table className="reading-ranking-table"><caption className="reading-sr-only">{PERIODS.find(([key]) => key === period)?.[1]} 우리 반 독서 랭킹</caption><thead><tr><th scope="col">순위</th><th scope="col">이름</th><th scope="col">레벨</th><th scope="col">경험치</th><th scope="col">대표 뱃지</th></tr></thead><tbody>{rows.map((r) => <tr key={r.uid || r.userId} className={(r.uid || r.userId) === uid ? "is-me" : ""}><td><span className={`reading-rank-number${r.rank <= 3 ? " reading-rank-top" : ""}`}>{r.rank}</span></td><th scope="row">{displayName({ ...r, realName: r.realName || r.name || r.userName })}{(r.uid || r.userId) === uid && <span className="reading-me-label">나</span>}</th><td>Lv. {r.level || 1}</td><td className="reading-rank-exp">{number(r.xp ?? r.totalExp ?? r.score)}</td><td>{r.featuredBadge ? <RankBadge badge={r.featuredBadge} /> : <span className="reading-muted">—</span>}</td></tr>)}</tbody></table></div>}
+    {showLoading ? <div className="reading-loading" role="status">우리 반 기록을 모으고 있어요.</div> : error ? <div className="reading-error" role="alert">{error}<button type="button" onClick={() => setRetry((v) => v + 1)}>다시 시도</button></div> : !rows.length ? <div className="reading-empty"><BookIcon size={40} /><h3>새로운 독서의 시작을 기다려요.</h3><p>우리 반 학생이 독서를 기록하면 이곳에서 함께 볼 수 있어요.</p></div> : <div className="reading-ranking-scroll"><table className="reading-ranking-table"><caption className="reading-sr-only">{PERIODS.find(([key]) => key === period)?.[1]} 우리 반 독서 랭킹</caption><thead><tr><th scope="col">순위</th><th scope="col">이름</th><th scope="col">레벨</th><th scope="col">경험치</th><th scope="col">대표 뱃지</th></tr></thead><tbody>{rows.map((r) => <tr key={r.uid || r.userId} className={(r.uid || r.userId) === uid ? "is-me" : ""}><td><span className={`reading-rank-number${r.rank <= 3 ? " reading-rank-top" : ""}`}>{r.rank}</span></td><th scope="row">{displayName({ ...r, realName: r.realName || r.name || r.userName })}{(r.uid || r.userId) === uid && <span className="reading-me-label">나</span>}</th><td>Lv. {r.level || 1}</td><td className="reading-rank-exp">{number(r.xp ?? r.totalExp ?? r.score)}</td><td>{r.featuredBadge ? <RankBadge badge={r.featuredBadge} /> : <span className="reading-muted">—</span>}</td></tr>)}</tbody></table></div>}
   </section>;
 }
 

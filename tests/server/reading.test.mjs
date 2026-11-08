@@ -177,6 +177,15 @@ test("계산 기준이 바뀐 옛 집계는 랭킹을 읽을 때 다시 셈", as
   assert.equal((await db.doc(`classes/api-class/readingMembers/${ids.student}`).get()).data().formula, READING_FORMULA);
 });
 
+test("집계가 아직 없는 학생은 랭킹을 읽을 때 그 자리에서 세어, 같은 응답에 함께 보여 줌", async () => {
+  const ref = db.doc(`classes/api-class/readingMembers/${ids.student}`);
+  const expected = (await getReadingRankings(principal("teacher"), "api-class", "all-time")).rankings.find((r) => r.uid === ids.student);
+  await ref.delete();
+  const row = (await getReadingRankings(principal("teacher"), "api-class", "all-time")).rankings.find((r) => r.uid === ids.student);
+  assert.deepEqual(row, expected);
+  assert.equal((await ref.get()).data().formula, READING_FORMULA);
+});
+
 test("journey appearance changes only the authenticated student's public character", async () => {
   const profileRef = db.doc(`users/${ids.student}`);
   const beforeProfile = (await profileRef.get()).data();
