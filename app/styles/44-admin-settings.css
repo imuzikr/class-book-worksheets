@@ -3,12 +3,19 @@
 .adm-settings-lead, .adm-settings-foot { margin: 0; color: var(--text-sub); font-size: 13.5px; }
 .adm-settings-foot { color: var(--text-faint); font-size: 12.5px; }
 .adm-settings-empty { margin: 0; padding: 24px; border: 1px dashed var(--border); border-radius: 12px; color: var(--text-sub); text-align: center; }
-.adm-table { border: 1px solid var(--border); border-radius: 14px; background: #fff; overflow: hidden; }
-.adm-row { display: grid; grid-template-columns: minmax(0, 1.1fr) repeat(3, minmax(0, 1fr)); gap: 12px; align-items: center; padding: 12px 16px; }
-.adm-row + .adm-row { border-top: 1px solid var(--border); }
-.adm-head { background: var(--bg); font-size: 13px; font-weight: 700; color: var(--dark); align-items: start; }
-.adm-head small { display: block; margin-top: 3px; font-weight: 400; font-size: 12px; color: var(--text-faint); line-height: 1.4; }
-.adm-class { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.adm-settings-classes { display: block; margin-top: 4px; color: var(--text-faint); font-size: 12.5px; }
+/* 기능 카드 — 한 줄에 같은 크기로 넷(책나눔 성장 · 도서 검색 · 랭킹 · 학생 캐릭터).
+   모든 반에 한 값이라 반 목록 표는 걷었습니다. */
+.adm-features { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.adm-feature { display: flex; flex-direction: column; justify-content: space-between; gap: 12px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 14px; background: #fff; }
+.adm-feature.is-off { background: var(--bg); }
+.adm-feature-text { display: flex; flex-direction: column; gap: 4px; }
+.adm-feature-text strong { font-size: 14px; color: var(--dark); }
+.adm-feature-text small { font-size: 12px; color: var(--text-faint); line-height: 1.45; }
+.adm-feature-text .adm-feature-mixed { color: var(--primary-dark); }
+.adm-feature .adm-switch { align-self: flex-start; margin-left: -6px; }
+@media (max-width: 1000px) { .adm-features { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .adm-features { grid-template-columns: minmax(0, 1fr); } }
 .adm-switch { display: inline-flex; align-items: center; gap: 8px; padding: 4px 6px; border: 0; background: none; cursor: pointer; font-size: 13px; color: var(--text-sub); border-radius: 999px; }
 .adm-switch:disabled { cursor: not-allowed; opacity: .5; }
 .adm-switch:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
@@ -17,8 +24,3 @@
 .adm-switch.on .adm-switch-track { background: var(--primary); }
 .adm-switch.on .adm-switch-knob { transform: translateX(18px); }
 .adm-switch.on .adm-switch-text { color: var(--primary-dark); font-weight: 600; }
-@media (max-width: 600px) {
-  .adm-row { grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 6px; padding: 10px 12px; }
-  .adm-switch-text { display: none; }
-  .adm-head small { display: none; }
-}

@@ -4,8 +4,8 @@
 
 ## 사용하기
 
-1. 담당 교사 또는 관리자가 **상단바 관리자 설정**(또는 반 관리하기 → 해당 반 → 책나눔 성장 기능 사용)에서 켭니다.
-2. 해당 반에 상단 앱 이름 오른쪽에 `책나눔` 버튼이 나타납니다. 학생은 책을 등록하고 날짜·읽은 쪽 범위·짧은 감상을 남깁니다.
+1. 담당 교사 또는 관리자가 **상단바 관리자 설정**에서 켭니다 — 선생님의 모든 반에 함께 켜집니다.
+2. 그 반들에 상단 앱 이름 오른쪽에 `책나눔` 버튼이 나타납니다. 학생은 책을 등록하고 날짜·읽은 쪽 범위·짧은 감상을 남깁니다.
 3. 성장·뱃지에서 다음 목표와 대표 뱃지를 선택하고, 우리 반 랭킹에서 오늘·이번 주·이번 달·누적 점수를 확인합니다.
 4. 스위치를 끄면 새 기능의 메뉴와 화면을 숨기고 API 조회·기록·랭킹을 차단합니다. 저장된 데이터는 보관되고 다시 켜면 이어서 사용합니다.
 
@@ -13,18 +13,26 @@
 
 새 영역은 `realName`과 `studentId`만 사용하며 익명 전환을 제공하지 않습니다. 기존 독서 활동의 이름 표시 정책은 유지합니다. 교사 계정은 랭킹에 포함하지 않습니다. 개인 감상과 도서 목록은 랭킹에 노출하지 않습니다.
 
-## 관리자 설정 — 반별 기능 스위치 (`/books?area=settings`)
+## 관리자 설정 — 선생님의 모든 반에 한 값 (`/books?area=settings`)
 
-상단바 **리더보드 오른쪽의 `관리자 설정`**(교사 · 관리자에게만 보임, 학생이 주소로 와도 책방 목록)이 운영 중인 반을 이름순으로 늘어놓고 반마다 스위치 둘을 둡니다(`components/AdminSettingsPanel.jsx` · `app/styles/44-admin-settings.css`). 설정은 앞으로 이 화면에 더해 갑니다.
+상단바 **리더보드 오른쪽의 `관리자 설정`**(교사 · 관리자에게만 보임, 학생이 주소로 와도 책방 목록)이 기능 카드 넷을 한 줄에 같은 크기로 둡니다 — **책나눔 성장 기능 · 도서 검색 · 랭킹 시스템 · 학생 캐릭터**(`components/AdminSettingsPanel.jsx` · `app/styles/44-admin-settings.css`, 1000px 아래 두 칸 · 560px 아래 한 칸).
 
-- **책나눔 성장 기능** — `classes/{cId}.readingEnabled`(기본 꺼짐). 반 관리하기의 같은 스위치와 **같은 값**입니다(둘 다 `setClassReadingEnabled`).
+- **반마다가 아니라 선생님의 운영 중인 반 모두에 같은 값**입니다(선생님 요청 — 한때 반마다 한 줄씩 스위치가 따로였고, 반 관리하기 카드에도 책나눔 스위치가 있었는데 둘 다 걷었습니다. **되살리지 마세요**).
+  - 값은 지금처럼 **반 문서마다** 적습니다 — 서버 API · 규칙 · 학생 화면이 반 문서를 읽기 때문입니다. 스위치 하나가 `setTeacherFeature(반 id들, 칸, 값)`으로 운영 중인 반 모두에 한 묶음(writeBatch)으로 씁니다. 보관된 반은 규칙이 막아 빼고 씁니다.
+  - 화면의 켜짐은 **운영 중인 반이 모두 켜졌을 때**이고, 반마다 다르면(이 바뀜 전의 반) 카드에 '반마다 다르게 켜져 있어요'가 서고 누르면 모두 켭니다(`lib/reading.js`의 `teacherFeatureSettings`).
+  - **새 반도 같은 값을 따릅니다** — 반 관리하기에서 만들 때 `featuresForNewClass(내 반들)`을 `addClass`에 넘겨, 만든 뒤 한 번 더 씁니다(규칙이 만들 때 `readingEnabled`를 거짓으로만 받음).
+  - 최고 관리자는 보이는 반 전부에 씁니다(남의 반 포함 — 규칙상 관리자는 됨).
+- **책나눔 성장 기능** — `classes/{cId}.readingEnabled`(기본 꺼짐).
+- **도서 검색** — `classes/{cId}.bookSearchEnabled`(기본 꺼짐 · 책나눔이 켜져 있어야 켬, 판정 `bookSearchEnabled(반)`). 카카오 REST API 키(아래 '도서 검색 (카카오)' 절)가 있어야 쓰는 기능이라, 키 없이 직접 입력만 쓰는 선생님을 위해 따로 둡니다.
+  - 꺼져 있으면 내 서재 **'새 책 등록'은 직접 입력만**(검색 칸 없음). 켜져 있으면 맨 위에 **'도서 검색으로 책 정보 채우기'** 단추가 서고, 누르면 검색 칸으로 바뀌어 커서가 들어가며, 결과를 고르거나 '직접 입력하기'를 누르면 접힙니다(`ReadingHub`의 `BookForm` · `bookSearchOn`).
+  - `/api/books/search` 자체는 이 스위치를 보지 않습니다(공개 서지 정보만, 키 · 빈도 제한이 지킴).
 - **랭킹 시스템** — `classes/{cId}.rankingEnabled`(값이 없으면 켜짐 · 끈 것만 `false`로 적음). 판정은 `lib/reading.js`의 `rankingEnabled(반)` 한 곳 — 책나눔이 켜져 있고 `rankingEnabled !== false`일 때만 참이라, 책나눔이 꺼지면 스위치도 꺼진 채 잠깁니다.
   - 끄면: 상단바 **리더보드 단추가 사라지고**(`?area=leaderboard`로 와도 책방 목록), 책나눔의 **'우리 반 랭킹' 탭이 빠지며**(보던 중이면 내 서재로), 서버 `getReadingRankings`가 `403 reading/ranking-disabled`로 막습니다(데모 `fetchReadingRankings`도 같음). 내 서재 · 성장 · 뱃지는 그대로이고, 반 집계(`readingMembers`)는 계속 쌓여 다시 켜면 곧바로 보입니다.
 - **학생 캐릭터** — `classes/{cId}.characterEnabled`(값이 없으면 켜짐 · 끈 것만 `false`). 판정은 `lib/readingCharacter.js`의 `characterChoiceEnabled` 한 곳. 리더보드 '캐릭터 꾸미기'(동물 20종 · 두 의상 — `public/reading-journey/`)를 켜고 끕니다. 랭킹이 꺼진 반에서는 스위치가 잠깁니다(리더보드 자체가 없음).
   - 끄면: 학생 화면에서 '캐릭터 꾸미기' 단추가 사라지고(`ReadingLeaderboard`의 `characterOn`), 서버 `saveReadingCharacter`가 `403 reading/character-disabled`로 막으며(데모도 같음), `getReadingRankings`가 고른 값 대신 `character: null`을 보내 모두 **기본 캐릭터**(`defaultWorldAvatar`)로 섭니다. 고른 값(`users/{uid}.readingCharacter`)은 지우지 않아 다시 켜면 돌아옵니다.
   - **바꾸는 자리는 둘이고 창은 하나**(`components/reading/CharacterChooser.jsx`): 지도의 '캐릭터 꾸미기'와 상단바 **프로필 메뉴 → '👤 내 프로필' → '내 캐릭터' 칸의 '바꾸기'**(그 창을 닫고 고르기 창을 엶 — 창 둘이 겹쳐 Esc가 둘 다 닫지 않게). 상단바 **프로필 동그라미에도 내 캐릭터 얼굴**이 섭니다(고른 적이 없으면 지도와 같은 기본 동물).
     - 조건은 지도와 같습니다 — 그 반의 책나눔 · 랭킹 · 학생 캐릭터가 모두 켜졌을 때만(`TopNav`가 반 문서 1건 · 내 `users` 문서 1건을 구독, `subscribeMyReadingCharacter`). 저장은 같은 `saveReadingCharacter`(서버 API)라 규칙을 안 건드립니다. 저장하면 `reading-character-change` 창 이벤트로 떠 있는 리더보드가 다시 읽습니다.
-- 규칙(`readingSettingValid`): 세 칸(`readingEnabled` · `rankingEnabled` · `characterEnabled`)은 **참 · 거짓만**(지우기 불가), 보관된 반은 못 바꿈, 담당 교사 · 관리자만. 시험 `tests/rules/reading.test.mjs`('랭킹 시스템 스위치'). **코드보다 규칙을 먼저 배포하세요** — 안 그러면 랭킹 스위치 저장이 권한 오류입니다(책나눔 스위치는 그대로 됩니다).
+- 규칙(`readingSettingValid`): 네 칸(`readingEnabled` · `rankingEnabled` · `characterEnabled` · `bookSearchEnabled`)은 **참 · 거짓만**(지우기 불가), 보관된 반은 못 바꿈, 담당 교사 · 관리자만. 시험 `tests/rules/reading.test.mjs`('랭킹 시스템 스위치' · '도서 검색 스위치'). **코드보다 규칙을 먼저 배포하세요** — 안 그러면 도서 검색 스위치 저장이 권한 오류입니다.
 - 실측(데모 1440 · 420px): 교사 상단바 `책방 · 책나눔 · 리더보드 · 관리자 설정` · 학생은 관리자 설정 없음 · 체험반 랭킹을 끄면 리더보드 단추와 랭킹 탭이 빠짐 · 가로 넘침 0.
 
 ## 리더보드 — 독서 여정

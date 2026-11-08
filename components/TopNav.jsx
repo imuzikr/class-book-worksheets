@@ -3,7 +3,7 @@
 // =============================================================
 // 공통 상단 내비게이션
 // -------------------------------------------------------------
-// 왼쪽: 책봄 로고 ｜ 책방 · 책나눔(반별 활성화 시)
+// 왼쪽: 책봄 로고 ｜ 책방 · 책나눔(관리자 설정에서 켰을 때)
 // 오른쪽: 역할 전환(개발용) ｜ 돌발 퀴즈 ｜ 손들기 ｜ 공지 ｜ 알림 ｜ 사용자 프로필(로그아웃은 그 메뉴 안)
 // =============================================================
 import { useEffect, useRef, useState } from "react";
@@ -293,7 +293,7 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
             onClick={() => go("/books?area=leaderboard")} title="리더보드">
             <IconTrophy size={20} /> <span className="nav-label">리더보드</span>
           </button>}
-          {/* 관리자 설정 — 교사(관리자 포함)에게만. 반별 기능 스위치를 모아 둔 화면 */}
+          {/* 관리자 설정 — 교사(관리자 포함)에게만. 선생님의 모든 반에 함께 걸리는 기능 스위치 */}
           {admin && <button type="button"
             className={`btn-ghost ${settingsOpen ? "nav-active" : ""}`}
             aria-current={settingsOpen ? "page" : undefined}

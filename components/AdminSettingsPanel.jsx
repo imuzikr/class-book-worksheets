@@ -1,17 +1,20 @@
 "use client";
 // =============================================================
 // 관리자 설정 — /books?area=settings (교사만)
-// 반마다 켜고 끄는 기능을 한 화면에 모읍니다. 지금은 셋:
+// 선생님의 **모든 운영 중인 반에 같은 값**으로 켜고 끕니다(선생님 요청 — 한때 반마다
+// 한 줄씩 따로였음). 값은 지금처럼 반 문서마다 적습니다 — 서버 API · 규칙 · 학생 화면이
+// 반 문서를 읽기 때문입니다(setTeacherFeature가 한 묶음으로 씀). 새 반은 만들 때
+// 같은 값을 따릅니다(addClass의 features · lib/reading.js featuresForNewClass).
 //   · 책나눔 성장 기능(readingEnabled — 기본 꺼짐)
-//   · 랭킹 시스템(rankingEnabled — 값이 없으면 켜짐, 책나눔이 켜져 있어야 의미가 있음)
-//   · 학생 캐릭터(characterEnabled — 값이 없으면 켜짐, 리더보드의 '캐릭터 꾸미기'라
-//     랭킹이 켜져 있어야 의미가 있음 · lib/readingCharacter.js)
-// 쓰기는 반 문서 한 칸이고, 규칙(readingSettingValid)이 참·거짓과 보관 안 된 반만 받습니다.
+//   · 도서 검색(bookSearchEnabled — 기본 꺼짐, 카카오 REST API 키가 있어야 씀. 끄면 내 서재
+//     새 책 등록이 직접 입력만, 켜면 '도서 검색' 단추가 섬)
+//   · 랭킹 시스템(rankingEnabled — 값이 없으면 켜짐)
+//   · 학생 캐릭터(characterEnabled — 값이 없으면 켜짐, 랭킹이 켜져 있어야 의미가 있음)
+// 쓰기는 반 문서 한 칸씩이고, 규칙(readingSettingValid)이 참·거짓과 보관 안 된 반만 받습니다.
 // =============================================================
 import { useMemo, useState } from "react";
-import { setClassReadingEnabled, setClassRankingEnabled, setClassCharacterEnabled } from "@/lib/store";
-import { characterChoiceEnabled } from "@/lib/readingCharacter";
-import { readingEnabled, rankingEnabled } from "@/lib/reading";
+import { setTeacherFeature } from "@/lib/store";
+import { teacherFeatureSettings } from "@/lib/reading";
 
 const byName = (a, b) => String(a.name || "").localeCompare(String(b.name || ""), "ko", { numeric: true });
 
@@ -25,75 +28,71 @@ function Switch({ on, disabled, busy, label, describedBy, onClick }) {
   );
 }
 
+const FEATURES = [
+  { key: "readingEnabled", label: "책나눔 성장 기능", hint: "내 서재 · 경험치 · 뱃지 · 랭킹. 꺼도 독서 활동은 그대로예요.",
+    on: "책나눔 성장 기능을 켰어요.", off: "책나눔 성장 기능을 껐어요. 기존 기록은 보관됩니다." },
+  { key: "bookSearchEnabled", label: "도서 검색", needs: ["readingEnabled"], needsText: "책나눔 성장 기능을 먼저 켜 주세요",
+    hint: "내 서재에 책을 담을 때 카카오 책 검색으로 표지 · 정보를 채워요. 카카오 REST API 키가 있어야 써요. 끄면 직접 입력만 해요.",
+    on: "도서 검색을 켰어요. 내 서재 새 책 등록에 '도서 검색' 단추가 생겨요.", off: "도서 검색을 껐어요. 책 정보는 직접 입력해요." },
+  { key: "rankingEnabled", label: "랭킹 시스템", needs: ["readingEnabled"], needsText: "책나눔 성장 기능을 먼저 켜 주세요",
+    hint: "상단바 리더보드 · 우리 반 랭킹. 책나눔이 켜져 있어야 써요.",
+    on: "랭킹 시스템을 켰어요.", off: "랭킹 시스템을 껐어요. 리더보드와 우리 반 랭킹이 숨겨져요." },
+  { key: "characterEnabled", label: "학생 캐릭터", needs: ["readingEnabled", "rankingEnabled"], needsText: "책나눔과 랭킹 시스템을 먼저 켜 주세요",
+    hint: "리더보드에서 학생이 동물 캐릭터를 골라요. 끄면 모두 기본 캐릭터예요. 랭킹이 켜져 있어야 써요.",
+    on: "학생이 리더보드에서 캐릭터를 고를 수 있어요.", off: "캐릭터 고르기를 껐어요. 모두 기본 캐릭터로 보이고, 고른 캐릭터는 보관됩니다." },
+];
+
 export default function AdminSettingsPanel({ classes = [], onToast }) {
   const rows = useMemo(() => classes.filter((c) => !c.archived).slice().sort(byName), [classes]);
-  const [busy, setBusy] = useState({}); // { "반id:key": true }
+  const settings = useMemo(() => teacherFeatureSettings(rows), [rows]);
+  const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
 
-  async function toggle(c, key) {
-    const k = `${c.id}:${key}`;
-    if (busy[k]) return;
-    const reading = key === "readingEnabled";
-    const enabled = reading ? !readingEnabled(c) : key === "rankingEnabled" ? !rankingEnabled(c) : !characterChoiceEnabled(c);
-    setBusy((b) => ({ ...b, [k]: true }));
+  async function toggle(f) {
+    if (busy) return;
+    // 반마다 달랐으면(mixed) 켜짐이 아닌 것으로 보이므로 누르면 모두 켭니다.
+    const enabled = !settings[f.key].on;
+    setBusy(f.key);
     setError("");
     try {
-      if (reading) await setClassReadingEnabled(c.id, enabled);
-      else if (key === "rankingEnabled") await setClassRankingEnabled(c.id, enabled);
-      else await setClassCharacterEnabled(c.id, enabled);
-      onToast?.(key === "characterEnabled"
-        ? (enabled ? `'${c.name}' 반 학생이 리더보드에서 캐릭터를 고를 수 있어요.` : `'${c.name}' 반의 캐릭터 고르기를 껐어요. 모두 기본 캐릭터로 보이고, 고른 캐릭터는 보관됩니다.`)
-        : reading
-        ? (enabled ? `'${c.name}' 반의 책나눔 성장 기능을 켰어요.` : `'${c.name}' 반의 책나눔 성장 기능을 껐어요. 기존 기록은 보관됩니다.`)
-        : (enabled ? `'${c.name}' 반의 랭킹 시스템을 켰어요.` : `'${c.name}' 반의 랭킹 시스템을 껐어요. 리더보드와 우리 반 랭킹이 숨겨져요.`));
+      await setTeacherFeature(rows.map((c) => c.id), f.key, enabled);
+      onToast?.(`${enabled ? f.on : f.off}${rows.length > 1 ? ` (반 ${rows.length}개 모두)` : ""}`);
     } catch (e) {
       setError(e?.message || "설정을 저장하지 못했어요.");
     } finally {
-      setBusy((b) => { const n = { ...b }; delete n[k]; return n; });
+      setBusy("");
     }
   }
 
   return (
     <section className="adm-settings" aria-label="관리자 설정">
-      <p className="adm-settings-lead">반마다 기능을 켜고 끕니다. 바꾸면 그 반의 학생 화면에 곧바로 반영돼요.</p>
+      <p className="adm-settings-lead">
+        기능을 켜고 끄면 선생님의 <strong>모든 반</strong>에 같이 적용되고, 학생 화면에 곧바로 반영돼요.
+        {rows.length > 0 && <span className="adm-settings-classes"> 적용되는 반: {rows.map((c) => c.name).join(" · ")}</span>}
+      </p>
       {error && <p className="form-error" role="alert">{error}</p>}
       {rows.length === 0 ? (
         <p className="adm-settings-empty">운영 중인 반이 없어요. 반 관리하기에서 반을 만들어 주세요.</p>
       ) : (
-        <div className="adm-table" role="table" aria-label="반별 기능 설정">
-          <div className="adm-row adm-head" role="row">
-            <span role="columnheader">반</span>
-            <span role="columnheader">책나눔 성장 기능
-              <small id="adm-hint-reading">내 서재 · 경험치 · 뱃지 · 랭킹. 꺼도 독서 활동은 그대로예요.</small></span>
-            <span role="columnheader">랭킹 시스템
-              <small id="adm-hint-ranking">상단바 리더보드 · 우리 반 랭킹. 책나눔이 켜져 있어야 써요.</small></span>
-            <span role="columnheader">학생 캐릭터
-              <small id="adm-hint-character">리더보드에서 학생이 동물 캐릭터를 골라요. 끄면 모두 기본 캐릭터예요. 랭킹이 켜져 있어야 써요.</small></span>
-          </div>
-          {rows.map((c) => {
-            const readOn = readingEnabled(c);
-            const rankOn = readOn && rankingEnabled(c);
+        <ul className="adm-features" aria-label="기능 설정">
+          {FEATURES.map((f) => {
+            const ready = (f.needs || []).every((k) => settings[k].on);
+            const st = settings[f.key];
             return (
-              <div className="adm-row" role="row" key={c.id}>
-                <span className="adm-class" role="cell">{c.name}</span>
-                <span role="cell">
-                  <Switch on={readOn} busy={busy[`${c.id}:readingEnabled`]} describedBy="adm-hint-reading"
-                    label={`${c.name} 책나눔 성장 기능`} onClick={() => toggle(c, "readingEnabled")} />
-                </span>
-                <span role="cell" title={readOn ? undefined : "책나눔 성장 기능을 먼저 켜 주세요"}>
-                  <Switch on={readOn && rankingEnabled(c)} disabled={!readOn} busy={busy[`${c.id}:rankingEnabled`]}
-                    describedBy="adm-hint-ranking" label={`${c.name} 랭킹 시스템`} onClick={() => toggle(c, "rankingEnabled")} />
-                </span>
-                <span role="cell" title={rankOn ? undefined : "책나눔과 랭킹 시스템을 먼저 켜 주세요"}>
-                  <Switch on={rankOn && characterChoiceEnabled(c)} disabled={!rankOn} busy={busy[`${c.id}:characterEnabled`]}
-                    describedBy="adm-hint-character" label={`${c.name} 학생 캐릭터`} onClick={() => toggle(c, "characterEnabled")} />
-                </span>
-              </div>
+              <li key={f.key} className={`adm-feature${ready ? "" : " is-off"}`} title={ready ? undefined : f.needsText}>
+                <div className="adm-feature-text">
+                  <strong>{f.label}</strong>
+                  <small id={`adm-hint-${f.key}`}>{f.hint}</small>
+                  {st.mixed && <small className="adm-feature-mixed">반마다 다르게 켜져 있어요 — 누르면 모든 반을 같게 맞춰요.</small>}
+                </div>
+                <Switch on={ready && st.on} disabled={!ready} busy={busy === f.key} describedBy={`adm-hint-${f.key}`}
+                  label={f.label} onClick={() => toggle(f)} />
+              </li>
             );
           })}
-        </div>
+        </ul>
       )}
-      <p className="adm-settings-foot">보관된 반은 바꿀 수 없어 목록에서 뺐어요. 설정은 앞으로 이 화면에 더해 갑니다.</p>
+      <p className="adm-settings-foot">보관된 반은 바꿀 수 없어 빼고 적용해요. 새로 만드는 반도 지금 설정을 따라요.</p>
     </section>
   );
 }

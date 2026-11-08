@@ -183,6 +183,10 @@
 @media(max-width:600px) { .reading-preview-button { min-height:38px; padding:7px 5px; font-size:9px; } }
 
 /* Search is a separate form so Enter never registers an unfinished book. */
+/* 관리자 설정 '도서 검색'이 켜졌을 때만 서는 여는 단추 — 누르면 아래 검색 칸으로 바뀜 */
+.reading-search-open { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; margin:0 0 18px; padding:11px 14px; border:1px dashed #9fc29f; border-radius:12px; background:#f3f8ef; color:#2f5a3a; font-size:13.5px; font-weight:700; cursor:pointer; }
+.reading-search-open:hover:not(:disabled) { background:#e8f2e1; border-style:solid; }
+.reading-search-open:disabled { opacity:.6; cursor:not-allowed; }
 .reading-book-search { padding:16px; margin:0 0 20px; border:1px solid #d3e2d2; border-radius:12px; background:#f3f8ef; }
 .reading-search-head { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:12px; }
 .reading-search-head strong { font-size:13px; color:#386043; }

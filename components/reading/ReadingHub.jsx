@@ -51,7 +51,7 @@ function Modal({ title, onClose, children, wide = false, busy = false }) {
   </div>;
 }
 
-export default function ReadingHub({ classId, user, isTeacher = false, rankingOn = true, onDisabled, activities = [], onOpenActivity, initialBookId = null, initialTab = "library" }) {
+export default function ReadingHub({ classId, user, isTeacher = false, rankingOn = true, bookSearchOn = false, onDisabled, activities = [], onOpenActivity, initialBookId = null, initialTab = "library" }) {
   const [raw, setRaw] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -157,7 +157,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, rankingOn
       {rankingOn && tab === "ranking" && <Rankings key={classId} classId={classId} uid={user.uid} isTeacher={isTeacher} onDisabled={onDisabled} revision={raw} />}
     </>}
 
-    {dialog?.type === "book" && <BookForm key={selected?.id || "new"} book={selected} pagesLocked={!!selected && [...(raw?.logs || []), ...(raw?.reviews || [])].some((r) => r.bookId === selected.id)} activities={activities} busy={busy} onClose={() => setDialog(null)} onSave={async (values) => { const ok = await run({ type: selected ? "updateBook" : "addBook", ...(selected ? { bookId: selected.id } : {}), ...values }, selected ? "책 정보를 고쳤어요." : "새 책을 서재에 놓았어요."); if (ok) setDialog(null); }} />}
+    {dialog?.type === "book" && <BookForm key={selected?.id || "new"} book={selected} searchOn={bookSearchOn} pagesLocked={!!selected && [...(raw?.logs || []), ...(raw?.reviews || [])].some((r) => r.bookId === selected.id)} activities={activities} busy={busy} onClose={() => setDialog(null)} onSave={async (values) => { const ok = await run({ type: selected ? "updateBook" : "addBook", ...(selected ? { bookId: selected.id } : {}), ...values }, selected ? "책 정보를 고쳤어요." : "새 책을 서재에 놓았어요."); if (ok) setDialog(null); }} />}
     {dialog?.type === "detail" && selected && <BookDetail book={selected} classId={classId} activity={activities.find((a) => a.id === selected.activityId)} onOpenActivity={onOpenActivity} logs={(stats.logs || raw?.logs || []).filter((l) => l.bookId === selected.id)} review={(stats.reviews || raw?.reviews || []).find((r) => r.bookId === selected.id)} busy={busy} onClose={() => setDialog(null)} onEdit={() => setDialog({ type: "book", bookId: selected.id })} onLog={(log) => setDialog({ type: "log", bookId: selected.id, log })} onReview={() => setDialog({ type: "review", bookId: selected.id })} onDeleteLog={(log) => ask("이 독서 기록을 삭제할까요? 경험치와 달성 기록도 다시 계산해요.", { type: "deleteLog", logId: log.id })} onDeleteReview={() => ask("이 감상문을 삭제할까요? 감상문 보상도 함께 정정해요.", { type: "deleteReview", bookId: selected.id })} onArchive={() => ask(selected.archived ? "이 책을 서재로 돌려놓을까요?" : "이 책을 보관함으로 옮길까요? 독서 기록은 그대로 남아요.", { type: "archiveBook", bookId: selected.id, archived: !selected.archived })} />}
     {dialog?.type === "log" && selected && <LogForm key={dialog.log?.id || selected.id} book={selected} log={dialog.log} today={day} busy={busy} onClose={() => setDialog({ type: "detail", bookId: selected.id })} onSave={async (values) => { const ok = await run({ type: dialog.log ? "updateLog" : "addLog", bookId: selected.id, ...(dialog.log ? { logId: dialog.log.id } : {}), ...values }, "오늘의 독서를 기록했어요."); if (ok) setDialog({ type: "detail", bookId: selected.id }); }} />}
     {dialog?.type === "review" && selected && <ReviewForm key={selected.id} book={selected} review={(stats.reviews || raw?.reviews || []).find((r) => r.bookId === selected.id)} busy={busy} onClose={() => setDialog({ type: "detail", bookId: selected.id })} onSave={async (values) => { const ok = await run({ type: "saveReview", bookId: selected.id, ...values }, "책을 읽고 남긴 생각을 저장했어요."); if (ok) setDialog({ type: "detail", bookId: selected.id }); }} />}
@@ -189,7 +189,10 @@ function BookCover({ book }) {
   </div>;
 }
 
-function BookForm({ book, pagesLocked, activities, busy, onSave, onClose }) {
+// 새 책 등록 — 관리자 설정의 '도서 검색'이 켜져 있으면 맨 위에 '도서 검색' 단추가 서고,
+// 누르면 카카오 책 검색 칸이 펼쳐집니다(직접 입력하기로 접힘). 꺼져 있으면 직접 입력만.
+function BookForm({ book, searchOn = false, pagesLocked, activities, busy, onSave, onClose }) {
+  const [searching, setSearching] = useState(false);
   const [form, setForm] = useState({ title: book?.title || "", author: book?.author || "", totalPages: book?.totalPages || "", status: book?.status === "paused" ? "paused" : "reading", activityId: book?.activityId || "", publisher: book?.publisher || "", isbn: book?.isbn || "", coverImage: book?.coverImage || "", bookLink: book?.bookLink || "" });
   const [selectedSearch, setSelectedSearch] = useState(false);
   const titleRef = useRef(null);
@@ -208,7 +211,12 @@ function BookForm({ book, pagesLocked, activities, busy, onSave, onClose }) {
     requestAnimationFrame(() => pagesRef.current?.focus());
   }
   return <Modal title={book ? "책 정보 고치기" : "새 책 등록"} onClose={onClose} busy={busy}>
-    {!book && <BookSearch busy={busy} onSelect={selectSearch} onManual={() => titleRef.current?.focus()} />}
+    {!book && searchOn && (searching
+      ? <BookSearch busy={busy} autoFocus onSelect={(r) => { selectSearch(r); setSearching(false); }} onManual={() => { setSearching(false); requestAnimationFrame(() => titleRef.current?.focus()); }} />
+      : <button type="button" className="reading-search-open" disabled={busy} onClick={() => setSearching(true)}>
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" strokeWidth="2" /><path d="m16 16 4.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+          도서 검색으로 책 정보 채우기
+        </button>)}
     {hasMetadata && <div className="reading-selected-book">
       <BookCover book={form} />
       <div><strong>{selectedSearch ? "검색에서 선택한 책" : "도서 정보"}</strong>{form.publisher && <span>{form.publisher}</span>}{form.isbn && <span>ISBN {form.isbn}</span>}

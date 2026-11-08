@@ -277,3 +277,24 @@ test("도서 메타데이터는 잘못된 ISBN·비보안 URL·낯선 도서 링
     assert.throws(() => applyReadingAction(initialReadingState(), { type: "addBook", title: "책", author: "저자", totalPages: 100, ...fields }, context("bad")));
   }
 });
+
+test("관리자 설정은 선생님의 모든 반에 한 값 — 도서 검색 · 새 반이 따를 값", async () => {
+  const { bookSearchEnabled, teacherFeatureSettings, featuresForNewClass } = await import("@/lib/reading");
+  assert.equal(bookSearchEnabled({ readingEnabled: true, bookSearchEnabled: true }), true);
+  assert.equal(bookSearchEnabled({ readingEnabled: true }), false); // 기본 꺼짐
+  assert.equal(bookSearchEnabled({ readingEnabled: false, bookSearchEnabled: true }), false); // 책나눔이 꺼지면 함께
+  assert.equal(bookSearchEnabled({ readingEnabled: true, bookSearchEnabled: true, archived: true }), false);
+  const classes = [
+    { id: "a", readingEnabled: true, bookSearchEnabled: true },
+    { id: "b", readingEnabled: true, rankingEnabled: false },
+    { id: "z", archived: true, readingEnabled: false },
+  ];
+  const s = teacherFeatureSettings(classes);
+  assert.deepEqual(s.readingEnabled, { on: true, mixed: false }); // 보관된 반은 안 셈
+  assert.deepEqual(s.bookSearchEnabled, { on: false, mixed: true });
+  assert.deepEqual(s.rankingEnabled, { on: false, mixed: true });
+  assert.deepEqual(s.characterEnabled, { on: true, mixed: false }); // 값이 없으면 켜짐
+  assert.deepEqual(featuresForNewClass(classes), { readingEnabled: true, bookSearchEnabled: false, rankingEnabled: false, characterEnabled: true });
+  assert.equal(featuresForNewClass([{ archived: true }]), null);
+  assert.equal(teacherFeatureSettings([]).readingEnabled.on, false);
+});
