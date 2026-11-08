@@ -62,8 +62,8 @@ export default function BookSearch({ busy = false, onSelect, onManual }) {
     }
   }
 
-  return <section className="reading-book-search" aria-label="네이버 도서 검색">
-    <div className="reading-search-head"><strong>네이버에서 책 찾기</strong><button type="button" className="reading-search-manual" onClick={onManual} disabled={busy}>직접 입력하기</button></div>
+  return <section className="reading-book-search" aria-label="도서 검색">
+    <div className="reading-search-head"><strong>책 찾기</strong><button type="button" className="reading-search-manual" onClick={onManual} disabled={busy}>직접 입력하기</button></div>
     <form className="reading-search-form" onSubmit={(e) => { e.preventDefault(); search(1); }}>
       <label htmlFor={`${resultId}-query`} className="reading-sr-only">도서 검색어</label>
       <input id={`${resultId}-query`} data-initial-focus value={query} onChange={(e) => editQuery(e.target.value)}
