@@ -265,7 +265,7 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
   - **모둠에서 뺍니다** — 기본 모둠은 `suspendedPlacements`에 자리를 적어 두고, 활동 모둠은
     `suspendedUids` · `suspendedMembers`로 옮깁니다(`lib/suspendGroups.js`, 혼자 쓰던 판은 그대로).
     **다시 사용하면 그 자리로 돌려놓습니다.**
-  - 그 학생의 해시태그 글에 친구가 댓글을 달려 하면 '입력할 수 없습니다'(`HashtagComments`, 규칙
+  - 그 학생의 해시태그 글에 친구가 댓글을 달려 하면 '입력할 수 없습니다.' 한 줄만(`HashtagComments`, 규칙
     `isSuspendedUser`도 막음). 동료 평가 · 브레인 라이팅은 모둠에서 빠져 칸 자체가 안 섭니다.
   - 소속 · 과일 · 출석 기록은 그대로입니다(선생님 화면의 명단에 남음).
   - 시험 `tests/rules/suspend.test.mjs` · `storage.test.mjs` · `tests/unit/suspendGroups.test.mjs`.

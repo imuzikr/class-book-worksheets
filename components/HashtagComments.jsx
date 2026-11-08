@@ -135,7 +135,7 @@ export default function HashtagComments({
       )}
 
       {canWrite && ownerSuspended ? (
-        <p className="htc-closed" role="note">입력할 수 없습니다 — 사용이 중지된 학생의 글이에요. 읽기만 할 수 있어요.</p>
+        <p className="htc-closed" role="note">입력할 수 없습니다.</p>
       ) : canWrite ? (
         <form className="htc-form" onSubmit={submit}>
           <div className="htc-kinds" role="radiogroup" aria-label="댓글 말머리">
