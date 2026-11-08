@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { BookSearchError, bookSearchFailure, createBookSearchLimiter, naverSearchConfigured, parseBookSearch, searchNaverBooks } from "@/lib/server/naverBooks";
+import { BookSearchError, bookSearchFailure, bookSearchConfigured, createBookSearchLimiter, parseBookSearch, searchBooks } from "@/lib/server/bookSearch";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,11 +12,11 @@ export async function GET(request) {
   try {
     const { query, start } = parseBookSearch(request.nextUrl.searchParams.get("q"), request.nextUrl.searchParams.get("start") ?? 1);
     // Do not consume provider quota or local rate slots while keys are absent.
-    if (naverSearchConfigured()) {
+    if (bookSearchConfigured()) {
       const client = (request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown").split(",")[0].trim().slice(0, 100);
       if (!allowSearch(client)) throw new BookSearchError("검색 요청이 많아요. 1분 후 다시 검색해 주세요.", 429, "book-search/rate-limited");
     }
-    return NextResponse.json(await searchNaverBooks({ query, start }), { headers });
+    return NextResponse.json(await searchBooks({ query, start }), { headers });
   } catch (error) {
     const failure = bookSearchFailure(error);
     return NextResponse.json(failure.body, { status: failure.status,

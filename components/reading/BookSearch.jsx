@@ -9,7 +9,7 @@ function SearchCover({ src, title }) {
     : <span className="reading-search-cover-fallback" aria-label="표지 이미지 없음">책</span>;
 }
 
-export default function BookSearch({ busy = false, onSelect, onManual }) {
+export default function BookSearch({ busy = false, autoFocus = false, onSelect, onManual }) {
   const [query, setQuery] = useState("");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -62,11 +62,11 @@ export default function BookSearch({ busy = false, onSelect, onManual }) {
     }
   }
 
-  return <section className="reading-book-search" aria-label="네이버 도서 검색">
-    <div className="reading-search-head"><strong>네이버에서 책 찾기</strong><button type="button" className="reading-search-manual" onClick={onManual} disabled={busy}>직접 입력하기</button></div>
+  return <section className="reading-book-search" aria-label="도서 검색">
+    <div className="reading-search-head"><strong>책 찾기</strong><button type="button" className="reading-search-manual" onClick={onManual} disabled={busy}>직접 입력하기</button></div>
     <form className="reading-search-form" onSubmit={(e) => { e.preventDefault(); search(1); }}>
       <label htmlFor={`${resultId}-query`} className="reading-sr-only">도서 검색어</label>
-      <input id={`${resultId}-query`} data-initial-focus value={query} onChange={(e) => editQuery(e.target.value)}
+      <input id={`${resultId}-query`} data-initial-focus autoFocus={autoFocus} value={query} onChange={(e) => editQuery(e.target.value)}
         placeholder="책 제목, 저자, ISBN으로 검색" maxLength={100} disabled={busy} aria-describedby={helpId} aria-controls={resultId} />
       <button type="submit" className="reading-small-primary" disabled={busy || loading || !query.trim()}>{loading ? "검색 중…" : "검색"}</button>
     </form>

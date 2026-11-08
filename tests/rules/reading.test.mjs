@@ -94,6 +94,18 @@ describe("책나눔 활성화와 서버 전용 보상 자료", () => {
     await assertFails(updateDoc(doc(asTeacher(env, "teacherA").firestore(), "classes", "archived"), { characterEnabled: false }));
   });
 
+  it("도서 검색 스위치(관리자 설정) — 담당 교사 · 관리자만, 참·거짓만, 운영 중인 반에서만", async () => {
+    const ref = doc(asTeacher(env, "teacherA").firestore(), "classes", "active");
+    await assertSucceeds(updateDoc(ref, { bookSearchEnabled: true }));
+    await assertSucceeds(updateDoc(ref, { bookSearchEnabled: false }));
+    await assertSucceeds(updateDoc(doc(asAdmin(env, "admin").firestore(), "classes", "active"), { bookSearchEnabled: true }));
+    for (const value of ["true", 1, null, deleteField()]) await assertFails(updateDoc(ref, { bookSearchEnabled: value }));
+    for (const ctx of [asStudent(env, "studentA"), asTeacher(env, "teacherB")]) {
+      await assertFails(updateDoc(doc(ctx.firestore(), "classes", "active"), { bookSearchEnabled: true }));
+    }
+    await assertFails(updateDoc(doc(asTeacher(env, "teacherA").firestore(), "classes", "archived"), { bookSearchEnabled: true }));
+  });
+
   it("새 설정과 무관한 기존 반 이름·출석 수정은 유지", async () => {
     const db = asTeacher(env, "teacherA").firestore();
     await assertSucceeds(updateDoc(doc(db, "classes", "legacy"), { name: "새 이름", attendanceOpen: true }));

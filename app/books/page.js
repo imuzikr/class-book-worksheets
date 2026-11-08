@@ -20,7 +20,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import ReadingHub from "@/components/reading/ReadingHub";
 import ReadingLeaderboard from "@/components/reading/ReadingLeaderboard";
 import AdminSettingsPanel from "@/components/AdminSettingsPanel";
-import { readingEnabled, rankingEnabled } from "@/lib/reading";
+import { readingEnabled, rankingEnabled, bookSearchEnabled } from "@/lib/reading";
 import { characterChoiceEnabled } from "@/lib/readingCharacter";
 import {
   subscribeBookActivities,
@@ -1032,7 +1032,7 @@ function BooksPageInner() {
             <ReadingLeaderboard key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin} characterOn={characterOn}
               onDisabled={() => patchBooksQuery({ area: null }, { replace: true })} />
           ) : readingOpen ? (
-            <ReadingHub key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin} rankingOn={rankingOn}
+            <ReadingHub key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin} rankingOn={rankingOn} bookSearchOn={bookSearchEnabled(currentClass)}
               activities={liveActivities} onOpenActivity={goToActivity}
               initialBookId={searchParams.get("book")} initialTab={searchParams.get("tab") || "library"}
               onDisabled={() => patchBooksQuery({ area: null }, { replace: true })} />

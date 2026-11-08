@@ -248,7 +248,7 @@ test("감상문만 있는 책도 전체 쪽수를 고정하고 아직 기록 없
   assert.throws(() => applyReadingAction(reviewed, { type: "updateBook", bookId: "book1", totalPages: 120 }, context("edit")), /전체 쪽수/);
 });
 
-test("네이버 도서 정보는 서재 저장·수정 후에도 유지되고 메타데이터만으로 보상하지 않음", () => {
+test("검색한 도서 정보(카카오 · 옛 네이버)는 서재 저장·수정 후에도 유지되고 메타데이터만으로 보상하지 않음", () => {
   const metadata = { isbn: "9780306406157", publisher: "출판사", coverImage: "https://shopping-phinf.pstatic.net/book.jpg", bookLink: "https://search.shopping.naver.com/book/catalog/123" };
   const state = applyReadingAction(initialReadingState(), { type: "addBook", title: "검색한 책", author: "저자", totalPages: 200, ...metadata }, context("searched"));
   for (const [key, value] of Object.entries(metadata)) assert.equal(state.books[0][key], value);
@@ -259,6 +259,9 @@ test("네이버 도서 정보는 서재 저장·수정 후에도 유지되고 �
   const manual = applyReadingAction(edited, { type: "updateBook", bookId: "searched", title: "다른 직접 입력 책", author: "다른 저자", isbn: "", publisher: "", coverImage: "", bookLink: "" }, context("manual"));
   for (const key of Object.keys(metadata)) assert.equal(manual.books[0][key], undefined);
   assert.equal(state.books[0].isbn, metadata.isbn);
+  const kakao = { coverImage: "https://search1.kakaocdn.net/thumb/R120x174/?fname=x", bookLink: "https://search.daum.net/search?w=bookpage&bookId=1" };
+  const fromKakao = applyReadingAction(initialReadingState(), { type: "addBook", title: "카카오 책", author: "저자", totalPages: 100, ...kakao }, context("kakao"));
+  for (const [key, value] of Object.entries(kakao)) assert.equal(fromKakao.books[0][key], value);
 });
 
 test("같은 ISBN의 표기만 다른 검색 도서 중복 등록을 거부", () => {
@@ -269,8 +272,29 @@ test("같은 ISBN의 표기만 다른 검색 도서 중복 등록을 거부", ()
   assert.throws(() => applyReadingAction(more, { type: "updateBook", bookId: "manual", isbn: "9780306406157" }, context("merge")), /이미/);
 });
 
-test("도서 메타데이터는 잘못된 ISBN·비보안 URL·비네이버 링크를 거부", () => {
-  for (const fields of [{ isbn: "9780306406158" }, { isbn: "not-isbn" }, { coverImage: "javascript:alert(1)" }, { coverImage: "http://example.com/book.jpg" }, { bookLink: "https://naver.com.evil.test/book" }, { bookLink: "https://user:password@naver.com/book" }]) {
+test("도서 메타데이터는 잘못된 ISBN·비보안 URL·낯선 도서 링크를 거부", () => {
+  for (const fields of [{ isbn: "9780306406158" }, { isbn: "not-isbn" }, { coverImage: "javascript:alert(1)" }, { coverImage: "http://example.com/book.jpg" }, { bookLink: "https://naver.com.evil.test/book" }, { bookLink: "https://user:password@naver.com/book" }, { bookLink: "https://daum.net.evil.test/book" }, { bookLink: "https://example.org/book" }]) {
     assert.throws(() => applyReadingAction(initialReadingState(), { type: "addBook", title: "책", author: "저자", totalPages: 100, ...fields }, context("bad")));
   }
+});
+
+test("관리자 설정은 선생님의 모든 반에 한 값 — 도서 검색 · 새 반이 따를 값", async () => {
+  const { bookSearchEnabled, teacherFeatureSettings, featuresForNewClass } = await import("@/lib/reading");
+  assert.equal(bookSearchEnabled({ readingEnabled: true, bookSearchEnabled: true }), true);
+  assert.equal(bookSearchEnabled({ readingEnabled: true }), false); // 기본 꺼짐
+  assert.equal(bookSearchEnabled({ readingEnabled: false, bookSearchEnabled: true }), false); // 책나눔이 꺼지면 함께
+  assert.equal(bookSearchEnabled({ readingEnabled: true, bookSearchEnabled: true, archived: true }), false);
+  const classes = [
+    { id: "a", readingEnabled: true, bookSearchEnabled: true },
+    { id: "b", readingEnabled: true, rankingEnabled: false },
+    { id: "z", archived: true, readingEnabled: false },
+  ];
+  const s = teacherFeatureSettings(classes);
+  assert.deepEqual(s.readingEnabled, { on: true, mixed: false }); // 보관된 반은 안 셈
+  assert.deepEqual(s.bookSearchEnabled, { on: false, mixed: true });
+  assert.deepEqual(s.rankingEnabled, { on: false, mixed: true });
+  assert.deepEqual(s.characterEnabled, { on: true, mixed: false }); // 값이 없으면 켜짐
+  assert.deepEqual(featuresForNewClass(classes), { readingEnabled: true, bookSearchEnabled: false, rankingEnabled: false, characterEnabled: true });
+  assert.equal(featuresForNewClass([{ archived: true }]), null);
+  assert.equal(teacherFeatureSettings([]).readingEnabled.on, false);
 });

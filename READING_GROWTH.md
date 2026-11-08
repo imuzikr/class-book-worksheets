@@ -4,8 +4,8 @@
 
 ## 사용하기
 
-1. 담당 교사 또는 관리자가 **상단바 관리자 설정**(또는 반 관리하기 → 해당 반 → 책나눔 성장 기능 사용)에서 켭니다.
-2. 해당 반에 상단 앱 이름 오른쪽에 `책나눔` 버튼이 나타납니다. 학생은 책을 등록하고 날짜·읽은 쪽 범위·짧은 감상을 남깁니다.
+1. 담당 교사 또는 관리자가 **상단바 관리자 설정**에서 켭니다 — 선생님의 모든 반에 함께 켜집니다.
+2. 그 반들에 상단 앱 이름 오른쪽에 `책나눔` 버튼이 나타납니다. 학생은 책을 등록하고 날짜·읽은 쪽 범위·짧은 감상을 남깁니다.
 3. 성장·뱃지에서 다음 목표와 대표 뱃지를 선택하고, 우리 반 랭킹에서 오늘·이번 주·이번 달·누적 점수를 확인합니다.
 4. 스위치를 끄면 새 기능의 메뉴와 화면을 숨기고 API 조회·기록·랭킹을 차단합니다. 저장된 데이터는 보관되고 다시 켜면 이어서 사용합니다.
 
@@ -13,18 +13,26 @@
 
 새 영역은 `realName`과 `studentId`만 사용하며 익명 전환을 제공하지 않습니다. 기존 독서 활동의 이름 표시 정책은 유지합니다. 교사 계정은 랭킹에 포함하지 않습니다. 개인 감상과 도서 목록은 랭킹에 노출하지 않습니다.
 
-## 관리자 설정 — 반별 기능 스위치 (`/books?area=settings`)
+## 관리자 설정 — 선생님의 모든 반에 한 값 (`/books?area=settings`)
 
-상단바 **리더보드 오른쪽의 `관리자 설정`**(교사 · 관리자에게만 보임, 학생이 주소로 와도 책방 목록)이 운영 중인 반을 이름순으로 늘어놓고 반마다 스위치 둘을 둡니다(`components/AdminSettingsPanel.jsx` · `app/styles/44-admin-settings.css`). 설정은 앞으로 이 화면에 더해 갑니다.
+상단바 **리더보드 오른쪽의 `관리자 설정`**(교사 · 관리자에게만 보임, 학생이 주소로 와도 책방 목록)이 기능 카드 넷을 한 줄에 같은 크기로 둡니다 — **책나눔 성장 기능 · 도서 검색 · 랭킹 시스템 · 학생 캐릭터**(`components/AdminSettingsPanel.jsx` · `app/styles/44-admin-settings.css`, 1000px 아래 두 칸 · 560px 아래 한 칸).
 
-- **책나눔 성장 기능** — `classes/{cId}.readingEnabled`(기본 꺼짐). 반 관리하기의 같은 스위치와 **같은 값**입니다(둘 다 `setClassReadingEnabled`).
+- **반마다가 아니라 선생님의 운영 중인 반 모두에 같은 값**입니다(선생님 요청 — 한때 반마다 한 줄씩 스위치가 따로였고, 반 관리하기 카드에도 책나눔 스위치가 있었는데 둘 다 걷었습니다. **되살리지 마세요**).
+  - 값은 지금처럼 **반 문서마다** 적습니다 — 서버 API · 규칙 · 학생 화면이 반 문서를 읽기 때문입니다. 스위치 하나가 `setTeacherFeature(반 id들, 칸, 값)`으로 운영 중인 반 모두에 한 묶음(writeBatch)으로 씁니다. 보관된 반은 규칙이 막아 빼고 씁니다.
+  - 화면의 켜짐은 **운영 중인 반이 모두 켜졌을 때**이고, 반마다 다르면(이 바뀜 전의 반) 카드에 '반마다 다르게 켜져 있어요'가 서고 누르면 모두 켭니다(`lib/reading.js`의 `teacherFeatureSettings`).
+  - **새 반도 같은 값을 따릅니다** — 반 관리하기에서 만들 때 `featuresForNewClass(내 반들)`을 `addClass`에 넘겨, 만든 뒤 한 번 더 씁니다(규칙이 만들 때 `readingEnabled`를 거짓으로만 받음).
+  - 최고 관리자는 보이는 반 전부에 씁니다(남의 반 포함 — 규칙상 관리자는 됨).
+- **책나눔 성장 기능** — `classes/{cId}.readingEnabled`(기본 꺼짐).
+- **도서 검색** — `classes/{cId}.bookSearchEnabled`(기본 꺼짐 · 책나눔이 켜져 있어야 켬, 판정 `bookSearchEnabled(반)`). 카카오 REST API 키(아래 '도서 검색 (카카오)' 절)가 있어야 쓰는 기능이라, 키 없이 직접 입력만 쓰는 선생님을 위해 따로 둡니다.
+  - 꺼져 있으면 내 서재 **'새 책 등록'은 직접 입력만**(검색 칸 없음). 켜져 있으면 맨 위에 **'도서 검색으로 책 정보 채우기'** 단추가 서고, 누르면 검색 칸으로 바뀌어 커서가 들어가며, 결과를 고르거나 '직접 입력하기'를 누르면 접힙니다(`ReadingHub`의 `BookForm` · `bookSearchOn`).
+  - `/api/books/search` 자체는 이 스위치를 보지 않습니다(공개 서지 정보만, 키 · 빈도 제한이 지킴).
 - **랭킹 시스템** — `classes/{cId}.rankingEnabled`(값이 없으면 켜짐 · 끈 것만 `false`로 적음). 판정은 `lib/reading.js`의 `rankingEnabled(반)` 한 곳 — 책나눔이 켜져 있고 `rankingEnabled !== false`일 때만 참이라, 책나눔이 꺼지면 스위치도 꺼진 채 잠깁니다.
   - 끄면: 상단바 **리더보드 단추가 사라지고**(`?area=leaderboard`로 와도 책방 목록), 책나눔의 **'우리 반 랭킹' 탭이 빠지며**(보던 중이면 내 서재로), 서버 `getReadingRankings`가 `403 reading/ranking-disabled`로 막습니다(데모 `fetchReadingRankings`도 같음). 내 서재 · 성장 · 뱃지는 그대로이고, 반 집계(`readingMembers`)는 계속 쌓여 다시 켜면 곧바로 보입니다.
 - **학생 캐릭터** — `classes/{cId}.characterEnabled`(값이 없으면 켜짐 · 끈 것만 `false`). 판정은 `lib/readingCharacter.js`의 `characterChoiceEnabled` 한 곳. 리더보드 '캐릭터 꾸미기'(동물 20종 · 두 의상 — `public/reading-journey/`)를 켜고 끕니다. 랭킹이 꺼진 반에서는 스위치가 잠깁니다(리더보드 자체가 없음).
   - 끄면: 학생 화면에서 '캐릭터 꾸미기' 단추가 사라지고(`ReadingLeaderboard`의 `characterOn`), 서버 `saveReadingCharacter`가 `403 reading/character-disabled`로 막으며(데모도 같음), `getReadingRankings`가 고른 값 대신 `character: null`을 보내 모두 **기본 캐릭터**(`defaultWorldAvatar`)로 섭니다. 고른 값(`users/{uid}.readingCharacter`)은 지우지 않아 다시 켜면 돌아옵니다.
   - **바꾸는 자리는 둘이고 창은 하나**(`components/reading/CharacterChooser.jsx`): 지도의 '캐릭터 꾸미기'와 상단바 **프로필 메뉴 → '👤 내 프로필' → '내 캐릭터' 칸의 '바꾸기'**(그 창을 닫고 고르기 창을 엶 — 창 둘이 겹쳐 Esc가 둘 다 닫지 않게). 상단바 **프로필 동그라미에도 내 캐릭터 얼굴**이 섭니다(고른 적이 없으면 지도와 같은 기본 동물).
     - 조건은 지도와 같습니다 — 그 반의 책나눔 · 랭킹 · 학생 캐릭터가 모두 켜졌을 때만(`TopNav`가 반 문서 1건 · 내 `users` 문서 1건을 구독, `subscribeMyReadingCharacter`). 저장은 같은 `saveReadingCharacter`(서버 API)라 규칙을 안 건드립니다. 저장하면 `reading-character-change` 창 이벤트로 떠 있는 리더보드가 다시 읽습니다.
-- 규칙(`readingSettingValid`): 세 칸(`readingEnabled` · `rankingEnabled` · `characterEnabled`)은 **참 · 거짓만**(지우기 불가), 보관된 반은 못 바꿈, 담당 교사 · 관리자만. 시험 `tests/rules/reading.test.mjs`('랭킹 시스템 스위치'). **코드보다 규칙을 먼저 배포하세요** — 안 그러면 랭킹 스위치 저장이 권한 오류입니다(책나눔 스위치는 그대로 됩니다).
+- 규칙(`readingSettingValid`): 네 칸(`readingEnabled` · `rankingEnabled` · `characterEnabled` · `bookSearchEnabled`)은 **참 · 거짓만**(지우기 불가), 보관된 반은 못 바꿈, 담당 교사 · 관리자만. 시험 `tests/rules/reading.test.mjs`('랭킹 시스템 스위치' · '도서 검색 스위치'). **코드보다 규칙을 먼저 배포하세요** — 안 그러면 도서 검색 스위치 저장이 권한 오류입니다.
 - 실측(데모 1440 · 420px): 교사 상단바 `책방 · 책나눔 · 리더보드 · 관리자 설정` · 학생은 관리자 설정 없음 · 체험반 랭킹을 끄면 리더보드 단추와 랭킹 탭이 빠짐 · 가로 넘침 0.
 
 ## 리더보드 — 독서 여정
@@ -72,17 +80,22 @@
 
 뱃지 그림은 새 여정 캐릭터와 어울리는 3D 금속·에나멜 훈장 18종입니다. `ReadingBadge`가 `public/reading-badges/v2/{series}_{tier}.webp`를 사용해 성장 갤러리·리더보드·지도 상단·개인 대시보드에 같은 디자인을 표시합니다. 원본은 투명 PNG이며 앱은 512px WebP로 제공합니다. 기존 ID·획득 조건·대표 선택·경험치 보상은 바꾸지 않습니다. 미획득은 CSS로 채도와 불투명도를 낮추고, '디자인 미리보기'는 전체 색상으로 표시합니다. 기존 24~180px 크기와 접근성 이름도 유지합니다.
 
-## 네이버 도서 검색
+## 도서 검색 (카카오)
 
-새 책 등록에서 제목·저자·ISBN으로 네이버 도서를 검색하고 결과를 선택할 수 있습니다. 책 제목·저자·출판사·ISBN·표지를 채운 뒤 전체 쪽수를 입력하고 등록합니다. 검색 결과를 고르는 것만으로 책을 등록하거나 경험치를 지급하지 않습니다. **네이버 도서 검색 API는 전체 쪽수를 제공하지 않으므로 쪽수는 직접 입력합니다.** 검색 실패·결과 없음·API 키 미등록 상태에서도 직접 입력할 수 있습니다.
+새 책 등록에서 제목·저자·ISBN으로 책을 검색하고 결과를 선택할 수 있습니다. 책 제목·저자·출판사·ISBN·표지를 채운 뒤 전체 쪽수를 입력하고 등록합니다. 검색 결과를 고르는 것만으로 책을 등록하거나 경험치를 지급하지 않습니다. **도서 검색 API는 전체 쪽수를 제공하지 않으므로 쪽수는 직접 입력합니다.** 검색 실패·결과 없음·API 키 미등록 상태에서도 직접 입력할 수 있습니다.
 
-API 키는 개발 후 나중에 등록해도 됩니다. 실제 네이버 검색을 사용할 때까지 아래 설정을 완료하면 되며, 등록 전에는 검색 준비 중 안내와 직접 입력을 제공합니다.
+- **한때 네이버 책 검색을 썼습니다.** 네이버가 그 API를 2026-07-31에 끝내(공식 대체 없음 — 알라딘 Open API도 2026-10-30 종료) 카카오(다음) 책 검색으로 옮겼습니다. 서버 함수는 `lib/server/bookSearch.js`, 주소 `/api/books/search`와 응답 모양(`{ items, total, start, display, hasMore }`)은 그대로라 화면은 바뀌지 않았습니다.
+- 카카오는 한 번에 10권씩 50쪽(`start` 491)까지만 넘겨 줍니다(`BOOK_SEARCH_MAX_START`).
+- 표지는 카카오 · 다음 그림 서버(`kakaocdn.net` · `daumcdn.net`), 책 링크는 `daum.net` · `kakao.com`만 받습니다. 카카오 표지는 120×174 안팎이라 작게 보이는 자리에 맞습니다.
+- 서재에 저장할 때의 링크 검사(`lib/reading.js`의 `BOOK_LINK_DOMAINS`)는 **옛 네이버 링크도 계속 받습니다** — 전에 저장한 책을 고칠 때 막히지 않게. 저장해 둔 네이버 표지 주소는 그대로 두었습니다(네이버 그림 서버가 막히면 그 책만 표지 없이 '책' 자리표로 보입니다).
 
-1. 네이버 개발자센터에서 애플리케이션을 등록하고 사용 API로 **검색**을 선택합니다.
-2. 발급된 Client ID와 Client Secret을 Vercel 프로젝트 **Settings → Environment Variables**에 `NAVER_CLIENT_ID`, `NAVER_CLIENT_SECRET`으로 등록합니다.
-3. Production 및 필요한 Preview 환경을 선택하고 다시 배포합니다. 기존 배포에는 새 환경 변수가 자동 적용되지 않습니다.
+API 키는 나중에 등록해도 됩니다. 등록 전에는 검색 준비 중 안내와 직접 입력을 제공합니다.
 
-키는 서버에서 `https://openapi.naver.com/v1/search/book.json`을 호출할 때만 사용합니다. `NEXT_PUBLIC_` 변수나 코드·채팅에 키를 넣지 않습니다. 검색 API는 공개 도서 정보만 반환하며 학생의 개인 독서 기록·경험치·권한 처리와 분리되어 있습니다. 설정 오류·타임아웃·요청 한도는 성공한 빈 결과로 숨기지 않고 안내합니다.
+1. [카카오디벨로퍼스](https://developers.kakao.com) → **내 애플리케이션 → 애플리케이션 추가하기**로 앱을 만들고, **앱 키**의 **REST API 키**를 복사합니다.
+2. Vercel 프로젝트 **Settings → Environment Variables**에 `KAKAO_REST_API_KEY`로 등록합니다(Production, 미리 보려면 Preview도).
+3. 다시 배포합니다. 기존 배포에는 새 환경 변수가 자동 적용되지 않습니다. 옛 `NAVER_CLIENT_ID` · `NAVER_CLIENT_SECRET`은 지워도 됩니다.
+
+키는 서버(API 경로 = Vercel 서버리스 함수)에서 `https://dapi.kakao.com/v3/search/book`을 `Authorization: KakaoAK …` 머리말로 부를 때만 사용합니다. `NEXT_PUBLIC_` 변수나 코드·채팅에 키를 넣지 않습니다. 로컬 시험은 `.env.local`에 적습니다(`.gitignore`가 `.env` · `.env*.local`을 막음). 검색 API는 공개 도서 정보만 반환하며 학생의 개인 독서 기록·경험치·권한 처리와 분리되어 있습니다. 설정 오류·타임아웃·요청 한도는 성공한 빈 결과로 숨기지 않고 안내합니다. 시험 `tests/unit/bookSearch.test.mjs`.
 
 ## 기존 독서 활동 연결
 
