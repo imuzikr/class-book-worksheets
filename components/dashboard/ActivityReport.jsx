@@ -56,7 +56,13 @@ export default function ActivityReport({ activities = [], subject, classroom }) 
         {classroom?.name && <div><dt>학급</dt><dd>{classroom.name}</dd></div>}
         {topics.length === 1 && <div className="bb-ar-book"><dt>도서·주제</dt><dd>{topics[0]}</dd></div>}
       </dl>
-      <p className="bb-ar-context">선택한 반에서 현재 저장된 활동 내용을 보여줍니다. 위의 조회 기간은 독서 통계에 적용됩니다.</p>
+      {/* '모아 보기'는 구분선 위, 안내 줄 오른쪽 끝(선생님 요청) */}
+      <div className="bb-ar-context-row">
+        <p className="bb-ar-context">선택한 반에서 현재 저장된 활동 내용을 보여줍니다. 위의 조회 기간은 독서 통계에 적용됩니다.</p>
+        {participated.length > 0 && <button type="button" className={`bb-ar-all${showAll ? " on" : ""}`} aria-pressed={showAll} onClick={() => setView(showAll ? null : "all")}>
+          {showAll ? "하나씩 보기" : `모아 보기 (${participated.length})`}
+        </button>}
+      </div>
     </header>
 
     {participated.length > 0 && <div className="bb-ar-tabbar">
@@ -68,9 +74,6 @@ export default function ActivityReport({ activities = [], subject, classroom }) 
           <span className="bb-ar-tab-text"><strong>{activity.label}</strong><small>{activity.title || "제목 미설정"}</small></span>
         </button>)}
       </div>
-      <button type="button" className={`bb-ar-all${showAll ? " on" : ""}`} aria-pressed={showAll} onClick={() => setView(showAll ? null : "all")}>
-        {showAll ? "하나씩 보기" : `모아 보기 (${participated.length})`}
-      </button>
     </div>}
 
     {participated.length ? <div className={`bb-ar-layout${showAll ? "" : " is-single"}`}>

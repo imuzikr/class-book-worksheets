@@ -9,8 +9,12 @@ import "./TeacherReports.css";
 
 function ReportHeading({ eyebrow, title, titleAction, children, aside }) {
   return <header className="bb-report-heading">
-    <div><span className="bb-report-eyebrow">{eyebrow}</span>{titleAction ? <div className="bb-report-title-row"><h2>{title}</h2>{titleAction}</div> : <h2>{title}</h2>}<p>{children}</p></div>
-    {aside && <span className="bb-report-heading-tag">{aside}</span>}
+    <div><span className="bb-report-eyebrow">{eyebrow}</span><h2>{title}</h2><p>{children}</p></div>
+    {/* 반 이름 · 편집은 오른쪽 끝에 함께(선생님 요청) */}
+    {(aside || titleAction) && <div className="bb-report-heading-side">
+      {aside && <span className="bb-report-heading-tag">{aside}</span>}
+      {titleAction}
+    </div>}
   </header>;
 }
 

@@ -254,7 +254,7 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
     시험 `tests/rules/withdraw.test.mjs`.
   - 독서 활동 아래에 학생 기록을 담는 컬렉션을 새로 만들면 `withdraw.js`에도 더하세요.
   - '반에서 빼기'(명단에서만 빠지고 글은 남음)는 그대로 있습니다.
-- **학생 사용 중지 — 전학 등으로 더 안 쓰지만 남긴 글은 둘 때**(같은 창, 탈퇴 위 · `lib/data/suspend.js`의
+- **학생 사용 중지 — 전학 등으로 더 안 쓰지만 남긴 글은 둘 때**(같은 창, 편집 · 탈퇴와 한 줄 · `lib/data/suspend.js`의
   `setStudentSuspended`, 탈퇴와 같은 조건 — 그 학생의 반이 모두 내 반).
   - `users/{uid}.suspended`(+ `suspendedAt` · `suspendedBy`). 규칙의 `signedIn()` · `isClassMember()`가
     `isSuspendedMe()`를 보아 **그 계정의 모든 읽기 · 쓰기를 막습니다**(휴면) — 본인 프로필 읽기만 열림.

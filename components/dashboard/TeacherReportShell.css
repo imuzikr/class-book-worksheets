@@ -52,6 +52,13 @@
   min-width: 0;
 }
 
+/* 오른쪽 첫 카드(개인별 보고서 머리)와 같은 높이에서 시작합니다(선생님 요청) — 그 위의
+   기간 줄(.bb-dash-scope-line: 글자 11px × 줄 1.7 + 위아래 여백 2 + 14) 만큼 내립니다.
+   두 값을 함께 고치세요. 한 열로 접히는 760px 아래에서는 풉니다. */
+.bb-report-layout:has(> .bb-report-content > .bb-dash-scope-line:first-child) > .bb-report-directory {
+  margin-top: calc(11px * 1.7 + 16px);
+}
+
 .bb-report-directory {
   position: sticky;
   top: 20px;
@@ -260,6 +267,7 @@
   .bb-report-tab { padding: 9px 5px; font-size: 12px; }
   .bb-report-layout { grid-template-columns: minmax(0, 1fr); gap: 18px; }
   .bb-report-directory { position: static; padding: 13px 12px 10px; }
+  .bb-report-layout:has(> .bb-report-content > .bb-dash-scope-line:first-child) > .bb-report-directory { margin-top: 0; }
   .bb-report-directory-scroll { max-height: 240px; }
   .bb-report-directory-hint { margin-bottom: 8px; }
   .bb-report-user { min-height: 62px; }
