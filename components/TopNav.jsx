@@ -37,7 +37,7 @@ import RoleManagerModal from "./RoleManagerModal";
 import PresentationOverlay from "./PresentationOverlay";
 import RewardCelebration from "./RewardCelebration";
 import FloatingHub from "./FloatingHub";
-import AppMarquee from "./AppMarquee";
+import ClassTopReaders from "./ClassTopReaders";
 import { useRewardCelebration } from "@/lib/useRewardCelebration";
 import { useClassMembers } from "@/lib/useClassRoster";
 import { IconLogo, IconBook, IconTrophy, IconSettings } from "./StatusIcons";
@@ -152,13 +152,17 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
   const [characterOn, setCharacterOn] = useState(false);
   // 과일 바구니 — 관리자 설정에서 끄면 떠 있는 동그라미의 '과일 바구니'를 가립니다(교사 · 학생 모두).
   const [fruitOn, setFruitOn] = useState(true);
+  // 상단바 가운데 '독서 TOP 3' — 책나눔 성장 기능과 랭킹이 켜진 반에서만
+  const [topOn, setTopOn] = useState(false);
   const [myCharacter, setMyCharacter] = useState(null);
   useEffect(() => {
     setCharacterOn(false);
     setFruitOn(true);
+    setTopOn(false);
     if (!quizClassId) return;
     return subscribeClass(quizClassId, (c) => {
       setFruitOn(fruitBasketOn(c));
+      setTopOn(!!c && !c.archived && readingEnabled(c) && rankingEnabled(c));
       if (!admin) setCharacterOn(!!c && readingEnabled(c) && rankingEnabled(c) && characterChoiceEnabled(c));
     });
   }, [admin, quizClassId]);
@@ -357,10 +361,11 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
           한 겹 씌우면 줄바꿈은 안 부르면서 남는 가로를 받고, 알약은 그 안에서
           제 글자만큼만 자랍니다.
 
-          반과 무관하므로 `broadcastClassId`에 걸지 않습니다 — 반을 아직 안
-          고른 교사, 질문방·리포트처럼 반이 없는 화면에도 그대로 섭니다. */}
+          지금은 **반별 독서 TOP 3**(ClassTopReaders — 선생님 요청)입니다. 한때
+          학교 전체에 하나인 전광판(meta/marquee, AppMarquee)이 섰는데 걷었습니다.
+          책나눔 · 랭킹이 꺼진 반에서는 빈 칸만 남습니다. */}
       <div className="topbar-mq-slot">
-        <AppMarquee isTeacher={admin} />
+        <ClassTopReaders classId={quizClassId} enabled={topOn} />
       </div>
 
       {/* ④ 오른쪽 끝: 돌발 퀴즈 + 손들기 + 확성기 + 과일 뱃지 + 알림 + 프로필.

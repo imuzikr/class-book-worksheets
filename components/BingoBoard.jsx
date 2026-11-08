@@ -8,7 +8,7 @@
 // 왼쪽 판별 진행(미니맵 순위) · 가운데 고른 판 크게 + 진행 단추.
 // -------------------------------------------------------------
 // 두 단계(활동 문서의 bingo.stage)
-//   판 채우기(fill) — 학생(모둠)이 낱말 상자에서 25칸을 골라 채웁니다. 왼쪽은 채운
+//   판 채우기(fill) — 학생(모둠)이 낱말 상자에서 n×n칸(16 · 25)을 골라 채웁니다. 왼쪽은 채운
 //                    칸이 많은 차례, 목표 줄 수(1~5줄)를 여기서 정합니다.
 //   빙고(play)      — 교사가 낱말을 부릅니다(상자에서 누르거나 '무작위로 부르기').
 //                    부른 낱말이 든 칸이 모든 판에서 저절로 표시되고, 왼쪽은 빙고를
@@ -24,7 +24,7 @@ import {
   addSoloBookBoards,
 } from "@/lib/store";
 import {
-  BINGO_CELLS,
+  bingoCellCount,
   BINGO_GOALS,
   bingoProgress,
   nextBingoCall,
@@ -56,6 +56,8 @@ export default function BingoBoard({ activity, onBack, onToast, user, roster = [
   const playing = stage === "play";
   const called = useMemo(() => bingo?.called ?? [], [bingo]);
   const goal = bingo?.goal ?? 3;
+  const size = bingo?.size ?? 5;
+  const CELLS = bingoCellCount(size);
   const lastWord = called.at(-1) ?? "";
 
   const liveGroups = useMemo(
@@ -71,10 +73,10 @@ export default function BingoBoard({ activity, onBack, onToast, user, roster = [
   }, [liveGroups]);
 
   // 판마다 진행 — 판 문서가 아직 없으면 빈 판
-  const cellsBy = useMemo(() => new Map(rawBoards.map((b) => [b.id, normalizeBingoCells(b.cells)])), [rawBoards]);
+  const cellsBy = useMemo(() => new Map(rawBoards.map((b) => [b.id, normalizeBingoCells(b.cells, size)])), [rawBoards, size]);
   const ranks = useMemo(() => {
     const rows = liveGroups.map((g, order) => ({
-      ...bingoProgress(cellsBy.get(g.id) ?? [], called, goal),
+      ...bingoProgress(cellsBy.get(g.id) ?? [], called, goal, size),
       groupId: g.id,
       group: g,
       order,
@@ -83,10 +85,10 @@ export default function BingoBoard({ activity, onBack, onToast, user, roster = [
     return playing
       ? rankBingo(rows)
       : [...rows].sort((a, b) => b.filled - a.filled || a.order - b.order);
-  }, [liveGroups, cellsBy, called, goal, playing]);
+  }, [liveGroups, cellsBy, called, goal, playing, size]);
   const pickedRow = ranks.find((r) => r.groupId === picked) ?? ranks[0] ?? null;
   const bingoCount = ranks.filter((r) => r.bingo).length;
-  const fullCount = ranks.filter((r) => r.filled === BINGO_CELLS).length;
+  const fullCount = ranks.filter((r) => r.filled === CELLS).length;
 
   // 낱말마다 몇 판에 놓였나(부르기 칩의 작은 숫자)
   const boardsWith = useMemo(() => {
@@ -124,7 +126,7 @@ export default function BingoBoard({ activity, onBack, onToast, user, roster = [
     save({ called: [...called, word] });
   }
   function callRandom() {
-    const w = nextBingoCall(ranks.map((r) => r.cells), bingo?.words, called);
+    const w = nextBingoCall(ranks.map((r) => r.cells), bingo?.words, called, Math.random, size);
     if (!w) { setNote("더 부를 낱말이 없어요."); return; }
     callWord(w);
   }
@@ -232,16 +234,16 @@ export default function BingoBoard({ activity, onBack, onToast, user, roster = [
                         style={{ "--xwg-c": color.border, "--xwg-bg": color.bg }}
                         onClick={() => setPicked(p.groupId)}
                         aria-pressed={on}
-                        title={playing ? `${p.count}줄 · 불린 칸 ${p.marked.size}개` : `채운 칸 ${p.filled} / ${BINGO_CELLS}`}
+                        title={playing ? `${p.count}줄 · 불린 칸 ${p.marked.size}개` : `채운 칸 ${p.filled} / ${CELLS}`}
                       >
                         <span className="xwg-rank-head">
                           <b className="xwg-rank-no">{rank + 1}</b>
                           <strong>{labelOf(p.group, p.order)}</strong>
-                          <span className={`xw-badge${playing ? (p.bingo ? " done" : "") : p.filled === BINGO_CELLS ? " done" : ""}`}>
-                            {playing ? (p.bingo ? `빙고! ${p.count}줄` : `${p.count}줄`) : `${p.filled} / ${BINGO_CELLS}칸`}
+                          <span className={`xw-badge${playing ? (p.bingo ? " done" : "") : p.filled === CELLS ? " done" : ""}`}>
+                            {playing ? (p.bingo ? `빙고! ${p.count}줄` : `${p.count}줄`) : `${p.filled} / ${CELLS}칸`}
                           </span>
                         </span>
-                        <BingoGrid cells={p.cells} marked={p.marked} lineCells={p.lineCells} mini tint={color} />
+                        <BingoGrid cells={p.cells} marked={p.marked} lineCells={p.lineCells} mini tint={color} size={size} />
                         {playing && p.bingoAt && (
                           <span className="bingo-rank-at">{p.bingoAt}번째 낱말에서 빙고</span>
                         )}
@@ -265,7 +267,7 @@ export default function BingoBoard({ activity, onBack, onToast, user, roster = [
               <h3>{pickedRow ? `${labelOf(pickedRow.group, pickedRow.order)}의 빙고판` : "빙고판"}</h3>
               {pickedRow && (
                 <span className={`xw-badge${playing && pickedRow.bingo ? " done" : ""}`}>
-                  {playing ? `${pickedRow.count}줄 · 불린 칸 ${pickedRow.marked.size}개` : `${pickedRow.filled} / ${BINGO_CELLS}칸`}
+                  {playing ? `${pickedRow.count}줄 · 불린 칸 ${pickedRow.marked.size}개` : `${pickedRow.filled} / ${CELLS}칸`}
                 </span>
               )}
             </header>
@@ -279,7 +281,7 @@ export default function BingoBoard({ activity, onBack, onToast, user, roster = [
                       ? "낱말 상자가 비어 있어요. ‘낱말 새로 가져오기’를 눌러 닿소리 채우기의 낱말을 들여오세요."
                       : playing
                         ? `낱말 ${called.length}개를 불렀어요. 아래 낱말 상자에서 누르거나 ‘무작위로 부르기’로 부르면 모든 판에 곧바로 표시돼요.`
-                        : `${who}마다 낱말 상자에서 25칸을 골라 채워요(다 채움 ${fullCount} / ${ranks.length}). 다 채웠으면 ‘빙고 시작’을 누르세요 — 시작하면 판은 굳어요.`)}
+                        : `${who}마다 낱말 상자에서 ${CELLS}칸을 골라 채워요(다 채움 ${fullCount} / ${ranks.length}). 다 채웠으면 ‘빙고 시작’을 누르세요 — 시작하면 판은 굳어요.`)}
                 </span>
                 <div className="xw-gen-btns">
                   {playing ? (
@@ -351,6 +353,7 @@ export default function BingoBoard({ activity, onBack, onToast, user, roster = [
                 marked={pickedRow.marked}
                 lineCells={pickedRow.lineCells}
                 lastWord={lastWord}
+                size={size}
               />
             ) : (
               <p className="xw-empty">왼쪽에 판이 생기면 눌러서 크게 볼 수 있어요.</p>
@@ -411,7 +414,7 @@ export default function BingoBoard({ activity, onBack, onToast, user, roster = [
         <ConfirmModal
           icon={<span aria-hidden="true">🎯</span>}
           title="빙고를 시작할까요?"
-          description={`아직 25칸을 다 채우지 못한 ${who}이(가) ${ranks.length - fullCount}개 있어요. 시작하면 판을 더 고칠 수 없고, 빈칸은 표시되지 않아요.`}
+          description={`아직 ${CELLS}칸을 다 채우지 못한 ${who}이(가) ${ranks.length - fullCount}개 있어요. 시작하면 판을 더 고칠 수 없고, 빈칸은 표시되지 않아요.`}
           confirmLabel="시작하기"
           onConfirm={start}
           onClose={() => setConfirm(null)}

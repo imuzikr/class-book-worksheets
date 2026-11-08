@@ -4,7 +4,8 @@
 // 낱말 빙고 판 한 장 — 학생 판 · 교사 판 · 미니맵 공용 (CrosswordGrid와 같은 생각)
 // -------------------------------------------------------------
 // 그리기만 합니다. 무엇을 표시할지는 부르는 쪽이 셈해 넘깁니다(lib/bingo.js).
-//   cells      길이 25 배열 — 칸마다 낱말("" = 빈칸)
+//   cells      길이 n×n 배열 — 칸마다 낱말("" = 빈칸)
+//   size       판 크기(4 | 5, 기본 5) — 격자 열 수는 --bingo-n
 //   marked     Set(칸 번호) — 부른 낱말이 든 칸
 //   lineCells  Set(칸 번호) — 완성된 줄에 든 칸(더 짙게)
 //   lastWord   방금 부른 낱말 — 그 칸에 테두리
@@ -12,7 +13,7 @@
 //   canClick   (선택) 칸 번호 → 누를 수 있나 — 빙고 중 학생 판은 아직 안 불린 낱말 칸만
 //   mini       미니맵 — 글자 없이 색만, 누를 수 없음 · tint { bg, border }
 // =============================================================
-import { BINGO_CELLS, BINGO_SIZE } from "@/lib/bingo";
+import { normalizeBingoSize } from "@/lib/bingo";
 
 export default function BingoGrid({
   cells = [],
@@ -24,9 +25,11 @@ export default function BingoGrid({
   canClick = null,
   mini = false,
   tint = null,
+  size = 5,
 }) {
+  const n = normalizeBingoSize(size);
   const out = [];
-  for (let i = 0; i < BINGO_CELLS; i++) {
+  for (let i = 0; i < n * n; i++) {
     const word = cells[i] ?? "";
     const isMarked = !!marked?.has(i);
     const inLine = !!lineCells?.has(i);
@@ -45,8 +48,8 @@ export default function BingoGrid({
       out.push(<span key={i} className={cls} style={style} />);
       continue;
     }
-    const r = Math.floor(i / BINGO_SIZE) + 1;
-    const c = (i % BINGO_SIZE) + 1;
+    const r = Math.floor(i / n) + 1;
+    const c = (i % n) + 1;
     out.push(
       <button
         key={i}
@@ -62,7 +65,7 @@ export default function BingoGrid({
     );
   }
   return (
-    <div className={`bingo-grid${mini ? " bingo-grid--mini" : ""}`} aria-hidden={mini || undefined}>
+    <div className={`bingo-grid${mini ? " bingo-grid--mini" : ""}`} style={{ "--bingo-n": n }} aria-hidden={mini || undefined}>
       {out}
     </div>
   );

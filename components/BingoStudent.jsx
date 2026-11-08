@@ -15,8 +15,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { callBingoWord, subscribeBookGroups, subscribeBingoBoards, writeBingoCells } from "@/lib/store";
 import {
-  BINGO_CELLS,
-  BINGO_LINE_COUNT,
+  bingoCellCount,
+  bingoLineCount,
   bingoProgress,
   bingoRandomFill,
   bingoUsedWords,
@@ -51,6 +51,8 @@ export default function BingoStudent({ activity, groupId, onBack }) {
   const playing = bingo?.stage === "play";
   const called = useMemo(() => bingo?.called ?? [], [bingo]);
   const goal = bingo?.goal ?? 3;
+  const size = bingo?.size ?? 5;
+  const CELLS = bingoCellCount(size);
   const lastWord = called.at(-1) ?? "";
   const locked = !!activity.locked;
   const canEdit = !!bingo && !playing && !locked;
@@ -58,9 +60,9 @@ export default function BingoStudent({ activity, groupId, onBack }) {
   const canCall = !!bingo && playing && !locked;
 
   const myGroup = groups.find((g) => g.id === groupId) ?? null;
-  const cellsBy = useMemo(() => new Map(rawBoards.map((b) => [b.id, normalizeBingoCells(b.cells)])), [rawBoards]);
-  const cells = cellsBy.get(groupId) ?? Array(BINGO_CELLS).fill("");
-  const mine = useMemo(() => bingoProgress(cells, called, goal), [cells, called, goal]);
+  const cellsBy = useMemo(() => new Map(rawBoards.map((b) => [b.id, normalizeBingoCells(b.cells, size)])), [rawBoards, size]);
+  const cells = cellsBy.get(groupId) ?? Array(CELLS).fill("");
+  const mine = useMemo(() => bingoProgress(cells, called, goal, size), [cells, called, goal, size]);
   const used = useMemo(() => bingoUsedWords(cells), [cells]);
 
   // 가장 앞선 친구(모둠) — 나를 뺀 판 가운데 1위(교사 화면과 같은 순위)
@@ -68,16 +70,16 @@ export default function BingoStudent({ activity, groupId, onBack }) {
     if (!playing) return null;
     const rows = groups
       .filter((g) => g.id !== groupId && !g.retired && (g.memberUids ?? []).length > 0)
-      .map((g, order) => ({ ...bingoProgress(cellsBy.get(g.id) ?? [], called, goal), group: g, order }));
+      .map((g, order) => ({ ...bingoProgress(cellsBy.get(g.id) ?? [], called, goal, size), group: g, order }));
     const top = rankBingo(rows)[0];
     if (!top || (top.marked.size === 0 && top.filled === 0)) return null;
     return { ...top, name: solo ? top.group.members?.[0]?.name || top.group.groupName || "친구" : top.group.groupName || "모둠" };
-  }, [playing, groups, groupId, cellsBy, called, goal, solo]);
+  }, [playing, groups, groupId, cellsBy, called, goal, solo, size]);
   const bingoFriends = useMemo(() => {
     if (!playing) return 0;
     return groups.filter((g) => g.id !== groupId && !g.retired && (g.memberUids ?? []).length > 0)
-      .filter((g) => bingoProgress(cellsBy.get(g.id) ?? [], called, goal).bingo).length;
-  }, [playing, groups, groupId, cellsBy, called, goal]);
+      .filter((g) => bingoProgress(cellsBy.get(g.id) ?? [], called, goal, size).bingo).length;
+  }, [playing, groups, groupId, cellsBy, called, goal, size]);
 
   async function write(set, del = []) {
     setNote("");
@@ -118,8 +120,8 @@ export default function BingoStudent({ activity, groupId, onBack }) {
   }
   function fillRandom() {
     if (!canEdit) return;
-    const set = bingoRandomFill(cells, bingo.words);
-    if (!Object.keys(set).length) { setNote(mine.filled === BINGO_CELLS ? "이미 다 채웠어요." : "넣을 낱말이 더 없어요."); return; }
+    const set = bingoRandomFill(cells, bingo.words, Math.random, size);
+    if (!Object.keys(set).length) { setNote(mine.filled === CELLS ? "이미 다 채웠어요." : "넣을 낱말이 더 없어요."); return; }
     write(set);
     setSel(null);
     setPick("");
@@ -187,7 +189,7 @@ export default function BingoStudent({ activity, groupId, onBack }) {
     );
   }
 
-  const fillPct = (mine.filled / BINGO_CELLS) * 100;
+  const fillPct = (mine.filled / CELLS) * 100;
   const linePct = Math.min(100, (mine.count / goal) * 100);
   const selWord = sel != null ? cells[sel] : "";
 
@@ -201,11 +203,11 @@ export default function BingoStudent({ activity, groupId, onBack }) {
           <section className="xw-card xwg-mymap">
             <header className="xw-card-head">
               <h3>{OUR} 빙고 한눈에</h3>
-              <span className={`xw-badge${(playing ? mine.bingo : mine.filled === BINGO_CELLS) ? " done" : ""}`}>
-                {playing ? `${mine.count} / ${goal}줄` : `${mine.filled} / ${BINGO_CELLS}칸`}
+              <span className={`xw-badge${(playing ? mine.bingo : mine.filled === CELLS) ? " done" : ""}`}>
+                {playing ? `${mine.count} / ${goal}줄` : `${mine.filled} / ${CELLS}칸`}
               </span>
             </header>
-            <BingoGrid cells={cells} marked={mine.marked} lineCells={mine.lineCells} sel={sel} mini tint={MAP_TINT} />
+            <BingoGrid cells={cells} marked={mine.marked} lineCells={mine.lineCells} sel={sel} mini tint={MAP_TINT} size={size} />
             <div className="xwg-bar" aria-hidden="true">
               <span style={{ width: `${playing ? linePct : fillPct}%` }} />
             </div>
@@ -213,10 +215,10 @@ export default function BingoStudent({ activity, groupId, onBack }) {
               {playing
                 ? mine.bingo
                   ? `🎉 빙고! ${mine.count}줄을 완성했어요${mine.bingoAt ? ` (${mine.bingoAt}번째 낱말에서)` : ""}.`
-                  : `불린 칸 ${mine.marked.size}개 · ${goal}줄을 먼저 완성하면 빙고예요(가로 · 세로 · 대각선 ${BINGO_LINE_COUNT}줄).`
-                : mine.filled === BINGO_CELLS
+                  : `불린 칸 ${mine.marked.size}개 · ${goal}줄을 먼저 완성하면 빙고예요(가로 · 세로 · 대각선 ${bingoLineCount(size)}줄).`
+                : mine.filled === CELLS
                   ? "다 채웠어요! 선생님이 ‘빙고 시작’을 누를 때까지 칸을 바꿀 수 있어요."
-                  : `빈칸 ${BINGO_CELLS - mine.filled}개 — 오른쪽 낱말 상자에서 골라 채워요.`}
+                  : `빈칸 ${CELLS - mine.filled}개 — 오른쪽 낱말 상자에서 골라 채워요.`}
             </p>
           </section>
 
@@ -234,7 +236,7 @@ export default function BingoStudent({ activity, groupId, onBack }) {
                       ? <span className="xwg-leader-me"> · 지금은 {solo ? "내가" : "우리가"} 앞서요!</span>
                       : null}
                   </p>
-                  <BingoGrid cells={leader.cells} marked={leader.marked} lineCells={leader.lineCells} mini tint={MAP_TINT} />
+                  <BingoGrid cells={leader.cells} marked={leader.marked} lineCells={leader.lineCells} mini tint={MAP_TINT} size={size} />
                   <p className="xw-card-note">빙고한 {solo ? "친구" : "모둠"} {bingoFriends}{solo ? "명" : "개"} — 먼저 빙고한 차례, 그다음 줄 수로 정해요.</p>
                 </>
               ) : (
@@ -281,6 +283,7 @@ export default function BingoStudent({ activity, groupId, onBack }) {
               sel={canEdit ? sel : null}
               onCellClick={canEdit ? pickCell : canCall ? callCell : null}
               canClick={canEdit ? null : canCall ? callable : null}
+              size={size}
             />
           </div>
           {canCall && (
@@ -301,7 +304,7 @@ export default function BingoStudent({ activity, groupId, onBack }) {
                     : "오른쪽에서 낱말을 누르고, 넣을 칸을 누르세요."}
               </span>
               <div className="xw-gen-btns">
-                <button type="button" className="xw-gen-btn xw-gen-btn--step" onClick={fillRandom} disabled={mine.filled === BINGO_CELLS}>
+                <button type="button" className="xw-gen-btn xw-gen-btn--step" onClick={fillRandom} disabled={mine.filled === CELLS}>
                   빈칸 무작위로 채우기
                 </button>
                 <button type="button" className="xw-gen-btn xw-gen-btn--off" onClick={clearCell} disabled={sel == null || !selWord}>
@@ -375,8 +378,8 @@ export default function BingoStudent({ activity, groupId, onBack }) {
                   ))}
                 </div>
               )}
-              {bingo.words.length > 0 && bingo.words.length < BINGO_CELLS && (
-                <p className="xw-card-note">낱말이 {BINGO_CELLS}개보다 적어 판을 다 채울 수 없어요 — 빈칸은 표시되지 않아요.</p>
+              {bingo.words.length > 0 && bingo.words.length < CELLS && (
+                <p className="xw-card-note">낱말이 {CELLS}개보다 적어 판을 다 채울 수 없어요 — 빈칸은 표시되지 않아요.</p>
               )}
             </section>
           )}

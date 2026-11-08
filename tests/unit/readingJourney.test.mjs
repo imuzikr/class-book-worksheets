@@ -171,3 +171,18 @@ test("랭킹 시스템 — 책나눔이 켜져 있고 끄지 않았을 때만", 
   assert.equal(rankingEnabled({ readingEnabled: false }), false);
   assert.equal(rankingEnabled(null), false);
 });
+
+test("상단바 독서 TOP 3 — 레벨 → 경험치 → 그 경험치에 먼저 이른 학생, 0 EXP는 빼고 셋까지", async () => {
+  const { topReaders, xpReachedOn } = await import("../../lib/readingJourney.js");
+  assert.equal(xpReachedOn([{ date: "2026-10-01", xp: 10 }, { date: "2026-10-05", xp: 0 }, { date: "2026-10-03", xp: 5 }]), "2026-10-03");
+  const rows = [
+    { uid: "a", studentId: "1", level: 3, totalXp: 300, xpReachedOn: "2026-10-09" },
+    { uid: "b", studentId: "2", level: 4, totalXp: 260, xpReachedOn: "2026-10-09" },
+    { uid: "c", studentId: "3", level: 3, totalXp: 300, xpReachedOn: "2026-10-02" },
+    { uid: "d", studentId: "4", level: 3, totalXp: 320, xpReachedOn: "2026-10-10" },
+    { uid: "e", studentId: "5", level: 1, totalXp: 0 },
+  ];
+  assert.deepEqual(topReaders(rows).map((r) => r.uid), ["b", "d", "c"]);
+  assert.deepEqual(topReaders(rows, 5).map((r) => r.uid), ["b", "d", "c", "a"]);
+  assert.deepEqual(topReaders([{ uid: "z", totalXp: 0 }]), []);
+});

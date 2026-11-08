@@ -115,3 +115,33 @@ test("무작위 부르기 — 판에 놓인 안 부른 낱말 먼저, 다 부르
   assert.ok(WORDS.includes(w) && w !== "w0" && w !== "w1");
   assert.equal(nextBingoCall(boards, ["w0"], ["w0"], rng), null);
 });
+
+test("판 크기 — 4×4는 16칸 · 10줄, 없거나 이상한 값은 5×5", async () => {
+  const { normalizeBingoSize, bingoCellCount, bingoLineCount, bingoLines, normalizeBingo } = await import("../../lib/bingo.js");
+  assert.equal(normalizeBingoSize(4), 4);
+  assert.equal(normalizeBingoSize(undefined), 5);
+  assert.equal(normalizeBingoSize(6), 5);
+  assert.equal(bingoCellCount(4), 16);
+  assert.equal(bingoLineCount(4), 10);
+  assert.equal(bingoLines(4).length, 10);
+  assert.deepEqual(bingoLines(4).find((l) => l.key === "d1").cells, [3, 6, 9, 12]);
+  assert.equal(normalizeBingo({ words: [] }).size, 5);
+  assert.equal(normalizeBingo({ size: 4, words: [] }).size, 4);
+});
+
+test("4×4 진행 — 칸 16개만 읽고, 첫 가로줄이 불리면 1줄", async () => {
+  const { bingoProgress, normalizeBingoCells, bingoRandomFill } = await import("../../lib/bingo.js");
+  const words = Array.from({ length: 16 }, (_, i) => `낱말${i}`);
+  const cells = Object.fromEntries(words.map((w, i) => [String(i), w]));
+  cells["20"] = "판밖";
+  assert.equal(normalizeBingoCells(cells, 4).length, 16);
+  const p = bingoProgress(cells, ["낱말0", "낱말1", "낱말2", "낱말3"], 1, 4);
+  assert.equal(p.total, 16);
+  assert.equal(p.filled, 16);
+  assert.equal(p.count, 1);
+  assert.equal(p.bingo, true);
+  assert.equal(p.bingoAt, 4);
+  const set = bingoRandomFill({}, words, () => 0.5, 4);
+  assert.equal(Object.keys(set).length, 16);
+  assert.ok(Object.keys(set).every((k) => Number(k) < 16));
+});
