@@ -315,7 +315,8 @@
 .rlb-modal-head { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
 .rlb-modal-head > div { flex:1; min-width:0; }
 .rlb-modal-head h3 { margin:0; font-size:18px; }
-.rlb-modal-head .rlb-to-library { flex:0 0 auto; white-space:nowrap; font-size:13px; padding:7px 12px; }
+.rlb-modal-head .rlb-to-library { flex:0 0 auto; white-space:nowrap; font-size:13px; padding:7px 12px; background:#e8f7ed; border-color:#a6d8b6; color:#2f6b45; }
+.rlb-modal-head .rlb-to-library:hover { background:#d6f0de; border-color:#8ccaa1; color:#2f6b45; }
 .rlb-modal-head p { margin:4px 0 0; color:#6d7a6f; font-size:12px; }
 .rlb-modal-sub { margin:18px 0 10px; font-size:14px; }
 .rlb-badge-grid { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
