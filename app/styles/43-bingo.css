@@ -5,11 +5,11 @@
    .xw-gen-*). 여기에는 빙고판 · 낱말 칩 · 부른 낱말만 둡니다.
    ============================================================= */
 
-/* ── 판 ── 5×5, 카드 폭에 맞춰 칸이 함께 커지고 줄어듭니다(글자는 판 폭의 cqw) */
+/* ── 판 ── 4×4 · 5×5(--bingo-n, BingoGrid가 줌), 카드 폭에 맞춰 칸이 함께 커지고 줄어듭니다(글자는 판 폭의 cqw) */
 .bingo-board-wrap { display: flex; justify-content: center; }
 .bingo-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--bingo-n, 5), minmax(0, 1fr));
   gap: 6px;
   width: min(100%, 520px);
   margin: 0 auto;
@@ -24,7 +24,7 @@
   background: #fff;
   color: var(--text);
   font-family: inherit;
-  font-size: clamp(11px, 3.7cqw, 19px);
+  font-size: clamp(11px, calc(18.5cqw / var(--bingo-n, 5)), 22px); /* 4×4는 칸이 커서 글자도 함께 */
   font-weight: 800;
   line-height: 1.2;
   display: flex;
@@ -48,7 +48,7 @@
 
 /* 미니맵 — 글자 없이 색만(채운 칸 회색 · 불린 칸 옅은 색 · 빙고 줄 짙은 색) */
 .bingo-grid--mini {
-  grid-template-columns: repeat(5, 12px);
+  grid-template-columns: repeat(var(--bingo-n, 5), 12px);
   gap: 2px;
   width: max-content;
   margin: 0;
@@ -67,7 +67,7 @@
 .xwg-rank .bingo-grid--mini { align-self: center; }
 /* 학생 왼쪽 칸 — 나의 판 · 가장 앞선 친구는 조금 크게, 카드 가운데 */
 .xwg-mymap .bingo-grid--mini,
-.xwg-leader .bingo-grid--mini { grid-template-columns: repeat(5, 18px); margin: 0 auto; }
+.xwg-leader .bingo-grid--mini { grid-template-columns: repeat(var(--bingo-n, 5), 18px); margin: 0 auto; }
 
 .bingo-rank-at { font-size: 11.5px; font-weight: 700; color: #2f7a45; align-self: center; }
 

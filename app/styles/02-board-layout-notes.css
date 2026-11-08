@@ -230,6 +230,36 @@
   cursor: pointer;
 }
 .app-marquee-edit:hover { color: var(--dark); }
+/* 칸 폭으로 접습니다(창 폭이 아니라 — 메뉴 · 아이콘 줄이 화면마다 폭이 다름).
+   빠듯하면 이름표('독서 TOP 3') → 메달 → 레벨 차례로 접고, 캐릭터와 이름은 끝까지
+   남깁니다(접힌 것은 툴팁에 있음). */
+.topbar-mq-slot { container: topmq / inline-size; }
+@container topmq (max-width: 470px) { .top-readers-label { display: none; } }
+@container topmq (max-width: 400px) { .top-readers-medal { display: none; } .top-readers-list { gap: 9px; } }
+@container topmq (max-width: 330px) { .top-readers-level { display: none; } }
+@container topmq (max-width: 260px) { .top-readers-item:not(:first-child) { display: none; } }
+/* 우리 반 독서 TOP 3(ClassTopReaders) — 옛 전광판 자리. 알약 하나에 셋이 나란히,
+   줄이 모자라면 이름이 먼저 말줄임으로 접힙니다(칸의 flex-shrink는 위 .topbar-mq-slot). */
+.top-readers {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  max-width: 640px;
+  height: 38px;
+  padding: 0 14px 0 12px;
+  border-radius: 999px;
+  background: var(--neutral);
+  overflow: hidden;
+}
+.top-readers-label { flex: none; font-size: 12px; font-weight: 700; color: var(--text-sub); white-space: nowrap; }
+.top-readers-empty { font-size: 13px; color: var(--text-faint); white-space: nowrap; }
+.top-readers-list { display: flex; align-items: center; gap: 12px; min-width: 0; margin: 0; padding: 0; list-style: none; }
+.top-readers-item { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.top-readers-medal { flex: none; font-size: 15px; line-height: 1; }
+.top-readers-avatar { flex: none; width: 26px; height: 26px; border-radius: 50%; background: #fff; object-fit: cover; }
+.top-readers-level { flex: none; font-size: 12px; font-weight: 700; color: var(--primary-dark); white-space: nowrap; }
+.top-readers-name { min-width: 3.2em; font-size: 14px; font-weight: 600; color: var(--dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* 전광판 편집 창 */
 .modal.modal-marquee { max-width: 520px; }
