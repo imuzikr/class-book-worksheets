@@ -46,6 +46,13 @@ const FEATURES = [
     on: "과일 바구니를 켰어요.", off: "과일 바구니를 껐어요. 담긴 과일과 응모 기록은 보관됩니다." },
 ];
 
+// 성격이 같은 것끼리 세 묶음(선생님 요청 — 2 · 2 · 1).
+const GROUPS = [
+  { key: "reading", title: "독서 기록", desc: "학생의 서재와 책 정보", keys: ["readingEnabled", "bookSearchEnabled"] },
+  { key: "growth", title: "랭킹 · 꾸미기", desc: "반 친구와 함께 보는 성장", keys: ["rankingEnabled", "characterEnabled"] },
+  { key: "reward", title: "교실 보상", desc: "과일 · 이벤트", keys: ["fruitBasketEnabled"] },
+];
+
 export default function AdminSettingsPanel({ classes = [], onToast }) {
   const rows = useMemo(() => classes.filter((c) => !c.archived).slice().sort(byName), [classes]);
   const settings = useMemo(() => teacherFeatureSettings(rows), [rows]);
@@ -78,8 +85,12 @@ export default function AdminSettingsPanel({ classes = [], onToast }) {
       {rows.length === 0 ? (
         <p className="adm-settings-empty">운영 중인 반이 없어요. 반 관리하기에서 반을 만들어 주세요.</p>
       ) : (
-        <ul className="adm-features" aria-label="기능 설정">
-          {FEATURES.map((f) => {
+        <div className="adm-groups">
+          {GROUPS.map((g) => (
+            <section key={g.key} className={`adm-group adm-group--${g.keys.length}`} aria-labelledby={`adm-group-${g.key}`}>
+              <header className="adm-group-head"><h3 id={`adm-group-${g.key}`}>{g.title}</h3><span>{g.desc}</span></header>
+              <ul className="adm-features">
+          {g.keys.map((k) => FEATURES.find((f) => f.key === k)).map((f) => {
             const ready = (f.needs || []).every((k) => settings[k].on);
             const st = settings[f.key];
             return (
@@ -94,7 +105,10 @@ export default function AdminSettingsPanel({ classes = [], onToast }) {
               </li>
             );
           })}
-        </ul>
+              </ul>
+            </section>
+          ))}
+        </div>
       )}
       <p className="adm-settings-foot">보관된 반은 바꿀 수 없어 빼고 적용해요. 새로 만드는 반도 지금 설정을 따라요.</p>
     </section>
