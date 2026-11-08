@@ -52,8 +52,14 @@
 .reading-book-pages strong { color:#3d6854; font-size:13px; font-weight:750; }
 .reading-book-info .reading-progress { margin:7px 0 5px; }
 .reading-book-percent { color:#7d8d7c; font-size:9px; }
-.reading-book-actions { display:flex; justify-content:space-between; align-items:center; gap:6px; padding:10px 16px; border-top:1px solid #e7ece2; background:#fafbf6; }
-.reading-book-actions .btn-ghost { font-size:11px; padding:7px 8px; }
+/* 카드 아래 단추 — 같은 크기 세 칸(가운데 '한 권의 책'은 완독한 책에만, 없으면 빈 칸) */
+.reading-book-actions { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); align-items:center; gap:8px; padding:10px 14px; border-top:1px solid #e7ece2; background:#fafbf6; }
+.reading-book-actions button { height:36px; min-height:0; padding:0 6px; font-size:12.5px; font-weight:700; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; box-sizing:border-box; width:100%; }
+.reading-book-actions .btn-ghost { font-size:12.5px; padding:0 6px; }
+.reading-small-review { background:#fff4e8; border:1px solid #efcfae; border-radius:7px; color:#9a5a2c; font:inherit; cursor:pointer; }
+.reading-small-review:hover { background:#fde9d4; }
+.reading-small-review:disabled { opacity:.5; cursor:wait; }
+.reading-detail-section-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
 .reading-small-primary { background:#e7efe2; border:1px solid #cadbc4; border-radius:7px; padding:7px 12px; color:#3c6544; font:inherit; font-size:11px; font-weight:750; cursor:pointer; }
 .reading-small-primary:hover { background:#dbe8d4; }
 .reading-small-primary:disabled { opacity:.5; cursor:wait; }
