@@ -202,39 +202,49 @@ export default function StudentProfileDialog({ student, myClasses, onClose, onWi
         </form>
           : <>
             <dl className="bb-profile-rows">{rows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
-            <div className="bb-profile-edit-row">
-              {saved && <span role="status">{saved}</span>}
-              <button type="button" className="bb-dash-secondary" onClick={startEdit} disabled={running || syncing}>편집</button>
-            </div>
+            {saved && <p className="bb-profile-saved" role="status">{saved}</p>}
           </>}
 
-    {profile && !draft && <section className="bb-profile-suspend" aria-label="사용 중지">
-      <p>{profile.suspended
-        ? "이 학생은 사용 중지 상태예요. 다시 사용하게 하면 빠졌던 모둠 자리로 돌아갑니다."
-        : "전학 등으로 더 쓰지 않을 때 — 글 · 그림 · 기록은 그대로 두고 계정만 쉬게 합니다."}</p>
-      {suspendAsk && !profile.suspended && <ul className="bb-profile-suspend-list">
+    {/* 편집 · 사용 중지 · 탈퇴 — 아래 한 줄에 같은 크기로(선생님 요청). 사용 중지 · 탈퇴를 누르면
+        그 자리가 확인 칸으로 바뀝니다. */}
+    {profile && !draft && !suspendAsk && !confirming && <section className="bb-profile-tools" aria-label="학생 관리">
+      <ul className="bb-profile-tool-notes">
+        <li>{profile.suspended
+          ? "사용 중지 상태예요. 다시 사용하게 하면 빠졌던 모둠 자리로 돌아갑니다."
+          : "사용 중지 — 전학 등으로 더 쓰지 않을 때. 글 · 그림 · 기록은 그대로 두고 계정만 쉬게 합니다."}</li>
+        <li>탈퇴 — 내 반에 남은 이 학생의 글 · 그림 파일 · 기록 · 과일 · 출석과 프로필이 모두 지워지고 되돌릴 수 없습니다.</li>
+      </ul>
+      {check && !check.ok && <p className="bb-profile-block">{blockText(check.reason, check.classNames)}</p>}
+      {suspendMsg && <p className="bb-profile-note" role="status">{suspendMsg}</p>}
+      <div className="bb-profile-trio">
+        <button type="button" className="bb-dash-secondary" onClick={startEdit} disabled={running || syncing || suspending}>편집</button>
+        <button type="button" className={profile.suspended ? "bb-dash-primary" : "bb-profile-suspend-btn"}
+          disabled={!check?.ok || suspending || running || syncing}
+          onClick={() => (profile.suspended ? toggleSuspend() : setSuspendAsk(true))}>
+          {suspending ? "바꾸는 중…" : profile.suspended ? "다시 사용하게 하기" : "사용 중지"}
+        </button>
+        <button type="button" className="bb-profile-withdraw" disabled={!check?.ok || syncing || suspending} onClick={() => setConfirming(true)}>탈퇴</button>
+      </div>
+    </section>}
+
+    {profile && !draft && suspendAsk && !profile.suspended && <section className="bb-profile-suspend" aria-label="사용 중지">
+      <p>전학 등으로 더 쓰지 않을 때 — 글 · 그림 · 기록은 그대로 두고 계정만 쉬게 합니다.</p>
+      <ul className="bb-profile-suspend-list">
         <li>이 학생은 로그인해도 안내 화면만 보고, 아무것도 읽거나 입력할 수 없어요.</li>
         <li>반 친구들은 이 학생이 남긴 글과 그림을 그대로 읽어요. 이 학생의 글에 댓글은 달 수 없어요.</li>
         <li>기본 모둠과 독서 활동 모둠에서 빠집니다(다시 사용하면 돌아와요).</li>
-      </ul>}
-      {check && !check.ok && <p className="bb-profile-block">{blockText(check.reason, check.classNames)}</p>}
+      </ul>
       {suspendMsg && <p className="bb-profile-note" role="status">{suspendMsg}</p>}
       <div className="bb-profile-actions">
-        {suspendAsk && <button type="button" className="bb-dash-secondary" disabled={suspending} onClick={() => setSuspendAsk(false)}>취소</button>}
-        <button type="button" className={profile.suspended ? "bb-dash-primary" : "bb-profile-suspend-btn"}
-          disabled={!check?.ok || suspending || running || syncing}
-          onClick={() => (profile.suspended || suspendAsk ? toggleSuspend() : setSuspendAsk(true))}>
-          {suspending ? "바꾸는 중…" : profile.suspended ? "다시 사용하게 하기" : suspendAsk ? "사용 중지하기" : "사용 중지"}
+        <button type="button" className="bb-dash-secondary" disabled={suspending} onClick={() => setSuspendAsk(false)}>취소</button>
+        <button type="button" className="bb-profile-suspend-btn" disabled={!check?.ok || suspending || running || syncing} onClick={toggleSuspend}>
+          {suspending ? "바꾸는 중…" : "사용 중지하기"}
         </button>
       </div>
     </section>}
 
-    {profile && !draft && <section className="bb-profile-danger" aria-label="탈퇴">
-      {!confirming ? <>
-        <p>탈퇴하면 내 반에 남은 이 학생의 글 · 그림 파일 · 기록 · 과일 · 출석과 프로필이 모두 지워지고 되돌릴 수 없습니다. 남긴 글을 남겨 두려면 위의 '사용 중지'를 쓰세요.</p>
-        {check && !check.ok && <p className="bb-profile-block">{blockText(check.reason, check.classNames)}</p>}
-        <button type="button" className="bb-profile-withdraw" disabled={!check?.ok || syncing} onClick={() => setConfirming(true)}>탈퇴</button>
-      </> : <>
+    {profile && !draft && confirming && <section className="bb-profile-danger" aria-label="탈퇴">
+        <p>탈퇴하면 내 반에 남은 이 학생의 글 · 그림 파일 · 기록 · 과일 · 출석과 프로필이 모두 지워지고 되돌릴 수 없습니다. 남긴 글을 남겨 두려면 '사용 중지'를 쓰세요.</p>
         <label htmlFor="bb-withdraw-name">확인하려면 학생 이름 <b>{name}</b>을(를) 그대로 적어 주세요.</label>
         <input
           id="bb-withdraw-name"
@@ -254,7 +264,6 @@ export default function StudentProfileDialog({ student, myClasses, onClose, onWi
           <button type="button" className="bb-dash-secondary" disabled={running} onClick={() => { setConfirming(false); setTyped(""); setError(""); }}>취소</button>
           <button type="button" className="bb-profile-withdraw" disabled={!ok || running} onClick={run}>{running ? "탈퇴 처리 중…" : "탈퇴시키기"}</button>
         </div>
-      </>}
     </section>}
   </Dialog>;
 }
