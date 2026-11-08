@@ -294,7 +294,7 @@ test("관리자 설정은 선생님의 모든 반에 한 값 — 도서 검색 �
   assert.deepEqual(s.bookSearchEnabled, { on: false, mixed: true });
   assert.deepEqual(s.rankingEnabled, { on: false, mixed: true });
   assert.deepEqual(s.characterEnabled, { on: true, mixed: false }); // 값이 없으면 켜짐
-  assert.deepEqual(featuresForNewClass(classes), { readingEnabled: true, bookSearchEnabled: false, rankingEnabled: false, characterEnabled: true });
+  assert.deepEqual(featuresForNewClass(classes), { readingEnabled: true, bookSearchEnabled: false, rankingEnabled: false, characterEnabled: true, fruitBasketEnabled: true });
   assert.equal(featuresForNewClass([{ archived: true }]), null);
   assert.equal(teacherFeatureSettings([]).readingEnabled.on, false);
 });

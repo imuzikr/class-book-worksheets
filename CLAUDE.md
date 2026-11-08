@@ -10,7 +10,7 @@
 
 학생 15명·독서 활동 11종·서재 24권의 데모 자료와 신원 전환은 `DEMO_CLASSROOM.md`를 참고하세요. `lib/demoClassroom.js`, `lib/demoBookActivities.js`, `lib/demoReading.js`가 공유 식별자와 목 데이터의 출처입니다. Firebase 미설정일 때만 사용하며 실제 데이터베이스에 시드하지 않습니다. 학생 전환 시 개인 편집 상태가 섞이지 않도록 `app/books/page.js`의 사용자별 `TopNav` 및 본문 key를 유지하세요.
 
-교사 상단바의 **관리자 설정**(`/books?area=settings`, 리더보드 오른쪽 · 교사만)이 **선생님의 모든 반에 한 값으로**(반마다 따로가 아님 · `setTeacherFeature`, 새 반도 따름) 책나눔 성장 기능(`readingEnabled`) · 도서 검색(`bookSearchEnabled` — 기본 꺼짐, 켜면 내 서재 새 책 등록에 카카오 도서 검색 단추)과 랭킹 시스템(`rankingEnabled` — 없으면 켜짐, 판정은 `rankingEnabled()` 한 곳) · 학생 캐릭터(`characterEnabled` — 없으면 켜짐, 판정은 `lib/readingCharacter.js`의 `characterChoiceEnabled`)를 켜고 끕니다. 기준은 `READING_GROWTH.md`의 '관리자 설정' 절입니다.
+교사 상단바의 **관리자 설정**(`/books?area=settings`, 리더보드 오른쪽 · 교사만)이 **선생님의 모든 반에 한 값으로**(반마다 따로가 아님 · `setTeacherFeature`, 새 반도 따름) 과일 바구니(`fruitBasketEnabled` — 없으면 켜짐, 판정은 `lib/reading.js`의 `fruitBasketOn`, 끄면 떠 있는 동그라미의 '과일 바구니' 행성과 `?open=fruit` 창을 가림 · 담긴 과일은 보관) · 책나눔 성장 기능(`readingEnabled`) · 도서 검색(`bookSearchEnabled` — 기본 꺼짐, 켜면 내 서재 새 책 등록에 카카오 도서 검색 단추)과 랭킹 시스템(`rankingEnabled` — 없으면 켜짐, 판정은 `rankingEnabled()` 한 곳) · 학생 캐릭터(`characterEnabled` — 없으면 켜짐, 판정은 `lib/readingCharacter.js`의 `characterChoiceEnabled`)를 켜고 끕니다. 기준은 `READING_GROWTH.md`의 '관리자 설정' 절입니다.
 
 `READING_GROWTH.md`가 새 개인 서재·경험치·18종 뱃지·반 랭킹의 현재 기준입니다. 상단바 **리더보드**(`/books?area=leaderboard` — 독서 여정 트랙 · 순위 · 학생별 경험치/뱃지 창 · 나의 독서 여정)도 같은 문서의 '리더보드' 절이 기준이며, 셈은 `lib/readingJourney.js`입니다. 친구에게는 수와 뱃지만, 책 제목 · 감상은 보이지 않게 두세요. 경험치 셈(연속 보너스 7일 상한 · 하루 5쪽 이상 · 과일 1개 10 EXP)은 같은 문서의 '경험치와 정정'이 기준이고, 셈을 바꾸면 `READING_FORMULA`를 올리세요(옛 반 집계를 다시 셈). 반별 `readingEnabled === true`일 때만 활성화하며 기본 꺼짐입니다. 기존 독서 활동은 이 스위치와 무관하게 유지합니다.
 새 영역은 Next.js Node API와 Firebase Admin SDK에서 인증·반 권한·보상 트랜잭션을 검증합니다. 기존 문서의 “서버 함수 없음”은 Cloud Functions/App Check를 추가하지 않는다는 뜻이며, 새 성장 기능에는 Vercel 서버 API 및 서버 전용 Admin 인증 설정이 필요합니다. 클라이언트에서 경험치·랭킹 정본에 직접 접근하지 마세요. 데모/서버는 `lib/reading.js`의 같은 계산·검증 로직을 사용합니다.
@@ -5198,7 +5198,7 @@ CodeMirror가 아니라 그냥 글자 칸(contentEditable)이라, 손대지 않�
   머리, 활동이 없는 옛 프로젝트는 `StudyCardModal`의 아래 줄. 곧바로 새 퀴즈 쓰는 칸) ·
   수업 화면 머리말의
   메모지(상단바를 덮으므로 — 손들기 칩 오른쪽).
-  - **두 칸** — 왼쪽 관리(새 퀴즈: 글/코드 · 제목 · 설명(```로 코드 블록) → 보내기 /
+  - **두 칸** — 왼쪽 관리(새 퀴즈: 제목 · 설명 → 보내기 — **'코드' 퀴즈는 걷었습니다**(책봄은 독서 전용, 선생님 요청 — 늘 글 퀴즈, 예전에 보낸 코드 퀴즈는 학생 창 · 지난 퀴즈에 그대로) /
     지금 퀴즈: 보낸 학생 n/N · 확인 전 · 반송 · 🍊 · 퀴즈 마치기 /
     퀴즈 목록(늘 펼침 — 한때 여닫는 단추였음, 선생님 요청) — 누르면 그 퀴즈의 자리표·답으로), 오른쪽 자리표.
   - **위 칸은 고른 퀴즈, 없으면 진행 중인 퀴즈뿐**입니다. 둘 다 없으면 '대기' 칸

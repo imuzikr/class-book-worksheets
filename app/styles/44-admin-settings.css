@@ -6,7 +6,8 @@
 .adm-settings-classes { display: block; margin-top: 4px; color: var(--text-faint); font-size: 12.5px; }
 /* 기능 카드 — 한 줄에 같은 크기로 넷(책나눔 성장 · 도서 검색 · 랭킹 · 학생 캐릭터).
    모든 반에 한 값이라 반 목록 표는 걷었습니다. */
-.adm-features { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.adm-features { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 1200px) { .adm-features { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .adm-feature { display: flex; flex-direction: column; justify-content: space-between; gap: 12px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 14px; background: #fff; }
 .adm-feature.is-off { background: var(--bg); }
 .adm-feature-text { display: flex; flex-direction: column; gap: 4px; }

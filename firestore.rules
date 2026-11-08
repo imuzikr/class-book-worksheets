@@ -496,7 +496,8 @@ service cloud.firestore {
                && (!changed.hasAny(['rankingEnabled']) || request.resource.data.get('rankingEnabled', null) is bool)
                && (!changed.hasAny(['characterEnabled']) || request.resource.data.get('characterEnabled', null) is bool)
                && (!changed.hasAny(['bookSearchEnabled']) || request.resource.data.get('bookSearchEnabled', null) is bool)
-               && (!changed.hasAny(['readingEnabled', 'rankingEnabled', 'characterEnabled', 'bookSearchEnabled'])
+               && (!changed.hasAny(['fruitBasketEnabled']) || request.resource.data.get('fruitBasketEnabled', null) is bool)
+               && (!changed.hasAny(['readingEnabled', 'rankingEnabled', 'characterEnabled', 'bookSearchEnabled', 'fruitBasketEnabled'])
                    || (resource.data.get('archived', false) != true
                        && request.resource.data.get('archived', false) != true));
       }

@@ -42,7 +42,7 @@ import { useRewardCelebration } from "@/lib/useRewardCelebration";
 import { useClassMembers } from "@/lib/useClassRoster";
 import { IconLogo, IconBook, IconTrophy, IconSettings } from "./StatusIcons";
 import { saveReadingCharacter, subscribeMyReadingCharacter } from "@/lib/data/reading";
-import { readingEnabled, rankingEnabled } from "@/lib/reading";
+import { readingEnabled, rankingEnabled, fruitBasketOn } from "@/lib/reading";
 import { characterChoiceEnabled } from "@/lib/readingCharacter";
 import { characterOf } from "./reading/CharacterChooser";
 
@@ -150,11 +150,17 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
   // 반 문서 1건 · 내 프로필 1건을 구독합니다(학생만).
   const myUid = user?.uid;
   const [characterOn, setCharacterOn] = useState(false);
+  // 과일 바구니 — 관리자 설정에서 끄면 떠 있는 동그라미의 '과일 바구니'를 가립니다(교사 · 학생 모두).
+  const [fruitOn, setFruitOn] = useState(true);
   const [myCharacter, setMyCharacter] = useState(null);
   useEffect(() => {
     setCharacterOn(false);
-    if (admin || !quizClassId) return;
-    return subscribeClass(quizClassId, (c) => setCharacterOn(!!c && readingEnabled(c) && rankingEnabled(c) && characterChoiceEnabled(c)));
+    setFruitOn(true);
+    if (!quizClassId) return;
+    return subscribeClass(quizClassId, (c) => {
+      setFruitOn(fruitBasketOn(c));
+      if (!admin) setCharacterOn(!!c && readingEnabled(c) && rankingEnabled(c) && characterChoiceEnabled(c));
+    });
   }, [admin, quizClassId]);
   useEffect(() => {
     setMyCharacter(null);
@@ -448,6 +454,7 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
         classId={quizClassId}
         user={user}
         isTeacher={admin}
+        fruitOn={fruitOn}
         lifted={admin && !!broadcast}
       />
     )}

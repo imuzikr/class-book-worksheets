@@ -409,7 +409,7 @@
 .pq-field em { font-style: normal; font-weight: 500; color: var(--text-faint); }
 .pq-field input,
 .pq-field textarea { font-family: inherit; font-size: 14px; font-weight: 500; }
-.pq-field textarea { resize: vertical; min-height: 110px; font-family: var(--font-mono); font-size: 13px; line-height: 1.6; }
+.pq-field textarea { resize: vertical; min-height: 110px; font-size: 14px; line-height: 1.6; /* 독서 전용 — 코드 칸 글꼴(mono)을 걷음 */ }
 .pq-compose-from { margin: 0; font-size: 12px; color: var(--text-sub); }
 .pq-compose-warn { margin: 0; padding: 7px 10px; border-radius: 8px; background: #fff4d6; font-size: 12.5px; color: #7d5811; }
 .pq-compose-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }

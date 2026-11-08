@@ -10,6 +10,7 @@
 //     새 책 등록이 직접 입력만, 켜면 '도서 검색' 단추가 섬)
 //   · 랭킹 시스템(rankingEnabled — 값이 없으면 켜짐)
 //   · 학생 캐릭터(characterEnabled — 값이 없으면 켜짐, 랭킹이 켜져 있어야 의미가 있음)
+//   · 과일 바구니(fruitBasketEnabled — 값이 없으면 켜짐, 끄면 떠 있는 동그라미에서도 가림)
 // 쓰기는 반 문서 한 칸씩이고, 규칙(readingSettingValid)이 참·거짓과 보관 안 된 반만 받습니다.
 // =============================================================
 import { useMemo, useState } from "react";
@@ -40,6 +41,9 @@ const FEATURES = [
   { key: "characterEnabled", label: "학생 캐릭터", needs: ["readingEnabled", "rankingEnabled"], needsText: "책나눔과 랭킹 시스템을 먼저 켜 주세요",
     hint: "리더보드에서 학생이 동물 캐릭터를 골라요. 끄면 모두 기본 캐릭터예요. 랭킹이 켜져 있어야 써요.",
     on: "학생이 리더보드에서 캐릭터를 고를 수 있어요.", off: "캐릭터 고르기를 껐어요. 모두 기본 캐릭터로 보이고, 고른 캐릭터는 보관됩니다." },
+  { key: "fruitBasketEnabled", label: "과일 바구니",
+    hint: "학생이 받은 과일을 바구니에 담아 이벤트에 응모해요. 끄면 오른쪽 아래 동그라미 메뉴에서도 가려져요.",
+    on: "과일 바구니를 켰어요.", off: "과일 바구니를 껐어요. 담긴 과일과 응모 기록은 보관됩니다." },
 ];
 
 export default function AdminSettingsPanel({ classes = [], onToast }) {
