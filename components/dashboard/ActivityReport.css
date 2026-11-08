@@ -21,6 +21,24 @@
 .bb-ar-metadata dd { min-width: 0; margin: 0; font-weight: 600; overflow-wrap: anywhere; }
 .bb-ar-metadata .bb-ar-book { flex-basis: 100%; }
 .bb-ar-context { margin: 10px 0 0; color: var(--ar-muted); font-size: 12px; line-height: 1.8; word-break: keep-all; overflow-wrap: anywhere; }
+/* 활동 탭 — 참여한 활동을 하나씩 보는 줄(같은 크기 칸, 넘치면 다음 줄) + 오른쪽 '모아 보기'. */
+.bb-ar-tabbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: start; margin-top: 22px; }
+.bb-ar-tabs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; min-width: 0; }
+.bb-ar-tab { display: flex; align-items: center; gap: 9px; min-width: 0; height: 52px; padding: 0 12px; border: 1px solid var(--ar-line); border-radius: 12px; background: #fff; color: var(--text); text-align: left; cursor: pointer; font: inherit; }
+.bb-ar-tab:hover { border-color: var(--primary); }
+.bb-ar-tab.on { border-color: var(--primary); background: var(--primary-light); box-shadow: inset 0 0 0 1px var(--primary); }
+.bb-ar-tab:focus-visible, .bb-ar-all:focus-visible { outline: 2px solid var(--primary-dark); outline-offset: 2px; }
+.bb-ar-tab-no { flex: none; font-family: var(--font-serif, serif); font-size: 15px; color: var(--primary-dark); }
+.bb-ar-tab-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+.bb-ar-tab-text strong, .bb-ar-tab-text small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bb-ar-tab-text strong { font-size: 13px; }
+.bb-ar-tab-text small { font-size: 11.5px; color: var(--ar-muted); }
+.bb-ar-all { height: 52px; padding: 0 18px; border: 1px solid var(--primary); border-radius: 12px; background: #fff; color: var(--primary-dark); font: inherit; font-size: 13.5px; font-weight: 700; white-space: nowrap; cursor: pointer; }
+.bb-ar-all:hover { background: var(--primary-light); }
+.bb-ar-all.on { background: var(--primary); color: #fff; }
+/* 하나씩 볼 때는 목차가 없어 본문이 가로를 다 씁니다. */
+.bb-ar-layout.is-single { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 620px) { .bb-ar-tabbar { grid-template-columns: minmax(0, 1fr); } .bb-ar-all { width: 100%; } .bb-ar-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .bb-ar-layout { display: grid; grid-template-columns: 156px minmax(0, 1fr); align-items: start; gap: 28px; margin-top: 27px; min-width: 0; }
 .bb-ar-index { position: sticky; top: 20px; min-width: 0; max-height: calc(100dvh - 40px); overflow-y: auto; border-right: 1px solid var(--ar-line); padding-right: 16px; }
 .bb-ar-index h3 { margin: 0 0 14px; color: var(--ar-muted); font-size: 12px; font-weight: 500; letter-spacing: .05em; }

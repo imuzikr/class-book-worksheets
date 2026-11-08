@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useState } from "react";
 import Link from "next/link";
 import ActivityReportContent from "./ActivityReportContent";
 import { stateLabels } from "./DashboardParts";
@@ -28,6 +28,13 @@ export default function ActivityReport({ activities = [], subject, classroom }) 
   const pending = ordered.filter((activity) => activity.state !== "doing" && activity.state !== "done");
   const anchor = (index) => `${id}-activity-${index}`;
   const topics = [...new Set(participated.map((activity) => activity.report?.topic).filter(Boolean))];
+  // 분량이 많아 활동마다 탭으로 하나씩 보고, '모아 보기'로 전체를 한 번에 봅니다(선생님 요청).
+  // view: 고른 활동 id 또는 "all". 고른 활동이 목록에서 빠지면 첫 활동으로.
+  const [view, setView] = useState(null);
+  const showAll = view === "all";
+  const current = showAll ? null : participated.find((a) => a.id === view) || participated[0] || null;
+  const shown = showAll ? participated : current ? [current] : [];
+  const indexOf = (activity) => participated.indexOf(activity);
 
   function moveToActivity(event, index) {
     const section = document.getElementById(anchor(index));
@@ -52,8 +59,22 @@ export default function ActivityReport({ activities = [], subject, classroom }) 
       <p className="bb-ar-context">선택한 반에서 현재 저장된 활동 내용을 보여줍니다. 위의 조회 기간은 독서 통계에 적용됩니다.</p>
     </header>
 
-    {participated.length ? <div className="bb-ar-layout">
-      <nav className="bb-ar-index" aria-label="활동 보고서 목차">
+    {participated.length > 0 && <div className="bb-ar-tabbar">
+      <div className="bb-ar-tabs" role="tablist" aria-label="참여한 활동">
+        {participated.map((activity, index) => <button key={activity.id} type="button" role="tab"
+          aria-selected={!showAll && current?.id === activity.id} className={`bb-ar-tab${!showAll && current?.id === activity.id ? " on" : ""}`}
+          title={activity.title || activity.label} onClick={() => setView(activity.id)}>
+          <span className="bb-ar-tab-no" aria-hidden="true">{number(index)}</span>
+          <span className="bb-ar-tab-text"><strong>{activity.label}</strong><small>{activity.title || "제목 미설정"}</small></span>
+        </button>)}
+      </div>
+      <button type="button" className={`bb-ar-all${showAll ? " on" : ""}`} aria-pressed={showAll} onClick={() => setView(showAll ? null : "all")}>
+        {showAll ? "하나씩 보기" : `모아 보기 (${participated.length})`}
+      </button>
+    </div>}
+
+    {participated.length ? <div className={`bb-ar-layout${showAll ? "" : " is-single"}`}>
+      {showAll && <nav className="bb-ar-index" aria-label="활동 보고서 목차">
         <h3>참여한 활동</h3>
         <ol>{participated.map((activity, index) => <li key={activity.id}>
           <a href={`#${anchor(index)}`} onClick={(event) => moveToActivity(event, index)}>
@@ -61,9 +82,9 @@ export default function ActivityReport({ activities = [], subject, classroom }) 
             <span><strong>{activity.label}</strong><small>{activity.title || "제목 미설정"}</small></span>
           </a>
         </li>)}</ol>
-      </nav>
+      </nav>}
       <div className="bb-ar-activities">
-        {participated.map((activity, index) => <article id={anchor(index)} key={activity.id} className="bb-ar-activity" tabIndex={-1} aria-labelledby={`${anchor(index)}-title`}>
+        {shown.map((activity) => { const index = indexOf(activity); return <article id={anchor(index)} key={activity.id} className="bb-ar-activity" tabIndex={-1} aria-labelledby={`${anchor(index)}-title`}>
           <header className="bb-ar-activity-head">
             <div className="bb-ar-activity-title">
               <span className="bb-ar-number" aria-hidden="true">{number(index)}</span>
@@ -79,7 +100,7 @@ export default function ActivityReport({ activities = [], subject, classroom }) 
           </div>
           <ActivityReportContent activity={activity} studentName={subject?.name || "학생"} scopeKey={scopeKey} />
           <footer className="bb-ar-activity-foot"><Link href={activity.href} className="bb-ar-original-link">원래 활동 열기 <span aria-hidden="true">→</span></Link></footer>
-        </article>)}
+        </article>; })}
       </div>
     </div> : <div className="bb-ar-empty">
       <h3>{ordered.length ? "아직 참여한 활동이 없습니다" : "아직 등록된 활동이 없습니다"}</h3>

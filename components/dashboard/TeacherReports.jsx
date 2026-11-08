@@ -2,7 +2,7 @@
 
 import ActivityReport from "./ActivityReport";
 import {
-  Section, Empty, Metric, WeeklyChart, Feedback,
+  Section, Empty, Metric, WeeklyChart,
   fmt, fullDate, asArray,
 } from "./DashboardParts";
 import "./TeacherReports.css";
@@ -73,7 +73,6 @@ export function TeacherPersonalReport({ data, onEditProfile }) {
       <ReadingFlow reading={reading} title="학생의 독서 흐름" note="선택한 반과 기간에 속하는 독서 날짜를 기준으로 합산합니다." />
       <ReportBooks books={asArray(reading.books)} title="학생이 읽은 책" note="선택한 반과 기간에 독서 기록을 남긴 도서입니다." />
     </div>}
-    <Feedback rows={asArray(data.feedback)} teacher note="선택한 반의 여러 활동에서 학생이 받은 피드백을 모았습니다." />
     {!reading && <p className="bb-dash-feature-off">이 반은 책나눔을 사용하지 않아 책방의 독서 활동 기록을 보여줍니다.</p>}
   </div>;
 }
