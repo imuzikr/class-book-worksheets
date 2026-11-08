@@ -77,7 +77,7 @@ export function TeacherPersonalReport({ data, onEditProfile }) {
       <ReadingFlow reading={reading} title="학생의 독서 흐름" note="선택한 반과 기간에 속하는 독서 날짜를 기준으로 합산합니다." />
       <ReportBooks books={asArray(reading.books)} title="학생이 읽은 책" note="선택한 반과 기간에 독서 기록을 남긴 도서입니다." />
     </div>}
-    {reading && <Section title="날마다 쌓인 독서량" note="선택한 반과 기간의 모든 날을 차례로 지나며 읽은 쪽수를 더한 선입니다." className="bb-report-cumulative">
+    {reading && <Section title="날마다 읽은 독서량" note="선택한 반과 기간의 모든 날마다 그날 읽은 쪽수를 이은 선입니다(누적 아님)." className="bb-report-cumulative">
       <CumulativeReadingChart daily={asArray(reading.daily)} />
     </Section>}
     {!reading && <p className="bb-dash-feature-off">이 반은 책나눔을 사용하지 않아 책방의 독서 활동 기록을 보여줍니다.</p>}

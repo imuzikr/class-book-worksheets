@@ -201,16 +201,16 @@ export function SemesterDialog({ classId, className, start, end, onSaved, onClos
 }
 
 
-// 날마다 쌓인 독서량 — 조회 기간의 모든 날(쉰 날 포함)을 지나며 읽은 쪽수를 더해 가는 선
-// (개인별 분석 리포트 맨 아래, 선생님 요청). 셈은 lib/readingCumulative.js.
+// 날마다 읽은 독서량 — 조회 기간의 모든 날(쉰 날은 0쪽)마다 그날 읽은 쪽수를 잇는 선
+// (개인별 분석 리포트 맨 아래, 선생님 요청 — 누적이 아니라 그날의 기록). 셈은 lib/readingCumulative.js.
 export function CumulativeReadingChart({ daily }) {
   const rows = cumulativeDaily(daily);
   if (!rows.length) return <Empty compact>표시할 날짜가 없습니다.</Empty>;
   const W = 720, H = 240, L = 46, R = 16, T = 16, B = 34;
-  const { unit, top } = niceCeiling(rows.at(-1).total);
+  const { unit, top } = niceCeiling(Math.max(0, ...rows.map((r) => r.pages)));
   const x = (i) => L + (rows.length === 1 ? (W - L - R) / 2 : (i / (rows.length - 1)) * (W - L - R));
   const y = (v) => T + (1 - v / top) * (H - T - B);
-  const line = rows.map((r, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(r.total).toFixed(1)}`).join(" ");
+  const line = rows.map((r, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(r.pages).toFixed(1)}`).join(" ");
   const area = `${line} L${x(rows.length - 1).toFixed(1)},${y(0)} L${x(0).toFixed(1)},${y(0)} Z`;
   const grid = [];
   for (let v = 0; v <= top; v += unit) grid.push(v);
@@ -218,7 +218,7 @@ export function CumulativeReadingChart({ daily }) {
   const readDays = rows.filter((r) => r.pages > 0).length;
   const total = rows.at(-1).total;
   return <figure className="bb-dash-cumulative">
-    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${shortDate(rows[0].date)}부터 ${shortDate(rows.at(-1).date)}까지 누적 ${fmt(total)}쪽, 독서한 날 ${readDays}일`}>
+    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${shortDate(rows[0].date)}부터 ${shortDate(rows.at(-1).date)}까지 날마다 읽은 쪽수 · 합계 ${fmt(total)}쪽, 독서한 날 ${readDays}일`}>
       {grid.map((v) => <g key={v}>
         <line x1={L} x2={W - R} y1={y(v)} y2={y(v)} className="bb-cum-grid" />
         <text x={L - 8} y={y(v) + 4} className="bb-cum-ylabel" textAnchor="end">{fmt(v)}</text>
@@ -226,14 +226,14 @@ export function CumulativeReadingChart({ daily }) {
       <path d={area} className="bb-cum-area" />
       <path d={line} className="bb-cum-line" />
       {rows.map((r, i) => <g key={r.date}>
-        {r.pages > 0 && <circle cx={x(i)} cy={y(r.total)} r={rows.length > 40 ? 2.5 : 4} className="bb-cum-dot" />}
-        <circle cx={x(i)} cy={y(r.total)} r={Math.max(6, (W - L - R) / rows.length / 2)} className="bb-cum-hit">
-          <title>{`${shortDate(r.date)} · 이날 ${fmt(r.pages)}쪽 · 누적 ${fmt(r.total)}쪽`}</title>
+        {r.pages > 0 && <circle cx={x(i)} cy={y(r.pages)} r={rows.length > 40 ? 2.5 : 4} className="bb-cum-dot" />}
+        <circle cx={x(i)} cy={y(r.pages)} r={Math.max(6, (W - L - R) / rows.length / 2)} className="bb-cum-hit">
+          <title>{`${shortDate(r.date)} · ${r.pages ? `${fmt(r.pages)}쪽` : "독서 기록 없음"}`}</title>
         </circle>
       </g>)}
       {ticks.map((i) => <text key={i} x={x(i)} y={H - 10} className="bb-cum-xlabel"
         textAnchor={i === 0 && rows.length > 1 ? "start" : i === rows.length - 1 && rows.length > 1 ? "end" : "middle"}>{shortDate(rows[i].date)}</text>)}
     </svg>
-    <p className="bb-dash-footnote">독서하지 않은 날도 포함해 하루하루 읽은 쪽수를 더해 갑니다. 점은 독서한 날({readDays}일) · 마지막 날까지 누적 {fmt(total)}쪽.</p>
+    <p className="bb-dash-footnote">그날 읽은 쪽수입니다. 독서하지 않은 날은 0쪽으로 이어집니다. 점은 독서한 날({readDays}일) · 기간 합계 {fmt(total)}쪽.</p>
   </figure>;
 }
