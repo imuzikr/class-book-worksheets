@@ -3,10 +3,149 @@ import assert from "node:assert/strict";
 import { getExpForReadingLevel } from "../../lib/reading.js";
 import {
   WORLD_MAP, WORLD_LEVEL_STOPS, WORLD_REGIONS, WORLD_CHARACTERS,
-  worldProgress, worldPoint, worldCheckpoints, groupWorldTravelers, defaultWorldAvatar,
+  worldProgress, worldPoint, worldCheckpoints, groupWorldTravelers, defaultWorldAvatar, readingLeaderUids, splitWorldLeaderGroups,
 } from "../../lib/readingWorldMap.js";
 
 const near = (actual, expected, epsilon = 1e-10) => assert.ok(Math.abs(actual - expected) < epsilon, `${actual} ≈ ${expected}`);
+
+test("독서 대장은 학급의 검증된 최고 레벨 중 누적 경험치가 가장 많은 학생이다", () => {
+  const rows = [
+    { uid: "lower", totalXp: 249, level: 2, xp: 99999, allTimeXp: 99999 },
+    { uid: "leader", totalXp: 485, level: 3, xp: 0, allTimeXp: 0 },
+    { uid: "same-level", totalXp: 435, level: 3, xp: 88888, allTimeXp: 88888 },
+    { uid: "unknown", level: 100, xp: 999999, allTimeXp: 999999 },
+  ];
+  assert.deepEqual(readingLeaderUids(rows), ["leader"]);
+  // A later chapter is eligible even while the UI is viewing an earlier map.
+  assert.deepEqual(readingLeaderUids([...rows, { uid: "next-chapter", totalXp: 11393, level: 11 }]), ["next-chapter"]);
+});
+
+test("최고 레벨과 누적 경험치가 완전히 같으면 공동 대장이며 입력 순서와 중복은 결과를 바꾸지 않는다", () => {
+  const rows = Object.freeze([
+    Object.freeze({ uid: "z", totalXp: 712, level: 4 }),
+    Object.freeze({ uid: "a", totalXp: 712, level: 4 }),
+    Object.freeze({ uid: "other", totalXp: 705, level: 4 }),
+    Object.freeze({ uid: "a", totalXp: 712, level: 4 }),
+  ]);
+  assert.deepEqual(readingLeaderUids(rows), ["a", "z"]);
+  assert.deepEqual(readingLeaderUids(rows.slice().reverse()), ["a", "z"]);
+  assert.ok(rows.every((row) => !Object.prototype.hasOwnProperty.call(row, "world")));
+});
+
+test("집계 대기·잘못된 EXP·불일치 레벨은 독서 대장으로 추정하지 않는다", () => {
+  const invalidRows = [
+    null, {}, { uid: "missing-level", totalXp: 712 },
+    { uid: "stale-level", totalXp: 712, level: 99 },
+    { uid: "text-level", totalXp: 712, level: "4" },
+    { uid: "", totalXp: 712, level: 4 },
+    { uid: "   ", totalXp: 712, level: 4 },
+    { uid: {}, totalXp: 712, level: 4 },
+    { uid: NaN, totalXp: 712, level: 4 },
+    ...[null, undefined, "712", NaN, Infinity, -1, false].map((totalXp, index) => ({ uid: `invalid-${index}`, totalXp, level: 4 })),
+  ];
+  for (const rows of [undefined, null, {}, [], invalidRows]) assert.deepEqual(readingLeaderUids(rows), []);
+  assert.deepEqual(readingLeaderUids([...invalidRows, { uid: "valid-zero", totalXp: 0, level: 1 }]), ["valid-zero"]);
+});
+
+test("대장은 EXP 갱신·정정과 학급 구성에 따라 다시 계산하고 최고 레벨에서도 EXP로 구분한다", () => {
+  const rows = [{ uid: "first", totalXp: 485, level: 3 }, { uid: "second", totalXp: 435, level: 3 }];
+  assert.deepEqual(readingLeaderUids(rows), ["first"]);
+  assert.deepEqual(readingLeaderUids([rows[0], { ...rows[1], totalXp: 500, level: 4 }]), ["second"]);
+  assert.deepEqual(readingLeaderUids([{ ...rows[0], totalXp: 400 }, rows[1]]), ["second"]);
+  assert.deepEqual(readingLeaderUids([rows[1]]), ["second"]);
+  const maxXp = getExpForReadingLevel(100);
+  assert.deepEqual(readingLeaderUids([{ uid: "at-max", totalXp: maxXp, level: 100 }, { uid: "above-max", totalXp: maxXp * 2, level: 100 }]), ["above-max"]);
+});
+
+test("근접 모임에서 다른 학생을 선택해도 공동 대장이 숨거나 대장 표시를 빌려주지 않는다", () => {
+  const rows = [
+    { uid: "peer-a", totalXp: 435, level: 3 }, { uid: "peer-b", totalXp: 445, level: 3 },
+    { uid: "leader-a", totalXp: 485, level: 3 }, { uid: "leader-b", totalXp: 485, level: 3 },
+  ];
+  const original = groupWorldTravelers(rows, { selectedUid: "peer-b", epsilon: 0.02 })[0];
+  const [leaders, peers] = splitWorldLeaderGroups([original], readingLeaderUids(rows), "peer-b");
+  assert.equal(leaders.id, `${original.id}:leaders`);
+  assert.equal(peers.id, `${original.id}:peers`);
+  assert.deepEqual(leaders.members.map((row) => row.uid), ["leader-a", "leader-b"]);
+  assert.deepEqual(peers.members.map((row) => row.uid), ["peer-a", "peer-b"]);
+  assert.equal(leaders.representative.uid, "leader-a");
+  assert.equal(leaders.isLeader, true);
+  assert.equal(peers.representative.uid, "peer-b");
+  assert.equal(peers.isLeader, false);
+  assert.equal(leaders.progress, worldProgress(485).progress);
+  assert.equal(peers.progress, original.progress);
+  assert.equal(peers.leaderProgress, leaders.progress);
+  const selectedLeader = splitWorldLeaderGroups([original], new Set(readingLeaderUids(rows)), "leader-b");
+  assert.equal(selectedLeader[0].representative.uid, "leader-b");
+  assert.equal(selectedLeader[1].representative.uid, "peer-a");
+});
+
+test("대장 슬롯 ID·진도·멤버 순서는 선택 학생과 원본 배열 순서에 무관하다", () => {
+  const rows = [
+    { uid: "peer", totalXp: 435, level: 3 },
+    { uid: "leader-b", totalXp: 485, level: 3 }, { uid: "leader-a", totalXp: 485, level: 3 },
+    { uid: "start", totalXp: 0, level: 1 },
+  ];
+  const snapshot = (values) => values.map(({ id, progress, members, isLeader, leaderProgress }) => ({
+    id, progress, members: members.map((member) => member.uid), isLeader, leaderProgress,
+  }));
+  const expected = snapshot(splitWorldLeaderGroups(groupWorldTravelers(rows, { epsilon: 0.02 }), readingLeaderUids(rows)));
+  for (const input of [rows, rows.slice().reverse()]) {
+    for (const selectedUid of ["peer", "leader-a", "leader-b", "start", null]) {
+      const groups = groupWorldTravelers(input, { selectedUid, epsilon: 0.02 });
+      assert.deepEqual(snapshot(splitWorldLeaderGroups(groups, readingLeaderUids(input), selectedUid)), expected);
+    }
+  }
+});
+
+test("대장 없는 모임은 동일 객체로 남고 대장만 있는 모임은 원 ID·진도로 공동 표시한다", () => {
+  const rows = [{ uid: "a", totalXp: 485, level: 3 }, { uid: "b", totalXp: 485, level: 3 }];
+  const [original] = groupWorldTravelers(rows, { selectedUid: "b" });
+  assert.equal(splitWorldLeaderGroups([original], ["absent"], "a")[0], original);
+  assert.equal(splitWorldLeaderGroups([original], [], "a")[0], original);
+  const [shared] = splitWorldLeaderGroups([original], readingLeaderUids(rows), "b");
+  assert.equal(shared.id, original.id);
+  assert.equal(shared.progress, original.progress);
+  assert.equal(shared.isLeader, true);
+  assert.equal(shared.representative.uid, "b");
+  assert.deepEqual(shared.members, original.members);
+  assert.equal(splitWorldLeaderGroups([original], readingLeaderUids(rows), "absent")[0].representative.uid, "a");
+  for (const input of [null, undefined, {}]) assert.deepEqual(splitWorldLeaderGroups(input, []), []);
+});
+
+test("슬롯 분리는 원본을 변경하지 않고 부가 정보와 모든 학생을 중복·유실 없이 보존한다", () => {
+  const rows = [{ uid: "z-peer", totalXp: 435, level: 3 }, { uid: "a-leader", totalXp: 485, level: 3 }, { uid: "start", totalXp: 0, level: 1 }];
+  const metadata = Object.freeze({ source: "class-public-snapshot" });
+  const groups = groupWorldTravelers(rows, { epsilon: 0.02 }).map((group) => ({ ...group, metadata }));
+  const before = structuredClone(groups);
+  const freeze = (value) => {
+    if (!value || typeof value !== "object" || Object.isFrozen(value)) return;
+    Object.freeze(value);
+    Object.values(value).forEach(freeze);
+  };
+  freeze(groups);
+  const split = splitWorldLeaderGroups(groups, Object.freeze(["a-leader", "a-leader", "absent"]), "z-peer");
+  const members = split.flatMap((group) => group.members.map((member) => member.uid));
+  assert.deepEqual(members.slice().sort(), rows.map((row) => row.uid).sort());
+  assert.equal(new Set(members).size, rows.length);
+  assert.deepEqual(groups, before);
+  assert.ok(split.every((group) => group.metadata === metadata));
+  assert.ok(split.flatMap((group) => group.members).every((member) => groups.some((group) => group.members.includes(member))));
+});
+
+test("최고 레벨의 같은 종점에 겹쳐도 EXP가 더 많은 대장은 별도 슬롯에 남는다", () => {
+  const maxXp = getExpForReadingLevel(100);
+  const rows = [{ uid: "peer", totalXp: maxXp, level: 100 }, { uid: "leader", totalXp: maxXp * 2, level: 100 }];
+  const groups = groupWorldTravelers(rows, { selectedUid: "peer" });
+  const [leader, peer] = splitWorldLeaderGroups(groups, readingLeaderUids(rows), "peer");
+  assert.equal(leader.representative.uid, "leader");
+  assert.equal(leader.isLeader, true);
+  assert.equal(peer.representative.uid, "peer");
+  assert.equal(peer.isLeader, false);
+  assert.equal(leader.progress, 1);
+  assert.equal(peer.progress, 1);
+  assert.equal(peer.leaderProgress, 1);
+});
 
 test("개인 전체 EXP가 없거나 유효하지 않으면 출발점으로 추정하지 않는다", () => {
   for (const value of [null, undefined, "", "100", false, {}, [], NaN, Infinity, -1]) assert.equal(worldProgress(value), null);
