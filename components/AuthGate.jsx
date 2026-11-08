@@ -12,6 +12,8 @@
 // 그 찰나에 본문을 보여 줄 이유가 없습니다.
 // =============================================================
 import { useRequireAuth } from "@/lib/useRequireAuth";
+import { getCurrentUser } from "@/lib/user";
+import SuspendedScreen, { isSuspendedUser } from "./SuspendedScreen";
 
 export default function AuthGate({ children }) {
   const status = useRequireAuth();
@@ -23,5 +25,8 @@ export default function AuthGate({ children }) {
       </div>
     );
   }
+  // 사용 중지된 학생 — 본문 대신 안내만(규칙이 어차피 모든 읽기 · 쓰기를 막음)
+  const user = getCurrentUser();
+  if (isSuspendedUser(user)) return <SuspendedScreen user={user} />;
   return children;
 }

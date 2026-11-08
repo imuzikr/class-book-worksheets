@@ -6,6 +6,7 @@ import AuthGate from "@/components/AuthGate";
 import TopNav from "@/components/TopNav";
 import { useCurrentUser } from "@/lib/useCurrentUser";
 import { isAdmin, isTeacher } from "@/lib/user";
+import SuspendedScreen, { isSuspendedUser } from "@/components/SuspendedScreen";
 import { isFirebaseConfigured } from "@/lib/firebase";
 import { subscribeClasses, subscribeMyMemberships } from "@/lib/store";
 import { getSelectedClassId, setSelectedClassId } from "@/lib/classroom";
@@ -50,6 +51,7 @@ export default function Dashboard() {
 function DashboardIdentity() {
   const user = useCurrentUser();
   if (!user) return null;
+  if (isSuspendedUser(user)) return <SuspendedScreen user={user} />;
   return <DashboardSession key={user.uid + ":" + user.role} user={user} />;
 }
 

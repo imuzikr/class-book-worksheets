@@ -66,8 +66,14 @@ service firebase.storage {
       return signedIn() && (role() == 'teacher' || role() == 'admin')
              && classDoc(classId).get('createdBy', '') == request.auth.uid;
     }
+    // 사용 중지(전학 등)된 학생은 소속이 남아 있어도 그림을 못 보고 못 올립니다
+    // (firestore.rules의 isSuspendedMe와 같음). 반 친구들은 각자 소속으로 그대로 봅니다.
+    function suspendedMe() {
+      return firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
+             && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.get('suspended', false) == true;
+    }
     function isClassMember(classId) {
-      return signedIn()
+      return signedIn() && !suspendedMe()
              && firestore.exists(/databases/(default)/documents/memberships/$(request.auth.uid + '_' + classId))
              && classDoc(classId).get('archived', false) != true;
     }

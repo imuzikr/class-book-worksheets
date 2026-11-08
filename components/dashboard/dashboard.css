@@ -354,6 +354,16 @@
 .bb-profile-rows dt { color: #69766e; }
 .bb-profile-rows dd { margin: 0; color: #2f4436; overflow-wrap: anywhere; }
 .bb-profile-note { font-size: 12px; color: #69766e; line-height: 1.6; margin: 0 0 10px; }
+/* 사용 중지(전학 등) — 탈퇴 위, 주황 톤(되돌릴 수 있는 일) */
+.bb-profile-flag.is-suspended { color: #9a5a2c; background: #fff1e3; }
+.bb-profile-flag + .bb-profile-flag { margin-left: 6px; }
+.bb-profile-suspend { border-top: 1px solid #f0e2d2; padding-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+.bb-profile-suspend > p { font-size: 12.5px; color: #6b5a4c; line-height: 1.6; margin: 0; }
+.bb-profile-suspend-list { margin: 0; padding-left: 18px; font-size: 12.5px; color: #6b5a4c; line-height: 1.6; }
+.bb-profile-suspend-btn { min-height: 38px; padding: 8px 13px; border: 1px solid #e3b98f; border-radius: 10px; background: #fff4e8; color: #8a4b1d; font-weight: 700; font-size: 13px; cursor: pointer; min-width: 120px; }
+.bb-profile-suspend-btn:hover:not(:disabled) { background: #fde6cf; }
+.bb-profile-suspend-btn:disabled { opacity: .5; cursor: not-allowed; }
+.bb-profile-suspend .bb-profile-actions > :only-child { grid-column: 2; }
 .bb-profile-danger { border-top: 1px solid #f1d9d5; padding-top: 14px; display: flex; flex-direction: column; gap: 10px; }
 .bb-profile-danger > p { font-size: 12.5px; color: #6b5550; line-height: 1.6; margin: 0; }
 .bb-profile-danger label { font-size: 12.5px; color: #5b665e; }

@@ -10,7 +10,7 @@
 // 다른 선생님 반에도 있는 학생은 탈퇴를 막고 '반에서 빼기'를 안내합니다.
 // =============================================================
 import { useEffect, useState } from "react";
-import { checkWithdraw, fetchStudentProfile, syncStudentName, updateStudentProfile, withdrawStudent } from "@/lib/store";
+import { checkWithdraw, fetchStudentProfile, setStudentSuspended, syncStudentName, updateStudentProfile, withdrawStudent } from "@/lib/store";
 import { purgeNameMatches } from "@/lib/classPurge";
 import { Dialog, fullDate } from "./DashboardParts";
 
@@ -58,6 +58,10 @@ export default function StudentProfileDialog({ student, myClasses, onClose, onWi
   const [saveError, setSaveError] = useState("");
   const [saved, setSaved] = useState(""); // 저장한 뒤 한 줄 안내
   const [syncing, setSyncing] = useState(false);
+  // 사용 중지(전학 등) — 두 번 눌러 확정(첫 번째 누름은 무엇이 일어나는지 펼침)
+  const [suspendAsk, setSuspendAsk] = useState(false);
+  const [suspending, setSuspending] = useState(false);
+  const [suspendMsg, setSuspendMsg] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -90,6 +94,27 @@ export default function StudentProfileDialog({ student, myClasses, onClose, onWi
         : "탈퇴 처리 도중에 멈췄어요. 남은 기록은 그대로이니 다시 누르면 이어서 지웁니다.");
       setRunning(false);
       setStep(null);
+    }
+  }
+
+  async function toggleSuspend() {
+    if (suspending || !profile) return;
+    const next = profile.suspended !== true;
+    setSuspending(true);
+    setSuspendMsg("");
+    try {
+      await setStudentSuspended(student.uid, myClasses, next);
+      setProfile((p) => ({ ...p, suspended: next }));
+      setSuspendAsk(false);
+      setSuspendMsg(next
+        ? "사용을 중지했어요. 이 학생은 로그인해도 안내만 보이고, 반 친구들은 남긴 글을 읽기만 합니다."
+        : "다시 사용하게 했어요. 빠졌던 모둠 자리로 돌려놓았어요.");
+      onUpdated?.();
+    } catch (e) {
+      console.warn("[사용 중지] 실패:", e?.code, e?.message);
+      setSuspendMsg(e?.classNames || BLOCK_TEXT[e?.code] ? blockText(e.code, e.classNames) : "바꾸지 못했어요. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      setSuspending(false);
     }
   }
 
@@ -147,6 +172,7 @@ export default function StudentProfileDialog({ student, myClasses, onClose, onWi
         <span>{profile?.studentId || student.studentId || "학번 미등록"}</span>
       </div>
       {profile?.withdrawRequested && <span className="bb-profile-flag">탈퇴 신청함</span>}
+      {profile?.suspended && <span className="bb-profile-flag is-suspended">사용 중지</span>}
     </div>
 
     {profile === undefined ? <p className="bb-profile-note" role="status">프로필을 불러오는 중입니다.</p>
@@ -182,9 +208,30 @@ export default function StudentProfileDialog({ student, myClasses, onClose, onWi
             </div>
           </>}
 
+    {profile && !draft && <section className="bb-profile-suspend" aria-label="사용 중지">
+      <p>{profile.suspended
+        ? "이 학생은 사용 중지 상태예요. 다시 사용하게 하면 빠졌던 모둠 자리로 돌아갑니다."
+        : "전학 등으로 더 쓰지 않을 때 — 글 · 그림 · 기록은 그대로 두고 계정만 쉬게 합니다."}</p>
+      {suspendAsk && !profile.suspended && <ul className="bb-profile-suspend-list">
+        <li>이 학생은 로그인해도 안내 화면만 보고, 아무것도 읽거나 입력할 수 없어요.</li>
+        <li>반 친구들은 이 학생이 남긴 글과 그림을 그대로 읽어요. 이 학생의 글에 댓글은 달 수 없어요.</li>
+        <li>기본 모둠과 독서 활동 모둠에서 빠집니다(다시 사용하면 돌아와요).</li>
+      </ul>}
+      {check && !check.ok && <p className="bb-profile-block">{blockText(check.reason, check.classNames)}</p>}
+      {suspendMsg && <p className="bb-profile-note" role="status">{suspendMsg}</p>}
+      <div className="bb-profile-actions">
+        {suspendAsk && <button type="button" className="bb-dash-secondary" disabled={suspending} onClick={() => setSuspendAsk(false)}>취소</button>}
+        <button type="button" className={profile.suspended ? "bb-dash-primary" : "bb-profile-suspend-btn"}
+          disabled={!check?.ok || suspending || running || syncing}
+          onClick={() => (profile.suspended || suspendAsk ? toggleSuspend() : setSuspendAsk(true))}>
+          {suspending ? "바꾸는 중…" : profile.suspended ? "다시 사용하게 하기" : suspendAsk ? "사용 중지하기" : "사용 중지"}
+        </button>
+      </div>
+    </section>}
+
     {profile && !draft && <section className="bb-profile-danger" aria-label="탈퇴">
       {!confirming ? <>
-        <p>탈퇴하면 내 반에 남은 이 학생의 글 · 기록 · 과일 · 출석과 프로필이 모두 지워지고 되돌릴 수 없습니다.</p>
+        <p>탈퇴하면 내 반에 남은 이 학생의 글 · 그림 파일 · 기록 · 과일 · 출석과 프로필이 모두 지워지고 되돌릴 수 없습니다. 남긴 글을 남겨 두려면 위의 '사용 중지'를 쓰세요.</p>
         {check && !check.ok && <p className="bb-profile-block">{blockText(check.reason, check.classNames)}</p>}
         <button type="button" className="bb-profile-withdraw" disabled={!check?.ok || syncing} onClick={() => setConfirming(true)}>탈퇴</button>
       </> : <>

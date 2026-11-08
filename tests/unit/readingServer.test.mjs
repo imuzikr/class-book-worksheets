@@ -13,7 +13,9 @@ test("reading server: default-off, archived classes and other-class membership s
     { membership: null },
     { membership: { uid: "s1", classId: "b" } },
     { membership: { uid: "s2", classId: "a" } },
+    { profile: { role: "student", suspended: true } },
   ]) assert.throws(() => assertReadingAccess({ ...student, ...patch }), (e) => e.status === 403);
+  assert.throws(() => assertReadingAccess({ ...student, profile: { role: "student", suspended: true } }), (e) => e.code === "reading/suspended");
 });
 
 test("reading server: only own-class teacher or administrator, and neither bypasses feature-off", () => {

@@ -1,0 +1,8 @@
+/* 사용 중지된 계정의 안내 화면 */
+.suspended-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; background: var(--bg, #faf8f3); }
+.suspended-card { width: min(480px, 100%); padding: 32px 28px; border: 1px solid var(--border, #e5ded4); border-radius: 18px; background: #fff; box-shadow: 0 10px 30px rgba(60, 40, 20, 0.08); display: flex; flex-direction: column; gap: 12px; text-align: center; align-items: center; }
+.suspended-badge { padding: 4px 12px; border-radius: 999px; background: #fff1e3; color: #9a5a2c; font-size: 12.5px; font-weight: 700; }
+.suspended-card h1 { margin: 4px 0 0; font-size: 22px; color: var(--dark, #2c2a25); }
+.suspended-card p { margin: 0; font-size: 14px; line-height: 1.7; color: var(--text-sub, #6b675e); }
+.suspended-card .suspended-sub { font-size: 13px; color: var(--text-faint, #a09f96); }
+.suspended-card .btn-primary { margin-top: 8px; min-width: 160px; }

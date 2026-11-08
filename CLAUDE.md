@@ -216,8 +216,11 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
     더했습니다. **쓰기 · 고치기는 그대로 막힙니다**, 운영 중인 반은 먼저 보관해야 합니다.
     시험 `tests/rules/classPurge.test.mjs`.
   - **학생 계정(Authentication)과 프로필(`users`)은 안 지웁니다** — 다른 반에서도 쓰고,
-    남의 로그인 계정은 서버 함수 없이는 못 지웁니다. 콘솔에서 지웁니다. 그림 파일(Storage)은
-    해시태그 대표 이미지만 지우기를 시도하고(실패해도 넘어감) 나머지는 남습니다.
+    남의 로그인 계정은 서버 함수 없이는 못 지웁니다. 콘솔에서 지웁니다.
+  - **그림 파일(Storage)도 지웁니다**(선생님 요청) — Storage 목록은 규칙이 막아 폴더를 훑을 수
+    없어, **지우기 전에 읽은 문서에서 `storage:uploads/…` 경로를 모아**(`lib/storagePaths.js`)
+    그 반 폴더의 것만 지웁니다(`deleteStoragePaths`, 활동은 `purgeBookActivity`가). 어느 기록에도
+    적히지 않은 파일(올리다 만 그림)은 찾을 길이 없어 남습니다.
 - **학생 프로필 편집도 같은 창에서** — '편집'으로 이름 · 학번 · 이메일(`updateStudentProfile`,
   users/{uid} 한 장 · displayName도 이름과 같게). 이름 · 학번이 바뀌면 이어서
   **내 반 기록의 옛 이름표도 맞춥니다**(`lib/data/nameSync.js`의 `syncStudentName`, 셈은
@@ -240,7 +243,8 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
   퀴즈 답 · 독서 활동의 글 · 낱말 · 메모 · 동료 평가 …) → 모둠 · 자리표에서 빼기 → 개인
   서재(`users/{uid}/reading/main`) → **프로필(`users/{uid}`)은 맨 마지막**.
   - **구글 로그인 기록만 남습니다**(남의 계정은 서버만 지움 — Authentication 탭에서).
-    다시 로그인하면 아무 반에도 없는 새 학생으로 시작합니다.
+    다시 로그인하면 아무 반에도 없는 새 학생으로 시작합니다. 그 학생이 올린 **그림 파일도
+    지웁니다** — 지우는 기록에서 모은 경로 가운데 내 반 폴더 안의 그 학생 폴더 것만.
   - 규칙: 먼저 프로필에 `withdrawingBy`(내 uid)를 적고, 반 아래 · 독서 활동 아래의
     와일드카드 규칙이 **그 학생을 가리키는 기록만**(`isWithdrawnRecord` — uid · authorId ·
     fromUid … 칸, 혼자 쓰던 판) 담당 교사에게 지우기를 엽니다. 그래서 '이력은 못 지운다'는
@@ -250,6 +254,22 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
     시험 `tests/rules/withdraw.test.mjs`.
   - 독서 활동 아래에 학생 기록을 담는 컬렉션을 새로 만들면 `withdraw.js`에도 더하세요.
   - '반에서 빼기'(명단에서만 빠지고 글은 남음)는 그대로 있습니다.
+- **학생 사용 중지 — 전학 등으로 더 안 쓰지만 남긴 글은 둘 때**(같은 창, 탈퇴 위 · `lib/data/suspend.js`의
+  `setStudentSuspended`, 탈퇴와 같은 조건 — 그 학생의 반이 모두 내 반).
+  - `users/{uid}.suspended`(+ `suspendedAt` · `suspendedBy`). 규칙의 `signedIn()` · `isClassMember()`가
+    `isSuspendedMe()`를 보아 **그 계정의 모든 읽기 · 쓰기를 막습니다**(휴면) — 본인 프로필 읽기만 열림.
+    Storage 규칙 · 서버 API(`assertReadingAccess` · 대시보드)도 막습니다. 학생 화면은 `AuthGate` ·
+    대시보드가 안내만 띄웁니다(`components/SuspendedScreen.jsx`, 데모는 '선생님 화면으로' 단추).
+  - **반 친구는 그대로 읽습니다** — 각자 소속으로 판정되므로 글 · 그림이 보입니다. 모둠 RAFT 글은
+    `suspendedUids`로 옮긴 친구 것도 읽힙니다(규칙 `mateReadsEntry`).
+  - **모둠에서 뺍니다** — 기본 모둠은 `suspendedPlacements`에 자리를 적어 두고, 활동 모둠은
+    `suspendedUids` · `suspendedMembers`로 옮깁니다(`lib/suspendGroups.js`, 혼자 쓰던 판은 그대로).
+    **다시 사용하면 그 자리로 돌려놓습니다.**
+  - 그 학생의 해시태그 글에 친구가 댓글을 달려 하면 '입력할 수 없습니다'(`HashtagComments`, 규칙
+    `isSuspendedUser`도 막음). 동료 평가 · 브레인 라이팅은 모둠에서 빠져 칸 자체가 안 섭니다.
+  - 소속 · 과일 · 출석 기록은 그대로입니다(선생님 화면의 명단에 남음).
+  - 시험 `tests/rules/suspend.test.mjs` · `storage.test.mjs` · `tests/unit/suspendGroups.test.mjs`.
+    **코드보다 규칙(Firestore · Storage)을 먼저 게시하세요.**
 - **반 공지는 교사가 곧바로 씁니다** — `classes/{cId}/classNotices`에 한 장(`sendClassNotice`,
   500자 · 고치기 · 지우기 없음). 학생 알림함에 나눠 쓰지 않고, 알림
   벨이 그 반의 최근 5장을 구독해 안 읽은 것을 셉니다 — 읽음 표시는 `chatReads.rooms.notice`

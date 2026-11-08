@@ -124,6 +124,12 @@ describe("반 폴더 uploads/{classId}/{uid}/{file}", () => {
     it("보관된 반: 소속 학생도 실패", () => assertFails(getBytes(ref(st(asStudent(env, "stu1")), "uploads/arch/stu1/old.jpg"))));
     it("보관된 반: 담당 교사는 읽기 가능", () => assertSucceeds(getBytes(ref(st(asTeacher(env, "t1")), "uploads/arch/stu1/old.jpg"))));
     it("없는 반은 실패", () => assertFails(getBytes(ref(st(asStudent(env, "stu1")), "uploads/zzz/stu1/a.jpg"))));
+    it("사용 중지된 학생 — 본인은 못 보고, 같은 반 친구는 그대로 봄", async () => {
+      await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), "users", "stu1"), { role: "student", suspended: true }));
+      await assertFails(getBytes(ref(st(asStudent(env, "stu1")), CF)));
+      await assertFails(uploadBytes(ref(st(asStudent(env, "stu1")), "uploads/c1/stu1/new.jpg"), img(), jpeg));
+      await assertSucceeds(getBytes(ref(st(asStudent(env, "stu2")), CF)));
+    });
   });
 
   describe("목록(list) — 막힘", () => {

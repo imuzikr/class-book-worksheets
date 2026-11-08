@@ -13,8 +13,8 @@
 // [지우기] 쓴 사람과 선생님. **그 해시태그의 주인은 못 지웁니다** — 마음에 안 드는
 //   '제안합니다'를 주인이 걷어 내면 댓글의 뜻이 없어집니다(규칙도 같음).
 // =============================================================
-import { useState } from "react";
-import { addHashtagComment, deleteHashtagComment } from "@/lib/store";
+import { useEffect, useState } from "react";
+import { addHashtagComment, deleteHashtagComment, fetchUserSuspended } from "@/lib/store";
 import {
   HASHTAG_COMMENT_KINDS,
   HASHTAG_COMMENT_MAX,
@@ -52,6 +52,14 @@ export default function HashtagComments({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [confirmDel, setConfirmDel] = useState(null);
+  // 글 주인이 사용 중지(전학 등)된 학생이면 학생은 댓글을 달 수 없습니다(읽기만 — 규칙도 막음)
+  const [ownerSuspended, setOwnerSuspended] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    setOwnerSuspended(false);
+    if (postUid && !isTeacher) fetchUserSuspended(postUid).then((v) => { if (alive) setOwnerSuspended(v); }).catch(() => {});
+    return () => { alive = false; };
+  }, [postUid, isTeacher]);
 
   const list = sortComments(comments);
   const seenMs = highlightAfter == null ? null : timeOf(highlightAfter, 0);
@@ -126,7 +134,9 @@ export default function HashtagComments({
         </ul>
       )}
 
-      {canWrite ? (
+      {canWrite && ownerSuspended ? (
+        <p className="htc-closed" role="note">입력할 수 없습니다 — 사용이 중지된 학생의 글이에요. 읽기만 할 수 있어요.</p>
+      ) : canWrite ? (
         <form className="htc-form" onSubmit={submit}>
           <div className="htc-kinds" role="radiogroup" aria-label="댓글 말머리">
             {HASHTAG_COMMENT_KINDS.map((k) => (
