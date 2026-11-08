@@ -50,7 +50,7 @@ const FEATURES = [
 const GROUPS = [
   { key: "reading", title: "독서 기록", desc: "학생의 서재와 책 정보", keys: ["readingEnabled", "bookSearchEnabled"] },
   { key: "growth", title: "랭킹 · 꾸미기", desc: "반 친구와 함께 보는 성장", keys: ["rankingEnabled", "characterEnabled"] },
-  { key: "reward", title: "교실 보상", desc: "과일 · 이벤트", keys: ["fruitBasketEnabled"] },
+  { key: "reward", title: "교실 보상", desc: "과일 모으기와 이벤트", keys: ["fruitBasketEnabled"] },
 ];
 
 export default function AdminSettingsPanel({ classes = [], onToast }) {
