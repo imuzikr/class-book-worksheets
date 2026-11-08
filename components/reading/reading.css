@@ -81,8 +81,11 @@
 .reading-form input::placeholder,.reading-form textarea::placeholder { color:#98a593; font-size:12px; }
 .reading-form-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
 .reading-form-row label { min-width:0; }
-.reading-form-actions { display:flex; justify-content:flex-end; align-items:center; gap:9px; padding-top:17px; margin-top:4px; border-top:1px solid #e3e9de; }
-.reading-form-actions button { min-height:38px; }
+/* 아래 단추 줄 — 이어 놓인 단추는 같은 크기(앱 약속, .modal-actions와 같은 균등 칸).
+   취소 · 저장이 반씩, 단추가 하나면 줄을 다 씁니다. 높이도 못 박아 테두리 있는 btn-ghost와
+   여백 큰 btn-primary가 같은 크기로 섭니다. */
+.reading-form-actions { display:grid; grid-auto-flow:column; grid-auto-columns:minmax(0, 1fr); gap:10px; padding-top:17px; margin-top:4px; border-top:1px solid #e3e9de; }
+.reading-form-actions button { height:44px; min-height:0; padding-top:0; padding-bottom:0; display:flex; align-items:center; justify-content:center; box-sizing:border-box; white-space:nowrap; }
 .reading-form-book { display:flex; gap:9px; align-items:center; padding:12px; border:1px solid #dce6d5; border-radius:10px; color:#557b55; background:#f2f6eb; }
 .reading-form-book strong { color:#38563d; font-size:13px; flex:1; overflow-wrap:anywhere; }
 .reading-form-book span { flex-shrink:0; font-size:11px; color:#84917b; }
@@ -168,7 +171,7 @@
 .reading-linked-activity span { color:#839772; font-size:10px; }
 .reading-linked-activity strong { color:#577148; font-size:13px; overflow-wrap:anywhere; }
 .reading-linked-activity button { flex-shrink:0; font-size:11px; }
-@media(max-width:600px) { .reading-filters button,.reading-book-actions button,.reading-feature-button,.reading-log-tools button { min-height:38px; } .reading-form-actions button { min-height:44px; } }
+@media(max-width:600px) { .reading-filters button,.reading-book-actions button,.reading-feature-button,.reading-log-tools button { min-height:38px; } }
 .reading-preview-button { margin:10px 0 0; padding:7px 10px; font:inherit; font-size:10px; border:1px solid #d9dfd0; border-radius:7px; color:#77856b; background:#f9faf5; cursor:pointer; }
 .reading-preview-button:hover { background:#eef2e4; border-color:#b5c4a3; color:#526b3f; }
 .reading-badge-preview { display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center; }
