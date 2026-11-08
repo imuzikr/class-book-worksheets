@@ -384,3 +384,14 @@
 .bb-profile-tool-notes { margin: 0; padding-left: 18px; font-size: 12.5px; color: #6b5a4c; line-height: 1.6; }
 .bb-profile-trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .bb-profile-trio > button { min-width: 0; height: 40px; min-height: 40px; padding: 0 10px; border-radius: 10px; font-size: 13px; font-weight: 700; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 날마다 쌓인 독서량(CumulativeReadingChart) — 개인별 분석 리포트 맨 아래 */
+.bb-dash-cumulative { margin: 0; }
+.bb-dash-cumulative svg { display: block; width: 100%; height: auto; overflow: visible; }
+.bb-cum-grid { stroke: #ece7dd; stroke-width: 1; }
+.bb-cum-ylabel, .bb-cum-xlabel { fill: #8a8378; font-size: 11px; font-family: inherit; }
+.bb-cum-area { fill: #b9966a; opacity: .16; }
+.bb-cum-line { fill: none; stroke: #9b7a52; stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.bb-cum-dot { fill: #fff; stroke: #9b7a52; stroke-width: 2; }
+.bb-cum-hit { fill: transparent; }
+.bb-cum-hit:hover { fill: #9b7a5222; }

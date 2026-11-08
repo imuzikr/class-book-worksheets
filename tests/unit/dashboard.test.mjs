@@ -253,3 +253,15 @@ test("학생 활동의 잠금 여부를 표시하고 잠금 상태로 진행 기
   assert.equal(result.studentActivities.find((activity) => activity.id === "locked").state, "doing");
   assert.equal(result.studentActivities.find((activity) => activity.id === "open").locked, false);
 });
+
+test("날마다 쌓인 독서량 — 빈날도 이어서 더하고, 눈금은 처음 · 끝 포함", async () => {
+  const { cumulativeDaily, cumulativeTicks, niceCeiling } = await import("../../lib/readingCumulative.js");
+  const rows = cumulativeDaily([{ date: "2026-11-03", pages: 0 }, { date: "2026-11-02", pages: 15 }, { date: "2026-11-04", pages: 17 }]);
+  assert.deepEqual(rows.map((r) => r.total), [15, 15, 32]);
+  assert.deepEqual(cumulativeTicks(3), [0, 1, 2]);
+  const t = cumulativeTicks(120, 7);
+  assert.equal(t[0], 0); assert.equal(t.at(-1), 119); assert.ok(t.length <= 7);
+  assert.deepEqual(niceCeiling(98), { unit: 50, top: 100 });
+  assert.deepEqual(niceCeiling(0), { unit: 1, top: 4 });
+  assert.deepEqual(niceCeiling(55), { unit: 20, top: 60 });
+});
