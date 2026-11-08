@@ -338,3 +338,21 @@
   .rlb-badge-grid li:nth-child(odd) .rlb-tip { left:0; right:auto; transform:none; }
   .rlb-badge-grid li:nth-child(even) .rlb-tip { left:auto; right:0; transform:none; }
 }
+
+/* 책 상세 창의 단추 크기 — 한때 11px 알약이라 너무 작았습니다(선생님 요청).
+   앱의 다른 단추처럼 글자 13.5px · 높이 38px로 맞춥니다. 위 규칙들보다 뒤에 와야 이깁니다. */
+.reading-detail-tools .btn-ghost, .reading-detail-tools .btn-primary, .reading-linked-activity button,
+.reading-detail-section>header button,
+.reading-log-tools .btn-ghost, .reading-log-tools .reading-text-danger,
+.reading-review .reading-text-danger {
+  height:38px; min-height:0; padding:0 16px; font-size:13.5px; font-weight:600;
+  display:inline-flex; align-items:center; justify-content:center; white-space:nowrap; box-sizing:border-box;
+}
+/* '삭제'는 글자만 있어 누를 자리로 안 보였습니다 — 옅은 붉은 테두리 단추로 */
+.reading-log-tools .reading-text-danger,
+.reading-review .reading-text-danger { border:1px solid #e8cbc1; border-radius:var(--radius-btn); background:#fff; }
+.reading-log-tools .reading-text-danger:hover:not(:disabled),
+.reading-review .reading-text-danger:hover:not(:disabled) { background:#fbf1ed; }
+.reading-log-tools { gap:8px; margin-top:6px; }
+.reading-review .reading-text-danger { margin-top:10px; }
+.reading-detail-tools { gap:8px; }
