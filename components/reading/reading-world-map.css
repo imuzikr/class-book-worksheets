@@ -58,9 +58,9 @@
 .rwm-checkpoint { position:absolute; transform:translate(-50%,5px); z-index:1; pointer-events:none; }
 .rwm-checkpoint>span { display:block; font-size:9px; color:#fbe7aa; text-shadow:0 1px 2px #000; background:#183b34eb; padding:3px 5px; border:1px solid #b8a36c; border-radius:4px; white-space:nowrap; }
 .rwm-token { position:absolute; width:80px; height:94px; padding:0; transform:translate(-50%,-81%); z-index:2; background:none; border:0; color:#fff2ca; text-align:center; }
-.rwm-token img { width:80px; height:80px; display:block; object-fit:contain; filter:drop-shadow(0 3px 2px #000a); transition:filter .2s,transform .2s; user-select:none; }
+.rwm-token img { width:80px; height:80px; display:block; object-fit:contain; transform-origin:50% 100%; filter:drop-shadow(0 3px 2px #000a); transition:filter .2s; user-select:none; }
 .rwm-token:hover,.rwm-token:focus-visible,.rwm-token.is-selected { z-index:4; }
-.rwm-token:hover img,.rwm-token.is-selected img { transform:scale(1.12); filter:drop-shadow(0 0 4px #ffe195) drop-shadow(0 5px 3px #000a); }
+.rwm-token:hover img,.rwm-token.is-selected img { filter:drop-shadow(0 0 4px #ffe195) drop-shadow(0 5px 3px #000a); }
 .rwm-token-label { position:absolute; top:78px; left:50%; transform:translateX(-50%); font-size:10px; font-weight:750; background:#11322fef; border:1px solid #8c9668; border-radius:5px; padding:3px 6px; white-space:nowrap; line-height:1.3; }
 .rwm-token-label small { margin-left:4px; font-size:8px; color:#e1ce8b; }
 .rwm-token.is-selected .rwm-token-label { background:#f3d38a; color:#273a29; border-color:#ffefb5; }
@@ -84,7 +84,7 @@
 .rwm-person strong i { margin-left:5px; font-size:8px; font-style:normal; border:1px solid #8b9b6d; border-radius:4px; padding:1px 3px; }
 .rwm-person small { color:#a9bea5; font-size:9px; }
 .rwm-person em { color:#d1bd82; font-size:10px; font-style:normal; }
-.rwm-cluster { position:relative; display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:13px 45px 13px 22px; background:#284c40; border-top:1px solid #72815a; }
+.rwm-cluster { position:absolute; top:12px; left:12px; right:12px; z-index:6; display:flex; flex-wrap:wrap; align-items:center; gap:6px; max-height:calc(100% - 80px); overflow-y:auto; overscroll-behavior:contain; padding:13px 45px 13px 22px; background:#284c40; border:1px solid #72815a; border-radius:10px; box-shadow:0 5px 18px #0005; }
 .rwm-cluster>span { font-size:11px; color:#e5d5a4; margin-right:6px; }
 .rwm-cluster button { border:1px solid #83936c; background:#173a32; color:#f2ebc8; border-radius:6px; padding:7px 9px; font-size:11px; }
 .rwm-cluster small { color:#b9c39b; font-size:9px; margin-left:5px; }
