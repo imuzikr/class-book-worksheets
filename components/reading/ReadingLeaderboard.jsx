@@ -2,7 +2,7 @@
 
 // 개인 누적 성장은 월드맵과 상태창에, 학급·기간별 EXP는 순위에만 씁니다.
 // 친구의 책 제목이나 감상문은 공개 성장 요약에 포함되지 않습니다.
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { deriveReading, kstToday, READING_BADGES } from "@/lib/reading";
 import { fetchReadingRankings, saveReadingCharacter, subscribeReadingState } from "@/lib/data/reading";
 import { journeyNarrative, journeyTitle, badgeHint } from "@/lib/readingJourney";
@@ -13,6 +13,7 @@ import ReadingWorldMap from "./ReadingWorldMap";
 import "./reading.css";
 
 const PERIODS = [["daily", "오늘"], ["weekly", "이번 주"], ["monthly", "이번 달"], ["all-time", "누적"]];
+const VIEWS = [{ key: "map", label: "독서 맵" }, { key: "ranking", label: "독서 랭킹" }];
 const DISABLED_CODES = new Set(["reading-disabled", "reading/disabled", "disabled_feature", "READING_DISABLED", "reading/ranking-disabled", "reading/forbidden", "reading/unauthenticated", "permission-denied", "unauthenticated"]);
 const numeric = (value) => typeof value === "number" && Number.isFinite(value) && value >= 0;
 const number = (value) => numeric(value) ? value.toLocaleString("ko-KR") : "—";
@@ -51,6 +52,9 @@ function Bar({ percent, label }) {
 }
 
 export default function ReadingLeaderboard({ classId, user, isTeacher = false, characterOn = true, onDisabled }) {
+  const viewId = useId();
+  const tabRefs = useRef([]);
+  const [view, setView] = useState("map");
   const uid = user?.uid;
   const scope = `${classId || ""}:${uid || ""}`;
   const [period, setPeriod] = useState("weekly");
@@ -141,25 +145,56 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, c
     return result.character;
   }, [classId, scope, uid]);
 
+  function handleViewKeys(event, index) {
+    let next;
+    if (event.key === "ArrowRight") next = (index + 1) % VIEWS.length;
+    else if (event.key === "ArrowLeft") next = (index + VIEWS.length - 1) % VIEWS.length;
+    else if (event.key === "Home") next = 0;
+    else if (event.key === "End") next = VIEWS.length - 1;
+    else return;
+    event.preventDefault();
+    setView(VIEWS[next].key);
+    tabRefs.current[next]?.focus();
+  }
+
   return <div className="reading-hub rlb">
     <header className="rlb-head">
-      <div><h2>우리 반 독서 여정</h2><p>우리 반 친구들이 각자의 속도로 걸어온 길을 한눈에 봐요. 맵은 개인 누적 경험치 · 레벨 · 뱃지를 보여 줍니다.</p></div>
+      <div><h2>우리 반 리더보드</h2><p>독서 맵에서 성장 여정을, 독서 랭킹에서 기간별 순위를 살펴보세요.</p></div>
       <div className="rlb-head-side">
-        {!isTeacher && myRow && !loading && !error && <div className="rlb-myrank"><span>{periodLabel} 내 순위</span><Medal rank={myRow.rank} size={40} /></div>}
+        {view === "ranking" && !isTeacher && myRow && !loading && !error && <div className="rlb-myrank"><span>{periodLabel} 내 순위</span><Medal rank={myRow.rank} size={40} /></div>}
         <button type="button" className="btn-ghost" disabled={loading} onClick={() => setRetry((value) => value + 1)}>새로고침</button>
       </div>
     </header>
 
-    {error && <div className="reading-error" role="alert">{error}<button type="button" onClick={() => setRetry((value) => value + 1)}>다시 시도</button></div>}
-    {!hasSnapshot ? !error && <div className="reading-loading" role="status">우리 반 여정을 모으고 있어요.</div>
-      : <>
-        {(loading || error) && <p className="reading-help" role="status">{loading ? "순위를 새로 불러오는 중이에요. 맵과 성장 정보는 마지막으로 확인한 누적 기록입니다." : "맵과 성장 정보는 마지막으로 확인한 누적 기록입니다. 새로고침해 주세요."}</p>}
-        <ReadingWorldMap key={classId} rows={list} uid={uid} isTeacher={isTeacher} onOpenDetails={selectStudent} onSaveCharacter={characterOn ? saveCharacter : null} />
+    <div className="reading-tabs rlb-tabs" role="tablist" aria-label="리더보드 보기">
+      {VIEWS.map((item, index) => <button
+        key={item.key}
+        ref={(element) => { tabRefs.current[index] = element; }}
+        type="button"
+        role="tab"
+        id={`${viewId}-tab-${item.key}`}
+        aria-controls={`${viewId}-panel-${item.key}`}
+        aria-selected={view === item.key}
+        tabIndex={view === item.key ? 0 : -1}
+        className={view === item.key ? "active" : ""}
+        onClick={() => setView(item.key)}
+        onKeyDown={(event) => handleViewKeys(event, index)}
+      >{item.label}</button>)}
+    </div>
 
-        {!list.length ? <div className="reading-empty"><h3>아직 함께 걸을 친구가 없어요.</h3><p>반에 학생이 들어오면 이곳에서 독서 여정을 확인할 수 있어요.</p></div>
+    {error && <div className="reading-error" role="alert">{error}<button type="button" onClick={() => setRetry((value) => value + 1)}>다시 시도</button></div>}
+    {hasSnapshot && (loading || error) && <p className="reading-help" role="status">{loading ? "순위를 새로 불러오는 중이에요. 성장 정보는 마지막으로 확인한 누적 기록입니다." : "성장 정보는 마지막으로 확인한 누적 기록입니다. 새로고침해 주세요."}</p>}
+    <section className="rlb-panel" id={`${viewId}-panel-map`} role="tabpanel" aria-labelledby={`${viewId}-tab-map`} hidden={view !== "map"} tabIndex={0}>
+      {!hasSnapshot ? !error && <div className="reading-loading" role="status">우리 반 여정을 모으고 있어요.</div>
+        : <ReadingWorldMap key={classId} rows={list} uid={uid} isTeacher={isTeacher} onOpenDetails={selectStudent} onSaveCharacter={characterOn ? saveCharacter : null} />}
+    </section>
+
+    <section className="rlb-panel" id={`${viewId}-panel-ranking`} role="tabpanel" aria-labelledby={`${viewId}-tab-ranking`} hidden={view !== "ranking"} tabIndex={0}>
+      {!hasSnapshot ? !error && <div className="reading-loading" role="status">우리 반 순위를 모으고 있어요.</div>
+        : !list.length ? <div className="reading-empty"><h3>아직 함께 걸을 친구가 없어요.</h3><p>반에 학생이 들어오면 이곳에서 독서 여정을 확인할 수 있어요.</p></div>
           : <div className={"rlb-cols" + (isTeacher ? " is-teacher" : "")}>
             <section className="rlb-card" aria-labelledby="rlb-rank-title" aria-busy={loading}>
-              <div className="rlb-card-head"><h3 id="rlb-rank-title">독서 여정 순위</h3></div>
+              <div className="rlb-card-head"><h3 id="rlb-rank-title">독서 랭킹</h3></div>
               <div className="reading-filters" aria-label="순위 기간">{PERIODS.map(([key, label]) => <button key={key} type="button" className={period === key ? "active" : ""} aria-pressed={period === key} onClick={() => setPeriod(key)}>{label}</button>)}</div>
               <p className="reading-help">순위는 고른 기간에 이 반에서 얻은 경험치로 · 한국 시간 · 주간은 월요일 시작 · 같은 점수는 공동 순위</p>
               {loading ? <div className="reading-loading" role="status">{periodLabel} 순위를 불러오는 중이에요.</div>
@@ -183,7 +218,7 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, c
             </section>
             {isTeacher ? <ClassSummary rows={list} /> : <MyJourney mine={mine} row={myRow} uid={uid} today={today} />}
           </div>}
-      </>}
+    </section>
 
     {picked && <StudentJourneyModal row={picked} me={picked.uid === uid} onClose={closeStudent} />}
   </div>;

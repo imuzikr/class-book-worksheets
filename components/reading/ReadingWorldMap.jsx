@@ -91,7 +91,12 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, onOpenDetails, o
   useEffect(() => {
     const element = viewport.current;
     if (!element) return undefined;
-    const observer = new ResizeObserver(() => setSize({ width: element.clientWidth, height: element.clientHeight }));
+    const observer = new ResizeObserver(() => {
+      const width = element.clientWidth;
+      const height = element.clientHeight;
+      // Hidden tabs have no layout. Keep the last visible canvas and viewport.
+      if (width > 0 && height > 0) setSize({ width, height });
+    });
     observer.observe(element);
     return () => observer.disconnect();
   }, []);

@@ -235,6 +235,10 @@
 .rlb-head h2 { margin:0; font-size:22px; font-weight:780; letter-spacing:-.03em; }
 .rlb-head p { margin:6px 0 0; color:#7a8578; font-size:12px; line-height:1.6; }
 .rlb-head-side { display:flex; align-items:center; gap:14px; flex-shrink:0; }
+.reading-tabs.rlb-tabs { padding-top:0; margin-bottom:20px; }
+.rlb-panel { min-width:0; }
+.rlb-panel[hidden] { display:none; }
+.rlb-panel:focus-visible { outline:3px solid #478fbd; outline-offset:4px; border-radius:8px; }
 .rlb-myrank { display:flex; align-items:center; gap:8px; color:#5f6f60; font-size:12px; }
 .rlb-medal { display:inline-flex; align-items:center; justify-content:center; line-height:1; flex-shrink:0; }
 .rlb-medal--num { border-radius:50%; background:#eef0ea; border:2px solid #c9cfc5; color:#4f5b50; font-weight:800; }
