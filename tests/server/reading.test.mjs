@@ -56,6 +56,15 @@ test("GET/POST enforce default-off and actual class membership, including admini
   await assert.rejects(() => mutateReading(principal("other"), payload("forbidden-0001", addBook)), (e) => e.status === 403);
 });
 
+test("teacher reads a member student's reading state; others and non-members are rejected", async () => {
+  const seen = await getReading(principal("teacher"), "api-class", ids.student);
+  assert.ok(Array.isArray(seen.state.books));
+  await assert.rejects(() => getReading(principal("teacher"), "api-class", ids.other), (e) => e.code === "reading/not-member");
+  await assert.rejects(() => getReading(principal("other"), "api-class", ids.student), (e) => e.status === 403);
+  const self = await getReading(principal("student"), "api-class", ids.student);
+  assert.ok(Array.isArray(self.state.books));
+});
+
 test("POST idempotency is atomic under concurrent submissions and conflicts reject", async () => {
   const body = payload("api-book-0001", addBook);
   const responses = await Promise.all([mutateReading(principal("student"), body), mutateReading(principal("student"), body)]);

@@ -9,7 +9,7 @@ const headers = { "Cache-Control": "private, no-store, max-age=0" };
 export async function GET(request) {
   try {
     const principal = await readingPrincipal(request);
-    return NextResponse.json(await getReading(principal, request.nextUrl.searchParams.get("classId")), { headers });
+    return NextResponse.json(await getReading(principal, request.nextUrl.searchParams.get("classId"), request.nextUrl.searchParams.get("uid")), { headers });
   } catch (error) {
     const failure = readingErrorResponse(error);
     return NextResponse.json(failure.body, { status: failure.status, headers });
