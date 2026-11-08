@@ -257,7 +257,8 @@
 .top-readers-list { display: flex; align-items: center; gap: 12px; min-width: 0; margin: 0; padding: 0; list-style: none; }
 .top-readers-item { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .top-readers-medal { flex: none; font-size: 15px; line-height: 1; }
-.top-readers-avatar { flex: none; width: 26px; height: 26px; border-radius: 50%; background: #fff; object-fit: cover; }
+/* 캐릭터 그림은 배경이 투명합니다 — 흰 동그라미를 깔면 알약 위에서 튀어 보여(선생님 지적) 바탕 없이 그대로 */
+.top-readers-avatar { flex: none; width: 28px; height: 28px; object-fit: contain; }
 .top-readers-level { flex: none; font-size: 12px; font-weight: 700; color: var(--primary-dark); white-space: nowrap; }
 .top-readers-name { min-width: 3.2em; font-size: 14px; font-weight: 600; color: var(--dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
