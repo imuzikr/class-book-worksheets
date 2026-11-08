@@ -102,6 +102,8 @@ describe("반 편성 고치기(교사)", () => {
         role: "student", realName: "학생1", classIds: ["classA", "classB"],
       });
       await setDoc(doc(db, "memberships", "stu1_classA"), { uid: "stu1", classId: "classA" });
+      // 교사는 내가 만든 반 목록(ownedClassIds)으로 '내 반 학생'을 알아봅니다(users 규칙).
+      await setDoc(doc(db, "users", "teacherA"), { role: "teacher", ownedClassIds: ["classA"] });
     });
   });
 
@@ -223,6 +225,14 @@ describe("반 편성 고치기(교사)", () => {
   it("개수만 줄이면서 없던 반을 끼워 넣는 것도 거부된다", async () => {
     const db = asTeacher(env, "teacherA").firestore();
     await assertFails(updateDoc(doc(db, "users", "stu1"), { classIds: ["classC"] }));
+  });
+
+  it("다른 선생님 반에만 있는 학생의 classIds는 줄이지 못한다", async () => {
+    await seed(env, (db) =>
+      setDoc(doc(db, "users", "stu9"), { role: "student", realName: "학생9", classIds: ["classB"] })
+    );
+    const db = asTeacher(env, "teacherA").firestore();
+    await assertFails(updateDoc(doc(db, "users", "stu9"), { classIds: [] }));
   });
 
   it("교사는 다른 교사의 classIds에는 손댈 수 없다", async () => {

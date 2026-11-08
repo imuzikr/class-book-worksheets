@@ -23,7 +23,6 @@ import {
   subscribeClassRewards,
   subscribeQuestionSignals,
   subscribeStudySeatLayout,
-  subscribeUserDirectory,
   todayDateKey,
 } from "@/lib/store";
 import { normalizeSeats } from "@/lib/seats";
@@ -37,7 +36,6 @@ import StudentToolsPopover from "./StudentToolsPopover";
 import { IconMyPost } from "./StatusIcons";
 
 export default function QuestionSeatModal({ classId, onClose }) {
-  const [directory, setDirectory] = useState([]);
   const [rewards, setRewards] = useState([]);
   const [seatLayout, setSeatLayout] = useState(null);
   const [dailySeatLayout, setDailySeatLayout] = useState(null);
@@ -60,8 +58,6 @@ export default function QuestionSeatModal({ classId, onClose }) {
   }
 
   const todayLayoutId = dailySeatLayoutId(todayDateKey());
-
-  useEffect(() => subscribeUserDirectory(setDirectory), []);
 
   useEffect(() => {
     if (!classId) return;
@@ -89,7 +85,7 @@ export default function QuestionSeatModal({ classId, onClose }) {
   // 학번순이어야 합니다: 자리표에 아직 없는 학생을 빈자리에 채울 때
   // (`normalizeSeats`) 명단 차례를 그대로 써서, 이 창만 정렬이 빠져 있던 동안
   // 같은 교실이 여기서만 다른 자리에 앉았습니다.
-  const { roster } = useClassRoster(classId, { directory, rewards });
+  const { roster, profiles } = useClassRoster(classId, { rewards });
 
   // 오늘 임시 자리표가 있으면 그것을, 없으면 기본 자리표를 씁니다(전광판과 동일)
   const seats = useMemo(
@@ -103,7 +99,7 @@ export default function QuestionSeatModal({ classId, onClose }) {
   // 과일을 줄 때 실명을 함께 저장 — 공부방은 실명 공간이라 학생 화면에도
   // 실명 이름표가 보입니다(공부방 화면의 awardReward와 같은 규칙).
   function handleAward(uid, count, delta = null) {
-    const d = directory.find((x) => x.uid === uid);
+    const d = profiles.find((x) => x.uid === uid);
     const identity = d
       ? { name: d.realName || d.studentId || d.displayName || "", emoji: d.emoji || "🙂" }
       : null;

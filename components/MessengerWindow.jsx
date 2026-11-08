@@ -225,7 +225,7 @@ function MessengerWindowBody({
   useEffect(() => {
     if (!isTeacher || !memberKey) { setRoster([]); return undefined; }
     let alive = true;
-    fetchClassRosterProfiles(memberKey.split(",")).then((list) => {
+    fetchClassRosterProfiles(memberKey.split(","), { healClassId: classId }).then((list) => {
       if (!alive) return;
       setRoster(
         [...list].sort((a, b) =>
@@ -234,7 +234,7 @@ function MessengerWindowBody({
       );
     });
     return () => { alive = false; };
-  }, [isTeacher, memberKey]);
+  }, [isTeacher, memberKey, classId]);
 
   const rooms = useMemo(
     () => buildChatRooms({ isTeacher, myUid, groups, roster, messages, seen }),

@@ -36,7 +36,6 @@ import {
   subscribePopQuizAnswers,
   subscribePopQuizzes,
   subscribeStudySeatLayout,
-  subscribeUserDirectory,
   todayDateKey,
   formatTime,
 } from "@/lib/store";
@@ -66,14 +65,12 @@ export default function PopQuizTeacherModal({ classId, board = null, startNew = 
   const [delAsk, setDelAsk] = useState(null); // 지우기를 되묻는 지난 퀴즈 id
   const [delBusy, setDelBusy] = useState(false);
   const [delErr, setDelErr] = useState(null);
-  const [directory, setDirectory] = useState([]);
   const [rewards, setRewards] = useState([]);
   const [seatLayout, setSeatLayout] = useState(null);
   const [dailySeatLayout, setDailySeatLayout] = useState(null);
   const [teacherView, toggleSeatView] = useSeatView();
 
   useEffect(() => subscribePopQuizzes(classId, setQuizzes), [classId]);
-  useEffect(() => subscribeUserDirectory(setDirectory), []);
   useEffect(() => (classId ? subscribeClassRewards(classId, setRewards) : undefined), [classId]);
   useEffect(
     () => (classId ? subscribeStudySeatLayout(classId, "default", setSeatLayout) : undefined),
@@ -100,7 +97,7 @@ export default function PopQuizTeacherModal({ classId, board = null, startNew = 
     return subscribePopQuizAnswers(classId, quizId, setAnswers);
   }, [classId, quizId]);
 
-  const { roster } = useClassRoster(classId, { directory, rewards });
+  const { roster } = useClassRoster(classId, { rewards });
   const byUid = useMemo(() => new Map(roster.map((s) => [s.uid, s])), [roster]);
   const seats = useMemo(
     () => normalizeSeats(dailySeatLayout?.seats ?? seatLayout?.seats ?? [], roster),

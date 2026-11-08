@@ -63,9 +63,12 @@ export default function StudentProfileDialog({ student, myClasses, onClose, onWi
   const [suspending, setSuspending] = useState(false);
   const [suspendMsg, setSuspendMsg] = useState("");
 
+  // 지금 보는 반 — 그 학생 프로필의 classIds에 이 반이 빠져 규칙에 막히면 한 번 메웁니다.
+  const healClassId = student.classes?.[0]?.id || null;
+
   useEffect(() => {
     let alive = true;
-    fetchStudentProfile(student.uid, myClasses)
+    fetchStudentProfile(student.uid, myClasses, { healClassId })
       .then(async (p) => {
         if (!alive) return;
         setProfile(p);

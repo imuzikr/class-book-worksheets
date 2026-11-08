@@ -8,9 +8,13 @@
 // =============================================================
 import { describe, it, before, after, beforeEach } from "node:test";
 import { assertSucceeds, assertFails } from "@firebase/rules-unit-testing";
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, setDoc, updateDoc } from "firebase/firestore";
 import { makeEnv, asStudent, asTeacher, asAdmin, seed } from "./helpers.mjs";
 
+// 교사는 **내가 가르치는 학생**(그 학생의 classIds와 내 프로필의 ownedClassIds — 내가 만든
+// 반 목록 — 이 겹침)만 읽고 고칩니다 — 한때 교사 누구나 모든 계정을 읽고 학생이면 누구든
+// 고쳤습니다. 목록은 관리자만.
+//
 // 최고 관리자 — 이 파일은 role 클레임으로 둡니다(users 문서 role은 docRoles.test.mjs).
 const asInitialAdmin = (env) => asAdmin(env, "rootAdmin");
 
@@ -27,15 +31,22 @@ describe("사용자 프로필 규칙", () => {
   beforeEach(async () => {
     await env.clearFirestore();
     await seed(env, async (db) => {
+      // cA · cA2(보관됨)는 teacherA의 반, cB는 teacherB의 반. stu1은 teacherA의 학생.
+      await setDoc(doc(db, "classes", "cA"), { name: "1반", createdBy: "teacherA" });
+      await setDoc(doc(db, "classes", "cA2"), { name: "지난 반", createdBy: "teacherA", archived: true });
+      await setDoc(doc(db, "classes", "cB"), { name: "3반", createdBy: "teacherB" });
+      await setDoc(doc(db, "memberships", "stu1_cA"), { uid: "stu1", classId: "cA" });
       await setDoc(doc(db, "users", "stu1"), {
         uid: "stu1", role: "student", realName: "학생A", studentId: "30101",
-        displayName: "다급한 달팽이", emoji: "🐌", email: "stu1@example.com",
+        displayName: "다급한 달팽이", emoji: "🐌", email: "stu1@example.com", classIds: ["cA"],
       });
       await setDoc(doc(db, "users", "teacherA"), {
         uid: "teacherA", role: "teacher", realName: "김선생", displayName: "선생님", emoji: "🧑‍🏫",
+        ownedClassIds: ["cA", "cA2"],
       });
       await setDoc(doc(db, "users", "teacherB"), {
         uid: "teacherB", role: "teacher", realName: "박선생", displayName: "선생님", emoji: "🧑‍🏫",
+        ownedClassIds: ["cB"],
       });
       await setDoc(doc(db, "users", "rootAdmin"), { uid: "rootAdmin", role: "student" });
     });
@@ -144,9 +155,147 @@ describe("사용자 프로필 규칙", () => {
       await assertFails(updateDoc(doc(db, "users", "stu1"), { realName: "홍길동", role: "admin" }));
     });
 
-    it("학생 프로필은 읽을 수 있다 (실명 확인)", async () => {
+    it("내 반 학생 프로필은 읽을 수 있다 (실명 확인)", async () => {
       const db = asTeacher(env, "teacherA").firestore();
       await assertSucceeds(getDoc(doc(db, "users", "stu1")));
+    });
+  });
+
+  describe("교사 — 내가 가르치는 학생만", () => {
+    beforeEach(async () => {
+      await seed(env, async (db) => {
+        // stu5 — teacherB 반 학생 · stuNone — 반이 없는 학생 · stuOld — 보관된 내 반 학생
+        await setDoc(doc(db, "users", "stu5"), { uid: "stu5", role: "student", realName: "학생E", classIds: ["cB"] });
+        await setDoc(doc(db, "memberships", "stu5_cB"), { uid: "stu5", classId: "cB" });
+        await setDoc(doc(db, "users", "stuNone"), { uid: "stuNone", role: "student", realName: "학생F" });
+        await setDoc(doc(db, "users", "stuOld"), { uid: "stuOld", role: "student", realName: "학생G", classIds: ["cA2"] });
+        // stuMany — 반 여섯째 자리에 내 반(규칙이 여섯 자리까지 펼쳐 봄)
+        await setDoc(doc(db, "users", "stuMany"), {
+          uid: "stuMany", role: "student", realName: "학생H", classIds: ["x1", "x2", "x3", "x4", "cB", "cA"],
+        });
+        // stuGap — 내 반 소속인데 프로필의 classIds에 반이 빠진 학생(동기화 실패 · 옛 계정)
+        await setDoc(doc(db, "users", "stuGap"), { uid: "stuGap", role: "student", realName: "학생I", classIds: [] });
+        await setDoc(doc(db, "memberships", "stuGap_cA"), { uid: "stuGap", classId: "cA" });
+        await setDoc(doc(db, "memberships", "stuGap_cB"), { uid: "stuGap", classId: "cB" });
+      });
+    });
+
+    it("다른 선생님 반 학생 · 반이 없는 학생의 프로필은 읽을 수 없다", async () => {
+      const a = asTeacher(env, "teacherA").firestore();
+      await assertFails(getDoc(doc(a, "users", "stu5")));
+      await assertFails(getDoc(doc(a, "users", "stuNone")));
+      await assertFails(getDoc(doc(asTeacher(env, "teacherB").firestore(), "users", "stu1")));
+    });
+
+    it("다른 교사의 프로필은 읽을 수 없다", async () => {
+      await assertFails(getDoc(doc(asTeacher(env, "teacherA").firestore(), "users", "teacherB")));
+      await assertSucceeds(getDoc(doc(asTeacher(env, "teacherA").firestore(), "users", "teacherA")));
+    });
+
+    it("보관된 내 반 학생 · 여섯째 자리의 내 반 학생도 읽는다", async () => {
+      const a = asTeacher(env, "teacherA").firestore();
+      await assertSucceeds(getDoc(doc(a, "users", "stuOld")));
+      await assertSucceeds(getDoc(doc(a, "users", "stuMany")));
+      await assertSucceeds(getDoc(doc(asTeacher(env, "teacherB").firestore(), "users", "stuMany")));
+    });
+
+    it("교사는 사용자 목록을 통째로 받지 못하고, 관리자는 받는다", async () => {
+      await assertFails(getDocs(collection(asTeacher(env, "teacherA").firestore(), "users")));
+      await assertFails(getDocs(collection(asStudent(env, "stu1").firestore(), "users")));
+      await assertSucceeds(getDocs(collection(asInitialAdmin(env).firestore(), "users")));
+    });
+
+    it("다른 선생님 반 학생의 프로필 · 탈퇴 표시 · classIds는 고칠 수 없다", async () => {
+      const b = asTeacher(env, "teacherB").firestore();
+      await assertFails(updateDoc(doc(b, "users", "stu1"), { realName: "변조" }));
+      await assertFails(setDoc(doc(b, "users", "stu1"), { realName: "변조", displayName: "변조" }, { merge: true }));
+      await assertFails(updateDoc(doc(b, "users", "stu1"), { withdrawingBy: "teacherB" }));
+      await assertFails(updateDoc(doc(b, "users", "stu1"), { classIds: [] }));
+    });
+
+    it("내 반 학생에게는 탈퇴 표시 · classIds 줄이기를 한다", async () => {
+      const a = asTeacher(env, "teacherA").firestore();
+      await assertSucceeds(updateDoc(doc(a, "users", "stu1"), { withdrawingBy: "teacherA" }));
+      await assertSucceeds(updateDoc(doc(a, "users", "stu1"), { classIds: [] }));
+    });
+
+    it("소속은 있는데 classIds에 반이 빠진 학생 — 교사가 그 반 하나를 이으면 읽힌다", async () => {
+      const a = asTeacher(env, "teacherA").firestore();
+      await assertFails(getDoc(doc(a, "users", "stuGap")));
+      await assertSucceeds(updateDoc(doc(a, "users", "stuGap"), { classIds: ["cA"] }));
+      await assertSucceeds(getDoc(doc(a, "users", "stuGap")));
+    });
+
+    it("다른 선생님 반 다섯에 든 학생도 읽고 고친다(규칙 한도 안)", async () => {
+      await seed(env, async (db) => {
+        for (const id of ["cB2", "cB3", "cB4", "cB5"]) await setDoc(doc(db, "classes", id), { name: id, createdBy: "teacherB" });
+        await setDoc(doc(db, "users", "stuWide"), {
+          uid: "stuWide", role: "student", realName: "학생J", classIds: ["cB", "cB2", "cB3", "cB4", "cB5", "cA"],
+        });
+        await setDoc(doc(db, "users", "stuWide2"), {
+          uid: "stuWide2", role: "student", realName: "학생K", classIds: ["cB", "cB2", "cB3", "cB4", "cB5"],
+        });
+        await setDoc(doc(db, "memberships", "stuWide2_cA"), { uid: "stuWide2", classId: "cA" });
+      });
+      const a = asTeacher(env, "teacherA").firestore();
+      await assertSucceeds(getDoc(doc(a, "users", "stuWide")));
+      await assertSucceeds(updateDoc(doc(a, "users", "stuWide"), { realName: "학생J2" }));
+      await assertSucceeds(updateDoc(doc(a, "users", "stuWide"), { withdrawingBy: "teacherA" }));
+      await assertSucceeds(updateDoc(doc(a, "users", "stuWide"), { classIds: ["cB", "cB2", "cB3", "cB4", "cB5"] }));
+      // 다섯 반이 다 남의 반인 학생 — 내 반 소속이면 메워서 읽음
+      await assertFails(getDoc(doc(a, "users", "stuWide2")));
+      await assertSucceeds(updateDoc(doc(a, "users", "stuWide2"), { classIds: ["cB", "cB2", "cB3", "cB4", "cB5", "cA"] }));
+      await assertSucceeds(getDoc(doc(a, "users", "stuWide2")));
+      // 반이 없는 교사는 못 읽음
+      await assertFails(getDoc(doc(asTeacher(env, "teacherC").firestore(), "users", "stuWide")));
+    });
+
+    it("내 반 목록(ownedClassIds)에 없는 반은 가르치는 반으로 치지 않는다", async () => {
+      // teacherA가 만든 반이어도 내 목록에 아직 안 적혔으면(옛 반) 그 반 학생은 막힘 — 앱이 메움
+      await seed(env, async (db) => {
+        await setDoc(doc(db, "classes", "cA3"), { name: "새 반", createdBy: "teacherA" });
+        await setDoc(doc(db, "users", "stuNew"), { uid: "stuNew", role: "student", realName: "학생L", classIds: ["cA3"] });
+      });
+      const a = asTeacher(env, "teacherA").firestore();
+      await assertFails(getDoc(doc(a, "users", "stuNew")));
+      await assertSucceeds(updateDoc(doc(a, "users", "teacherA"), { ownedClassIds: ["cA", "cA2", "cA3"] }));
+      await assertSucceeds(getDoc(doc(a, "users", "stuNew")));
+    });
+
+    it("내 반 목록은 내가 만든 반 하나씩만 늘리고, 줄이기는 늘 된다", async () => {
+      const a = asTeacher(env, "teacherA").firestore();
+      // 남의 반 · 없는 반 · 한 번에 둘 · 다른 칸과 함께는 거부
+      await assertFails(updateDoc(doc(a, "users", "teacherA"), { ownedClassIds: ["cA", "cA2", "cB"] }));
+      await assertFails(updateDoc(doc(a, "users", "teacherA"), { ownedClassIds: ["cA", "cA2", "nope"] }));
+      await seed(env, (db) => setDoc(doc(db, "classes", "cA4"), { name: "넷째", createdBy: "teacherA" }));
+      await seed(env, (db) => setDoc(doc(db, "classes", "cA5"), { name: "다섯째", createdBy: "teacherA" }));
+      await assertFails(updateDoc(doc(a, "users", "teacherA"), { ownedClassIds: ["cA", "cA2", "cA4", "cA5"] }));
+      await assertFails(updateDoc(doc(a, "users", "teacherA"), { ownedClassIds: ["cA", "cA2", "cA4"], realName: "변조" }));
+      await assertSucceeds(updateDoc(doc(a, "users", "teacherA"), { ownedClassIds: ["cA", "cA2", "cA4"] }));
+      // 그대로(같은 반을 다시 적기) · 줄이기
+      await assertSucceeds(updateDoc(doc(a, "users", "teacherA"), { ownedClassIds: ["cA", "cA2", "cA4"] }));
+      await assertSucceeds(updateDoc(doc(a, "users", "teacherA"), { ownedClassIds: ["cA"] }));
+      // 남의 목록은 못 고침 · 학생은 늘리지 못함
+      await assertFails(updateDoc(doc(a, "users", "teacherB"), { ownedClassIds: ["cB", "cA"] }));
+      await seed(env, (db) => setDoc(doc(db, "classes", "cS"), { name: "학생이 만든?", createdBy: "stu1" }));
+      await assertFails(updateDoc(doc(asStudent(env, "stu1").firestore(), "users", "stu1"), { ownedClassIds: ["cS"] }));
+    });
+
+    it("이어붙이기는 내 반 · 소속이 있는 반 · 하나만 · classIds만", async () => {
+      const a = asTeacher(env, "teacherA").firestore();
+      // 남의 반(소속은 있어도)
+      await assertFails(updateDoc(doc(a, "users", "stuGap"), { classIds: ["cB"] }));
+      // 소속이 없는 학생
+      await assertFails(updateDoc(doc(a, "users", "stuNone"), { classIds: ["cA"] }));
+      // 한 번에 둘
+      await assertFails(updateDoc(doc(a, "users", "stuGap"), { classIds: ["cA", "cA2"] }));
+      // 다른 칸과 함께
+      await assertFails(updateDoc(doc(a, "users", "stuGap"), { classIds: ["cA"], realName: "변조" }));
+      // 교사 계정에는
+      await seed(env, (db) => setDoc(doc(db, "memberships", "teacherB_cA"), { uid: "teacherB", classId: "cA" }));
+      await assertFails(updateDoc(doc(a, "users", "teacherB"), { classIds: ["cA"] }));
+      // 학생은 남의 classIds를 잇지 못함(내 반 · 소속이 있어도)
+      await assertFails(updateDoc(doc(asStudent(env, "stu1").firestore(), "users", "stuGap"), { classIds: ["cA"] }));
     });
   });
 

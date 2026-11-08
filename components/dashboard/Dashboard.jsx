@@ -77,7 +77,11 @@ function DashboardSession({ user }) {
   const [profileStudent, setProfileStudent] = useState(null);
   const [notice, setNotice] = useState("");
 
-  useEffect(() => subscribeClasses((list) => { setClasses(list); setClassesLoaded(true); }), []);
+  // 보이는 반만 — 관리자 전체 · 교사 내가 만든 반 · 학생 내가 든 반(lib/data/classes.js).
+  useEffect(() => {
+    setClassesLoaded(false);
+    return subscribeClasses({ uid: user.uid, role: user.role }, (list) => { setClasses(list); setClassesLoaded(true); });
+  }, [user.uid, user.role]);
   useEffect(() => {
     if (teacher) { setMembershipsLoaded(true); return undefined; }
     return subscribeMyMemberships(user.uid, (list) => { setMemberships(list); setMembershipsLoaded(true); });

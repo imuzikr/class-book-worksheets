@@ -46,7 +46,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { HUB_DRAG_MIN, cleanHubPos, hubPlacement, hubPosFromPoint } from "@/lib/hubPlace";
 import {
-  subscribeClasses,
+  subscribeOwnClasses,
   subscribeClassChat,
   subscribeRoomsChat,
   subscribeChatReads,
@@ -216,12 +216,12 @@ export default function FloatingHub({ classId: pageClassId, user, isTeacher, fru
 
   // ── 교사 — 내가 맡은 반(보관 안 된 것, 이름순) ──
   // 규칙이 메신저를 **반을 만든 교사**에게만 열어 두어(ownsClass) 최고 관리자도
-  // 제 반만 셉니다. 반 목록은 문서 수가 적어 늘 구독해도 가볍습니다.
+  // 제 반만 셉니다 — 그래서 '내가 만든 반'만 구독합니다(where createdBy == 나, 반 수만큼만 읽음).
   // 데모 모드는 접속마다 uid가 새로 나와 '내가 만든 반'이 없으므로 보이는 반 전부.
   const [teacherClasses, setTeacherClasses] = useState([]);
   useEffect(() => {
     if (!isTeacher || !myUid) { setTeacherClasses([]); return undefined; }
-    return subscribeClasses((list) =>
+    return subscribeOwnClasses(myUid, (list) =>
       setTeacherClasses(
         list
           .filter((c) => !c.archived && (!isFirebaseConfigured || c.createdBy === myUid))

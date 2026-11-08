@@ -23,6 +23,9 @@ describe("학생 탈퇴 규칙", () => {
       await setDoc(doc(db, "classes", "cA"), { name: "A", createdBy: "teacherA", archived: false });
       await setDoc(doc(db, "classes", "cA2"), { name: "A2", createdBy: "teacherA", archived: true });
       await setDoc(doc(db, "classes", "cB"), { name: "B", createdBy: "teacherB", archived: false });
+      // 교사는 내가 만든 반 목록(ownedClassIds)으로 '내 반 학생'을 알아봅니다(users 규칙).
+      await setDoc(doc(db, "users", "teacherA"), { role: "teacher", ownedClassIds: ["cA", "cA2"] });
+      await setDoc(doc(db, "users", "teacherB"), { role: "teacher", ownedClassIds: ["cB"] });
       // 내 반에만 (지운 반 cGone도 적혀 있음)
       await setDoc(doc(db, "users", "s1"), { role: "student", classIds: ["cA", "cA2", "cGone"] });
       await setDoc(doc(db, "users", "s1", "reading", "main"), { books: [] });
@@ -69,6 +72,8 @@ describe("학생 탈퇴 규칙", () => {
     await assertSucceeds(updateDoc(doc(t, "users", "s1"), { withdrawingBy: "teacherA" }));
     await assertFails(updateDoc(doc(t, "users", "s1"), { withdrawingBy: "teacherB" }));
     await assertFails(updateDoc(doc(asStudent(env, "s4").firestore(), "users", "s4"), { withdrawingBy: "s4" }));
+    // 그 학생을 가르치지 않는 교사는 표시를 못 적음
+    await assertFails(updateDoc(doc(asTeacher(env, "teacherB").firestore(), "users", "s1"), { withdrawingBy: "teacherB" }));
   });
 
   it("탈퇴 표시한 학생의 기록만 — 내 운영 중인 반에서 지움", async () => {

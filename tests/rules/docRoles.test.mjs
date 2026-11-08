@@ -34,8 +34,10 @@ describe("users 문서의 role로 판정하기", () => {
   beforeEach(async () => {
     await env.clearFirestore();
     await seed(env, async (db) => {
-      await setDoc(doc(db, "users", "tDoc"), { role: "teacher", displayName: "선생님" });
-      await setDoc(doc(db, "users", "sDoc"), { role: "student", displayName: "다람쥐", realName: "학생" });
+      // 교사는 내가 만든 반 목록(ownedClassIds)과 학생의 classIds가 겹칠 때만 그 학생을 읽습니다.
+      await setDoc(doc(db, "users", "tDoc"), { role: "teacher", displayName: "선생님", ownedClassIds: ["cT"] });
+      await setDoc(doc(db, "users", "sDoc"), { role: "student", displayName: "다람쥐", realName: "학생", classIds: ["cT"] });
+      await setDoc(doc(db, "users", "sOther"), { role: "student", realName: "다른 반 학생", classIds: ["cX"] });
       await setDoc(doc(db, "users", "aDoc"), { role: "admin", displayName: "선생님" });
       await setDoc(doc(db, "config", "teacherSignup"), { code: "BOOK-2026" });
       await setDoc(doc(db, "classes", "cT"), { name: "1반", createdBy: "tDoc", archived: false });
@@ -53,9 +55,15 @@ describe("users 문서의 role로 판정하기", () => {
       await assertFails(setDoc(doc(db, "classes", "c3"), { name: "3반", createdBy: "sDoc" }));
     });
 
-    it("문서 role이 teacher면 학생 프로필을 읽는다", async () => {
+    it("문서 role이 teacher면 내 반 학생 프로필을 읽는다(남의 반 학생은 못 읽음)", async () => {
       const db = as(env, "tDoc").firestore();
       await assertSucceeds(getDoc(doc(db, "users", "sDoc")));
+      await assertFails(getDoc(doc(db, "users", "sOther")));
+    });
+
+    it("문서 role이 student면 반 목록(ownedClassIds)이 있어도 남의 프로필을 못 읽는다", async () => {
+      await seed(env, (db) => setDoc(doc(db, "users", "sFake"), { role: "student", ownedClassIds: ["cT"] }));
+      await assertFails(getDoc(doc(as(env, "sFake").firestore(), "users", "sDoc")));
     });
 
     it("문서 role이 teacher면 자기 반에 참여 코드를 만들고 공지를 남긴다", async () => {

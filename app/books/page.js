@@ -35,7 +35,6 @@ import {
   updateBookActivity,
   subscribeClasses,
   subscribeMyMemberships,
-  subscribeUserDirectory,
   subscribeStudyGroupAssignment,
   subscribeStudySeatLayout,
   saveStudySeatLayout,
@@ -203,7 +202,6 @@ function BooksPageInner() {
   const [membershipsLoaded, setMembershipsLoaded] = useState(false);
   const [localSelectedId, setLocalSelectedId] = useState(null);
   const [teacherClassId, setTeacherClassId] = useState(null);
-  const [directory, setDirectory] = useState([]);
   const [baseGroupAssignment, setBaseGroupAssignment] = useState(null);
   // '멋진 순간' 패널의 자리표 — 공부방과 같은 문서(seatLayouts/default)를 봅니다.
   // 두 화면 중 어디서 자리를 옮기든 서로 어긋나지 않습니다.
@@ -272,7 +270,12 @@ function BooksPageInner() {
     return () => window.removeEventListener("class-change", sync);
   }, []);
 
-  useEffect(() => subscribeClasses(setClasses), []);
+  // 보이는 반만 — 관리자 전체 · 교사 내가 만든 반 · 학생 내가 든 반(lib/data/classes.js).
+  const myRole = user?.role ?? null;
+  useEffect(() => {
+    if (!myUid) { setClasses([]); return undefined; }
+    return subscribeClasses({ uid: myUid, role: myRole }, setClasses);
+  }, [myUid, myRole]);
 
   // 학생: 서버 소속 구독
   //
@@ -292,12 +295,6 @@ function BooksPageInner() {
       setMembershipsLoaded(true);
     });
   }, [myUid, admin]);
-
-  // 교사: 실명 디렉터리 (모둠 구성에 필요)
-  useEffect(() => {
-    if (!admin) { setDirectory([]); return; }
-    return subscribeUserDirectory(setDirectory);
-  }, [admin]);
 
   // 교사: 참여 코드 — '반 관리하기' 창이 씁니다(일반 교사는 본인 코드만).
   useEffect(() => {
@@ -392,7 +389,8 @@ function BooksPageInner() {
   // 교사: 모둠 구성·자리표용 반 학생 명단 — 소속 × 디렉터리(실명) × 과일 누적,
   // 학번순(lib/roster.js). 과일 누적(`count`)이 없으면 '과일 주기' 창이 '−1'을
   // 잠급니다(위 rewards 주석).
-  const { roster } = useClassRoster(classId, { enabled: admin, directory, rewards });
+  // 학생 프로필은 이 반 학생 것만 받습니다(useClassRoster — users를 통째로 받지 않음).
+  const { roster, profiles: rosterProfiles } = useClassRoster(classId, { enabled: admin, rewards });
 
   // 오늘 출석한 학생 — 공부방과 같은 기준입니다(app/study/page.js).
   // 출석을 아직 시작하지도, 기록이 하나도 남지도 않았으면 null을 주어 자리를
@@ -485,7 +483,7 @@ function BooksPageInner() {
 
   // 과일 주기 — 이름표를 함께 넘겨 자리표·이력에 누구인지 남게 합니다.
   function awardReward(uid, count, delta = null) {
-    const d = directory.find((x) => x.uid === uid);
+    const d = rosterProfiles.find((x) => x.uid === uid);
     const identity = d
       ? { name: d.realName || d.studentId || d.displayName || "", emoji: d.emoji || "🙂" }
       : null;

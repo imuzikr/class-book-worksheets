@@ -182,6 +182,48 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
 - 바닥글 · 개인정보처리방침의 **문의 이메일**(`SiteFooter.jsx` · `PrivacyContent.jsx`)은 접근
   권한과 무관한 연락처라 남겨 두었습니다 — 운영자가 바뀌면 그 두 곳만 고치면 됩니다.
 
+### 반 목록 · 학생 프로필은 '내 반'만 읽습니다
+
+한때 화면을 열 때마다 **모든 반**(`subscribeClasses`)과 **모든 계정**(교사 —
+`subscribeUserDirectory`)을 통째로 받았습니다. 이 앱을 쓰는 학교 · 선생님이 늘수록 읽기가
+늘고, 교사 누구나 다른 선생님 반 · 다른 학교 학생의 실명 · 학번 · 이메일까지 받았습니다.
+
+- **반 목록**은 `subscribeClasses(viewer, callback)`(사용자를 받음) — 관리자는 모든 반, 교사는
+  내가 만든 반만(`subscribeOwnClasses` — `where createdBy == 나`), 학생은 내가 든 반만(소속
+  `memberships`를 따라 반 문서를 한 건씩 — 첫 답이 다 모인 뒤 한 번에 알림).
+  - 규칙: `classes`의 `get`(문서 id로 한 건)은 로그인한 사람 — 참여 코드로 들어갈 때 ·
+    탈퇴 전 다른 선생님 반을 확인할 때 씁니다. `list`는 관리자와 `createdBy == 나` 질의만.
+    시험 `tests/rules/classesRead.test.mjs`.
+- **학생 프로필**(`users/{uid}`) 읽기는 본인 · 관리자 · **그 학생을 가르치는 교사** · 같은 반
+  급우입니다. 통째로 받는 목록은 관리자만(역할 관리 창 — `subscribeUserDirectory`).
+  - 교사 화면의 명단은 `useClassRoster` → `subscribeClassDirectory`(소속을 따라 그 반 학생
+    문서만 한 건씩). 메신저 명단 · 대시보드 프로필 창도 그 반 학생만 한 건씩 읽습니다.
+  - **'가르치는 교사'는 학생의 `classIds`와 교사 프로필의 `ownedClassIds`(내가 만든 반
+    목록)가 겹치는가**입니다(규칙 `teachesStudent` — `hasAny`). 교사가 학생 프로필을 고치는
+    일(이름 · 학번 · 이메일 · 탈퇴 표시 · classIds 줄이기)도 같은 판정입니다.
+  - **반 문서를 열어 보는 판정으로 되돌리지 마세요.** 처음에는 학생의 반마다 반 문서를
+    `exists` · `get`으로 열어 '내가 만든 반인가'를 봤는데, 그 한 번이 규칙 식 50~100개를 쓰고
+    `exists`와 `get`이 따로 세어져, 학생이 반 대여섯에 들어 있으면 요청 하나의 한도(식
+    1000개 · 문서 읽기 10번)를 넘어 **정상적인 교사 요청이 거부**됐습니다(실측). 같은 실험으로
+    확인한 것 — 규칙의 `let`은 쓰이지 않아도 **미리 계산**되고, `&&` · `||`는 앞에서 정해지면
+    뒤를 계산하지 않습니다. 무거운 판정은 `let`에 담지 말고 값싼 칸 검사 뒤에 두세요.
+  - `ownedClassIds`는 반을 만들 때 적고(`addClass` → `ensureOwnedClassId`), 이 칸이 생기기
+    전에 만든 반은 **반 목록을 받을 때 · 명단을 열 때 저절로 메웁니다**(규칙이 한 번에 하나만
+    받아 반마다 한 번 · 이미 적힌 반은 안 씀 — 로그인 때 받은 `user.ownedClassIds`와 이 세션에
+    적은 것을 기억). 반을 완전히 지우면 뺍니다(`purgeClass`). 규칙(`isOwnedClassIdsChange`)은
+    본인만 · 그대로 · 줄이기 · **내가 만든 반 하나** 늘리기(반 문서의 `createdBy`를 봄)만 받습니다.
+  - 소속은 있는데 학생 프로필의 `classIds`에 반이 빠진 학생(동기화 실패 · 옛 계정)은 교사가
+    한 번 메웁니다(`healClassIdsForTeacher` — 규칙 `isTeacherClassIdsAppend`: 내 반 목록에 있는
+    반 · 그 학생의 소속 문서가 있음 · 하나만). 학생이 스스로 할 수 있는 일(제 소속 반 잇기)
+    그대로라 권한이 넓어지지 않습니다. 교사가 학생을 반에 넣을 때도 함께 잇습니다.
+  - 시험 `tests/rules/users.test.mjs`('교사 — 내가 가르치는 학생만') · `docRoles` ·
+    `memberships` · `withdraw`. **규칙 시험의 교사 프로필에는 `ownedClassIds`를 적어 두세요.**
+- **이 변경의 배포 차례는 '앱 → 규칙'입니다**(평소와 반대). 새 앱은 옛 규칙에서도 그대로
+  돕니다(교사의 내 반 질의 · 학생의 반 문서 읽기 · 학생 프로필 읽기가 옛 규칙에서도 열려 있고,
+  반 목록 메우기 쓰기만 조용히 실패). 거꾸로 규칙을 먼저 올리면 옛 앱이 반 목록과 사용자
+  목록을 통째로 받으려다 막혀 **반이 하나도 안 보입니다.** 규칙을 올린 뒤 선생님이 화면을
+  열면 반 목록이 저절로 메워집니다.
+
 ### 구글 로그인 창을 우리 주소로 띄우기 (`authDomain`)
 
 학교 와이파이·자녀 보호 앱이 `*.firebaseapp.com`만 막아 구글 로그인 창이 안 뜨는
@@ -235,7 +277,7 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
     새 값은 그 기록이 가리키는 학생의 **지금 프로필**과 같아야 합니다. 보관된 반 ·
     다른 선생님 반은 그대로입니다. 시험 `tests/rules/nameSync.test.mjs`.
   - 학생 이모지는 늘 🙂입니다 — 익명 시절의 동물 이모지가 프로필에 남아 있어도 명단이
-    쓰지 않고(`subscribeUserDirectory` · `fetchClassRosterProfiles` · 대시보드), 이름을
+    쓰지 않고(`subscribeClassDirectory` · `fetchClassRosterProfiles` · 대시보드), 이름을
     맞출 때 모둠 명단의 이모지도 🙂로 돌립니다.
 - **학생 탈퇴는 관리자 대시보드의 학생 프로필 창에서**(`StudentProfileDialog` →
   `lib/data/withdraw.js`의 `withdrawStudent`, 학생 이름을 그대로 적어야 실행). 서버 없이
@@ -1633,7 +1675,9 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
   서랍' 절.
 - `users` — 사용자 프로필 (uid, email, displayName(익명), realName, studentId, role)
   - **식별 정보(실명·이메일·학번)는 여기에만** 저장. 게시물·카드엔 익명 정보만 넣음.
-  - 읽기 규칙: 본인+교사. 교사 화면은 `subscribeUserDirectory`로 uid→실명/학번 조회.
+  - 읽기 규칙: 본인 · 관리자 · 그 학생을 가르치는 교사(`classIds` ∩ 교사의 `ownedClassIds`) ·
+    급우. 교사 화면은 그 반 학생만 한 건씩 읽습니다(`subscribeClassDirectory` — 위 '반 목록 ·
+    학생 프로필은 내 반만 읽습니다' 절). 통째로 받는 `subscribeUserDirectory`는 관리자 전용.
 - `groupMemos` — **모둠 메모** (classId, pairKey, fromUid/fromName,
   toUid/toName, html, replyToId/replyToText/replyToName, read, createdAt)
   - 학생이 같은 기본 모둠 친구에게 남기는 쪽지. 자세한 것은 아래
@@ -2072,9 +2116,10 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
     학생에게 남의 반 명단을 읽을 권한을 얹어 줄 수 있습니다. 줄이는 것은 늘
     권한을 좁히는 쪽이라, 잘못 눌러도 학생이 그 반에 다시 들어가면 스스로
     채워집니다(`ensureClassIdSynced`).
-- **넣을 때는 `classIds`를 안 건드립니다** — 교사에게 열린 것이 '줄이는 쪽'
-  뿐이라서요. 학생이 다음에 공부방을 열 때 스스로 채웁니다. 그 전까지 늦는
-  것은 급우 이름표 하나뿐입니다.
+- **넣을 때 `classIds`에도 그 반 하나를 잇습니다**(책봄 — 위 '반 목록 · 학생 프로필은
+  내 반만 읽습니다' 절의 `isTeacherClassIdsAppend`: 내 반 목록에 있는 반 · 소속 문서가 있는
+  반 하나만). 한때는 교사에게 '줄이는 쪽'만 열려 있어, 학생이 다음에 들어올 때 스스로
+  채웠습니다. 줄이기 · 잇기 모두 **내가 가르치는 학생**(`teachesStudent`)에게만 됩니다.
 - 시험은 `tests/rules/memberships.test.mjs`의 '반 편성 고치기(교사)'.
 
 ### 우리 모둠 · 모둠 메모 (`groupMemos`)
