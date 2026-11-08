@@ -6,12 +6,12 @@
 // 소속인지 확인합니다(lib/server/readingService.js의 getReading).
 // 명단은 페이지가 이미 받아 둔 useClassRoster(학번순)를 그대로 씁니다(읽기 0).
 // =============================================================
-import { useState } from "react";
 import ReadingHub from "./ReadingHub";
 
-export default function TeacherReadingView({ classId, user, roster = [], ...hubProps }) {
-  const [picked, setPicked] = useState(null);
-  const student = roster.find((s) => s.uid === picked) || roster[0] || null;
+// 고른 학생은 주소(?student=)가 듭니다 — 리더보드의 '서재로 이동'이 그 학생을 짚어 열고,
+// 새로고침해도 그 학생입니다. 명단을 누르면 주소만 바꿉니다(replace).
+export default function TeacherReadingView({ classId, user, roster = [], studentUid = null, onPickStudent, ...hubProps }) {
+  const student = roster.find((s) => s.uid === studentUid) || roster[0] || null;
   return (
     <div className="reading-teacher">
       <aside className="reading-teacher-rail" aria-label="학생 명단">
@@ -20,7 +20,7 @@ export default function TeacherReadingView({ classId, user, roster = [], ...hubP
           <ol>
             {roster.map((s) => (
               <li key={s.uid}>
-                <button type="button" className={student?.uid === s.uid ? "on" : ""} aria-current={student?.uid === s.uid ? "true" : undefined} onClick={() => setPicked(s.uid)}>
+                <button type="button" className={student?.uid === s.uid ? "on" : ""} aria-current={student?.uid === s.uid ? "true" : undefined} onClick={() => onPickStudent?.(s.uid)}>
                   {s.studentId && <span className="reading-teacher-sid">{s.studentId}</span>}
                   <span className="reading-teacher-name">{s.name}</span>
                 </button>

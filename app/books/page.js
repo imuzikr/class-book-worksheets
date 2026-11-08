@@ -1031,9 +1031,11 @@ function BooksPageInner() {
             <AdminSettingsPanel classes={myClasses} onToast={setToast} />
           ) : leaderboardOpen ? (
             <ReadingLeaderboard key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin} characterOn={characterOn}
+              onOpenLibrary={admin ? (uid) => patchBooksQuery({ area: "reading", student: uid }) : undefined}
               onDisabled={() => patchBooksQuery({ area: null }, { replace: true })} />
           ) : readingOpen && admin ? (
-            <TeacherReadingView classId={classId} user={user} roster={roster} rankingOn={rankingOn} bookSearchOn={bookSearchEnabled(currentClass)}
+            <TeacherReadingView classId={classId} user={user} roster={roster}
+              studentUid={searchParams.get("student")} onPickStudent={(uid) => patchBooksQuery({ student: uid }, { replace: true })} rankingOn={rankingOn} bookSearchOn={bookSearchEnabled(currentClass)}
               activities={liveActivities} onOpenActivity={goToActivity}
               onDisabled={() => patchBooksQuery({ area: null }, { replace: true })} />
           ) : readingOpen ? (

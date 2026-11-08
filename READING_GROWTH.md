@@ -110,6 +110,8 @@ API 키는 나중에 등록해도 됩니다. 등록 전에는 검색 준비 중 
 - 읽기는 `GET /api/reading?classId=&uid=` — 서버(`getReading`의 `studentUid`)가 **담당 교사 · 관리자**이고 그 학생이 **이 반 소속**인지 확인합니다(아니면 `reading/forbidden` · `reading/not-member`). 학생이 남의 uid를 넣으면 403. 쓰기 API는 그대로 본인 것만입니다. Firestore 규칙은 안 건드립니다(정본은 클라이언트 직접 읽기가 막혀 있음).
 - 대시보드의 '교사 응답에 개인 감상을 넣지 않는다'는 그대로입니다 — 원문은 이 화면에서만 봅니다.
 - 900px 아래에서는 명단이 위로 올라가 옆으로 구릅니다.
+- 고른 학생은 **주소(`?area=reading&student=<uid>`)**가 듭니다 — 새로고침해도 그 학생이고, 명단을 누르면 주소만 바꿉니다(replace). 지금 반에 없는 uid면 첫 학생입니다.
+- **리더보드의 학생 정보 창(교사)** 머리줄 × 왼쪽에 **'서재로 이동'** — 누르면 이 화면으로 와서 그 학생이 선택된 채 열립니다(선생님 요청).
 - 시험 `tests/server/reading.test.mjs`('teacher reads a member student'…).
 
 ## 데이터와 권한
