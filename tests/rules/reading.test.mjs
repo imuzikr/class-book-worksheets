@@ -94,6 +94,18 @@ describe("책나눔 활성화와 서버 전용 보상 자료", () => {
     await assertFails(updateDoc(doc(asTeacher(env, "teacherA").firestore(), "classes", "archived"), { characterEnabled: false }));
   });
 
+  it("과일 바구니 스위치(관리자 설정) — 담당 교사 · 관리자만, 참·거짓만, 운영 중인 반에서만", async () => {
+    const ref = doc(asTeacher(env, "teacherA").firestore(), "classes", "active");
+    await assertSucceeds(updateDoc(ref, { fruitBasketEnabled: false }));
+    await assertSucceeds(updateDoc(ref, { fruitBasketEnabled: true }));
+    await assertSucceeds(updateDoc(doc(asAdmin(env, "admin").firestore(), "classes", "active"), { fruitBasketEnabled: false }));
+    for (const value of ["false", 0, null, deleteField()]) await assertFails(updateDoc(ref, { fruitBasketEnabled: value }));
+    for (const ctx of [asStudent(env, "studentA"), asTeacher(env, "teacherB")]) {
+      await assertFails(updateDoc(doc(ctx.firestore(), "classes", "active"), { fruitBasketEnabled: true }));
+    }
+    await assertFails(updateDoc(doc(asTeacher(env, "teacherA").firestore(), "classes", "archived"), { fruitBasketEnabled: false }));
+  });
+
   it("도서 검색 스위치(관리자 설정) — 담당 교사 · 관리자만, 참·거짓만, 운영 중인 반에서만", async () => {
     const ref = doc(asTeacher(env, "teacherA").firestore(), "classes", "active");
     await assertSucceeds(updateDoc(ref, { bookSearchEnabled: true }));

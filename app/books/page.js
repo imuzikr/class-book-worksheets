@@ -20,7 +20,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import ReadingHub from "@/components/reading/ReadingHub";
 import ReadingLeaderboard from "@/components/reading/ReadingLeaderboard";
 import AdminSettingsPanel from "@/components/AdminSettingsPanel";
-import { readingEnabled, rankingEnabled, bookSearchEnabled } from "@/lib/reading";
+import { readingEnabled, rankingEnabled, bookSearchEnabled, fruitBasketOn } from "@/lib/reading";
 import { characterChoiceEnabled } from "@/lib/readingCharacter";
 import {
   subscribeBookActivities,
@@ -1230,7 +1230,7 @@ function BooksPageInner() {
       )}
 
       {/* 과일 바구니 — 학생은 과일을 담아 응모하고, 교사는 합계와 응모 현황을 봅니다 */}
-      {fruitBasketOpen && classId && user && (
+      {fruitBasketOpen && classId && user && fruitBasketOn(currentClass) && (
         <FruitBasketModal
           onClose={() => setFruitBasketOpen(false)}
           classId={classId}

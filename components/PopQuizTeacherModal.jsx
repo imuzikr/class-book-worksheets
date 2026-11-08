@@ -42,7 +42,6 @@ import {
 } from "@/lib/store";
 import {
   QUIZ_DESC_MAX,
-  QUIZ_KINDS,
   QUIZ_NOTE_MAX,
   QUIZ_TITLE_MAX,
   quizCounts,
@@ -348,9 +347,9 @@ function AnswerPopover({ anchor, onClose, children }) {
   );
 }
 
-// 새 퀴즈 쓰기 — 글/코드 · 제목(꼭) · 설명(선택, ``` 로 코드 블록).
+// 새 퀴즈 쓰기 — 제목(꼭) · 설명(선택). 늘 글 퀴즈입니다.
 function ComposeQuiz({ classId, board, openQuiz, canCancel, onCancel, onSent }) {
-  const [kind, setKind] = useState("text");
+  const kind = "text";
   const [title, setTitle] = useState("");
   const [desc, setDesc] = useState("");
   const [busy, setBusy] = useState(false);
@@ -379,20 +378,8 @@ function ComposeQuiz({ classId, board, openQuiz, canCancel, onCancel, onSent }) 
   return (
     <section className="pq-compose">
       <h4 className="pq-compose-title">새 돌발 퀴즈</h4>
-      <div className="pq-kind-seg" role="radiogroup" aria-label="답하는 방식">
-        {QUIZ_KINDS.map((k) => (
-          <button
-            key={k.key}
-            type="button"
-            role="radio"
-            aria-checked={kind === k.key}
-            className={kind === k.key ? "on" : ""}
-            onClick={() => setKind(k.key)}
-          >
-            {k.key === "code" ? "‹/› 코드" : "✎ 글"}
-          </button>
-        ))}
-      </div>
+      {/* 책봄은 독서 전용이라 '코드' 퀴즈를 걷었습니다(선생님 요청) — 늘 글로 답합니다.
+          예전에 보낸 코드 퀴즈는 학생 창 · 지난 퀴즈에서 그대로 보입니다. */}
       <label className="pq-field">
         <span>제목</span>
         <input
@@ -401,18 +388,18 @@ function ComposeQuiz({ classId, board, openQuiz, canCancel, onCancel, onSent }) 
           maxLength={QUIZ_TITLE_MAX}
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) { e.preventDefault(); send(); } }}
-          placeholder={kind === "code" ? "예: 1부터 10까지 더하는 코드를 짜 보세요" : "예: 변수란 무엇일까요?"}
+          placeholder="예: 주인공은 왜 그런 선택을 했을까요?"
           autoFocus
         />
       </label>
       <label className="pq-field">
-        <span>설명 <em>(선택 · ``` 로 감싸면 코드 블록)</em></span>
+        <span>설명 <em>(선택)</em></span>
         <textarea
           rows={5}
           value={desc}
           maxLength={QUIZ_DESC_MAX}
           onChange={(e) => setDesc(e.target.value)}
-          placeholder={"예: 아래 코드의 결과를 예측해 보세요.\n```\nx = 3\nprint(x * 2)\n```"}
+          placeholder={"예: 책 속 장면을 떠올리며 내 생각을 두세 문장으로 적어 보세요."}
         />
       </label>
       {board?.title && <p className="pq-compose-from">‘{board.title}’에서 보내요</p>}

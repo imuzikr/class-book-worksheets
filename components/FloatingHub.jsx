@@ -134,7 +134,7 @@ function ChatIcon({ size = 26 }) {
 // classId — 지금 보는 반(교사는 공부방에서 고른 반, 학생은 소속 반).
 // 교사의 메신저는 이와 따로 **창 맨 위에서 반을 고릅니다**(chatClassId) —
 // 어느 화면에서든 원하는 반과 대화하고, 공부방의 반은 안 바뀝니다.
-export default function FloatingHub({ classId: pageClassId, user, isTeacher, lifted = false }) {
+export default function FloatingHub({ classId: pageClassId, user, isTeacher, fruitOn = true, lifted = false }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [msgOpen, setMsgOpen] = useState(false);
@@ -285,7 +285,8 @@ export default function FloatingHub({ classId: pageClassId, user, isTeacher, lif
     return totalUnread(messages, rooms, myUid, seen);
   }, [messages, seen, myUid, isTeacher, studentRoomsKey]);
 
-  const items = isTeacher ? TEACHER_ITEMS : STUDENT_ITEMS;
+  // 과일 바구니를 끄면(관리자 설정) 그 행성을 빼고 남은 것으로 원을 다시 나눕니다.
+  const items = (isTeacher ? TEACHER_ITEMS : STUDENT_ITEMS).filter((it) => fruitOn || it.key !== "fruit");
   const step = 360 / items.length;
   // 첫 조각(메신저)의 가운데가 맨 위에 오게.
   const angleOf = (i) => -90 + i * step;
