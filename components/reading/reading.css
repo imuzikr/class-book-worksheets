@@ -231,11 +231,9 @@
 /* =============================================================
    리더보드 — 독서 여정 (ReadingLeaderboard.jsx · lib/readingJourney.js)
    ============================================================= */
-.rlb-head { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin:6px 0 20px; }
-.rlb-head h2 { margin:0; font-size:22px; font-weight:780; letter-spacing:-.03em; }
-.rlb-head p { margin:6px 0 0; color:#7a8578; font-size:12px; line-height:1.6; }
-.rlb-head-side { display:flex; align-items:center; gap:14px; flex-shrink:0; }
-.reading-tabs.rlb-tabs { padding-top:0; margin-bottom:20px; }
+.rlb-head { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin:6px 0 20px; }
+.rlb-head-side { display:flex; align-items:center; gap:14px; flex-shrink:0; margin-left:auto; }
+.reading-tabs.rlb-tabs { flex:1 1 200px; padding-top:0; margin-bottom:0; }
 .rlb-panel { min-width:0; }
 .rlb-panel[hidden] { display:none; }
 .rlb-panel:focus-visible { outline:3px solid #478fbd; outline-offset:4px; border-radius:8px; }
@@ -318,7 +316,6 @@
 .rlb-badge-grid small { font-weight:400; color:#7c897d; font-size:10.5px; }
 @media (max-width:900px) { .rlb-cols { grid-template-columns:minmax(0,1fr); } .rlb-cols.is-teacher > .rlb-card + .rlb-card { position:static; } }
 @media (max-width:600px) {
-  .rlb-head { flex-direction:column; }
   .rlb-card { padding:16px 14px; }
   .rlb-card-note { margin-left:0; width:100%; }
   .rlb-track-scale span { font-size:9px; }

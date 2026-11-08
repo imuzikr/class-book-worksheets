@@ -159,14 +159,7 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, c
 
   return <div className="reading-hub rlb">
     <header className="rlb-head">
-      <div><h2>우리 반 리더보드</h2><p>독서 맵에서 성장 여정을, 독서 랭킹에서 기간별 순위를 살펴보세요.</p></div>
-      <div className="rlb-head-side">
-        {view === "ranking" && !isTeacher && myRow && !loading && !error && <div className="rlb-myrank"><span>{periodLabel} 내 순위</span><Medal rank={myRow.rank} size={40} /></div>}
-        <button type="button" className="btn-ghost" disabled={loading} onClick={() => setRetry((value) => value + 1)}>새로고침</button>
-      </div>
-    </header>
-
-    <div className="reading-tabs rlb-tabs" role="tablist" aria-label="리더보드 보기">
+      <div className="reading-tabs rlb-tabs" role="tablist" aria-label="리더보드 보기">
       {VIEWS.map((item, index) => <button
         key={item.key}
         ref={(element) => { tabRefs.current[index] = element; }}
@@ -180,7 +173,12 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, c
         onClick={() => setView(item.key)}
         onKeyDown={(event) => handleViewKeys(event, index)}
       >{item.label}</button>)}
-    </div>
+      </div>
+      <div className="rlb-head-side">
+        {view === "ranking" && !isTeacher && myRow && !loading && !error && <div className="rlb-myrank"><span>{periodLabel} 내 순위</span><Medal rank={myRow.rank} size={40} /></div>}
+        <button type="button" className="btn-ghost" disabled={loading} onClick={() => setRetry((value) => value + 1)}>새로고침</button>
+      </div>
+    </header>
 
     {error && <div className="reading-error" role="alert">{error}<button type="button" onClick={() => setRetry((value) => value + 1)}>다시 시도</button></div>}
     {hasSnapshot && (loading || error) && <p className="reading-help" role="status">{loading ? "순위를 새로 불러오는 중이에요. 성장 정보는 마지막으로 확인한 누적 기록입니다." : "성장 정보는 마지막으로 확인한 누적 기록입니다. 새로고침해 주세요."}</p>}
