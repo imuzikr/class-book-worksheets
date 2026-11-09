@@ -11,20 +11,6 @@
   max-width: 100%;
   max-height: 100%;
 }
-.attend-backdrop {
-  padding: 16px;
-}
-.attend-modal {
-  width: min(760px, 94vw);
-  max-width: 100%;
-  padding: 20px;
-  max-height: calc(100dvh - 32px);
-  overflow-y: auto;
-  scrollbar-gutter: stable both-edges;
-}
-.attend-modal .modal-head {
-  margin-bottom: 8px;
-}
 
 /* 누가기록 슬라이드 패널 — 전광판은 그대로 두고 그 오른쪽에 겹쳐서
    미끄러져 나옵니다(전광판 크기와 무관하게 위치를 잡도록 절대 위치). */
@@ -94,123 +80,6 @@
     animation: none;
   }
 }
-.attend-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-.attend-view-controls {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-}
-.attend-mode-tabs {
-  display: inline-flex;
-  gap: 4px;
-  padding: 3px;
-  background: var(--neutral);
-  border-radius: var(--radius-btn);
-}
-.attend-mode-tabs button {
-  padding: 7px 11px;
-  border: 0;
-  border-radius: calc(var(--radius-btn) - 2px);
-  background: transparent;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--text-sub);
-  cursor: pointer;
-}
-.attend-mode-tabs button.active {
-  color: var(--text);
-  background: #fff;
-  box-shadow: var(--shadow-soft);
-}
-.attend-mode-tabs button:disabled {
-  opacity: 0.45;
-  cursor: default;
-}
-.attend-help {
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--text-sub);
-}
-
-/* 교실 자리 — 가로 6칸 × 세로 5줄 고정. 학생이 적으면 남는 자리는 빈 책상.
-   align-items:start — 도구 줄이 붙어 키가 커진 칸에 맞춰 빈 자리(사각형
-   그대로)까지 늘어나 찌그러지지 않도록 각 칸을 위쪽에 붙입니다. */
-.attend-grid {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 10px;
-  align-items: start;
-}
-/* 카드(정사각형) + 도구 줄을 위아래로 묶는 칸 — 실제 그리드 아이템 */
-.attend-desk-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-.attend-desk {
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  padding: 6px 4px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  text-align: center;
-  overflow: hidden;
-}
-.attend-desk--on {
-  background: #d7f0dd;
-  border-color: var(--green-300);
-}
-.attend-desk--away {
-  background: #ffe2c9;
-  border-color: #f0b483;
-}
-.attend-desk--absent {
-  background: #f9dbdb;
-  color: #7f2b2b;
-}
-/* 빈 자리 — 테두리만 옅게 남겨 '자리는 있으나 학생이 없음'을 표시 */
-.attend-desk--empty {
-  background: transparent;
-  border-style: dashed;
-  border-color: var(--border);
-}
-.attend-desk-no {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 700;
-  opacity: 0.75;
-}
-.attend-desk-name {
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1.25;
-  word-break: keep-all;
-}
-.attend-desk-name em {
-  font-style: normal;
-  font-size: 11px;
-  font-weight: 800;
-}
-.attend-desk-group {
-  font-size: 11px;
-  font-weight: 800;
-  color: var(--text-sub);
-}
 
 /* 교사는 카드를 눌러 과일 주기·누가기록을 고릅니다 */
 .attend-desk--clickable {
@@ -225,52 +94,15 @@
   outline: none;
   box-shadow: 0 0 0 3px rgba(217, 119, 87, 0.45);
 }
-/* 지금까지 받은 과일 수 — 카드 안 작은 뱃지 */
-.attend-desk-fruit {
-  margin-top: 2px;
-  padding: 1px 7px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.85);
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  font-weight: 800;
-  color: var(--text-sub);
-}
-/* 누가기록 패널이 열려 있는 학생 카드를 표시 */
-.attend-desk--noting {
-  box-shadow: 0 0 0 2px var(--primary) inset;
-}
-
-/* ── 손들기(언제든 질문하기) — 자리에서 바로 눈에 띄게 ── */
-.attend-desk {
-  position: relative; /* 손 아이콘·필기 중 아이콘의 기준 */
-}
 /* 손든 학생은 오른쪽 위 손바닥(.attend-desk-hand)만으로 표시합니다 —
    자리표(.attend-seat--raised)와 같은 이유로 테두리 강조는 뺐습니다. */
 /* 카드가 overflow:hidden이라 밖으로 내밀면 잘립니다 — 안쪽 모서리에 둡니다 */
-.attend-desk-hand {
-  position: absolute;
-  top: 2px;
-  right: 3px;
-  font-size: 18px;
-  line-height: 1;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
-  animation: attend-hand-wave 1.6s ease-in-out infinite;
-}
 @keyframes attend-hand-wave {
   0%, 100% { transform: rotate(-9deg); }
   50%      { transform: rotate(9deg); }
 }
 /* 수업 노트에 필기 중 — 손들기(오른쪽 위) 맞은편인 왼쪽 위에 둡니다 */
-.attend-desk-noting {
-  position: absolute;
-  top: 3px;
-  left: 4px;
-  font-size: 15px;
-  line-height: 1;
-}
 @media (prefers-reduced-motion: reduce) {
-  .attend-desk-hand,
   .attend-seat-hand {
     animation: none;
   }
@@ -430,61 +262,6 @@
 .attend-tools-notes:hover {
   background: var(--primary-light);
   border-color: var(--primary);
-}
-.attend-group-view {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  max-height: 68vh;
-  overflow-y: auto;
-  padding-right: 2px;
-}
-/* 모둠 구분은 왼쪽 색 띠 하나로만 — 예전엔 카드 테두리 전체를 원색으로
-   두르고 제목도 그 색으로 칠해서, 카드 안 참여 상태 색(초록/주황/빨강)과
-   겹쳐 알록달록해 보였습니다. 섹션당 색은 여기 한 번이면 충분합니다. */
-.attend-group-section {
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--group-color);
-  border-radius: 10px;
-  background: var(--card-bg, #fff);
-  padding: 12px;
-}
-.attend-group-section h4 {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin: 0 0 10px;
-  color: var(--text);
-  font-size: 14px;
-  font-weight: 800;
-}
-/* 제목 앞 작은 점으로만 모둠 색을 다시 짚어 줍니다(글자색까지 칠하지 않음) */
-.attend-group-section h4::before {
-  content: "";
-  width: 8px;
-  height: 8px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: var(--group-color);
-}
-.attend-group-members {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-.attend-group-members .attend-desk {
-  aspect-ratio: auto;
-  min-height: 56px;
-}
-.attend-group-members .attend-desk-wrap {
-  align-items: stretch;
-}
-/* 모둠별 보기 안에서는 섹션 자체가 모둠을 나타내므로, 카드마다 모둠 색
-   테두리를 겹쳐 칠하지 않고 참여 상태 색(배경)만으로 보여 줍니다.
-   (테두리까지 모둠 원색으로 칠하면, 예를 들어 결석=분홍 배경에 모둠색=
-   파랑 테두리가 겹쳐 오히려 상태를 읽기 어려웠습니다) */
-.attend-group-members .attend-desk[style*="--group-color"] {
-  border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 /* 수업 준비 — 자리 배정 / 모둠 설정 */

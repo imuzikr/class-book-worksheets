@@ -461,17 +461,6 @@
   white-space: nowrap;
 }
 /* 과일 그리드 — 10개씩 한 줄, 20개면 2줄로 반복 */
-.reward-fruits {
-  margin-top: 6px;
-  display: grid;
-  grid-template-columns: repeat(10, 1fr);
-  gap: 3px 1px;
-  justify-items: center;
-}
-.reward-fruit {
-  font-size: clamp(10px, 0.8vw, 12.5px);
-  line-height: 1.15;
-}
 
 .present-slide {
   width: 100%;

@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   bwNoteId, sortMembers, columnOrder, notesByColumn, columnRows,
-  previousRow, writerProgress, writerChars, brainwriteStageTarget, brainwriteSlotState,
+  writerProgress, writerChars, brainwriteStageTarget, brainwriteSlotState,
 } from "../../lib/brainwrite.js";
 
 const M = [
@@ -22,7 +22,7 @@ test("컬럼 차례는 주인부터 돌아가며", () => {
   assert.deepEqual(columnOrder(M, "zz").map((m) => m.uid), ["a", "b", "c", "e"]);
 });
 
-test("줄 · 앞 사람 · 진행", () => {
+test("줄 · 진행", () => {
   const notes = [
     { ownerUid: "c", writerUid: "c", text: "질문" },
     { ownerUid: "c", writerUid: "e", text: "  " },
@@ -32,8 +32,6 @@ test("줄 · 앞 사람 · 진행", () => {
   const by = notesByColumn(notes);
   const rows = columnRows(M, "c", by);
   assert.deepEqual(rows.map((r) => r.filled), [true, false, false, false]);
-  assert.equal(previousRow(M, "c", "e", by).member.uid, "c");
-  assert.equal(previousRow(M, "c", "c", by), null);
   assert.deepEqual(writerProgress(M, "e", by).map((p) => p.done), [true, false, false, false]);
   assert.equal(writerChars("e", notes), 2);
 });

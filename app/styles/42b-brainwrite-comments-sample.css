@@ -208,7 +208,6 @@
   .topbar-book-navigation .topnav-menu > .btn-ghost { padding: 0 6px; gap: 4px; }
   .topbar-book-navigation .topnav-menu .nav-label { font-size: 11px; }
   .topbar-book-navigation .topnav-menu > .btn-ghost svg { width: 14px; height: 14px; }
-  .topbar-book-navigation .nav-dashboard svg { display: none; }
   .topbar-book-navigation .logo > svg { width: 24px; height: 24px; }
 }
 /* 휴대폰 상단바 — 누르는 곳은 모두 36px 이상(검수반장 지적, 손가락 기준).

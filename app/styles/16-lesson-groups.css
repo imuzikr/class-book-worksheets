@@ -34,17 +34,6 @@
 }
 
 @media (max-width: 768px) {
-  /* 좁은 화면에서는 6칸을 4칸으로 줄입니다 — 칸 하나가 55px까지 좁아지면
-     이름·학번이 뭉개집니다. 과일·누가기록은 카드를 눌러 뜨는 모달로
-     옮겨 갔으므로 칸 안에는 이름만 들어가면 됩니다. */
-  .attend-grid {
-    gap: 6px;
-    grid-template-columns: repeat(4, 1fr);
-  }
-  .attend-desk { padding: 4px 2px; }
-  .attend-desk-name { font-size: 11px; }
-  .attend-desk-no { font-size: 10px; }
-  .attend-desk-fruit { font-size: 9.5px; padding: 1px 5px; }
   /* 출석 관리 > 자리 배정하기도 같은 이유로 4칸 */
   .attend-seatmap-grid {
     gap: 6px;

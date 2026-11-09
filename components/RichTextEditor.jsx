@@ -86,24 +86,6 @@ function IconCheckList() {
   );
 }
 
-export function IconImage() {
-  return (
-    <svg {...svgProps}>
-      <rect x="3" y="4" width="18" height="16" rx="2" />
-      <circle cx="9" cy="10" r="1.6" fill="currentColor" stroke="none" />
-      <path d="M5 18l5-5 4 4 2.5-2.5L21 19" />
-    </svg>
-  );
-}
-
-export function IconPen() {
-  return (
-    <svg {...svgProps}>
-      <path d="M17 3l4 4L7 21H3v-4L17 3z" />
-    </svg>
-  );
-}
-
 function IconSend() {
   return (
     <svg {...svgProps} width={16} height={16}>

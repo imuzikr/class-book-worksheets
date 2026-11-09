@@ -10,7 +10,6 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { safeImageUrl } from "@/lib/hashtag";
 import { safeNodeImage, mindmapImages } from "@/lib/mindmap";
-import { stripImgTags, htmlHasImage } from "@/lib/html";
 
 const htmlSrc = readFileSync(new URL("../../lib/html.js", import.meta.url), "utf8");
 const start = htmlSrc.indexOf("function isSafeImageSrc(");
@@ -72,15 +71,6 @@ test("isSafeImageSrc(서식 글): http·https 모두, data:image/는 종류 상�
     "uploads/u1/a.jpg", "//example.com/x", " https://x/y"]) {
     assert.equal(isSafeImageSrc(bad), false, String(bad));
   }
-});
-
-test("stripImgTags / htmlHasImage: 서식 글의 그림 감지·제거", () => {
-  const html = `<p>글</p><img src="${DL}" alt=""><IMG src="${DATA_PNG}"/>`;
-  assert.equal(htmlHasImage(html), true);
-  assert.equal(htmlHasImage("<p>그림 없음</p><imgx>"), false);
-  assert.equal(stripImgTags(html), "<p>글</p>");
-  // data-storage-path를 쓰는 미래 모양도 지금은 '그림 있음'으로 봅니다
-  assert.equal(htmlHasImage('<img data-storage-path="uploads/c/u/a.jpg" alt="">'), true);
 });
 
 // ── 4단계: 반 폴더 경로 표식 ─────────────────────────────────

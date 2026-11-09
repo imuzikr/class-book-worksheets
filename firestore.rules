@@ -555,15 +555,6 @@ service cloud.firestore {
       //  자리라 걷었습니다 — match가 없으니 아무도 못 읽고 못 씁니다.)
     }
 
-    // ── meta/keywordsSeeded — 기본 키워드를 이미 한 번 심었는지 기록 ──
-    //  · keywords 컬렉션이 비어 있을 때, "한 번도 안 심음"과 "교사가 전부
-    //    지움"을 구분하기 위한 플래그. 없으면(과거 시드 이력 없음) 기본
-    //    키워드를 심고, 있으면 비워 둔 채로 둡니다.
-    match /meta/{docId} {
-      allow read: if signedIn();
-      allow write: if isTeacher();
-    }
-
     // ── 반(클래스) ────────────────────────────────────────────
     //  · 한 건 읽기(get)는 로그인 사용자(참여 코드 확인 등), 목록(list)은 관리자 ·
     //    내가 만든 반의 교사만(아래 주석).
@@ -892,27 +883,19 @@ service cloud.firestore {
         allow update, delete: if false;
       }
 
-      // ── 손들기 이력 ─────────────────────────────────────────
+      // ── 손들기 확인 이력(옛 기록) ───────────────────────────
       //  · 경로 = classes/{classId}/signalEvents/{auto}
-      //  · questionSignals는 '지금 손든 사람'만 담고, 손이 내려가면 문서가
-      //    지워집니다. 그래서 '누가 언제 손을 들었나'가 전혀 남지 않아
-      //    참여의 변화를 볼 수 없었습니다. 여기에 한 건 남깁니다.
-      //  · 교사가 '확인'을 눌러 받아 준 손만 적습니다. '닫기'로 내린 손은
-      //    잘못 눌린 것이라 세지 않습니다(그래서 create만 있고 종류가 없음).
-      //  · 읽기는 본인·담당 교사·관리자 — rewardEvents와 같은 기준입니다.
-      //  · 이력은 고치거나 지울 수 없습니다.
+      //  · 한때 교사가 손든 학생을 '확인'할 때마다 한 장씩 남겼는데, 그것을 읽는
+      //    화면이 없어 앱이 더는 쓰지 않습니다 — 그래서 만들기를 닫았습니다.
+      //  · 이미 남은 기록은 반 삭제 · 학생 탈퇴 때 지웁니다(위 와일드카드 규칙).
+      //    탈퇴 때 담당 교사가 그 학생 것을 찾아 읽어야 해서 읽기는 남깁니다.
       match /signalEvents/{eId} {
         allow read: if signedIn() && (
           isAdmin()
           || ownsClass(cId)
           || resource.data.uid == uid()
         );
-        allow create: if (isAdmin() || ownsClassEditable(cId))
-                      && request.resource.data.classId == cId
-                      && request.resource.data.uid is string
-                      && request.resource.data.byUid == uid()
-                      && request.resource.data.at == request.time;
-        allow update, delete: if false;
+        allow create, update, delete: if false;
       }
 
       // ── 반 공지 발송 이력 ───────────────────────────────────
@@ -1179,16 +1162,13 @@ service cloud.firestore {
       allow delete: if canPurgeClass(classId);
     }
 
-    // ── 참여 상태 — 발표 중 학생 화면이 보이는지(교사 전광판용) ──
-    //  · 문서 ID = `{uid}_{classId}`. 학생은 자기 것만 쓰고, 읽기는 담당 교사만.
-    //  · 화면이 보이는지(visible)와 갱신 시각뿐이라 실명·내용은 담지 않습니다.
+    // ── 참여 상태(옛 기록) — 발표 중 학생 화면이 보이는지 ──────
+    //  · 문서 ID = `{uid}_{classId}`. 한때 수업 화면을 띄우는 동안 학생 기기가
+    //    20초마다 적었는데(옛 공부방 전광판용), 그것을 읽는 화면이 없어 앱이 더는
+    //    쓰지 않습니다 — 그래서 만들기 · 고치기를 닫았습니다.
+    //  · 이미 남은 기록은 반 삭제 · 학생 탈퇴 때 지웁니다(읽기 · 지우기는 남김).
     match /presence/{pId} {
       allow read: if isAdmin() || ownsClass(resource.data.classId);
-      allow create, update: if signedIn()
-                            && request.resource.data.uid == uid()
-                            && pId == (uid() + '_' + request.resource.data.classId)
-                            && request.resource.data.visible is bool
-                            && isClassMember(request.resource.data.classId);
       allow delete: if isAdmin()
                     || resource.data.uid == uid()
                     || ownsClassEditable(resource.data.classId)
@@ -1209,15 +1189,14 @@ service cloud.firestore {
       allow delete: if resource.data.classId != null && canPurgeClass(resource.data.classId);
     }
 
-    // ── 공부방 보드 — 읽기는 로그인 사용자(메타데이터), 쓰기는 반 소유 교사/관리자 ──
-    //  책봄에는 공부방 화면이 없지만, 반을 만들 때 '선생님 보드' 한 장을 함께
-    //  만드는 길(lib/data/classes.js의 addClass → ensureDefaultStudyBoard)이
-    //  남아 있어 이 규칙을 둡니다. 그 아래 학생 카드(cards)의 규칙은 걷었습니다.
+    // ── 공부방 보드(옛 기록) ──────────────────────────────────
+    //  책봄에는 공부방 화면이 없습니다. 한때 반을 만들 때 '선생님 보드' 한 장을
+    //  함께 만들었는데 그 길을 걷어, 앱이 더는 만들거나 고치지 않습니다.
+    //  이미 있는 문서는 반 삭제 때 지우므로(lib/classPurge.js) 읽기 · 지우기만 남깁니다.
+    //  그 아래 학생 카드(cards)의 규칙은 걷었습니다 — 하위 문서는 아무도 못 씁니다.
     match /studyBoards/{bId} {
       allow read: if signedIn();
-      allow create: if isAdmin()
-                    || (isTeacher() && ownsClassEditable(request.resource.data.classId));
-      allow update, delete: if isAdmin() || ownsClassEditable(resource.data.classId);
+      allow delete: if isAdmin() || ownsClassEditable(resource.data.classId);
       allow delete: if canPurgeClass(resource.data.classId);
     }
 

@@ -98,8 +98,6 @@
     color: var(--text-sub);
   }
 
-  .study-title-row { flex-wrap: wrap; gap: 6px; }
-
   .present-slide { padding: 28px 22px; border-radius: 18px; }
   .present-slide-title { font-size: 24px; margin-bottom: 18px; }
   .present-slide-content { font-size: 18px; line-height: 1.75; }

@@ -5,25 +5,6 @@
    그대로 이어받아 KWL 패널을 다시 켜도 나란히 어색하지 않게 맞춥니다.
    ============================================================= */
 
-/* 자물쇠 — 활동이 학생에게 열려 있는지(잠금 아이콘 채워짐) 즉시 토글 */
-.study-activity-lock {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
-  border: 1px solid var(--on-dark-12);
-  background: var(--on-dark-06);
-  color: var(--coral-400);
-  cursor: pointer;
-}
-.study-activity-lock.locked {
-  background: rgba(255, 255, 255, 0.03);
-  color: #6b6a63;
-}
-
 /* 저장 줄 — 자료가 많아 본문이 길어져도 버튼이 늘 보이게 아래에 고정 */
 /* 모달 아래 단추 줄 (독서 활동 만들기 · 도서명 묻기)
    -------------------------------------------------------------

@@ -1,59 +1,5 @@
 
 
-/* ===================== 이미지 첨부 ===================== */
-.attach-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.attach-label {
-  display: inline-block;
-}
-
-.attach-preview {
-  max-height: 180px;
-  max-width: 100%;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  object-fit: contain;
-  align-self: flex-start;
-}
-
-/* 카드 본문: 텍스트(왼쪽) + 섬네일(오른쪽) */
-.card-body {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-}
-
-.card-main {
-  flex: 1;
-  min-width: 0;
-}
-
-/* 첨부/그리기 이미지 섬네일 묶음 — 오른쪽 끝에서부터 순서대로 채워지고,
-   삽입한 이미지·그림이 모두 보이도록 오른쪽 정렬로 줄바꿈합니다. */
-.card-thumbs {
-  flex-shrink: 0;
-  max-width: 45%;
-  display: flex;
-  flex-wrap: wrap;
-  flex-direction: row-reverse;
-  justify-content: flex-start;
-  align-content: flex-start;
-  gap: 6px;
-}
-.card-thumb {
-  width: 60px;
-  height: 60px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  object-fit: cover;
-  background: #fff;
-  flex-shrink: 0;
-}
-
 /* ===================== 질문 상태 토글 (궁금해요/해결됐어요) ===================== */
 
 /* ===================== 서식 입력 에디터 (RichTextEditor) ===================== */
@@ -230,9 +176,7 @@ code.rte-code-glyph {
    넣은 코드만 밋밋한 글로 나왔습니다 — 에디터에서는 검은 블록이던 것이
    저장하고 보면 평범한 글이 되니 '서식이 안 먹는다'로 보입니다. */
 .rte-area pre,
-.qa-content pre,
 .msgr-bubble pre,
-.notice-item pre,
 .study-card-content pre,
 .study-card-body pre {
   background: var(--dark);
@@ -257,10 +201,6 @@ pre code {
 .rte-area ol,
 .msgr-bubble ul,
 .msgr-bubble ol,
-.qa-content ul,
-.qa-content ol,
-.notice-item ul,
-.notice-item ol,
 .study-card-content ul,
 .study-card-content ol,
 .study-card-body ul,

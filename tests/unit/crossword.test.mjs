@@ -2,8 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  buildCrossword, crosswordCells, crosswordWordOk, crosswordCandidates,
-  crosswordPicksDone, normalizeCrosswordPicks, entryCellKeys, CROSSWORD_TARGET,
+  buildCrossword, crosswordCells, crosswordWordOk, entryCellKeys, CROSSWORD_TARGET,
 } from "../../lib/crossword.js";
 
 // 결정적인 난수 — 시험이 매번 같은 판을 봅니다
@@ -117,22 +116,6 @@ test("판에 오를 수 있는 낱말", () => {
   assert.ok(!crosswordWordOk("AI"));
   assert.ok(!crosswordWordOk("광합 작용"));
   assert.ok(!crosswordWordOk("가나다라마바사아자"));
-});
-
-test("학생 기록 → 재료: 같은 낱말은 먼저 낸 사람 것 · 풀이 없는 것은 뺌", () => {
-  const entries = [
-    { authorId: "b", updatedAt: 2000, answers: { crossword: [{ word: "사과", clue: "늦게" }] } },
-    { authorId: "a", updatedAt: 1000, answers: { crossword: [{ word: "사과", clue: "먼저" }, { word: "과일", clue: "" }] } },
-  ];
-  const c = crosswordCandidates(entries);
-  assert.deepEqual(c, [{ word: "사과", clue: "먼저", uid: "a" }]);
-});
-
-test("셋을 골라 셋 다 풀이를 써야 다 쓴 것", () => {
-  assert.ok(!crosswordPicksDone([{ word: "사과", clue: "x" }]));
-  assert.ok(!crosswordPicksDone([{ word: "사과", clue: "x" }, { word: "과일", clue: "y" }, { word: "일기", clue: " " }]));
-  assert.ok(crosswordPicksDone([{ word: "사과", clue: "x" }, { word: "과일", clue: "y" }, { word: "일기", clue: "z" }]));
-  assert.equal(normalizeCrosswordPicks([{ word: "a" }, { word: "a" }, { word: "b" }, { word: "c" }, { word: "d" }]).length, 3);
 });
 
 // ─── 모둠 퍼즐 ───────────────────────────────────────────────

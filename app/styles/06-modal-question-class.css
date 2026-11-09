@@ -339,61 +339,10 @@
   line-height: 1;
 }
 
-.modal-body {
-  font-size: 15px;
-  line-height: 1.8;
-  white-space: pre-wrap;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 18px;
-  margin-bottom: 18px;
-}
-
 .form-grid {
   display: flex;
   flex-direction: column;
   gap: 10px;
-}
-
-.form-row {
-  display: flex;
-  gap: 10px;
-}
-
-.form-row select {
-  width: 140px;
-  flex-shrink: 0;
-}
-
-/* 필수 입력 — 라벨(키워드/제목/본문) 옆 빨간 * 로 표시 */
-.form-row .req-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.form-row .req-field.req-kw {
-  width: 140px;
-  flex-shrink: 0;
-}
-/* select는 브라우저가 텍스트 앞에 여분 여백을 줘 '#'이 밀려 보임 → 좌측 패딩을 줄여 보정 */
-.form-row .req-field.req-kw select {
-  padding-left: 7px;
-}
-.form-row .req-field.req-title {
-  flex: 1;
-}
-.form-row .req-field select,
-.form-row .req-field input {
-  width: 100%;
-}
-.field-label {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-sub);
-  padding-left: 2px;
-}
-.field-label b {
-  color: var(--danger);
-  font-weight: 800;
 }
 /* 필수 항목 누락 경고 */
 .form-error {
@@ -509,36 +458,11 @@
 
 /* 본문(에디터/표시)에 들어간 인라인 이미지 크기 제한 */
 .rte-area img,
-.study-card-body img,
-.notice-content img,
-.qa-content img,
-.chat-text img {
+.study-card-body img {
   max-width: 100%;
   height: auto;
   border-radius: 6px;
   display: block;
   margin: 6px 0;
-}
-
-/* 다중 이미지 첨부 미리보기(작성 중) */
-.attach-multi {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.attach-thumb {
-  position: relative;
-  display: inline-block;
-}
-.attach-thumb .attach-preview,
-.attach-thumb img {
-  max-width: 130px;
-  max-height: 130px;
-  width: auto;
-  height: auto;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  display: block;
 }
 

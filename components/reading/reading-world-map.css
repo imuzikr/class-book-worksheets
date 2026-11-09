@@ -4,11 +4,6 @@
 .rwm button { cursor:pointer; }
 .rwm button:disabled { cursor:default; opacity:.5; }
 .rwm button:focus-visible,.rwm select:focus-visible,.rwm-viewport:focus-visible { outline:3px solid #ffdd8f; outline-offset:-3px; }
-.rwm-heading { padding:24px 28px 19px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
-.rwm-eyebrow { font-size:10px; letter-spacing:.2em; color:#cbb780; font-weight:700; }
-.rwm-heading h3 { font-size:25px; letter-spacing:-.045em; color:#fff4d6; margin:7px 0 5px; }
-.rwm-heading p { margin:0; color:#a6c0b8; font-size:12px; }
-.rwm-basis { border:1px solid #6e795b; color:#e2d5a5; padding:7px 11px; border-radius:20px; font-size:11px; white-space:nowrap; }
 .rwm-hud { display:grid; grid-template-columns:104px minmax(145px,.9fr) minmax(220px,1.3fr) minmax(155px,.8fr); gap:20px; align-items:center; margin:0 22px 20px; padding:10px 20px 10px 7px; border:1px solid #6e795b; border-radius:14px; background:#193c3c; }
 .rwm-portrait { height:116px; display:flex; align-items:center; justify-content:center; }
 .rwm-portrait img { object-fit:contain; width:116px; height:116px; filter:drop-shadow(0 5px 6px #0004); }
@@ -134,10 +129,6 @@
 }
 @media (max-width:760px) {
   .rwm { border-radius:14px; }
-  .rwm-heading { padding:20px 17px 16px; align-items:flex-start; }
-  .rwm-heading h3 { font-size:21px; }
-  .rwm-eyebrow { font-size:8px; }
-  .rwm-basis { font-size:9px; padding:5px 8px; }
   .rwm-hud { margin:0 12px 16px; padding:8px 12px; grid-template-columns:72px minmax(0,1fr); gap:8px 14px; }
   .rwm-portrait,.rwm-portrait img { width:80px; height:90px; }
   .rwm-identity strong { font-size:22px; }
@@ -167,8 +158,6 @@
   .rwm-character-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
 }
 @media (max-width:420px) {
-  .rwm-heading { display:block; }
-  .rwm-basis { display:inline-block; margin-top:12px; }
   .rwm-growth-values>span { align-items:flex-start; flex-direction:column; gap:4px; }
   .rwm-hud-badges { flex-wrap:wrap; gap:8px; }
   .rwm-hud-badges button { width:100%; }

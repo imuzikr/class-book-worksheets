@@ -116,12 +116,3 @@ export function PopQuizStatus({ answer, quizOpen = true }) {
   if (st === "returned") return <span className="pq-status pq-status--returned">반송됨</span>;
   return <span className="pq-status pq-status--none">{quizOpen ? "아직 안 보냄" : "보내지 않음"}</span>;
 }
-
-// 접고 펴는 삼각형 — 선 그림(글자 ▸는 기기 글꼴에 따라 점처럼 작아짐).
-export function Caret({ open }) {
-  return (
-    <svg className={`pq-caret${open ? " open" : ""}`} width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
-      <path d="M4.5 2.5 8 6l-3.5 3.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}

@@ -1,4 +1,4 @@
-// 이미지 보안 안전망 — 그림을 **올리는 곳 3군데**와 **보여 주는 곳 11군데**를 소스에서 확인합니다.
+// 이미지 보안 안전망 — 그림을 **올리는 곳 3군데**와 **보여 주는 곳 9군데**를 소스에서 확인합니다.
 // 4단계: 올리는 곳은 모두 반 id를 넘기고, 보여 주는 곳은 모두 SecureImage / SecureHtml을 씁니다.
 // JSX는 시험 도구가 못 읽으므로(resolve.mjs 참고) 파일 글자를 읽어 확인합니다.
 // 새 표시 자리가 몰래 생기거나 맨 <img src={저장값}>으로 되돌아가면 이 시험이 알려 줍니다.
@@ -60,7 +60,6 @@ test("uploadImage를 부르는 곳은 정해진 파일뿐이고, 모두 classId�
 
 test("서식 편집기를 쓰는 화면은 모두 반 id로 감싸져 있습니다(UploadClassProvider)", () => {
   const hosts = {
-    "components/CornellNoteDrawer.jsx": "props.classId", // 수업 노트·과제(LessonTaskPanel)·노트 고치기
     "components/MessengerWindow.jsx": "props.classId",
     "components/PopQuizStudentModal.jsx": "props.classId",
     "components/RaftForm.jsx": "props.activity?.classId", // 동료 평가(PeerReviewModal)
@@ -70,9 +69,6 @@ test("서식 편집기를 쓰는 화면은 모두 반 id로 감싸져 있습니�
   }
   // 편집기를 직접 쓰는 컴포넌트 목록 — 늘어나면 위 감싸기도 확인해야 합니다
   assert.deepEqual(walkFiles(["app", "components"], /<RichTextEditor\b/), [
-    "components/CornellNoteDrawer.jsx",
-    "components/CornellNoteEditSheet.jsx",
-    "components/LessonTaskPanel.jsx",
     "components/MessengerWindow.jsx",
     "components/PeerReviewModal.jsx",
     "components/PopQuizStudentModal.jsx",
@@ -87,13 +83,11 @@ const DIRECT = [
   ["components/MindmapCanvas.jsx", /<SecureImage className="mm-node-img" src=\{n\.image\}/],
   ["components/PresentationOverlay.jsx", /<SecureImage\s+className="broadcast-slide-img"\s+src=\{broadcast\.imageUrl\}/],
 ];
-// 정화한 서식 HTML을 그리는 6곳 — 모두 SecureHtml
+// 정화한 서식 HTML을 그리는 4곳 — 모두 SecureHtml
 const RICH = [
   ["components/PeerReviewModal.jsx", /html=\{richHtml\(/, 3],
-  ["components/LessonTaskPanel.jsx", /html=\{sanitizeHtml\(/, 1], // 파이썬 셀 미리보기는 걷음
   ["components/MessengerWindow.jsx", /html=\{sanitizeHtml\(m\.html\)\}/, 1],
   ["components/PopQuizParts.jsx", /html=\{sanitizeHtml\(/, 1],
-  ["components/CornellNoteSheet.jsx", /html=\{notesHtml\}/, 1],
   ["components/PresentationOverlay.jsx", /html=\{html\}/, 1],
 ];
 
@@ -105,7 +99,7 @@ test("표시 — 저장된 주소를 그리는 5곳은 SecureImage", () => {
   }
 });
 
-test("표시 — 서식 HTML 6곳은 SecureHtml(개수까지)", () => {
+test("표시 — 서식 HTML 4곳은 SecureHtml(개수까지)", () => {
   for (const [f, re, n] of RICH) {
     const src = read(f);
     assert.equal(src.match(new RegExp(re.source, "g"))?.length ?? 0, n, f);
@@ -128,7 +122,6 @@ test("저장값을 맨 <img src={…}>로 그리는 곳이 다시 생기지 않�
 
 test("서식 HTML 표시 경로는 sanitizeHtml(또는 그 위의 richHtml)을 거칩니다", () => {
   assert.match(read("components/PresentationOverlay.jsx"), /const html = sanitizeHtml\(broadcast\.content \|\| ""\)/);
-  const cornell = read("components/CornellNoteSheet.jsx");
-  assert.match(cornell, /const notesHtml = richHtml\(b\.notes \?\? ""\)/);
+  assert.match(read("components/PeerReviewModal.jsx"), /html=\{richHtml\(/);
   assert.match(read("lib/html.js"), /export function richHtml[\s\S]*?sanitizeHtml\(s\)/);
 });

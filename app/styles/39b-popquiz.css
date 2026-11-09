@@ -134,8 +134,6 @@
 .pq-status--done { background: var(--green-50); color: var(--green-700); }
 .pq-status--none { background: var(--neutral); color: var(--text-sub); }
 .pq-empty { margin: 0; padding: 16px 0; font-size: 13.5px; color: var(--text-sub); text-align: center; }
-.pq-caret { flex-shrink: 0; color: var(--text-sub); transition: transform 0.15s; }
-.pq-caret.open { transform: rotate(90deg); }
 
 /* ── 학생 창 ── */
 .modal.pq-student-modal {
@@ -401,19 +399,6 @@
 .pq-count-main { font-size: 14px; color: var(--text); }
 .pq-count-main b { font-size: 18px; font-weight: 800; color: var(--dark); }
 .pq-compose-title { margin: 0; font-size: 15px; font-weight: 800; color: var(--dark); }
-.pq-kind-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.pq-kind-seg button {
-  padding: 9px 0;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: #fff;
-  font-family: inherit;
-  font-size: 13.5px;
-  font-weight: 800;
-  color: var(--text-sub);
-  cursor: pointer;
-}
-.pq-kind-seg button.on { background: var(--primary); border-color: var(--primary); color: #fff; }
 .pq-field { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; font-weight: 800; color: var(--text-sub); }
 .pq-field em { font-style: normal; font-weight: 500; color: var(--text-faint); }
 .pq-field input,

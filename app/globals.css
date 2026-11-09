@@ -1,5 +1,5 @@
 /* =============================================================
-   전역 CSS 입구 — 실제 규칙은 app/styles/ 의 49개 파일에 있습니다.
+   전역 CSS 입구 — 실제 규칙은 app/styles/ 의 46개 파일에 있습니다.
    -------------------------------------------------------------
    예전 globals.css 한 파일(33,712줄)을 **내용·순서 그대로** 잘라 둔 것이라
    아래 @import 순서가 곧 옛 파일의 줄 순서입니다. 순서를 바꾸면 뒤의 규칙이
@@ -19,20 +19,17 @@
 @import "./styles/11-confirm-profile-roles.css";
 @import "./styles/12-study-room.css";
 @import "./styles/13-lesson-broadcast.css";
-@import "./styles/14a-activity-view-lesson-prep.css";
 @import "./styles/14b-studying-board.css";
 @import "./styles/15-attend-board.css";
 @import "./styles/16-lesson-groups.css";
 @import "./styles/17-lesson-create-kwlfs.css";
 @import "./styles/18-group-memo-tkwl.css";
-@import "./styles/19-kwl-kwls-summary.css";
 @import "./styles/20-study-today-attend.css";
 @import "./styles/21-seat-fruit.css";
 @import "./styles/22-study-project-wall.css";
 @import "./styles/23-study-project-detail.css";
 @import "./styles/24-study-guide-cards.css";
 @import "./styles/25a-study-my-activity.css";
-@import "./styles/25b-related-questions.css";
 @import "./styles/26-keyword-kwlfab-mobile768.css";
 @import "./styles/27-books-list-consonant.css";
 @import "./styles/28a-books-teacher-workspace.css";

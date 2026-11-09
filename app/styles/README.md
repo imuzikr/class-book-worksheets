@@ -1,6 +1,6 @@
 # 책봄 화면 모양(CSS) 안내
 
-책봄의 화면 모양 규칙은 모두 이 폴더(`app/styles/`)의 CSS 파일 49개에 있습니다.
+책봄의 화면 모양 규칙은 모두 이 폴더(`app/styles/`)의 CSS 파일 46개에 있습니다.
 `app/globals.css`는 이 파일들을 **정해진 순서대로 불러오는 입구**일 뿐입니다.
 
 > 한 줄 요약: **파일 순서를 바꾸지 말고, 고친 뒤에는 `npm run css:fingerprint`로 확인하세요.**
@@ -12,27 +12,32 @@
 파일 이름 앞의 번호는 불러오는 순서입니다. 한 화면의 모양이 여러 파일에 나뉘어 있는 경우가 많으니,
 찾을 때는 아래 2번 표(접두사)와 함께 보세요.
 
+> 파일 이름은 배움나눔의 한 파일을 차례대로 자를 때 붙인 것이라, 이름 속 화면(게시판 · 공부방 · 수업 ·
+> 코넬 노트)이 이 앱에 없는 경우가 있습니다. 2026년 11월에 화면이 안 쓰는 규칙을 걷어(약 2,500줄)
+> 지금은 이 앱의 화면 규칙만 남았고, 비게 된 세 파일(14a · 19 · 25b)은 지웠습니다 — 남은 파일의
+> `@import` 차례는 그대로입니다. 파일 이름은 `@import` 줄과 함께 바꿔야 해서 그대로 두었습니다.
+
 | 화면 | 주로 보는 파일 |
 |---|---|
 | 공통 바탕(색 변수 `:root`, 버튼, 첫 화면, 푸터) | 01-base-landing-footer |
-| 게시판 틀 · 메모 · 공지 | 02-board-layout-notes, 03-teacher-memo-notice |
+| 상단바 틀 · 독서 TOP 3 · 반 공지 기록 | 02-board-layout-notes, 03-teacher-memo-notice |
 | 알림 · 손들기 신호 | 04-notification-signal |
 | 프로필 · 피드 | 05-profile-insight-feed, 11-confirm-profile-roles |
-| 공통 창(모달) · 질문 · 반 관리 | 06-modal-question-class, 07-joincode-detail-attach |
+| 공통 창(모달) · 과일 바구니 · 반 관리 | 06-modal-question-class, 07-joincode-detail-attach |
 | 서식 입력 에디터 · 채팅 입력 | 08a-image-editor-richtext-chat |
-| 관리자 대시보드 · 학생 보고서 | 09-admin-dashboard |
-| 공부방 | 12-study-room, 20~25번, 31-study-activity-panel |
-| 수업 중계 · 수업 준비 | 13-lesson-broadcast, 14a-activity-view-lesson-prep, 16·17번, 33-lesson-window-report |
-| 공부중 · 읽는중 전광판(잔디) | 14b-studying-board |
+| 로고 단추 | 09-admin-dashboard |
+| '멋진 순간'(자리표 · 과일 · 궁금한 순간) · 모둠 설정 | 12-study-room, 20~25번, 31-study-activity-panel, 36-lesson-material-pycell |
+| 수업 화면 방송(중계) · 수업 화면 창 | 13-lesson-broadcast, 16·17번, 33-lesson-window-report |
+| 읽는중 전광판(잔디) | 14b-studying-board |
 | 출석 · 자리표 · 열매 | 15-attend-board, 20-study-today-attend, 21-seat-fruit, 32-fruit-celebration-dash |
-| KWL · KWLS | 17-lesson-create-kwlfs, 18-group-memo-tkwl, 19-kwl-kwls-summary, 29-paratext-raft-kwls |
+| KWLS | 17-lesson-create-kwlfs, 18-group-memo-tkwl, 29-paratext-raft-kwls |
 | **휴대폰(768px) 화면 묶음** | 26-keyword-kwlfab-mobile768 ⚠ 자리를 옮기지 마세요 |
 | 책방 목록 · 닿소리 활동 | 27-books-list-consonant |
 | 책방 교사 3칸 작업 화면 · 집계 | 28a-books-teacher-workspace |
 | 모둠 고르기 · 동료 평가 · 낱말 구름 | 28b-group-peer-review-wordcloud |
 | 곁텍스트 · RAFT | 29-paratext-raft-kwls, 42a-raft-crossword-signup |
 | 마인드맵 · 칠판 중계(cast) | 30-mindmap-cast |
-| 코넬 노트 | 34-cornell-drawer, 35-cornell-modal-report |
+| 서식 에디터의 체크 줄 · 모둠원별 진행 점 등(이름은 옛 코넬 노트 자리) | 34-cornell-drawer, 35-cornell-modal-report |
 | 의견 게시판 | 37-opinion-board |
 | 해시태그 | 38a-hashtag-form-slides, 38b-hashtag-infographic-teacher |
 | 물음표(qmark) | 39a-qmark-activity-examples |
@@ -58,7 +63,6 @@
 | `mm-` | 마인드맵 | 30 |
 | `bw-` | 브레인 라이팅 | 42b |
 | `bingo-` | 낱말 빙고 | 43 |
-| `cornell-` | 코넬 노트 | 34, 35, 36 |
 | `qmark-` | 물음표 활동 | 39a, 42b |
 | `opinion-` | 의견 게시판 | 37, 42b |
 | `msgr-` | 메신저 | 08a, 41 |
@@ -78,7 +82,7 @@
 
 ## 3. 파일을 고치거나 더할 때 지킬 것
 
-1. **순서가 곧 규칙입니다.** 같은 선택자가 두 번 나오면 뒤의 것이 이깁니다(그런 곳이 45곳).
+1. **순서가 곧 규칙입니다.** 같은 선택자가 두 번 나오면 뒤의 것이 이깁니다(그런 곳이 여럿).
    `globals.css`의 `@import` 줄 순서를 바꾸지 마세요.
 2. **새 규칙은 관련 파일의 알맞은 자리에** 넣으세요. 새 파일이 꼭 필요하면 관련 번호 바로 뒤에
    `@import` 한 줄을 끼워 넣습니다.

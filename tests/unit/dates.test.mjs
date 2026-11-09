@@ -4,7 +4,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  dateKeyOf, todayDateKey, dateKeyFromParts, shiftDateKey, dateKeyLabel, dateKeyDots,
+  dateKeyOf, todayDateKey, dateKeyFromParts, dateKeyLabel, dateKeyDots,
 } from "@/lib/dates";
 
 // ── 옛 구현(삭제 전 컴포넌트에서 그대로) ──
@@ -17,18 +17,6 @@ const old = {
   },
   toDateKey(year, month, day) { // LessonMemoPanel · StudyAttendanceModal
     return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-  },
-  shiftTeacher(dateKey, days) { // TeacherKwlPanel
-    const d = new Date(`${dateKey}T00:00:00`);
-    if (Number.isNaN(d.getTime())) return dateKey;
-    d.setDate(d.getDate() + days);
-    return old.ymd(d);
-  },
-  shiftCornell(key, days) { // CornellNotesPanel
-    const [y, m, d] = key.split("-").map(Number);
-    const dt = new Date(y, m - 1, d);
-    dt.setDate(dt.getDate() + days);
-    return old.ymd(dt);
   },
   longLabel(dateStr) { // fmtDate · dateLabel(TeacherKwlPanel) · formatDateLabel(KwlPanel·KwlFullscreenModal)
     const d = new Date(dateStr + "T00:00:00");
@@ -60,18 +48,6 @@ test("날짜 → 열쇠: 옛 셈과 두 해치 날짜가 모두 같습니다", (
   }
 });
 
-test("열쇠 ± 며칠: 두 옛 구현과 같고, 달·해 경계를 넘습니다", () => {
-  for (const d of everyDay()) {
-    const k = old.ymd(d);
-    for (const n of [-7, -1, 1, 7]) {
-      assert.equal(shiftDateKey(k, n), old.shiftTeacher(k, n));
-      assert.equal(shiftDateKey(k, n), old.shiftCornell(k, n));
-    }
-  }
-  assert.equal(shiftDateKey("2025-12-31", 1), "2026-01-01");
-  assert.equal(shiftDateKey("2024-03-01", -1), "2024-02-29");
-});
-
 test("긴 글자와 점 글자: 옛 셈과 같습니다", () => {
   for (const d of everyDay()) {
     const k = old.ymd(d);
@@ -83,7 +59,6 @@ test("긴 글자와 점 글자: 옛 셈과 같습니다", () => {
 
 test("읽을 수 없는 값은 받은 그대로 — 'Invalid Date'·'NaN-NaN-NaN'을 만들지 않습니다", () => {
   assert.equal(dateKeyLabel("오늘"), "오늘");
-  assert.equal(shiftDateKey("오늘", 1), "오늘");
   assert.equal(dateKeyDots(""), "");
   assert.equal(dateKeyDots(null), "");
 });

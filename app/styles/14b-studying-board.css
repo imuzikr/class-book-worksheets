@@ -169,7 +169,6 @@
    같은 함정입니다). `.book-progress`도 피했습니다 — `.book-progress-legend`·
    `-done`·`-sum`이 이미 따로 있어, 뿌리로 쓰면 그것들이 이 모달의 자식처럼
    읽힙니다. */
-.reading-board .grass-name,
 .bookboard .grass-act { background: #fff; }
 /* 쓰는 중 · 시작 전 — 학생 카드의 네모(.paratext-mark)와 같은 색.
    공부방의 --open(연한 주황 = 열려 있는데 덜 씀)을 여기서 쓰지 않는 까닭:

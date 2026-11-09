@@ -27,7 +27,6 @@ import {
   PARATEXT_SECTIONS,
   PARATEXT_SECTION_COUNT,
   isSectionDone,
-  isSectionStarted,
   paratextDoneCount,
   paratextCharCount,
   paratextRows,

@@ -13,7 +13,6 @@
 // =============================================================
 import { backdropClose } from "@/lib/modal";
 import { useMemo, useState } from "react";
-import { composeStudyGroups } from "@/lib/store";
 import { getCurrentUser } from "@/lib/user";
 import { IconGroup } from "./StatusIcons";
 
@@ -71,16 +70,15 @@ function groupsFromBase(baseGroups = [], roster = []) {
     }));
 }
 
-// onCompose를 주면 그 함수로 저장합니다(책방 등 다른 활동에서 재사용).
-// 주지 않으면 기본값인 공부방 모둠 카드(composeStudyGroups)로 저장합니다.
+// onCompose — 모둠을 저장하는 함수입니다(독서 활동은 composeBookGroups).
 // keepEmpty: 사람이 없는 모둠도 그대로 저장합니다.
 //   책방처럼 이름을 지어 미리 만들어 둔 모둠 칸은, 아직 배정을 안 했다고
-//   해서 사라지면 안 되므로 true로 씁니다. (공부방은 기존대로 false)
+//   해서 사라지면 안 되므로 true로 씁니다.
 export default function GroupComposer({
   board,
   roster = [],
   cards = [],
-  onCompose = null,
+  onCompose,
   keepEmpty = false,
   baseGroups = [],
   groupSetName = "활동 모둠",
@@ -225,8 +223,7 @@ export default function GroupComposer({
         leaderUid: g.leaderUid,
         groupSetName,
       }));
-      const save = onCompose ?? composeStudyGroups;
-      await save(getCurrentUser(), board.id, payload);
+      await onCompose(getCurrentUser(), board.id, payload);
       onSaved?.();
       onClose();
     } finally {
@@ -505,8 +502,7 @@ export default function GroupComposer({
         leaderUid: g.leaderUid,
         groupSetName,
       }));
-      const save = onCompose ?? composeStudyGroups;
-      await save(getCurrentUser(), board.id, payload, { groupSetName });
+      await onCompose(getCurrentUser(), board.id, payload, { groupSetName });
       onSaved?.();
       onClose();
     } finally {

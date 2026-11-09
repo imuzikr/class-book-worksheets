@@ -1,17 +1,16 @@
 // =============================================================
-// 손들기 이력 — classes/{cId}/signalEvents/{auto}
+// 손들기 확인 이력(옛 기록) — classes/{cId}/signalEvents/{auto}
 // -------------------------------------------------------------
-// questionSignals는 '지금 손든 사람'만 담고 손이 내려가면 문서가 지워져서,
-// '누가 언제 손을 들었나'가 전혀 남지 않았습니다. 교사가 '확인'으로 받아 준
-// 손만 여기에 한 건 적습니다('닫기'로 내린 손은 잘못 눌린 것이라 안 적습니다).
+// 한때 교사가 손든 학생을 '확인'할 때마다 한 장씩 남겼는데, 그것을 읽는 화면이
+// 없어 앱이 더는 쓰지 않습니다(lib/data/signals.js의 confirmQuestionSignal).
+// 그래서 만들기를 닫았습니다. 이미 남은 기록은 반 삭제 · 학생 탈퇴 때 지우므로,
+// 담당 교사가 그 학생 것을 찾아 읽는 길은 그대로 둡니다.
 //
-// 여기서 지키려는 것 — 과일 지급 이력(rewardEvents)과 같은 기준입니다:
-//  · 남의 반 교사가 남의 반 이력을 만들거나 읽지 못할 것
-//  · 학생은 스스로 이력을 만들 수 없을 것 (만들 수 있으면 손든 횟수를
-//    자기가 부풀릴 수 있습니다 — 참여 분석의 근거가 무너집니다)
+// 여기서 지키는 것:
+//  · 아무도 새로 만들지 못할 것(담당 교사도)
+//  · 담당 교사는 옛 기록을 찾아 읽을 것(탈퇴 정리) · 남의 반 교사는 못 읽을 것
 //  · 학생은 '자기 것만' 읽을 것
-//  · byUid·at을 위조하지 못할 것
-//  · 한 번 쓴 이력은 고치거나 지울 수 없을 것
+//  · 고치거나 그냥 지우지 못할 것(지우기는 반 삭제 · 탈퇴 갈래만)
 // =============================================================
 import { describe, it, before, after, beforeEach } from "node:test";
 import { assertSucceeds, assertFails } from "@firebase/rules-unit-testing";
@@ -20,6 +19,9 @@ import {
   addDoc,
   collection,
   getDoc,
+  getDocs,
+  query,
+  where,
   setDoc,
   updateDoc,
   deleteDoc,
@@ -29,7 +31,7 @@ import { makeEnv, asStudent, asTeacher, asAdmin, seed } from "./helpers.mjs";
 
 const evCol = (db, cId) => collection(db, "classes", cId, "signalEvents");
 
-// 클라이언트(lib/store.js confirmQuestionSignal)가 실제로 보내는 형태
+// 한때 클라이언트(confirmQuestionSignal)가 보내던 형태
 const payload = (cId, uid, byUid) => ({
   classId: cId,
   uid,
@@ -40,7 +42,7 @@ const payload = (cId, uid, byUid) => ({
   at: serverTimestamp(),
 });
 
-describe("손들기 이력 규칙", () => {
+describe("손들기 확인 이력(옛 기록) 규칙", () => {
   let env;
 
   before(async () => {
@@ -67,10 +69,10 @@ describe("손들기 이력 규칙", () => {
     });
   });
 
-  // ── 쓰기 ──
-  it("담당 교사는 자기 반 학생의 손들기 이력을 남길 수 있다", async () => {
+  // ── 쓰기 ── 앱이 더는 쓰지 않아 닫았습니다.
+  it("담당 교사도 새로 남길 수 없다", async () => {
     const db = asTeacher(env, "teacherA").firestore();
-    await assertSucceeds(addDoc(evCol(db, "cA"), payload("cA", "stu1", "teacherA")));
+    await assertFails(addDoc(evCol(db, "cA"), payload("cA", "stu1", "teacherA")));
   });
 
   it("남의 반 교사는 남길 수 없다", async () => {
@@ -149,6 +151,15 @@ describe("손들기 이력 규칙", () => {
     });
     const db = asTeacher(env, "teacherA").firestore();
     await assertSucceeds(getDoc(doc(db, "classes", "cA", "signalEvents", id)));
+  });
+
+  // 학생 탈퇴 때 담당 교사가 그 학생 것을 찾아 지웁니다(lib/data/withdraw.js).
+  it("담당 교사는 그 학생 것을 찾아 읽을 수 있다(탈퇴 정리)", async () => {
+    await seed(env, (db) => addDoc(evCol(db, "cA"), {
+      classId: "cA", uid: "stu1", byUid: "teacherA", at: new Date(),
+    }));
+    const db = asTeacher(env, "teacherA").firestore();
+    await assertSucceeds(getDocs(query(evCol(db, "cA"), where("uid", "==", "stu1"))));
   });
 
   it("남의 반 교사는 읽을 수 없다", async () => {

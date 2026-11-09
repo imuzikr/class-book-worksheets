@@ -326,7 +326,6 @@
 .question-signal-list > li.is-waiting .question-signal-item { box-shadow: inset 3px 0 0 var(--coral-600); }
 .qsig-follow { min-height: 64px; margin-bottom: 8px; }
 .qsig-thread-closed { margin: 0 0 10px; font-size: 12px; line-height: 1.5; color: var(--text-sub); }
-.qsig-actions--one { grid-template-columns: 1fr; }
 
 /* 손들고 대화한 이력(교사) — 자리표 과일 창에서 엽니다. 과일 팝오버(320)
    위에 떠야 하고, 그 팝오버가 다른 모달 안에서 열릴 때도 있습니다. 창 높이를

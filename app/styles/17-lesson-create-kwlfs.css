@@ -1,10 +1,3 @@
-/* 두 단추 모두 채운 살구색(.btn-primary)입니다 — 제목이 비어 있으면 '슬라이드
-   없이 만들기'만 옅어집니다(.btn-primary:disabled). */
-/* 수업 줄의 '편집하기 · 수업 시작하기'는 **같은 폭**입니다(선생님 요청) —
-   글자 수만큼 차지하게 두면 넉 자와 여섯 자라 두 단추가 짝으로 안 읽힙니다.
-   긴 쪽('수업 시작하기')이 들어가는 폭으로 못 박습니다. 프로젝트 줄의 '열기'
-   등은 이 클래스가 없어 그대로입니다. `min-height: 0`은 768px 아래의
-   터치 규칙(`.btn-primary { min-height: 44px }
 /* ── 교사 화면 — 방송 중일 때 어디서든 바로 끌 수 있는 안전장치 ── */
 .broadcast-stop-pill {
   position: fixed;
@@ -26,70 +19,6 @@
 }
 .broadcast-stop-pill:hover {
   filter: brightness(1.08);
-}
-
-@keyframes kwlfs-refresh-pulse {
-  0%, 100% { opacity: 0.7; }
-  50% { opacity: 1; }
-}
-
-/* 날짜 달력 — 날짜 버튼 바로 아래로 내려옵니다.
-   예전에는 브라우저 기본 날짜 선택기(input[type=date])를 열었는데, 그것은
-   '어느 날에 기록이 있는지'를 모릅니다. 기록이 있는 날을 칠해 보여 주는
-   달력으로 바꿨습니다(KwlCalendar). */
-.kwlfs-cal {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  z-index: 5;
-  /* 좁은 화면에서는 화면 밖으로 나가지 않게 — 이 모달은 94vw입니다 */
-  width: min(340px, calc(100vw - 48px));
-  padding: 10px;
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.18);
-}
-.kwlfs-cal .study-attendance-calendar {
-  margin-bottom: 0;
-  border: none;
-  padding: 0;
-}
-.kwlfs-cal-foot {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 10px 0 0;
-  padding-top: 9px;
-  border-top: 1px solid var(--border);
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--text-sub);
-}
-.kwlfs-cal-swatch {
-  flex-shrink: 0;
-  width: 12px;
-  height: 12px;
-  border-radius: 4px;
-  background: var(--green-50);
-  border: 1px solid var(--green-750);
-}
-.kwlfs-cal-close {
-  margin-left: auto;
-  flex-shrink: 0;
-  border: 1px solid var(--border);
-  background: #fff;
-  border-radius: 999px;
-  padding: 3px 11px;
-  font-family: inherit;
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--text-sub);
-  cursor: pointer;
-}
-.kwlfs-cal-close:hover {
-  background: var(--neutral);
-  color: var(--text);
 }
 
 /* ── 누가기록(학생 관찰 메모) — 모달 + 대시보드 공통 ── */
@@ -269,6 +198,3 @@
   cursor: pointer;
 }
 .modal-back:hover { color: var(--primary-dark); }
-
-/* 자리표 확대 보기 — 좁은 패널의 8.5px 글씨를 큰 폭에서 제 크기로 봅니다.
-   내용은 같은 SeatPickGrid라 자리 이동·과일 주기가 그대로 동작합니다. */

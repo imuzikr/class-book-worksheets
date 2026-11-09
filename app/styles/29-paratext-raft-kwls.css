@@ -218,14 +218,6 @@
   color: var(--text-sub);
   flex-shrink: 0;
 }
-.paratext-mark {
-  display: block;
-  height: 15px;
-  border-radius: 4px;
-  background: var(--neutral);
-}
-.paratext-mark.doing { background: #f3c99a; }
-.paratext-mark.done { background: var(--green-300); }
 .paratext-student-meta {
   font-size: 11.5px;
   font-weight: 700;

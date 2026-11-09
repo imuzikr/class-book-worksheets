@@ -242,16 +242,9 @@
 .bb-dash-modal > header { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-bottom: 18px; }
 .bb-dash-modal > header h2 { color: #405d33; font-size: 21px; line-height: 1.5; }
 .bb-dash-modal .bb-dash-text-link { text-decoration: none; }
-.bb-dash-dialog-scope { font-size: 11px; color: #83916f; margin-bottom: 18px; line-height: 1.8; }
-.bb-dash-student-detail { background: #f9faf5; border-radius: 12px; padding: 16px; margin-bottom: 18px; }
-.bb-dash-student-detail h3 { color: #5a7246; font-size: 15px; margin: 10px 0 7px; line-height: 1.7; }
-.bb-dash-student-detail p { color: #7c8b68; font-size: 12px; margin-bottom: 8px; line-height: 1.8; }
-.bb-dash-student-detail blockquote { font-size: 12px; line-height: 1.9; border-left: 3px solid #d5e4c5; padding: 10px 12px; margin: 13px 0; background: #fff; color: #657b51; white-space: pre-wrap; overflow-wrap: anywhere; }
 .bb-dash-metrics.is-dialog { margin-bottom: 18px; gap: 8px; }
 .bb-dash-metrics.is-dialog .bb-dash-metric { padding: 12px; }
 .bb-dash-metrics.is-dialog .bb-dash-metric > strong { font-size: 25px; }
-.bb-dash-detail-reflection { margin-bottom: 18px; }
-.bb-dash-detail-reflection h3 { color: #698153; font-size: 14px; margin-bottom: 12px; }
 .bb-dash-day-total { padding: 15px 0 24px; }
 .bb-dash-day-total strong { display: block; color: #537844; font-size: 50px; line-height: 1.3; }
 .bb-dash-day-total strong small { font-size: 16px; margin-left: 9px; }

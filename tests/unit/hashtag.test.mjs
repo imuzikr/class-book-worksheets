@@ -19,7 +19,6 @@ import {
   newCommentCount,
   normalizeHashtagPost,
   normalizeTag,
-  quoteHasTag,
   commentAuthorLabel,
   sortComments,
 } from "@/lib/hashtag";
@@ -44,14 +43,6 @@ test("칸은 여섯 개 — 빈 값·옛 값도 같은 모양", () => {
 test("중복 태그는 뒤에 적은 칸이 걸립니다(대소문자 무시)", () => {
   const dup = duplicateTagIndexes([{ tag: "AI" }, { tag: "기후" }, { tag: "#ai" }, { tag: "" }, { tag: "기후" }]);
   assert.deepEqual([...dup].sort(), [2, 4]);
-});
-
-test("원문 문장에 태그 낱말이 있나 — 띄어쓰기 무시, 빈 칸은 문제없음", () => {
-  assert.equal(quoteHasTag("기후위기", "지금은 기후 위기가 심각하다."), true);
-  assert.equal(quoteHasTag("탄소", "지구가 뜨거워진다."), false);
-  assert.equal(quoteHasTag("", "아무 문장"), true);
-  assert.equal(quoteHasTag("탄소", ""), true);
-  assert.equal(quoteHasTag("AI", "ai가 바꾼 세상"), true);
 });
 
 test("진행 — 태그와 생각이 다 찬 칸만, 중복 칸은 빼고 · 원문은 안 봄", () => {

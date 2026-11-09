@@ -3,8 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { initialReadingState, applyReadingAction, deriveReading } from "../../lib/reading.js";
 import {
-  journeyAvatar, journeyTitle, journeyStage, levelProgress, journeyTrackMax, journeyPosition,
-  currentStreakOf, memberSnapshot, memberStats, sortJourney, journeyNarrative,
+  journeyTitle, currentStreakOf, memberSnapshot, memberStats, journeyNarrative,
   RANKING_PERIODS, rankingsForPeriod, sortReadingRankings, isRankedStudent,
 } from "../../lib/readingJourney.js";
 import { sortReadingRankings as serverSort } from "../../lib/server/readingPolicy.js";
@@ -19,29 +18,8 @@ function sample() {
   return deriveReading(s, new Date(NOW));
 }
 
-test("레벨별 모습 · 칭호 · 곳", () => {
-  assert.equal(journeyAvatar(1), "🌱");
-  assert.equal(journeyAvatar(3), "📚");
-  assert.equal(journeyAvatar(7), "🦉");
+test("레벨별 칭호", () => {
   assert.equal(journeyTitle(5), "열정적인 독서가");
-  assert.equal(journeyStage(1), "시작의 마을");
-  assert.equal(journeyStage(99), "마스터의 궁전");
-});
-
-test("레벨 안 진행률과 다음 레벨까지", () => {
-  assert.deepEqual(levelProgress(0), { level: 1, from: 0, to: 100, toNext: 100, percent: 0 });
-  const p = levelProgress(175);
-  assert.equal(p.level, 2);
-  assert.equal(p.percent, 50);
-  assert.equal(p.toNext, 75);
-});
-
-test("트랙 끝 레벨과 자리", () => {
-  assert.equal(journeyTrackMax([{ level: 2 }]), 7);
-  assert.equal(journeyTrackMax([{ level: 9 }]), 10);
-  assert.equal(journeyPosition(0, 7), 4);
-  assert.ok(journeyPosition(175, 7) > journeyPosition(100, 7));
-  assert.equal(journeyPosition(10 ** 9, 7), 96);
 });
 
 test("오늘 기준 연속 독서일 — 어제까지 읽었으면 잇고, 그 전이면 0", () => {
@@ -71,16 +49,6 @@ test("옛 집계(칸이 없음)는 null — 화면이 '—'로", () => {
   assert.equal(stats.badges, null);
   assert.equal(stats.currentStreak, null);
   assert.deepEqual(memberStats({ badges: ["nope", "shelf_1", "shelf_1"] }, "2026-10-29").badges, ["shelf_1"]);
-});
-
-test("트랙 순서 — 누적 경험치 → 최근에 읽은 학생 → 학번", () => {
-  const order = sortJourney([
-    { uid: "a", totalXp: 10, studentId: "3" },
-    { uid: "b", totalXp: 50, studentId: "2" },
-    { uid: "c", totalXp: 10, lastReadDate: "2026-10-28", studentId: "4" },
-    { uid: "d", totalXp: 10, studentId: "1" },
-  ]).map((r) => r.uid);
-  assert.deepEqual(order, ["b", "c", "d", "a"]);
 });
 
 test("나의 독서 여정 이야기", () => {

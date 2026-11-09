@@ -11,7 +11,6 @@ import {
   levelMap,
   mindmapImages,
   mindmapNodeSize,
-  moveSubtreeTo,
   normalizeMindmap,
   normalizeVerticalGap,
   safeNodeImage,
@@ -19,7 +18,6 @@ import {
   settleNodeVerticalPositions,
   updateNodeImage,
   updateNodeText,
-  updateVerticalGap,
   withRadialPositions,
 } from "@/lib/mindmap";
 import { createDemoBookActivities } from "@/lib/demoBookActivities";
@@ -55,6 +53,23 @@ function freezeMap(map) {
   for (const n of map.nodes) Object.freeze(n);
   Object.freeze(map.nodes);
   return Object.freeze(map);
+}
+
+// 한 노드와 그 아래 가지 전체의 저장 좌표를 (x, y)로 옮긴 판 — 옛 기록에 남은
+// '끌어 옮긴 좌표'를 흉내 냅니다(지금 화면은 세로 이동량만 저장합니다).
+function shiftSubtree(map, id, x, y) {
+  const at = map.nodes.find((n) => n.id === id);
+  const dx = x - (at.x ?? 0);
+  const dy = y - (at.y ?? 0);
+  const moving = new Set([id]);
+  for (let grew = true; grew;) {
+    grew = false;
+    for (const n of map.nodes) {
+      if (!moving.has(n.id) && moving.has(n.parentId)) { moving.add(n.id); grew = true; }
+    }
+  }
+  return { ...map, nodes: map.nodes.map((n) => (moving.has(n.id)
+    ? { ...n, x: (n.x ?? 0) + dx, y: (n.y ?? 0) + dy } : n)) };
 }
 
 test("세로 끌기는 두 형태의 모든 깊이에서 해당 가지를 정확히 옮기고 나머지 자리는 유지합니다", () => {
@@ -341,19 +356,16 @@ test("세로 간격은 숫자만 받아 범위 안에 두고, 옛 기록은 기�
   assert.equal(normalizeMindmap({ nodes: [node("root", null)] }).verticalGap, 20);
 });
 
-test("세로 간격만 고쳐 저장하고 다시 읽어도 원문·좌표·노드 순서는 그대로입니다", () => {
+test("옛 기록의 세로 간격은 다시 읽어도 · 다른 편집을 거쳐도 그대로이고, 원문·좌표·노드 순서도 그대로입니다", () => {
   const text = "내 생각에  어떤 편향이 있었을까";
-  const map = freezeMap(normalizeMindmap({ layout: "radial", verticalGap: 20, nodes: [
+  const map = freezeMap(normalizeMindmap({ layout: "radial", verticalGap: 84, nodes: [
     node("root", null, { x: 90, y: 40 }),
     node("a", "root", { x: 330, y: 80, text, image: IMG, edgeLabel: "관계" }),
     node("b", "a", { x: 410, y: 190, text: "또 다른 생각" }),
   ] }));
   const before = JSON.stringify(map);
-  const spaced = updateVerticalGap(map, 84);
-  assert.equal(spaced.verticalGap, 84);
-  assert.equal(spaced.nodes, map.nodes);
-  assert.deepEqual(spaced, { ...map, verticalGap: 84 });
-  const edited = updateNodeText(spaced, "b", text);
+  assert.equal(map.verticalGap, 84);
+  const edited = updateNodeText(map, "b", text);
   const restored = normalizeMindmap(JSON.parse(JSON.stringify(edited)));
   assert.deepEqual(restored, edited);
   assert.equal(restored.nodes.find((n) => n.id === "a").text, text);
@@ -363,10 +375,7 @@ test("세로 간격만 고쳐 저장하고 다시 읽어도 원문·좌표·노�
   }
   assert.equal(addChild(restored, "a", "새 가지").verticalGap, 84);
   assert.equal(updateNodeImage(restored, "b", IMG).verticalGap, 84);
-  assert.equal(moveSubtreeTo(restored, "a", 340, 100).verticalGap, 84);
   assert.equal(withRadialPositions(restored).verticalGap, 84);
-  assert.equal(updateVerticalGap(map, 900).verticalGap, 120);
-  assert.equal(updateVerticalGap(map, "84").verticalGap, 20);
   assert.equal(JSON.stringify(map), before);
 });
 
@@ -591,7 +600,7 @@ test("원본 좌표로 하위 가지를 끌면 원문은 유지되고 형제의 
     node("a", "p", { x: 330, y: 0, image: IMG, edgeLabel: "내가 적은 관계" }),
     node("b", "p", { x: 330, y: 100 }), node("a1", "a", { x: 420, y: 10 }),
   ] });
-  const moved = moveSubtreeTo(map, "a", 350, 300);
+  const moved = shiftSubtree(map, "a", 350, 300);
   for (const id of ["a", "a1"]) {
     const old = map.nodes.find((n) => n.id === id);
     assert.deepEqual(moved.nodes.find((n) => n.id === id), { ...old, x: old.x + 20, y: old.y + 300 });

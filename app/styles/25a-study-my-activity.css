@@ -1,69 +1,9 @@
-
 /* =============================================================
    공부방 — 내 카드 활동 페이지 (StudyMyActivityCard)
    모달 대신 상세 페이지로, 활동을 RAFT 글쓰기처럼 나란히 배치합니다.
    ============================================================= */
 
 /* 활동 하나를 크게 쓰는 모달 */
-/* 수업 노트 서랍(3001) 위 — 서랍이 열린 채로 칸을 누르면 서랍이 창의
-   오른쪽(× 단추)을 덮었습니다. 서랍의 오늘의 활동이 여는 셀 창(PyCellModal)도
-   같은 층입니다. 노트 크게 보기(3010)와 같은 층. */
-.study-act-backdrop { z-index: 3010; }
-
-.modal.study-act-modal {
-  width: min(980px, 94vw);
-  max-width: 94vw;
-  height: min(84vh, 900px);
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 20px 22px 22px;
-  overflow: hidden;
-}
-.study-act-modal-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
-}
-.study-act-modal-title {
-  flex: 1;
-  min-width: 0;
-  padding: 8px 12px;
-  font-family: inherit;
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--dark);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: #fff;
-}
-.study-act-modal-title:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-light);
-}
-/* 편집기가 남은 높이를 모두 씁니다 */
-.study-act-modal-body {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-.study-act-modal-body .rte-full {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-.study-act-modal-body .rte-full .rte-area {
-  flex: 1;
-  min-height: 0;
-  max-height: none;
-  height: auto;
-  overflow-y: auto;
-}
 
 /* 칸 폭이 좁아 이미지는 2열로 작게 */
 
@@ -117,50 +57,5 @@
   line-height: 1.6;
   color: var(--text);
   word-break: break-word;
-}
-
-/* 자동저장 상태 — 저장 행 왼쪽(오류 안내용) */
-.study-autosave {
-  margin-right: auto;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--text-sub);
-  transition: color 0.2s;
-}
-.study-autosave--saved {
-  color: var(--green-500);
-}
-.study-autosave--error {
-  color: var(--danger);
-}
-
-/* 자동저장 배지 — 제목 줄에 잠깐 표시됐다가 사라짐(다음 입력 때 재표시) */
-.study-autosave-pill {
-  margin-left: 10px;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: var(--neutral);
-  color: var(--text-sub);
-  vertical-align: middle;
-  white-space: nowrap;
-  animation: autosave-pill-in 0.25s ease;
-}
-@keyframes autosave-pill-in {
-  from { opacity: 0; transform: translateY(-2px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.study-autosave-pill--saving {
-  background: var(--neutral);
-  color: var(--text-sub);
-}
-.study-autosave-pill--saved {
-  background: #eef8f1;
-  color: #3f8a4f;
-}
-.study-autosave-pill--error {
-  background: #fdecea;
-  color: var(--danger);
 }
 

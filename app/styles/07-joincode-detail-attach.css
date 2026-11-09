@@ -161,10 +161,3 @@
 .qa-delete:hover {
   background: #fdecea;
 }
-
-.qa-content {
-  font-size: 15px;
-  line-height: 1.8;
-  white-space: pre-wrap;
-  color: var(--text);
-}

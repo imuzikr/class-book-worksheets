@@ -440,21 +440,6 @@ html[data-auth-pending] .site-footer {
   line-height: 1.5;
 }
 
-.auth-divider {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--text-sub);
-  font-size: 12px;
-}
-.auth-divider::before,
-.auth-divider::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-}
-
 .btn-google {
   display: inline-flex;
   align-items: center;

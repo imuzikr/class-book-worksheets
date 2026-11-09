@@ -297,12 +297,6 @@
   min-height: 0;
 }
 /* 전체 화면(칠판) 모드에서는 끼워 넣은 상태라도 화면을 가득 씁니다 */
-.dash-embed.zoom {
-  margin-top: 0;
-  padding: 18px 24px 22px;
-  border-top: none;
-  background: var(--bg);
-}
 
 .consonant-chip-x {
   border: none;

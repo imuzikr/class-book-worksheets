@@ -3,13 +3,13 @@
 import { test, mock } from "node:test";
 import assert from "node:assert/strict";
 
-// memoTime(null)이 '지금'을 돌려주는지 보려면 '지금'이 정해져 있어야 합니다.
+// chatTime(null)이 '지금'을 돌려주는지 보려면 '지금'이 정해져 있어야 합니다.
 const NOW = new Date(2026, 8, 25, 10, 0, 0);
 mock.timers.enable({ apis: ["Date"], now: NOW });
 
 const { toDate, todayDateKey, formatClockMs, formatStampMs } = await import("@/lib/dates");
 const { cellIndexOfWord } = await import("@/lib/consonants");
-const { buildMemoThreads, memoTime } = await import("@/lib/memoThreads");
+const { chatTime } = await import("@/lib/messenger");
 
 // ── 날짜 ─────────────────────────────────────────────────────
 test("todayDateKey는 두 자리로 채운 YYYY-MM-DD", () => {
@@ -44,34 +44,8 @@ test("쌍자음은 홑자음 칸, 한글로 시작하지 않으면 -1", () => {
   assert.equal(cellIndexOfWord(""), -1);
 });
 
-// ── 모둠 메모 스레드 ─────────────────────────────────────────
-const m = (id, from, to, t, replyToId = null) => ({
-  id, fromUid: from, toUid: to, createdAt: new Date(2026, 8, 25, 9, t), replyToId, read: false,
-});
-
-test("답장은 한 스레드로, 목록은 '마지막 글'이 최근인 차례", () => {
-  const threads = buildMemoThreads([
-    m("a1", "me", "you", 0),
-    m("b1", "me", "him", 5),
-    m("a2", "you", "me", 10, "a1"), // 어제 시작한 대화에 방금 온 답
-  ], "me");
-  assert.deepEqual(threads.map((t) => t.id), ["a1", "b1"]);
-  assert.deepEqual(threads[0].items.map((x) => x.id), ["a1", "a2"]);
-  assert.equal(threads[0].otherUid, "you");
-  assert.equal(threads[0].unread, 1);
-});
-
-test("가운데 글이 거둬지면 거기서 끊겨 새 뿌리가 됩니다", () => {
-  const threads = buildMemoThreads([m("r", "me", "you", 0), m("c", "me", "you", 20, "gone")], "me");
-  assert.equal(threads.length, 2);
-});
-
-test("고리(서로가 서로의 답장)여도 멈추지 않습니다", () => {
-  const threads = buildMemoThreads([m("x", "me", "you", 0, "y"), m("y", "you", "me", 1, "x")], "me");
-  assert.equal(threads.reduce((n, t) => n + t.items.length, 0), 2);
-});
-
-test("memoTime: 서버 시각이 아직 없으면 0이 아니라 '지금'", () => {
-  // 0으로 치면 방금 보낸 메모가 대화 맨 위로 튀었다가 내려앉습니다.
-  assert.equal(memoTime(null), NOW.getTime());
+// ── 메신저 말의 시각 ─────────────────────────────────────────
+test("chatTime: 서버 시각이 아직 없으면 0이 아니라 '지금'", () => {
+  // 0으로 치면 방금 보낸 말이 대화 맨 위로 튀었다가 내려앉습니다.
+  assert.equal(chatTime(null), NOW.getTime());
 });

@@ -181,8 +181,8 @@ npm run deploy             # 규칙 시험 → firestore(rules·indexes) + stora
 
 ```
 users/{uid}                 프로필 (email, realName, displayName, role, requestedRole ...)
-classes/{cId}               반 (+ attendanceOpen, marquee 등)
-  ├ cornellNotes            이전 수업 노트 기록(기존 자료 보존)
+classes/{cId}               반 (+ attendanceOpen · 관리자 설정 스위치 등)
+  ├ cornellNotes            옛 수업 노트 기록(화면 없음 · 지우지 않고 보존, 반 삭제 · 탈퇴 때 정리)
   ├ rewards · rewardEvents  과일 누적 · 지급 이력
   ├ fruitBasket · fruitEvents  과일 바구니 · 이벤트 기록
   ├ popQuizzes              돌발 퀴즈
@@ -201,7 +201,8 @@ broadcasts/{cId}            학급 화면 방송
 ```
 
 규칙은 책봄 화면이 쓰는 컬렉션만 둡니다. 배움나눔에서 함께 왔던 질문방 · 공부방 카드 ·
-수업 노트 등의 규칙은 걷었습니다(`studyBoards`만 반을 만들 때 '선생님 보드'를 함께 만들어 남김).
+수업 노트 등의 규칙은 걷었습니다. 옛 문서가 남은 `studyBoards` · `presence` · `signalEvents`는
+읽기 · 지우기만 남겨, 반 완전 삭제 · 학생 탈퇴가 그 옛 문서를 정리합니다(만들기 · 고치기는 닫음).
 
 ## 폴더 구조
 
