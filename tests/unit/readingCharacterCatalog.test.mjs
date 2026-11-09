@@ -16,14 +16,33 @@ test("초급 · 중급 · 고급을 순서대로 제공하고 초급의 첨부 �
   assert.equal(new Set(beginners.map(({ id }) => id)).size, 10);
 });
 
-test("중급 · 고급은 기존 동물과 ID를 그대로 사용하며 초급 번호와 혼동하지 않는다", () => {
+test("중급은 기존 동물과 ID를 유지하며 같은 번호의 초급 · 고급 이름과 혼동하지 않는다", () => {
   assert.equal(characterCatalog("intermediate"), WORLD_CHARACTERS);
-  assert.equal(characterCatalog("advanced"), WORLD_CHARACTERS);
   assert.equal(characterName({ number: 1, style: "beginner" }), "엘프 궁수 · 초급");
   assert.equal(characterName({ number: 1, style: "intermediate" }), "곰 · 중급");
+  assert.equal(characterName({ number: 1, style: "advanced" }), "쥐 · 고급");
   assert.equal(characterName({ number: 2, style: "beginner" }), "곰 기사 · 초급");
-  assert.equal(characterName({ number: 2, style: "advanced" }), "토끼 · 고급");
+  assert.equal(characterName({ number: 2, style: "advanced" }), "소 · 고급");
   assert.equal(characterName({ number: 10, style: "beginner" }), "요정 · 초급");
+  assert.equal(characterName({ number: 10, style: "advanced" }), "돼지 · 고급");
+});
+
+test("고급은 새 무술 세트의 첨부 순서 · 이름 · 파일 번호를 독립적으로 제공한다", () => {
+  const advanced = characterCatalog("advanced");
+  assert.notEqual(advanced, WORLD_CHARACTERS);
+  assert.notEqual(advanced, characterCatalog("beginner"));
+  assert.deepEqual(advanced.map(({ number }) => number), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  assert.deepEqual(advanced.map(({ id }) => id), [
+    "01-rat", "02-ox", "03-tiger", "04-rabbit", "05-dragon",
+    "06-goat", "07-monkey", "08-rooster", "09-dog", "10-pig",
+  ]);
+  assert.deepEqual(advanced.map(({ name }) => name), ["쥐", "소", "호랑이", "토끼", "용", "양", "원숭이", "닭", "개", "돼지"]);
+  for (const { number, name } of advanced) {
+    const selected = { number, style: "advanced" };
+    assert.deepEqual(characterOf({ uid: "existing-student", character: selected }), selected);
+    assert.equal(characterName(selected), `${name} · 고급`);
+    assert.equal(characterImage(selected), `/reading-journey/advanced-${String(number).padStart(2, "0")}.webp`);
+  }
 });
 
 test("초급을 포함한 모든 선택은 UID · 레벨 · 경험치와 무관하게 그대로 표시한다", () => {
