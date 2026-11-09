@@ -1,6 +1,6 @@
 # 책봄 화면 모양(CSS) 안내
 
-책봄의 화면 모양 규칙은 모두 이 폴더(`app/styles/`)의 CSS 파일 50개에 있습니다.
+책봄의 화면 모양 규칙은 모두 이 폴더(`app/styles/`)의 CSS 파일 49개에 있습니다.
 `app/globals.css`는 이 파일들을 **정해진 순서대로 불러오는 입구**일 뿐입니다.
 
 > 한 줄 요약: **파일 순서를 바꾸지 말고, 고친 뒤에는 `npm run css:fingerprint`로 확인하세요.**
@@ -20,7 +20,6 @@
 | 프로필 · 피드 | 05-profile-insight-feed, 11-confirm-profile-roles |
 | 공통 창(모달) · 질문 · 반 관리 | 06-modal-question-class, 07-joincode-detail-attach |
 | 서식 입력 에디터 · 채팅 입력 | 08a-image-editor-richtext-chat |
-| 파이썬 실행 패널 | 08b-python-panel, 36-lesson-material-pycell |
 | 관리자 대시보드 · 학생 보고서 | 09-admin-dashboard |
 | 공부방 | 12-study-room, 20~25번, 31-study-activity-panel |
 | 수업 중계 · 수업 준비 | 13-lesson-broadcast, 14a-activity-view-lesson-prep, 16·17번, 33-lesson-window-report |
@@ -36,7 +35,7 @@
 | 코넬 노트 | 34-cornell-drawer, 35-cornell-modal-report |
 | 의견 게시판 | 37-opinion-board |
 | 해시태그 | 38a-hashtag-form-slides, 38b-hashtag-infographic-teacher |
-| 물음표(qmark) · 활동 예시 코드 | 39a-qmark-activity-examples |
+| 물음표(qmark) | 39a-qmark-activity-examples |
 | 돌발 퀴즈 | 39b-popquiz (일부는 13번) |
 | 가로세로 퀴즈 | 40-crossword, 42a-raft-crossword-signup |
 | 떠 있는 메신저 | 41-floating-messenger |
@@ -64,11 +63,14 @@
 | `opinion-` | 의견 게시판 | 37, 42b |
 | `msgr-` | 메신저 | 08a, 41 |
 | `qsig-` | 손들기 신호 | 04, 41 |
-| `pycell-` | 파이썬 셀 | 36, 37, 39a |
 | `sample-` | 체험용 샘플 반 | 42b |
 | `raft-`, `paratext-`, `kwl-`, `kwls-`, `study-`, `lesson-`, `modal-` | 여러 화면 공통 | 많은 파일에 흩어져 있음 |
 
 흩어진 접두사는 검색이 가장 빠릅니다: `rg "\.raft-" app/styles`
+
+파이썬 실행기의 규칙(`08b-python-panel`, `pycell-` · `py-` · 코드 편집기 `cm-` · 활동 예시 코드)은
+실행기와 함께 걷었습니다. 36 · 37 · 39a의 파일 이름에 그 흔적(`pycell` · `activity-examples`)이
+남아 있지만 이름만입니다 — 파일 이름을 바꾸면 `@import` 줄도 함께 고쳐야 해서 그대로 두었습니다.
 
 ⚠ **화면 코드(JS)가 이름을 조립하는 클래스가 있습니다.** 예를 들어 `` `pad-${색}` ``, `` `ht-insight-${종류}` ``,
 `grass-cell--…`, `reading-status--…`처럼요. 이런 이름은 소스에서 통째로 검색해도 안 나오므로,
@@ -80,7 +82,7 @@
    `globals.css`의 `@import` 줄 순서를 바꾸지 마세요.
 2. **새 규칙은 관련 파일의 알맞은 자리에** 넣으세요. 새 파일이 꼭 필요하면 관련 번호 바로 뒤에
    `@import` 한 줄을 끼워 넣습니다.
-3. **이름 규칙:** `번호-내용.css`. 큰 파일을 둘로 나눌 때는 번호를 그대로 두고 `08a`·`08b`처럼
+3. **이름 규칙:** `번호-내용.css`. 큰 파일을 둘로 나눌 때는 번호를 그대로 두고 `14a`·`14b`처럼
    a·b를 붙여 순서를 지킵니다(번호를 다시 매기지 않습니다).
 4. **이 폴더의 파일을 컴포넌트(.jsx)에서 `import` 하지 마세요.** Next.js는 컴포넌트가 불러온 CSS를
    페이지마다 다른 순서로 묶어서, 겹치는 규칙의 승패가 바뀔 수 있습니다. 반드시 `globals.css`로만 불러옵니다.

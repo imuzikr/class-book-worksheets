@@ -8,8 +8,6 @@ const NOW = new Date(2026, 8, 25, 10, 0, 0);
 mock.timers.enable({ apis: ["Date"], now: NOW });
 
 const { toDate, todayDateKey, formatClockMs, formatStampMs } = await import("@/lib/dates");
-const { splitEcho } = await import("@/lib/pyRun");
-const { outputTextOf } = await import("@/lib/pyShare");
 const { cellIndexOfWord } = await import("@/lib/consonants");
 const { buildMemoThreads, memoTime } = await import("@/lib/memoThreads");
 
@@ -33,35 +31,6 @@ test("밀리초 시각: 세 자리를 손으로 붙이고, 값이 없으면 지�
   // serverTimestamp()가 아직 null인 순간 — '지금'의 밀리초를 찍으면 안 됩니다.
   assert.equal(formatClockMs(null), "");
   assert.equal(formatStampMs(undefined), "");
-});
-
-// ── 파이썬 실행 결과 ─────────────────────────────────────────
-test("splitEcho: 표시가 없는 줄은 그대로, parts 없음", () => {
-  assert.deepEqual(splitEcho("skan"), { text: "skan", parts: undefined });
-});
-
-test("splitEcho: input()이 찍은 값만 echo 조각으로, 안내 문구는 같은 줄에", () => {
-  const { text, parts } = splitEcho("이름: \u0001홍길동\u0002");
-  assert.equal(text, "이름: 홍길동");
-  assert.deepEqual(parts, [
-    { text: "이름: ", echo: false },
-    { text: "홍길동", echo: true },
-  ]);
-});
-
-test("splitEcho: 닫는 표시가 없어도 멈추지 않고 끝까지 입력으로 봅니다", () => {
-  assert.equal(splitEcho("\u0001abc").text, "abc");
-});
-
-test("outputTextOf: 줄바꿈으로 잇고 안내 줄은 뺍니다", () => {
-  // Pyodide는 줄 끝 줄바꿈을 뗀 채 넘깁니다 — 빈 글자로 이으면 한 줄로 뭉개집니다.
-  const lines = [
-    { type: "info", text: "파이썬을 불러오는 중이에요…" },
-    { type: "out", text: "skan" },
-    { type: "out", text: "테스트" },
-    { type: "err", text: "Traceback" },
-  ];
-  assert.equal(outputTextOf(lines), "skan\n테스트\nTraceback");
 });
 
 // ── 닿소리 칸 고르기 ─────────────────────────────────────────

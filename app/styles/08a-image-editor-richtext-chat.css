@@ -252,59 +252,6 @@ pre code {
   font-size: inherit;
 }
 
-/* 코드 셀의 **결과**(lib/pyCells.js의 `pre.py-result`) — 읽는 자리에서.
-   코드와 같은 검은 블록이면 어디까지가 코드고 어디부터가 출력인지 안
-   갈려서, 옅은 바탕 + 왼쪽 선으로 '프로그램이 낸 말'임을 보입니다.
-   '실행 결과' 이름은 **코드 셀 바로 뒤일 때만** CSS가 그립니다 — 옛
-   '결과 붙이기'는 `<p>실행 결과</p>` 줄을 글로 넣어 두어, 거기까지 달면
-   이름이 두 번 섭니다. 출력은 길어도 접어 보이게(pre-wrap) 둡니다. */
-.rte-area pre.py-result,
-.study-card-content pre.py-result,
-.study-card-body pre.py-result {
-  background: var(--bg-deep);
-  color: var(--text);
-  border-left: 3px solid var(--green-200);
-  border-radius: 0 10px 10px 0;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-.rte-area pre.py-code + pre.py-result,
-.study-card-content pre.py-code + pre.py-result,
-.study-card-body pre.py-code + pre.py-result {
-  margin-top: -2px;
-}
-.rte-area pre.py-code + pre.py-result::before,
-.study-card-content pre.py-code + pre.py-result::before,
-.study-card-body pre.py-code + pre.py-result::before {
-  content: "실행 결과";
-  display: block;
-  margin-bottom: 2px;
-  font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-  font-size: 11px;
-  font-weight: 800;
-  color: var(--text-sub);
-}
-
-/* 파이썬 연계 활동의 **글 셀**(lib/pyCells.js의 `div.py-text`) — 읽는 자리에서.
-   코드(검은 블록)와 결과(옅은 바탕 + 초록 선) 사이에서 글만 맨바닥에 흘러,
-   어디까지가 한 셀인지 안 보였습니다. 흰 바탕 + 옅은 테두리 + 살구빛 왼쪽
-   선으로 '학생이 쓴 글' 한 덩이를 보입니다 — 결과의 초록 선과 색으로 갈립니다.
-   둘레(모서리·여백·위아래 간격)는 코드·결과 블록과 같은 값입니다. */
-.study-card-content .py-text,
-.study-card-body .py-text {
-  margin: 6px 0;
-  padding: 10px 14px;
-  background: #fff;
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--primary);
-  border-radius: 0 10px 10px 0;
-  overflow-wrap: anywhere;
-}
-.study-card-content .py-text > :first-child,
-.study-card-body .py-text > :first-child { margin-top: 0; }
-.study-card-content .py-text > :last-child,
-.study-card-body .py-text > :last-child { margin-bottom: 0; }
-
 /* 글머리 기호 들여쓰기 (에디터·말풍선·본문·공지 공통) */
 .rte-area ul,
 .rte-area ol,

@@ -11,21 +11,24 @@ const FIREBASE_APP_HOST = `https://${FIREBASE_PROJECT_ID}.firebaseapp.com`;
 const FIREBASE_FRAME = FIREBASE_PROJECT_ID.startsWith("YOUR_") ? "" : ` ${FIREBASE_APP_HOST}`;
 
 // Content-Security-Policy — 앱이 실제로 쓰는 출처만 허용.
-//  · script/eval: Next 하이드레이션(inline) + Pyodide(wasm-eval) + jsDelivr CDN
-//    + 구글 로그인 스크립트
+//  · script: Next 하이드레이션(inline) + 구글 로그인 스크립트
+//    'unsafe-eval'은 원래 파이썬 실행기(Pyodide)용이었는데, 실행기를 걷은 뒤에도
+//    남겨 둡니다 — 개발 서버(React)가 쓰고, 구글 로그인 스크립트가 필요로 하는지
+//    실제 로그인으로 확인하기 전에는 걷지 않습니다.
 //  · connect: Firebase(Firestore/Auth/Storage/Installations = *.googleapis.com)
-//    + Pyodide CDN (서버 함수 · App Check는 쓰지 않음)
+//    (서버 함수 · App Check는 쓰지 않음)
 //  · img: Storage 등 https 이미지 + data/blob(미리보기·그리기)
-//  · worker/blob: 파이썬 실행 Web Worker
+//  · worker: 앱이 따로 띄우는 Web Worker가 없습니다(파이썬 실행 Worker · jsDelivr
+//    CDN · blob 스크립트 허용은 실행기와 함께 걷었습니다).
 //  · frame: 구글/Firebase 인증 팝업
 const csp = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://apis.google.com https://www.google.com https://*.gstatic.com blob:",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.google.com https://*.gstatic.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self' https://*.googleapis.com https://*.gstatic.com https://cdn.jsdelivr.net https://apis.google.com https://www.google.com wss://*.firebaseio.com data: blob:",
-  "worker-src 'self' blob:",
+  "connect-src 'self' https://*.googleapis.com https://*.gstatic.com https://apis.google.com https://www.google.com wss://*.firebaseio.com data: blob:",
+  "worker-src 'self'",
   `frame-src 'self'${FIREBASE_FRAME} https://apis.google.com https://accounts.google.com https://www.google.com`,
   "object-src 'none'",
   "base-uri 'self'",

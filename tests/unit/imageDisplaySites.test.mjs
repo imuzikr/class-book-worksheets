@@ -60,7 +60,7 @@ test("uploadImage를 부르는 곳은 정해진 파일뿐이고, 모두 classId�
 
 test("서식 편집기를 쓰는 화면은 모두 반 id로 감싸져 있습니다(UploadClassProvider)", () => {
   const hosts = {
-    "components/CornellNoteDrawer.jsx": "props.classId", // 수업 노트·과제(LessonTaskPanel)·파이썬 셀·노트 고치기
+    "components/CornellNoteDrawer.jsx": "props.classId", // 수업 노트·과제(LessonTaskPanel)·노트 고치기
     "components/MessengerWindow.jsx": "props.classId",
     "components/PopQuizStudentModal.jsx": "props.classId",
     "components/RaftForm.jsx": "props.activity?.classId", // 동료 평가(PeerReviewModal)
@@ -76,7 +76,6 @@ test("서식 편집기를 쓰는 화면은 모두 반 id로 감싸져 있습니�
     "components/MessengerWindow.jsx",
     "components/PeerReviewModal.jsx",
     "components/PopQuizStudentModal.jsx",
-    "components/PyCellEditor.jsx",
   ]);
 });
 
@@ -91,7 +90,7 @@ const DIRECT = [
 // 정화한 서식 HTML을 그리는 6곳 — 모두 SecureHtml
 const RICH = [
   ["components/PeerReviewModal.jsx", /html=\{richHtml\(/, 3],
-  ["components/LessonTaskPanel.jsx", /html=\{sanitizeHtml\(/, 2],
+  ["components/LessonTaskPanel.jsx", /html=\{sanitizeHtml\(/, 1], // 파이썬 셀 미리보기는 걷음
   ["components/MessengerWindow.jsx", /html=\{sanitizeHtml\(m\.html\)\}/, 1],
   ["components/PopQuizParts.jsx", /html=\{sanitizeHtml\(/, 1],
   ["components/CornellNoteSheet.jsx", /html=\{notesHtml\}/, 1],

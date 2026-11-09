@@ -32,14 +32,10 @@
 // 공부방으로 건너가야 했습니다. 잠긴 활동은 깔지 않습니다 — 학생이 아직 쓰면
 // 안 되는 자리입니다.
 //
-// [파이썬 연계 프로젝트는 큰 창에서]
-// `board.pyLinked`이면 활동 칸을 서랍 안에서 쓰지 않습니다 — 펼친 칸에는 쓴 것의
-// 미리보기와 '크게 열어 쓰기' 단추만 서고, 누르면 공부방 카드와 **같은 큰 창**
-// (PyCellModal — 글 셀 · 코드 셀)이 서랍 위로 뜹니다. 한때 서랍 안에 셀 편집기를
-// 그대로 두었는데, 380px에서 코드를 짜기가 너무 좁았습니다(선생님 요청).
-// 저장 길은 서랍 칸 그대로입니다(onDraft → save, 닫을 때 한 번 더).
-// 파이썬을 **돌리는 곳은 그 셀뿐**입니다 — 연계하지 않은 프로젝트의 칸은 코드
-// 블록을 적을 수는 있어도 ▶ 실행 줄이 없습니다.
+// [파이썬 연계 프로젝트의 큰 셀 창은 걷었습니다]
+// 배움나눔에서는 `board.pyLinked`이면 칸을 큰 셀 창(PyCellModal)에서 쓰고 ▶로
+// 돌렸는데, 책봄에는 파이썬 실행기가 없어 셀 창 · 실행 엔진을 통째로 걷었습니다.
+// 모든 칸을 이 서랍의 서식 에디터로 씁니다(코드 블록은 적을 수 있고 실행은 없음).
 //
 // [읽는 문서]
 // 프로젝트 1건(`fetchStudyBoard`) + 내 카드 **구독** 1건(`subscribeStudyCard`).
@@ -76,9 +72,6 @@ import {
 } from "@/lib/activities";
 import { sanitizeHtml, stripHtml, htmlHasImage, richHtml } from "@/lib/html";
 import RichTextEditor from "./RichTextEditor";
-import PyCellModal from "./PyCellModal";
-import { exampleOf } from "@/lib/activityExamples";
-import { tidyCellsHtml } from "@/lib/pyCells";
 import SecureHtml from "./SecureHtml";
 
 const SAVE_DELAY = 1500;
@@ -122,11 +115,6 @@ export default function LessonTaskPanel({ task, user, onType }) {
   const boardId = task?.boardId ?? "";
   const idx = task?.actIndex ?? 0;
   const tagWord = "오늘의 활동";
-  // 셀 창을 연 활동 번호(파이썬 연계 프로젝트 — null이면 닫힘)
-  const [bigIdx, setBigIdx] = useState(null);
-  // 다른 프로젝트가 내려오면 창을 닫습니다 — 열린 창이 앞 프로젝트의 칸을 쥐고
-  // 있으면 거기서 쓴 것이 새 프로젝트의 같은 자리로 갑니다.
-  useEffect(() => { setBigIdx(null); }, [boardId]);
 
   // 칸마다 에디터가 지금 담고 있는 글 — 서버 값이 이것과 다를 때만 갈아
   // 끼웁니다(ver를 올려 다시 마운트). 저장한 값은 **쓰기 전에** 되읽은
@@ -216,9 +204,6 @@ export default function LessonTaskPanel({ task, user, onType }) {
   const locked = board ? boardLocked || isActivityLocked(board, idx) : false;
   const isGroup = board?.type === "group";
   const canWrite = !!board && !locked && !isGroup;
-  // 파이썬 실행기와 연계한 프로젝트는 활동 칸을 **큰 셀 창**에서 씁니다
-  // (머리 주석) — 공부방 카드와 같은 창이라 같은 칸이 두 모양이 되지 않습니다.
-  const cellMode = !!board?.pyLinked && !isGroup;
 
   // 카드에서 활동 칸들을 떠 옵니다. 자리(index)로 읽고 자리로 씁니다 —
   // 제목으로 짝지으면 학생이 카드에서 활동 제목을 고쳤을 때 엉뚱한 칸을
@@ -417,33 +402,7 @@ export default function LessonTaskPanel({ task, user, onType }) {
                   프로젝트가 바뀌면 열쇠가 바뀌어 그 칸의 글로 갈아 끼웁니다.
                   밖(카드 화면)에서 이 칸이 고쳐지면 ver가 올라 새 글로
                   다시 그립니다 — 쓰는 중인 칸은 올리지 않습니다. */}
-              {/* 파이썬 연계 — 서랍에서는 쓴 것을 보여 주기만 하고, 쓰는 것은
-                  큰 창에서(머리 주석). 누르는 자리는 미리보기 전체와 단추 둘 다. */}
-              {open && cellMode && (
-                <div className="ltask-cells">
-                  {text && (stripHtml(text).trim() || htmlHasImage(text)) ? (
-                    <SecureHtml
-                      className="study-card-content ltask-cells-peek"
-                      html={sanitizeHtml(tidyCellsHtml(text))}
-                    />
-                  ) : exampleOf(board, acts[i]) ? (
-                    <div className="study-mycard-example ltask-cells-peek" aria-label="선생님 예시 코드">
-                      <span className="study-mycard-example-tag">선생님 예시</span>
-                      <pre>{exampleOf(board, acts[i])}</pre>
-                    </div>
-                  ) : (
-                    <p className="ltask-cells-empty">아직 안 썼어요.</p>
-                  )}
-                  <button
-                    type="button"
-                    className="btn-primary ltask-cells-open"
-                    onClick={() => setBigIdx(i)}
-                  >
-                    ⤢ 크게 열어 쓰기
-                  </button>
-                </div>
-              )}
-              {open && !cellMode && (
+              {open && (
                 <RichTextEditor
                   key={`ltask-${boardId}-${i}-${ver[i] ?? 0}`}
                   className="ltask-rte"
@@ -474,32 +433,6 @@ export default function LessonTaskPanel({ task, user, onType }) {
       </p>
       {error && <p className="form-error" role="alert">{error}</p>}
 
-      {/* 셀 창 — 열어 둔 동안 이 칸의 글은 창이 쥡니다(열쇠는 활동 자리뿐이라
-          구독으로 새 값이 와도 창이 다시 그려지지 않습니다). 닫을 때 남은 것을
-          곧바로 씁니다 — 미리보기가 저장된 카드를 따라오므로. */}
-      {bigIdx !== null && cellMode && (
-        <PyCellModal
-          key={`ltask-big-${boardId}-${bigIdx}`}
-          index={bigIdx}
-          title={String(acts[bigIdx] ?? "").trim() || `활동 ${bigIdx + 1}`}
-          example={exampleOf(board, acts[bigIdx])}
-          initialHtml={pendingRef.current?.t?.boardId === boardId &&
-            Object.prototype.hasOwnProperty.call(pendingRef.current.drafts, bigIdx)
-            ? pendingRef.current.drafts[bigIdx]
-            : secs[bigIdx]?.content ?? ""}
-          onChange={(html, o) => {
-            onDraft(bigIdx, html);
-            // 결과가 붙을 때는 곧바로 씁니다 — 1.5초를 기다리면 카드에 결과가
-            // 늦게 나타나 한 번 더 돌리게 됩니다.
-            if (o?.flush) save();
-          }}
-          status={status}
-          onClose={() => {
-            save();
-            setBigIdx(null);
-          }}
-        />
-      )}
     </div>
   );
 }

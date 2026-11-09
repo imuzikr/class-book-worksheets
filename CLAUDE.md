@@ -34,6 +34,13 @@
   `/dashboard`는 책봄 전용 교사·학생 분석입니다. 질문방(`/board`) · 공부방(`/study`) · 원본 관리자 대시보드(`/admin`) · 학습 리포트
   (`/report`) · 파이썬 실행기 · 수업 관리(수업 모드)는 없습니다. 로고와 로그인 뒤
   첫 화면은 `/books`입니다.
+  - **파이썬 실행기는 코드까지 걷었습니다** — 실행 엔진(Pyodide · `lib/pyRun.js`) ·
+    코드 편집기(CodeMirror 패키지) · 셀 창(`PyCellEditor` · `PyCellModal`) · 그 CSS,
+    CSP의 jsDelivr · blob 스크립트 · Worker 허용까지. 돌발 퀴즈 학생 창이 이것들을
+    미리 불러와 모든 화면이 무거웠습니다 — 걷고 나서 책방 첫 화면 728 → 574KB ·
+    분석 리포트 628 → 474KB(빌드 표의 First Load JS).
+    예전에 보낸 '코드' 돌발 퀴즈가 아직 열려 있으면 고정폭 글자 칸에 코드를 적어
+    보냅니다(실행 없음 — 규칙 · 자료 모양은 그대로). **되살리지 마세요.**
 - **공부방 머리말에 있던 창을 책방에서 엽니다**(`app/books/page.js`):
   - 머리말 단추 — 교사 **'반 관리하기'**(`ClassManagerModal` → '자리 배정하기'로
     `SeatGroupSetupModal`) · **'출석 관리'**(`StudyAttendanceModal`), 학생
@@ -86,7 +93,7 @@
 
 - **프레임워크**: Next.js 15.5 App Router, React 19 (Client Components)
 - **DB**: Firebase Firestore (실서비스) / 브라우저 인메모리 Mock (데모 모드)
-- **스타일**: `app/globals.css`는 입구일 뿐이고, 실제 규칙은 `app/styles/`의 50개 파일(01~43 번호 순, 큰 조각은 08a·08b처럼 a·b로 나눔)에 있습니다. globals.css의 `@import` 순서가 곧 적용 순서이니 바꾸지 마세요. 옮기기·정리 뒤에는 `npm run css:fingerprint`로 빌드 CSS가 그대로인지(SAME) 확인합니다. (CSS Variables + Flexbox) 파일별 안내는 `app/styles/README.md`를 보세요.
+- **스타일**: `app/globals.css`는 입구일 뿐이고, 실제 규칙은 `app/styles/`의 49개 파일(01~43 번호 순, 큰 조각은 14a·14b처럼 a·b로 나눔)에 있습니다. globals.css의 `@import` 순서가 곧 적용 순서이니 바꾸지 마세요. 옮기기·정리 뒤에는 `npm run css:fingerprint`로 빌드 CSS가 그대로인지(SAME) 확인합니다. (CSS Variables + Flexbox) 파일별 안내는 `app/styles/README.md`를 보세요.
 - **배포**: Vercel (앱) · Firebase (규칙 · 색인 · 함수 · Storage 규칙)
 
 ## 실행
@@ -5223,10 +5230,10 @@ CodeMirror가 아니라 그냥 글자 칸(contentEditable)이라, 손대지 않�
   - 창(`PopQuizStudentModal`, body 포털 · z-index 3010 — 수업 노트 서랍 위)은
     닫을 수 있습니다. 쓰던 글은 이 기기에 남겨 두었다가(`popquiz_draft:{퀴즈}:{uid}`)
     다시 열면 이어 씁니다. 보내면 지웁니다.
-  - 글 퀴즈는 서식 에디터(굵게·밑줄·목록·코드 블록), 코드 퀴즈는 셀 창과 **같은
-    코드 칸**(`PyCodeInput` — `onRun`을 받게 넓힘) + ▶ 실행(Ctrl+Enter) + 입력값 칸
-    (`input(`이 보일 때). 실행 결과가 **함께 보내집니다**(선생님 요청). 코드를 고치면
-    지난 결과는 걷힙니다.
+  - 글 퀴즈는 서식 에디터(굵게·밑줄·목록·코드 블록). 예전에 보낸 코드 퀴즈가 아직
+    열려 있으면 **고정폭 글자 칸**(`.pq-code-text`)에 코드를 적어 보냅니다 — 한때 셀 창과
+    같은 코드 칸 + ▶ 실행(실행 결과도 함께)이었는데, 파이썬 실행기와 함께 걷었습니다
+    (실행 결과 칸은 빈 채로 보냄 · 지난 답의 실행 결과는 그대로 보임).
   - 보낸 뒤에는 선생님이 확인할 때까지 **못 고칩니다**. 반송되면 **입력칸은 빈 채로**
     열립니다(선생님 요청 — 한때 보냈던 답을 다시 채워 두었는데, 위 대화에 같은 글이
     두 번 서서 헷갈렸습니다). 앞의 답은 대화에서 봅니다. 과일을 받으면 끝.

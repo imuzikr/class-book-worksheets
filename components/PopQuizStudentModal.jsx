@@ -7,12 +7,14 @@
 // 상단바의 메모지를 눌러 엽니다. 닫아도 됩니다 — 쓰던 글은 이 기기에 남겨
 // 두었다가 다시 열면 이어 씁니다.
 //
-//  · 글 퀴즈는 서식 에디터, 코드 퀴즈는 코드 칸 + ▶ 실행(결과도 함께 보냄).
+//  · 글 퀴즈는 서식 에디터. 예전에 보낸 '코드' 퀴즈가 아직 열려 있으면 고정폭
+//    글자 칸에 코드를 적어 보냅니다 — 파이썬 실행(▶)과 코드 편집기는 걷었습니다
+//    (책봄은 독서 전용 · 코드 퀴즈는 더 만들 수 없음 · 모든 화면이 그만큼 가벼워짐).
 //  · '선생님께 보내기'를 누르면 선생님이 확인할 때까지 못 고칩니다.
-//  · 반송되면 맨 위에 선생님 한 마디(있으면)가 서고, 보냈던 답이 입력칸에
-//    그대로 남아 고쳐 다시 보냅니다(선생님 요청 — 이력은 안 남김).
-//  · 과일을 받으면 그 퀴즈는 끝입니다.
-//  · 아래 '지난 퀴즈'는 접고 펴는 목록 — 펼칠 때 그 퀴즈의 내 답을 한 건 읽습니다.
+//  · 반송되면 선생님 한 마디와 앞의 답이 '선생님과 나눈 말'에 남고, 입력칸은
+//    빈 채로 열립니다.
+//  · 과일을 받거나 '완료'되면 그 퀴즈는 끝입니다.
+//  · 아래 '지난 퀴즈'는 다 펼친 목록 — 퀴즈마다 내 답을 한 건씩 읽습니다.
 // =============================================================
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -28,12 +30,7 @@ import {
   quizAnswerFilled,
   quizKindOf,
 } from "@/lib/popQuiz";
-import { runPython, stopPython } from "@/lib/pyRun";
-import { dedent, codeUsesInput } from "@/lib/pyCells";
-import { outputTextOf } from "@/lib/pyShare";
 import RichTextEditor from "./RichTextEditor";
-import { PyCodeInput } from "./PyCellEditor";
-import PyLineText from "./PyLineText";
 import { PopQuizQuestion, PopQuizStatus, PopQuizThread } from "./PopQuizParts";
 import { IconQuizMemo } from "./StatusIcons";
 import { UploadClassProvider } from "@/lib/uploadClass";
@@ -140,8 +137,8 @@ function PopQuizStudentModalBody({ classId, user, quiz, answer, onClose }) {
   );
 }
 
-// 답 쓰기 — 글이면 서식 에디터, 코드면 코드 칸 + ▶ 실행.
-// key가 (퀴즈 · 상태)라 반송되면 새로 그려지며 보냈던 답을 다시 채웁니다.
+// 답 쓰기 — 글이면 서식 에디터, (예전) 코드 퀴즈면 고정폭 글자 칸.
+// key가 (퀴즈 · 상태)라 반송되면 새로 그려집니다(입력칸은 빈 채로).
 function AnswerEditor({ classId, uid, quiz, kind, answer }) {
   const saved = readDraft(quiz.id, uid);
   // 처음 채울 글 — 이 기기에 쓰던 것이 있으면 그것, 없으면 빈 칸.
@@ -149,14 +146,13 @@ function AnswerEditor({ classId, uid, quiz, kind, answer }) {
   // '선생님과 나눈 말'에 그대로 있어, 입력칸에도 있으면 같은 글이 두 번 서서
   // 무엇을 새로 쓰는 칸인지 헷갈렸습니다.
   const [text, setText] = useState(() => saved?.text ?? "");
-  const [output, setOutput] = useState(() => saved?.output ?? "");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   const initialRef = useRef(saved?.text ?? "");
 
-  function update(next, nextOut = output) {
+  function update(next) {
     setText(next);
-    writeDraft(quiz.id, uid, { text: next, output: nextOut });
+    writeDraft(quiz.id, uid, { text: next });
   }
 
   const filled = quizAnswerFilled(kind, text);
@@ -167,7 +163,7 @@ function AnswerEditor({ classId, uid, quiz, kind, answer }) {
     setBusy(true);
     setErr(null);
     try {
-      await submitPopQuizAnswer(classId, quiz.id, uid, { kind, text, output }, answer);
+      await submitPopQuizAnswer(classId, quiz.id, uid, { kind, text }, answer);
       writeDraft(quiz.id, uid, null);
     } catch (e) {
       console.error("[돌발 퀴즈] 답을 보내지 못했어요:", e?.code, e?.message);
@@ -184,18 +180,17 @@ function AnswerEditor({ classId, uid, quiz, kind, answer }) {
     <div className="pq-editor">
       <span className="pq-editor-label">{kind === "code" ? "코드로 답하기" : "답 쓰기"}</span>
       {kind === "code" ? (
-        <CodeAnswer
-          code={text}
-          output={output}
-          onCode={(c) => {
-            // 코드를 고치면 지난 결과는 그 코드의 것이 아니라 걷습니다.
-            setOutput("");
-            update(c, "");
-          }}
-          onOutput={(o) => {
-            setOutput(o);
-            writeDraft(quiz.id, uid, { text, output: o });
-          }}
+        // 실행은 없습니다 — 적은 코드를 그대로 보냅니다(실행 결과 칸은 빈 채로).
+        <textarea
+          className="pq-code-text"
+          value={text}
+          onChange={(e) => update(e.target.value)}
+          placeholder="코드를 그대로 적어 주세요."
+          spellCheck={false}
+          autoCapitalize="off"
+          autoCorrect="off"
+          rows={10}
+          autoFocus
         />
       ) : (
         <RichTextEditor
@@ -222,112 +217,6 @@ function AnswerEditor({ classId, uid, quiz, kind, answer }) {
           {busy ? "보내는 중…" : "선생님께 보내기"}
         </button>
       </div>
-    </div>
-  );
-}
-
-// 코드 답 — 코드 칸 하나 + ▶ 실행. 실행은 셀 창과 같은 엔진(lib/pyRun.js)이고
-// 늘 새 이름 공간에서 돕니다. 끝나면 출력이 '보낼 결과'가 됩니다.
-function CodeAnswer({ code, output, onCode, onOutput }) {
-  const [lines, setLines] = useState([]);
-  const [running, setRunning] = useState(false);
-  const [stdin, setStdin] = useState("");
-  const linesRef = useRef([]);
-  const ranRef = useRef("");
-  const codeRef = useRef(code);
-  codeRef.current = code;
-  const aliveRef = useRef(true);
-  useEffect(() => {
-    aliveRef.current = true;
-    return () => { aliveRef.current = false; };
-  }, []);
-
-  function add(type, text, parts) {
-    linesRef.current = [...linesRef.current, { type, text, parts }];
-    if (aliveRef.current) setLines(linesRef.current);
-  }
-
-  function finish() {
-    setRunning(false);
-    if (!aliveRef.current) return;
-    if (codeRef.current !== ranRef.current) {
-      add("info", "코드가 바뀌어 이 결과는 남기지 않았어요 — 다시 실행해 주세요.");
-      return;
-    }
-    const out = outputTextOf(linesRef.current);
-    if (!out) add("info", "✓ 출력 없이 끝났어요.");
-    onOutput(out);
-  }
-
-  function run() {
-    if (running) return;
-    const src = dedent(code).replace(/\s+$/, "");
-    linesRef.current = [];
-    if (!src.trim()) {
-      setLines([{ type: "info", text: "돌릴 코드가 없어요 — 먼저 코드를 적어 주세요." }]);
-      return;
-    }
-    setLines([]);
-    ranRef.current = code;
-    const how = runPython({
-      code: src,
-      stdin,
-      onLine: (type, text, parts) => add(type, text, parts),
-      onDone: (result) => { if (result) add("result", result); finish(); },
-      onError: (e) => { add("err", e); finish(); },
-      onTimeout: (ms) => { add("err", `⏱ ${ms / 1000}초를 넘겨 멈췄어요. (무한 루프인지 확인해 보세요)`); finish(); },
-    });
-    if (how === "busy") {
-      setLines([{ type: "info", text: "다른 곳에서 파이썬이 돌고 있어요 — 끝나면 다시 눌러 주세요." }]);
-      return;
-    }
-    if (how === "fresh") add("info", "파이썬을 불러오는 중이에요… (처음 한 번만, 조금 걸려요)");
-    setRunning(true);
-  }
-
-  function stop() {
-    stopPython();
-    add("info", "⏹ 멈췄어요.");
-    finish();
-  }
-
-  return (
-    <div className="pq-code">
-      <PyCodeInput
-        code={code}
-        onCode={(c) => {
-          if (linesRef.current.length && !running) { linesRef.current = []; setLines([]); }
-          onCode(c);
-        }}
-        onRun={run}
-        autoFocus
-        placeholder="코드를 적고 ▶ 실행(Ctrl+Enter)으로 돌려 보세요"
-      />
-      {codeUsesInput(code) && (
-        <label className="ltask-stdin">
-          <span>입력값 <em>한 줄에 하나씩 — 실행 전에 미리</em></span>
-          <textarea rows={2} value={stdin} onChange={(e) => setStdin(e.target.value)} placeholder={"홍길동\n7"} />
-        </label>
-      )}
-      <div className="pq-code-run">
-        <span className="pq-code-run-hint">실행 결과도 함께 보내져요</span>
-        {running ? (
-          <button type="button" className="ltask-run-stop pq-run" onClick={stop}>⏹ 중단</button>
-        ) : (
-          <button type="button" className="ltask-run-btn pq-run" onClick={run}>▶ 실행</button>
-        )}
-      </div>
-      {lines.length > 0 ? (
-        <div className="ltask-out pycell-out" aria-live="polite">
-          {lines.map((l, n) => (
-            <span key={n} className={`ltask-out-line ltask-out-line--${l.type}`}>
-              <PyLineText line={l} />
-            </span>
-          ))}
-        </div>
-      ) : output ? (
-        <div className="ltask-out pycell-out">{output}</div>
-      ) : null}
     </div>
   );
 }

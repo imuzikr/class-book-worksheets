@@ -18,13 +18,6 @@
     "test:reading-server": "FIREBASE_ADMIN_PROJECT_ID=demo-reading-api tests/rules/node_modules/.bin/firebase emulators:exec --config tests/server/firebase.json --only auth,firestore --project demo-reading-api 'node --import ./tests/unit/register.mjs --test --test-concurrency=1 tests/server/*.test.mjs'"
   },
   "dependencies": {
-    "@codemirror/autocomplete": "^6.18.0",
-    "@codemirror/commands": "^6.6.0",
-    "@codemirror/lang-python": "^6.1.6",
-    "@codemirror/language": "^6.12.4",
-    "@codemirror/state": "^6.4.1",
-    "@codemirror/view": "^6.34.0",
-    "codemirror": "^6.0.1",
     "firebase": "^11.9.0",
     "firebase-admin": "^13.10.0",
     "next": "^15.3.3",
