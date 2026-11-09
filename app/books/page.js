@@ -23,6 +23,7 @@ import ReadingLeaderboard from "@/components/reading/ReadingLeaderboard";
 import AdminSettingsPanel from "@/components/AdminSettingsPanel";
 import { readingEnabled, rankingEnabled, bookSearchEnabled, fruitBasketOn } from "@/lib/reading";
 import { characterChoiceEnabled } from "@/lib/readingCharacter";
+import { petEnabled } from "@/lib/readingPet";
 import {
   subscribeBookActivities,
   subscribeBookGroups,
@@ -341,6 +342,8 @@ function BooksPageInner() {
   const rankingOn = rankingEnabled(currentClass);
   // 학생 캐릭터 고르기(관리자 설정) — 값이 없으면 켜짐
   const characterOn = characterChoiceEnabled(currentClass);
+  // 학생 펫(관리자 설정 — 값이 없으면 켜짐, lib/readingPet.js) — 책나눔의 '나의 펫' · 리더보드의 펫
+  const petOn = petEnabled(currentClass);
   const leaderboardOpen = rankingOn && !openActivityId && searchParams.get("area") === "leaderboard";
   // 관리자 설정 — 교사에게만(학생이 주소로 와도 책방 목록이 섭니다)
   const settingsOpen = admin && !openActivityId && searchParams.get("area") === "settings";
@@ -1044,7 +1047,7 @@ function BooksPageInner() {
           {settingsOpen ? (
             <AdminSettingsPanel classes={myClasses} onToast={setToast} />
           ) : leaderboardOpen ? (
-            <ReadingLeaderboard key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin} characterOn={characterOn}
+            <ReadingLeaderboard key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin} characterOn={characterOn} petOn={petOn}
               onOpenLibrary={admin ? (uid) => patchBooksQuery({ area: "reading", student: uid }) : undefined}
               onDisabled={() => patchBooksQuery({ area: null }, { replace: true })} />
           ) : readingOpen && admin ? (
@@ -1053,7 +1056,7 @@ function BooksPageInner() {
               activities={liveActivities} onOpenActivity={goToActivity}
               onDisabled={() => patchBooksQuery({ area: null }, { replace: true })} />
           ) : readingOpen ? (
-            <ReadingHub key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin} rankingOn={rankingOn} bookSearchOn={bookSearchEnabled(currentClass)}
+            <ReadingHub key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin} rankingOn={rankingOn} bookSearchOn={bookSearchEnabled(currentClass)} petOn={petOn}
               activities={liveActivities} onOpenActivity={goToActivity}
               initialBookId={searchParams.get("book")} initialTab={searchParams.get("tab") || "library"}
               onDisabled={() => patchBooksQuery({ area: null }, { replace: true })} />

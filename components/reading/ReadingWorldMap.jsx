@@ -8,9 +8,12 @@ import {
   groupWorldTravelers, readingLeaderUids, splitWorldLeaderGroups,
   worldCheckpoints, worldPoint, worldProgress,
 } from "@/lib/readingWorldMap";
+import { normalizePublicPet } from "@/lib/readingPet";
 import ReadingBadge from "./ReadingBadge";
 import CharacterChooser, { characterImage, characterOf } from "./CharacterChooser";
+import PetFigure from "./PetFigure";
 import "./reading-world-map.css";
+import "./pet.css";
 
 const number = (value) => value.toLocaleString("ko-KR");
 const chapterLabel = (chapter) => `제${chapter}여정 · Lv.${(chapter - 1) * 10 + 1}–${Math.min(chapter * 10 + 1, 100)}`;
@@ -38,8 +41,15 @@ function LeaderSun() {
   return <span className="rwm-leader-sun" aria-hidden="true" />;
 }
 
+// 캐릭터 옆의 독서 펫(서버가 순위 줄에 실어 줌 — lib/readingPet.js). 길 위에서도 캐릭터 발치에서 함께 걷습니다.
+function TravelerPet({ row, petOn, size, className }) {
+  const pet = petOn ? normalizePublicPet(row?.pet) : null;
+  if (!pet) return null;
+  return <span className={className} aria-hidden="true"><PetFigure species={pet.species} stage={pet.stage} ready={pet.ready} size={size} /></span>;
+}
+
 /** The map consumes the same public snapshot as the rankings, never a peer's library. */
-export default function ReadingWorldMap({ rows, uid, isTeacher, onOpenDetails, onSaveCharacter }) {
+export default function ReadingWorldMap({ rows, uid, isTeacher, petOn = false, onOpenDetails, onSaveCharacter }) {
   const viewport = useRef(null);
   const pointer = useRef(null);
   const suppressClick = useRef(false);
@@ -237,7 +247,7 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, onOpenDetails, o
               {routeVisible && <svg className="rwm-route" viewBox={`0 0 ${WORLD_MAP.width} ${WORLD_MAP.height}`} aria-hidden="true"><path d={WORLD_MAP.path} /></svg>}
             </div>
             {checkpoints.map((stop) => <span key={stop.level} className="rwm-checkpoint" style={{ left: offset.x + stop.x * scale, top: offset.y + stop.y * scale }} title={`${number(stop.xp)} EXP`}><span>Lv.{stop.level}</span></span>)}
-            {groups.map((group) => <TravelerToken key={group.id} group={group} selectedUid={selected?.uid} selectionPulse={selectionPulse} scale={scale} offset={offset} peerOffset={peerSlotOffset(group, scale, offset, canvasWidth)} chapter={activeChapter} onClick={() => {
+            {groups.map((group) => <TravelerToken key={group.id} group={group} petOn={petOn} selectedUid={selected?.uid} selectionPulse={selectionPulse} scale={scale} offset={offset} peerOffset={peerSlotOffset(group, scale, offset, canvasWidth)} chapter={activeChapter} onClick={() => {
               const row = group.representative;
               selectTraveler(row);
               if (group.members.length > 1) setClusterId(group.id);
@@ -255,7 +265,7 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, onOpenDetails, o
           아래: 함께 걷는 친구들. 한때 지도 위에 가로로 펼쳐 지도가 그만큼 아래로 밀렸습니다(선생님 요청). */}
       <aside className="rwm-side" aria-label="선택한 학생과 함께 걷는 친구들">
         {selected && <div className="rwm-hud" aria-label="선택한 학생의 성장 정보">
-          <div className={`rwm-portrait${selectedIsLeader ? " is-leader" : ""}`}>{selectedIsLeader && <LeaderSun />}<img src={characterImage(characterOf(selected))} alt="" width={110} height={110} /></div>
+          <div className={`rwm-portrait${selectedIsLeader ? " is-leader" : ""}`}>{selectedIsLeader && <LeaderSun />}<img src={characterImage(characterOf(selected))} alt="" width={110} height={110} /><TravelerPet row={selected} petOn={petOn} size={44} className="rwm-portrait-pet" /></div>
           <div className="rwm-identity"><span>선택한 여행자 {selected.uid === uid && <b>나</b>} {selectedIsLeader && <b className="rwm-leader-tag">{leaderUids.length > 1 ? "공동 독서 대장" : "독서 대장"}</b>}</span><strong data-testid="journey-selected-name">{selected.name || "이름 미설정"}</strong><small>{selected.studentId || "학번 미설정"} · {growth ? journeyTitle(growth.level) : "성장 정보 확인 중"}</small></div>
           <div className="rwm-growth">
             <div className="rwm-growth-values"><span><small>독서 레벨</small><strong data-testid="journey-selected-level">{growth ? `Lv.${growth.level}` : "—"}</strong></span><span><small>누적 경험치</small><strong data-testid="journey-selected-xp">{growth ? number(growth.xp) : "—"}<em> EXP</em></strong></span></div>
@@ -273,7 +283,7 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, onOpenDetails, o
         </button>
         {rosterOpen && <div className="rwm-roster-list" aria-label="우리 반 전체 학생">
           {travelers.map((row) => <button type="button" className={`rwm-person${leaderSet.has(String(row.uid)) ? " is-leader" : ""}`} key={row.uid} aria-pressed={row.uid === selected?.uid} onClick={() => selectTraveler(row)}>
-            <div className="rwm-person-avatar">{leaderSet.has(String(row.uid)) && <LeaderSun />}<img src={characterImage(characterOf(row))} alt="" width={47} height={52} loading="lazy" /></div><span><strong>{row.name || "이름 미설정"}{row.uid === uid && <i>나</i>}{leaderSet.has(String(row.uid)) && <b className="rwm-leader-tag">독서 대장</b>}</strong><small>{row.studentId}{row.world ? ` · 제${row.world.chapter}여정` : " · 집계 대기"}</small><em>{row.world ? `Lv.${row.world.level} · ${number(row.world.xp)} EXP` : "성장 정보 확인 중"}</em></span>
+            <div className="rwm-person-avatar">{leaderSet.has(String(row.uid)) && <LeaderSun />}<img src={characterImage(characterOf(row))} alt="" width={47} height={52} loading="lazy" /><TravelerPet row={row} petOn={petOn} size={24} className="rwm-person-pet" /></div><span><strong>{row.name || "이름 미설정"}{row.uid === uid && <i>나</i>}{leaderSet.has(String(row.uid)) && <b className="rwm-leader-tag">독서 대장</b>}</strong><small>{row.studentId}{row.world ? ` · 제${row.world.chapter}여정` : " · 집계 대기"}</small><em>{row.world ? `Lv.${row.world.level} · ${number(row.world.xp)} EXP` : "성장 정보 확인 중"}</em></span>
           </button>)}
         </div>}
       </div>
@@ -286,7 +296,7 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, onOpenDetails, o
   </section>;
 }
 
-function TravelerToken({ group, selectedUid, selectionPulse, scale, offset, peerOffset, chapter, onClick }) {
+function TravelerToken({ group, petOn = false, selectedUid, selectionPulse, scale, offset, peerOffset, chapter, onClick }) {
   const row = group.representative;
   // A different representative must not move a group along the route.
   const target = group.progress;
@@ -328,6 +338,7 @@ function TravelerToken({ group, selectedUid, selectionPulse, scale, offset, peer
     {peerOffset !== 0 && <span className="rwm-slot-link" style={{ width: Math.abs(peerOffset), left: peerOffset > 0 ? `calc(50% - ${peerOffset}px)` : "50%" }} aria-hidden="true" />}
     {group.isLeader && <LeaderSun />}
     <img ref={image} src={characterImage(characterOf(row))} alt="" width={82} height={82} draggable={false} />
+    <TravelerPet row={row} petOn={petOn} size={32} className="rwm-token-pet" />
     {group.members.length > 1 && <span className="rwm-token-count">{group.members.length}</span>}
     <span className="rwm-token-label">{group.isLeader && <b className="rwm-token-role">독서 대장</b>}{row.name}<small>Lv.{row.world.level}</small></span>
   </button>;

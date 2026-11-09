@@ -4,8 +4,10 @@ import { createContext, useContext, useEffect, useId, useMemo, useRef, useState 
 import { deriveReading, initialReadingState, kstToday, READING_BADGES } from "@/lib/reading";
 import { subscribeReadingState, mutateReading, fetchReadingRankings } from "@/lib/data/reading";
 import { rankingsForPeriod } from "@/lib/readingJourney";
+import { petGrowthOfSummary } from "@/lib/readingPet";
 import ReadingBadge from "./ReadingBadge";
 import BookSearch from "./BookSearch";
+import PetCard from "./PetCard";
 import "./reading.css";
 
 const ReadingErrorContext = createContext("");
@@ -52,7 +54,8 @@ function Modal({ title, onClose, children, wide = false, busy = false }) {
   </div>;
 }
 
-export default function ReadingHub({ classId, user, isTeacher = false, rankingOn = true, bookSearchOn = false, onDisabled, activities = [], onOpenActivity, initialBookId = null, initialTab = "library", student = null }) {
+// petOn — 관리자 설정의 '학생 펫'(lib/readingPet.js의 petEnabled). 학생 본인 화면에만 '나의 펫' 카드가 섭니다.
+export default function ReadingHub({ classId, user, isTeacher = false, rankingOn = true, bookSearchOn = false, petOn = false, onDisabled, activities = [], onOpenActivity, initialBookId = null, initialTab = "library", student = null }) {
   // student가 있으면 교사가 그 학생의 책나눔을 보는 읽기 전용 화면입니다(선생님 결정 — 감상·발자국까지 전부 보임).
   const readOnly = !!student?.uid;
   const viewUid = readOnly ? student.uid : user?.uid;
@@ -135,11 +138,16 @@ export default function ReadingHub({ classId, user, isTeacher = false, rankingOn
   const visibleBooks = books.filter((b) => filter === "archived" ? b.archived : !b.archived && (filter === "all" || b.status === filter));
   const selected = dialog?.bookId ? books.find((b) => b.id === dialog.bookId) : null;
   const featured = (stats.badges || []).find((b) => b.id === (stats.featuredBadge?.id || stats.featuredBadge));
+  const showPet = petOn && !readOnly && !isTeacher && !!user?.uid;
 
   return <ReadingErrorContext.Provider value={error}><section className="reading-hub" aria-label="책나눔 성장 기능" aria-busy={loading || busy}>
     <div className="reading-intro">
       {readOnly ? <div><p className="reading-eyebrow">READING JOURNEY</p><h2>{student.name || "학생"}의 독서 여정</h2><p>학생이 남긴 서재 · 독서 발자국 · 한 권의 책을 읽기만 합니다.</p></div> : <div><p className="reading-eyebrow">MY READING JOURNEY</p><h2>한 페이지씩, 나의 가능성을 넓히다.</h2><p>읽은 순간을 기록하고 나만의 독서 컬렉션을 완성해 보세요.</p></div>}
-      {featured?.earned && <div className="reading-featured"><ReadingBadge badge={featured} size={70} /><span>{readOnly ? "대표 뱃지" : "나의 대표 뱃지"}<strong>{featured.name}</strong></span></div>}
+      {(featured?.earned || showPet) && <div className="reading-intro-side">
+        {featured?.earned && <div className="reading-featured"><ReadingBadge badge={featured} size={70} /><span>{readOnly ? "대표 뱃지" : "나의 대표 뱃지"}<strong>{featured.name}</strong></span></div>}
+        {/* 나의 펫 — 단계는 이미 받은 서재로 셉니다(과일 경험치 빼고 · lib/readingPet.js). 서재를 받기 전에는 카드도 기다립니다. */}
+        {showPet && <PetCard classId={classId} uid={user.uid} growthXp={raw ? petGrowthOfSummary(stats) : null} />}
+      </div>}
     </div>
     <nav className="reading-tabs" aria-label="책나눔 메뉴">
       {[["library", readOnly ? "서재" : "내 서재"], ["growth", "성장·뱃지"], ...(rankingOn ? [["ranking", "우리 반 랭킹"]] : [])].map(([key, label]) => <button type="button" key={key} className={tab === key ? "active" : ""} aria-current={tab === key ? "page" : undefined} onClick={() => { setTab(key); setDialog(null); setError(""); }}>{label}</button>)}

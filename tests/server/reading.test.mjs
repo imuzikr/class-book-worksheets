@@ -484,3 +484,78 @@ test("사용 중지 — 리더보드 · TOP 3에서 빠지고, 옛 TOP 3 장은 
   // 사용 중지된 학생 본인은 책나눔 API를 못 씀(그대로)
   await assert.rejects(() => getReadingTop({ uid: "su-b", roleClaim: null, db }, "api-susp"), (e) => e.status === 403 && e.code === "reading/suspended");
 });
+
+test("독서 펫 — 학생만 알 하나(받을 때의 경험치가 바탕 · 종은 비밀 문서에만), 100 모이면 깨우기, 리더보드 줄에 펫", async () => {
+  const { getReadingPet, readingPetAction } = await import("../../lib/server/readingService.js");
+  const snapshot = (uid, totalXp, fruitCount = 0) => ({ uid, level: getReadingLevel(totalXp), featuredBadge: null, formula: READING_FORMULA,
+    events: [{ date: today, xp: totalXp }], xpDays: [{ date: today, xp: totalXp }],
+    totalXp, badges: [], totalPages: 0, completedBooks: 0, reviewCount: 0, longestStreak: 0, streakRun: 0,
+    lastReadDate: today, fruitCount, xpReachedOn: today, fruits: [] });
+  const batch = db.batch();
+  batch.set(db.doc("classes/api-pet"), { createdBy: ids.teacher, readingEnabled: true, archived: false });
+  batch.set(db.doc("classes/api-pet-off"), { createdBy: ids.teacher, readingEnabled: true, archived: false, petEnabled: false });
+  for (const uid of ["pet-a", "pet-b"]) {
+    batch.set(db.doc(`users/${uid}`), { role: "student", realName: uid, studentId: uid === "pet-a" ? "50101" : "50102" });
+    batch.set(db.doc(`memberships/${uid}_api-pet`), { uid, classId: "api-pet" });
+  }
+  batch.set(db.doc("memberships/pet-a_api-pet-off"), { uid: "pet-a", classId: "api-pet-off" });
+  // pet-a는 이미 1,800 경험치(과일 3개 = 30 포함) — 알부터 시작해야 함
+  batch.set(db.doc("classes/api-pet/readingMembers/pet-a"), snapshot("pet-a", 1800, 3));
+  batch.set(db.doc("classes/api-pet/readingMembers/pet-b"), snapshot("pet-b", 50));
+  await batch.commit();
+  const a = { uid: "pet-a", roleClaim: null, db };
+
+  // 알 받기 — 바탕은 독서로 얻은 경험치(1,800 − 30), 프로필에는 종이 없고 비밀 문서에만
+  const adopted = await readingPetAction(a, { classId: "api-pet", action: "adopt" });
+  assert.equal(adopted.event, "adopted");
+  assert.equal(adopted.pet.stage, 1);
+  assert.equal(adopted.pet.xp, 0);
+  const mirror = (await db.doc("users/pet-a").get()).data().readingPet;
+  assert.equal(mirror.species, null);
+  assert.equal(mirror.baseXp, 1800 - 3 * FRUIT_XP);
+  const secret = (await db.doc("users/pet-a/reading/pet").get()).data();
+  assert.ok(typeof secret.species === "string" && secret.species.length > 0);
+  assert.equal(secret.baseXp, mirror.baseXp);
+  // 두 번 · 동시에 불러도 알은 하나(종도 그대로)
+  const again = await Promise.all([readingPetAction(a, { classId: "api-pet", action: "adopt" }), readingPetAction(a, { classId: "api-pet", action: "adopt" })]);
+  assert.ok(again.every((r) => r.event === null));
+  assert.equal((await db.doc("users/pet-a/reading/pet").get()).data().species, secret.species);
+
+  // 리더보드 줄 — 알은 종 없이(비밀), 펫이 없는 학생은 null
+  const rows = (await getReadingRankings(principal("teacher"), "api-pet", "all-time")).rankings;
+  assert.deepEqual(rows.find((r) => r.uid === "pet-a").pet, { species: null, stage: 1, xp: 0, ready: false });
+  assert.equal(rows.find((r) => r.uid === "pet-b").pet, null);
+  // 처음 받기가 동시에 두 번 와도(두 기기 · 상단바와 펫 카드) 알은 하나 — 하나만 'adopted'
+  const b = { uid: "pet-b", roleClaim: null, db };
+  const firstB = await Promise.all([readingPetAction(b, { classId: "api-pet", action: "adopt" }), readingPetAction(b, { classId: "api-pet", action: "adopt" })]);
+  assert.equal(firstB.filter((r) => r.event === "adopted").length, 1);
+  assert.equal((await db.doc("users/pet-b").get()).data().readingPet.baseXp, 50);
+
+  // 아직 100이 안 모였으면 못 깨움
+  await assert.rejects(() => readingPetAction(a, { classId: "api-pet", action: "hatch" }), (e) => e.status === 409 && e.code === "reading/pet-not-ready");
+  // 독서로 120을 더 얻음(과일이 아니라) → 깨울 수 있음 · 종은 비밀 문서의 것
+  await db.doc("classes/api-pet/readingMembers/pet-a").set(snapshot("pet-a", 1920, 3));
+  const ready = (await getReadingRankings(principal("teacher"), "api-pet", "all-time")).rankings.find((r) => r.uid === "pet-a").pet;
+  assert.deepEqual(ready, { species: null, stage: 1, xp: 120, ready: true });
+  const hatched = await readingPetAction(a, { classId: "api-pet", action: "hatch" });
+  assert.equal(hatched.event, "hatched");
+  assert.equal(hatched.pet.species, secret.species);
+  assert.equal(hatched.pet.stage, 2);
+  assert.equal((await db.doc("users/pet-a").get()).data().readingPet.species, secret.species);
+  assert.equal((await getReadingPet(a, "api-pet")).pet.species, secret.species);
+  // 과일만 더 받으면 펫은 그대로(과일 경험치는 빼고 셈)
+  await db.doc("classes/api-pet/readingMembers/pet-a").set(snapshot("pet-a", 2920, 103));
+  assert.equal((await getReadingPet(a, "api-pet")).pet.xp, 120);
+
+  // 막히는 길 — 선생님(펫 없음) · 다른 반 · 펫을 끈 반 · 모르는 요청 · 남의 uid를 끼워 넣기
+  await assert.rejects(() => readingPetAction(principal("teacher"), { classId: "api-pet", action: "adopt" }), (e) => e.status === 403 && e.code === "reading/pet-students-only");
+  await assert.rejects(() => readingPetAction(principal("other"), { classId: "api-pet", action: "adopt" }), (e) => e.status === 403);
+  await assert.rejects(() => readingPetAction(a, { classId: "api-pet-off", action: "adopt" }), (e) => e.status === 403 && e.code === "reading/pet-disabled");
+  await assert.rejects(() => getReadingPet(a, "api-pet-off"), (e) => e.code === "reading/pet-disabled");
+  await assert.rejects(() => readingPetAction(a, { classId: "api-pet", action: "feed" }), (e) => e.status === 400);
+  await assert.rejects(() => readingPetAction(a, { classId: "api-pet", action: "adopt", uid: "pet-b" }), (e) => e.status === 400);
+  // 펫을 끈 반의 리더보드에는 펫을 싣지 않음
+  await db.doc("classes/api-pet").update({ petEnabled: false });
+  assert.equal((await getReadingRankings(principal("teacher"), "api-pet", "all-time")).rankings.find((r) => r.uid === "pet-a").pet, null);
+  await db.doc("classes/api-pet").update({ petEnabled: true });
+});

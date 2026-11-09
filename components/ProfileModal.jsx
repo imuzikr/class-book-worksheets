@@ -12,10 +12,12 @@ import { useState } from "react";
 import { updateMyProfile } from "@/lib/store";
 import { isTeacher } from "@/lib/user";
 import { characterImage, characterName } from "./reading/CharacterChooser";
+import { PetProfileField } from "./reading/PetCard";
 
 // character: 학생 캐릭터를 쓰는 반이면 지금 캐릭터({ number, style }), 아니면 null.
 // onChangeCharacter: '바꾸기' — 이 창을 닫고 고르기 창을 엽니다(UserProfile).
-export default function ProfileModal({ user, onClose, character = null, onChangeCharacter = null }) {
+// pet: 학생 펫을 쓰는 반이고 알을 받았으면 { classId, mirror } — 단계는 열 때 한 번 서버에 묻습니다.
+export default function ProfileModal({ user, onClose, character = null, onChangeCharacter = null, pet = null }) {
   const teacherRole = isTeacher(user);
   const [realName, setRealName] = useState(user.realName || "");
   const [saving, setSaving] = useState(false);
@@ -92,12 +94,19 @@ export default function ProfileModal({ user, onClose, character = null, onChange
               </div>
             </div>
           )}
+          {!teacherRole && pet?.mirror && (
+            <div className="student-edit-field">
+              <span>내 펫</span>
+              <PetProfileField classId={pet.classId} mirror={pet.mirror} />
+            </div>
+          )}
         </div>
 
         {!teacherRole && (
           <p className="profile-modal-hint">
             실명·학번은 선생님만 수정할 수 있어요. 게시물과 채팅에는 실명이
             표시됩니다.{character && " 캐릭터는 언제든 바꿀 수 있고, 리더보드의 독서 여정 지도에서도 함께 걸어요."}
+            {pet?.mirror && " 펫은 독서로 얻은 경험치로 자라요(과일 경험치는 빼고)."}
           </p>
         )}
 

@@ -9,9 +9,12 @@ import { startVisiblePoll, RANKING_POLL_MS, RANKING_WAKE_GAP_MS } from "@/lib/vi
 import { journeyNarrative, journeyTitle, badgeHint, rankingsForPeriod } from "@/lib/readingJourney";
 import { defaultWorldAvatar, worldProgress } from "@/lib/readingWorldMap";
 import { backdropClose } from "@/lib/modal";
+import { normalizePublicPet, PET_HATCH_XP, petSpecies, petStageName } from "@/lib/readingPet";
 import ReadingBadge from "./ReadingBadge";
 import ReadingWorldMap from "./ReadingWorldMap";
+import PetFigure from "./PetFigure";
 import "./reading.css";
+import "./pet.css";
 
 const PERIODS = [["daily", "오늘"], ["weekly", "이번 주"], ["monthly", "이번 달"], ["all-time", "누적"]];
 const VIEWS = [{ key: "map", label: "독서 맵" }, { key: "ranking", label: "독서 랭킹" }];
@@ -41,6 +44,28 @@ function Character({ row, uid, className }) {
     src={`/reading-journey/${style}-${String(avatarNumber).padStart(2, "0")}.webp`} alt="" draggable={false} loading="lazy" /></span>;
 }
 
+// 캐릭터 옆의 독서 펫(lib/readingPet.js) — 서버가 줄마다 실어 줍니다(알이면 종 없이). 관리자 설정에서 끈 반은 null.
+const petOf = (row, petOn) => (petOn ? normalizePublicPet(row?.pet) : null);
+function petName(pet) {
+  const sp = pet?.species ? petSpecies(pet.species) : null;
+  return sp ? `${sp.name} · ${sp.animal}` : pet?.ready ? "곧 깨어날 알" : "신비한 알";
+}
+function petLine(pet, mine = false) {
+  if (!pet) return "";
+  if (!pet.species) {
+    return pet.ready ? (mine ? "알이 깨어나려 해요! 책나눔에서 깨워 주세요." : "알이 곧 깨어나요.")
+      : `${mine ? "알이 따뜻해지는 중" : "어떤 친구일지 아직 비밀"} · ${number(Math.min(pet.xp, PET_HATCH_XP))} / ${number(PET_HATCH_XP)}`;
+  }
+  return `${pet.stage}단계 ${petStageName(pet.stage)} · 펫 경험치 ${number(pet.xp)}`;
+}
+// 캐릭터와 펫을 한 덩이로 — 펫은 캐릭터의 오른쪽 아래(발치)에 작게
+function Face({ row, uid, className, pet, petSize = 26 }) {
+  return <span className="rlb-face-pair">
+    <Character row={row} uid={uid} className={className} />
+    {pet && <span className="rlb-face-pet" title={petName(pet)}><PetFigure species={pet.species} stage={pet.stage} ready={pet.ready} size={petSize} /></span>}
+  </span>;
+}
+
 function Medal({ rank, size = 34 }) {
   if (rank === 1) return <span className="rlb-medal" style={{ fontSize: size }} aria-label="1위">🥇</span>;
   if (rank === 2) return <span className="rlb-medal" style={{ fontSize: size }} aria-label="2위">🥈</span>;
@@ -54,7 +79,7 @@ function Bar({ percent, label }) {
   </span>;
 }
 
-export default function ReadingLeaderboard({ classId, user, isTeacher = false, characterOn = true, onDisabled, onOpenLibrary }) {
+export default function ReadingLeaderboard({ classId, user, isTeacher = false, characterOn = true, petOn = true, onDisabled, onOpenLibrary }) {
   const viewId = useId();
   const tabRefs = useRef([]);
   const [view, setView] = useState("map");
@@ -197,7 +222,7 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, c
     {hasSnapshot && error && <p className="reading-help" role="status">성장 정보는 마지막으로 확인한 누적 기록입니다. 새로고침해 주세요.</p>}
     <section className="rlb-panel" id={`${viewId}-panel-map`} role="tabpanel" aria-labelledby={`${viewId}-tab-map`} hidden={view !== "map"} tabIndex={0}>
       {!hasSnapshot ? !error && <div className="reading-loading" role="status">우리 반 여정을 모으고 있어요.</div>
-        : <ReadingWorldMap key={classId} rows={list} uid={uid} isTeacher={isTeacher} onOpenDetails={selectStudent} onSaveCharacter={characterOn ? saveCharacter : null} />}
+        : <ReadingWorldMap key={classId} rows={list} uid={uid} isTeacher={isTeacher} petOn={petOn} onOpenDetails={selectStudent} onSaveCharacter={characterOn ? saveCharacter : null} />}
     </section>
 
     <section className="rlb-panel" id={`${viewId}-panel-ranking`} role="tabpanel" aria-labelledby={`${viewId}-tab-ranking`} hidden={view !== "ranking"} tabIndex={0}>
@@ -215,7 +240,7 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, c
                     return <li key={row.uid}>
                       <button type="button" className={"rlb-row" + (me ? " is-me" : "")} onClick={() => selectStudent(row.uid)}>
                         <Medal rank={row.rank} />
-                        <Character row={row} className="rlb-row-face" />
+                        <Face row={row} className="rlb-row-face" pet={petOf(row, petOn)} />
                         <span className="rlb-row-main">
                           <span className="rlb-row-name">{nameOf(row)}{me && <span className="reading-me-label">나</span>}</span>
                           <span className="rlb-row-sub">{progress ? `Lv.${progress.level} ${journeyTitle(progress.level)} · ${period === "all-time" ? progress.level === 100 ? "최고 레벨에 도착했어요" : `다음 레벨까지 ${number(progress.toNext)} EXP` : `누적 ${number(xpOf(row))} EXP`}` : "누적 성장 정보 집계 중 · —"}</span>
@@ -226,25 +251,26 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, c
                     </li>;
                   })}</ul>}
             </section>
-            {isTeacher ? <ClassSummary rows={list} /> : <MyJourney mine={mine} row={myRow} uid={uid} today={today} />}
+            {isTeacher ? <ClassSummary rows={list} /> : <MyJourney mine={mine} row={myRow} uid={uid} today={today} pet={petOf(myRow, petOn)} />}
           </div>}
     </section>
 
-    {picked && <StudentJourneyModal row={picked} me={picked.uid === uid} onClose={closeStudent} onOpenLibrary={isTeacher && onOpenLibrary && picked.uid !== uid ? () => onOpenLibrary(picked.uid) : null} />}
+    {picked && <StudentJourneyModal row={picked} me={picked.uid === uid} pet={petOf(picked, petOn)} onClose={closeStudent} onOpenLibrary={isTeacher && onOpenLibrary && picked.uid !== uid ? () => onOpenLibrary(picked.uid) : null} />}
   </div>;
 }
 
-function MyJourney({ mine, row, uid, today }) {
+function MyJourney({ mine, row, uid, today, pet = null }) {
   const progress = growthOf(row);
   const earned = Array.isArray(row?.badges) ? READING_BADGES.filter((badge) => row.badges.includes(badge.id)) : null;
   const lines = mine ? journeyNarrative(mine, today) : null;
   return <section className="rlb-card rlb-mine" aria-labelledby="rlb-mine-title">
     <div className="rlb-card-head"><h3 id="rlb-mine-title">내 여정 정보</h3></div>
     <div className="rlb-mine-top">
-      <Character row={row} uid={uid} className="rlb-mine-face" />
+      <Face row={row} uid={uid} className="rlb-mine-face" pet={pet} petSize={40} />
       <strong>{progress ? journeyTitle(progress.level) : "성장 정보 집계 중"}</strong>
       {progress && <span className="rlb-stage">📍 제{progress.chapter}여정 · {progress.region.name}</span>}
     </div>
+    {pet && <div className="rlb-mine-pet"><PetFigure species={pet.species} stage={pet.stage} ready={pet.ready} size={44} /><span><strong>나의 펫 · {petName(pet)}</strong><small>{petLine(pet, true)}</small></span></div>}
     <dl className="rlb-facts">
       <div><dt>레벨</dt><dd>{progress ? `Lv.${progress.level}` : "—"}</dd></div>
       <div><dt>누적 경험치</dt><dd>{orDash(xpOf(row), " EXP")}</dd></div>
@@ -280,7 +306,7 @@ function ClassSummary({ rows }) {
   </section>;
 }
 
-function StudentJourneyModal({ row, me, onClose, onOpenLibrary = null }) {
+function StudentJourneyModal({ row, me, pet = null, onClose, onOpenLibrary = null }) {
   const modalRef = useRef(null);
   const progress = growthOf(row);
   const earned = new Set(row.badges ?? []);
@@ -310,7 +336,7 @@ function StudentJourneyModal({ row, me, onClose, onOpenLibrary = null }) {
   return <div className="modal-backdrop" {...backdropClose(onClose)}>
     <div ref={modalRef} className="modal reading-modal rlb-modal" role="dialog" aria-modal="true" aria-labelledby="rlb-modal-title" onKeyDown={handleKeys}>
       <div className="rlb-modal-head">
-        <Character row={row} className="rlb-mine-face" />
+        <Face row={row} className="rlb-mine-face" pet={pet} petSize={36} />
         <div><h3 id="rlb-modal-title">{nameOf(row)}{me && <span className="reading-me-label">나</span>}</h3><p>{progress ? `Lv.${progress.level} ${journeyTitle(progress.level)} · 📍 제${progress.chapter}여정 · ${progress.region.name}` : "누적 성장 정보 집계 중"}</p></div>
         {/* 교사: 그 학생의 책나눔(읽기 전용 서재)으로 — 선생님 요청 */}
         {onOpenLibrary && <button type="button" className="btn-ghost rlb-to-library" onClick={onOpenLibrary}>서재로 이동</button>}
@@ -328,6 +354,7 @@ function StudentJourneyModal({ row, me, onClose, onOpenLibrary = null }) {
         <div><dt>뱃지</dt><dd>{known ? `${earned.size} / ${READING_BADGES.length}개` : "—"}</dd></div>
       </dl>
       {progress && <Bar percent={progress.percent} label="다음 레벨까지 진행률" />}
+      {pet && <div className="rlb-modal-pet"><PetFigure species={pet.species} stage={pet.stage} ready={pet.ready} size={44} /><span><strong>{me ? "나의 펫" : "함께하는 펫"} · {petName(pet)}</strong><small>{petLine(pet, me)}</small></span></div>}
       <h4 className="rlb-modal-sub">뱃지</h4>
       {known ? <ul className="rlb-badge-grid">{READING_BADGES.map((badge, index) => {
         const got = earned.has(badge.id);

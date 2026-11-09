@@ -11,6 +11,7 @@
 //   · 랭킹 시스템(rankingEnabled — 값이 없으면 켜짐)
 //   · 학생 캐릭터(characterEnabled — 값이 없으면 켜짐, 랭킹이 켜져 있어야 의미가 있음)
 //   · 과일 바구니(fruitBasketEnabled — 값이 없으면 켜짐, 끄면 떠 있는 동그라미에서도 가림)
+//   · 학생 펫(petEnabled — 값이 없으면 켜짐, 책나눔이 켜져 있어야 씀 · lib/readingPet.js)
 // 쓰기는 반 문서 한 칸씩이고, 규칙(readingSettingValid)이 참·거짓과 보관 안 된 반만 받습니다.
 // =============================================================
 import { useMemo, useState } from "react";
@@ -44,13 +45,16 @@ const FEATURES = [
   { key: "fruitBasketEnabled", label: "과일 바구니",
     hint: "학생이 받은 과일을 바구니에 담아 이벤트에 응모해요. 끄면 오른쪽 아래 동그라미 메뉴에서도 가려져요.",
     on: "과일 바구니를 켰어요.", off: "과일 바구니를 껐어요. 담긴 과일과 응모 기록은 보관됩니다." },
+  { key: "petEnabled", label: "학생 펫", needs: ["readingEnabled"], needsText: "책나눔 성장 기능을 먼저 켜 주세요",
+    hint: "학생마다 알을 하나씩 받아 독서 경험치로 키워요(과일 경험치는 빼고). 책나눔 · 리더보드 · 내 프로필에 보여요. 선생님은 펫이 없어요.",
+    on: "학생 펫을 켰어요. 학생마다 알을 하나씩 받아요.", off: "학생 펫을 껐어요. 키우던 펫은 보관되고, 다시 켜면 그대로 이어져요." },
 ];
 
-// 성격이 같은 것끼리 세 묶음(선생님 요청 — 2 · 2 · 1).
+// 성격이 같은 것끼리 세 묶음(선생님 요청 — 한때 2 · 2 · 1, 학생 펫이 교실 보상에 들어 2 · 2 · 2).
 const GROUPS = [
   { key: "reading", title: "독서 기록", desc: "학생의 서재와 책 정보", keys: ["readingEnabled", "bookSearchEnabled"] },
   { key: "growth", title: "랭킹 · 꾸미기", desc: "반 친구와 함께 보는 성장", keys: ["rankingEnabled", "characterEnabled"] },
-  { key: "reward", title: "교실 보상", desc: "과일 모으기와 이벤트", keys: ["fruitBasketEnabled"] },
+  { key: "reward", title: "교실 보상", desc: "과일 모으기와 이벤트 · 독서로 키우는 펫", keys: ["fruitBasketEnabled", "petEnabled"] },
 ];
 
 export default function AdminSettingsPanel({ classes = [], onToast }) {

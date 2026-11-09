@@ -142,6 +142,9 @@
 /* ===================== 학생 프로필 편집 모달 ===================== */
 
 .student-edit-modal {
+  /* 닫기(×, .modal-close-float — position: absolute)의 기준. 없으면 .modal에 기준이 없어
+     ×가 창이 아니라 화면 오른쪽 위 모서리에 떠 있었습니다(내 프로필 창). */
+  position: relative;
   max-width: 380px;
   padding: 28px 28px 22px;
 }
