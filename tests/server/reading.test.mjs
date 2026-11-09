@@ -156,7 +156,9 @@ test("oversized Korean state is rejected before any transaction writes", async (
 
 test("과일 — 선생님이 준 과일이 다시 세기(refresh) 뒤 랭킹 경험치에 들어가고, 학생은 다시 세기를 못 부름", async () => {
   const before = (await getReadingRankings(principal("teacher"), "api-class", "all-time")).rankings[0];
-  const at = new Date();
+  // 지급 이력의 시각은 늘 서버가 찍은 지금 시각입니다(규칙 at == request.time) — 시험도 미래 시각은 쓰지 않습니다.
+  // 과일은 '어디까지 셌나' 뒤의 이력만 이어서 세므로, 미래 시각을 적어 두면 그 앞에 나중에 적은 이력을 건너뜁니다.
+  const at = new Date(Date.now() - 2000);
   await db.collection("classes/api-class/rewardEvents").add({ classId: "api-class", uid: ids.student, delta: 3, count: 3, byUid: ids.teacher, at });
   await db.collection("classes/api-class/rewardEvents").add({ classId: "api-class", uid: ids.student, delta: -1, count: 2, byUid: ids.teacher, at: new Date(at.getTime() + 1000) });
   await assert.rejects(() => refreshReadingMember(principal("student"), "api-class", ids.student), (e) => e.status === 403);
@@ -343,4 +345,77 @@ test("책나눔 상태 — 과일이 하나도 없는 학생도 처음 한 번 �
   const written = (await ref.get()).data();
   assert.deepEqual(written.allFruits, []);
   assert.equal(written.formula, READING_FORMULA);
+});
+
+// 과일 경험치는 이어서 셉니다 — 반 집계에 { 과일 날, 어디까지 셌나(fruitCursor) }를 적어 두고 그 뒤의 지급 이력만 읽습니다.
+// (lib/server/readingService.js의 fruitsFor · lib/reading.js의 readingFruitFold)
+test("과일 — 이어 세기: 이미 센 이력은 다시 읽지 않고, −1 뒤의 +1은 두 번 세지 않으며, 처음부터 센 값과 같음", async () => {
+  const uid = "fruit-cursor-student";
+  const classId = "api-fruit";
+  await db.doc(`classes/${classId}`).set({ createdBy: ids.teacher, readingEnabled: true, archived: false });
+  await db.doc(`users/${uid}`).set({ role: "student", realName: "이어세기", studentId: "20301" });
+  await db.doc(`memberships/${uid}_${classId}`).set({ uid, classId });
+  const who = { uid, roleClaim: null, db };
+  const ref = db.doc(`classes/${classId}/readingMembers/${uid}`);
+  const events = db.collection(`classes/${classId}/rewardEvents`);
+  const give = (delta, ms) => events.add({ classId, uid, delta, count: 0, byUid: ids.teacher, at: new Date(ms) });
+  const teacherRefresh = () => refreshReadingMember(principal("teacher"), classId, uid);
+  const t0 = Date.now() - 60000;
+  // +3, −1 → 누계 2 · 최고치 3 → 과일 3개
+  const first = await give(3, t0);
+  await give(-1, t0 + 1000);
+  await teacherRefresh();
+  let snap = (await ref.get()).data();
+  assert.equal(snap.fruitCursor[classId].total, 2);
+  assert.equal(snap.fruitCursor[classId].peak, 3);
+  assert.equal(snap.allFruits.reduce((n, f) => n + f.count, 0), 3);
+  // +1 → 누계 3(최고치를 못 넘음) — 과일 수 그대로
+  await give(1, t0 + 2000);
+  await teacherRefresh();
+  assert.equal((await getReading(who, classId)).summary.fruitCount, 3);
+  // +2 → 누계 5 · 최고치를 2 넘음 → 5개
+  await give(2, t0 + 3000);
+  await teacherRefresh();
+  assert.equal((await getReading(who, classId)).summary.fruitCount, 5);
+  // 이미 센 이력은 다시 읽지 않습니다 — 처음 이력을 지워도(앱에서는 못 지움 · 시험만) 이어 센 값은 그대로
+  await first.delete();
+  await give(1, t0 + 4000);
+  await teacherRefresh();
+  snap = (await ref.get()).data();
+  assert.equal(snap.allFruits.reduce((n, f) => n + f.count, 0), 6);
+  // cursor가 없는 옛 집계 모양이면 처음부터 셈 — 지운 +3이 빠진 이력: −1, +1, +2, +1 → 누계 3 · 과일 3개
+  const { fruitCursor, ...old } = snap;
+  assert.ok(fruitCursor[classId]);
+  await ref.set(old);
+  await teacherRefresh();
+  snap = (await ref.get()).data();
+  assert.equal(snap.allFruits.reduce((n, f) => n + f.count, 0), 3);
+  assert.deepEqual({ total: snap.fruitCursor[classId].total, peak: snap.fruitCursor[classId].peak }, { total: 3, peak: 3 });
+});
+
+test("과일 — 이어 세기: 독서 기록 저장 · 책나눔 다시 셈(fresh) · 새로 든 반도 같은 값", async () => {
+  const uid = "fruit-cursor-student";
+  const classId = "api-fruit";
+  const other = "api-fruit-2";
+  const who = { uid, roleClaim: null, db };
+  const ref = db.doc(`classes/${classId}/readingMembers/${uid}`);
+  const before = (await getReading(who, classId, null, { fresh: true })).summary.fruitCount;
+  // 독서 기록을 저장하면 그 사이 받은 과일도 이어 세어 함께 적음
+  await db.collection(`classes/${classId}/rewardEvents`).add({ classId, uid, delta: 2, count: 0, byUid: ids.teacher, at: new Date() });
+  const saved = await mutateReading(who, payload("fruit-cursor-book-01", { ...addBook, title: "이어 세기 책" }, classId));
+  assert.equal(saved.summary.fruitCount, before + 2);
+  assert.equal((await ref.get()).data().allFruits.reduce((n, f) => n + f.count, 0), before + 2);
+  // 다른 반에 새로 듦 — 그 반은 처음부터 읽고 cursor가 생김
+  await db.doc(`classes/${other}`).set({ createdBy: ids.teacher, readingEnabled: true, archived: false });
+  await db.doc(`memberships/${uid}_${other}`).set({ uid, classId: other });
+  await db.collection(`classes/${other}/rewardEvents`).add({ classId: other, uid, delta: 4, count: 4, byUid: ids.teacher, at: new Date(Date.now() - 5000) });
+  const fresh = await getReading(who, classId, null, { fresh: true });
+  assert.equal(fresh.summary.fruitCount, before + 6);
+  const snap = (await ref.get()).data();
+  assert.ok(snap.fruitCursor[other]);
+  assert.equal(snap.allFruits.reduce((n, f) => n + f.count, 0), before + 6);
+  // 그 반에서 빠지면 그 반 과일은 빠짐(처음부터 셀 때와 같음)
+  await db.doc(`memberships/${uid}_${other}`).delete();
+  assert.equal((await getReading(who, classId, null, { fresh: true })).summary.fruitCount, before + 2);
+  assert.equal((await ref.get()).data().fruitCursor[other], undefined);
 });
