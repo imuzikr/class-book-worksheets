@@ -5,8 +5,8 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { deriveReading, kstToday, READING_BADGES } from "@/lib/reading";
 import { fetchReadingRankings, saveReadingCharacter, subscribeReadingState } from "@/lib/data/reading";
-import { startVisiblePoll } from "@/lib/visiblePoll";
-import { journeyNarrative, journeyTitle, badgeHint } from "@/lib/readingJourney";
+import { startVisiblePoll, RANKING_POLL_MS, RANKING_WAKE_GAP_MS } from "@/lib/visiblePoll";
+import { journeyNarrative, journeyTitle, badgeHint, rankingsForPeriod } from "@/lib/readingJourney";
 import { defaultWorldAvatar, worldProgress } from "@/lib/readingWorldMap";
 import { backdropClose } from "@/lib/modal";
 import ReadingBadge from "./ReadingBadge";
@@ -21,6 +21,8 @@ const number = (value) => numeric(value) ? value.toLocaleString("ko-KR") : "—"
 const nameOf = (row) => [row?.studentId, row?.name || "이름 미설정"].filter(Boolean).join(" ");
 const xpOf = (row) => numeric(row?.totalXp) ? row.totalXp : null;
 const orDash = (value, unit = "") => numeric(value) ? `${number(value)}${unit}` : "—";
+// 리더보드가 서버에 다시 묻는 주기 — 10분마다 · 탭으로 돌아오면 5분 넘었을 때만(lib/visiblePoll.js, 선생님 요청)
+const RANKING_POLL = { intervalMs: RANKING_POLL_MS, wakeGapMs: RANKING_WAKE_GAP_MS };
 
 function growthOf(row) {
   const xp = xpOf(row);
@@ -61,7 +63,6 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, c
   const [period, setPeriod] = useState("weekly");
   const [rows, setRows] = useState(null);
   const [rowsScope, setRowsScope] = useState("");
-  const [rowsPeriod, setRowsPeriod] = useState("");
   const [request, setRequest] = useState(null);
   const [retry, setRetry] = useState(0);
   const [mineState, setMineState] = useState(null);
@@ -69,21 +70,21 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, c
   const disabledRef = useRef(onDisabled); disabledRef.current = onDisabled;
   const scopeRef = useRef(scope); scopeRef.current = scope;
   const pollRef = useRef(null);
-  const requestKey = `${scope}:${period}:${retry}`;
+  // 기간은 받을 열쇠에 넣지 않습니다 — 한 번 받으면 네 기간의 경험치가 함께 와서(xpBy) 단추를 눌러도 다시 안 받습니다.
+  const requestKey = `${scope}:${retry}`;
   const requestCurrent = request?.key === requestKey;
   const loading = !requestCurrent || request.status === "loading";
   const error = requestCurrent && request.status === "error" ? request.error : "";
 
   useEffect(() => {
     let live = true;
-    // 어느 길로 받든(기간 바꾸기 · 새로고침 · 주기) 방금 받았다고 적어 둡니다 — 곧이어 오는 주기는 건너뜁니다.
+    // 어느 길로 받든(처음 · 새로고침 · 주기) 방금 받았다고 적어 둡니다 — 곧이어 오는 주기는 건너뜁니다.
     pollRef.current?.mark();
     setRequest({ key: requestKey, status: "loading" });
-    Promise.resolve(fetchReadingRankings(classId, period)).then((result) => {
+    Promise.resolve(fetchReadingRankings(classId)).then((result) => {
       if (!live) return;
       setRows(Array.isArray(result) ? result : result?.rankings || []);
       setRowsScope(scope);
-      setRowsPeriod(period);
       setRequest({ key: requestKey, status: "ready" });
     }).catch((error) => {
       if (!live) return;
@@ -95,16 +96,16 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, c
       }
     });
     return () => { live = false; };
-  }, [classId, period, requestKey, scope]);
+  }, [classId, requestKey, scope]);
 
   useEffect(() => {
     setPickedUid(null);
   }, [scope]);
 
-  // 순위는 화면이 보일 때만 60초마다, 탭으로 돌아오면 한 번(lib/visiblePoll.js).
-  // 한때 30초마다 + 돌아올 때 focus · visibilitychange로 두 번씩 받았습니다(한 번에 약 95건 읽기).
+  // 순위는 화면이 보일 때만 10분마다, 탭으로 돌아오면 마지막으로 받은 지 5분이 넘었을 때만(lib/visiblePoll.js).
+  // 한때 30초마다 + 돌아올 때 두 번씩, 그 뒤 60초마다 받았습니다(한 번에 반 인원의 세 배쯤 읽기).
   useEffect(() => {
-    const poll = startVisiblePoll(() => setRetry((value) => value + 1));
+    const poll = startVisiblePoll(() => setRetry((value) => value + 1), RANKING_POLL);
     // 처음 받기는 위 효과가 이미 했습니다(효과는 적힌 차례대로 돕니다).
     poll.mark();
     pollRef.current = poll;
@@ -129,7 +130,9 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, c
         if (!live) return;
         setMineState(null);
         if (DISABLED_CODES.has(error?.code)) disabledRef.current?.();
-      });
+      },
+      // 이 화면의 순위와 같은 주기 — 과일을 받거나 내가 저장하면 지금처럼 곧바로 다시 받습니다.
+      RANKING_POLL);
     return () => { live = false; unsubscribe(); };
   }, [classId, uid, isTeacher, scope]);
 
@@ -137,11 +140,9 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, c
   // 상태는 내용이 바뀔 때만 오므로(같으면 안 넘김) 날짜가 바뀌면 오늘 기준으로 다시 셉니다(ReadingHub와 같은 셈).
   const mine = useMemo(() => mineState?.scope === scope ? deriveReading(mineState.value, new Date(`${today}T12:00:00+09:00`)) : null, [mineState, scope, today]);
   const hasSnapshot = rowsScope === scope && rows !== null;
-  // 고른 기간의 순위를 이미 그리고 있으면, 다시 받는 동안에도 그대로 둡니다(주기마다 깜빡이지 않게).
-  // 기간을 바꿨을 때만 '불러오는 중'을 띄웁니다 — 그동안의 표는 다른 기간의 순위라서요.
-  const freshShown = hasSnapshot && rowsPeriod === period;
-  const showLoading = loading && !freshShown;
-  const list = useMemo(() => hasSnapshot ? rows : [], [hasSnapshot, rows]);
+  // 받아 둔 순위가 있으면 다시 받는 동안에도 그대로 둡니다(주기마다 깜빡이지 않게). 기간 단추는 받아 둔 네 기간의
+  // 경험치로 그 자리에서 다시 세웁니다(lib/readingJourney.js의 rankingsForPeriod) — 서버에 다시 묻지 않습니다.
+  const list = useMemo(() => hasSnapshot ? rankingsForPeriod(rows, period) : [], [hasSnapshot, rows, period]);
   const myRow = list.find((row) => row.uid === uid);
   const picked = list.find((row) => row.uid === pickedUid);
   const periodLabel = PERIODS.find(([key]) => key === period)?.[1];
@@ -187,13 +188,13 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, c
       >{item.label}</button>)}
       </div>
       <div className="rlb-head-side">
-        {view === "ranking" && !isTeacher && myRow && !showLoading && !error && <div className="rlb-myrank"><span>{periodLabel} 내 순위</span><Medal rank={myRow.rank} size={40} /></div>}
+        {view === "ranking" && !isTeacher && myRow && !error && <div className="rlb-myrank"><span>{periodLabel} 내 순위</span><Medal rank={myRow.rank} size={40} /></div>}
         <button type="button" className="btn-ghost" disabled={loading} onClick={() => setRetry((value) => value + 1)}>새로고침</button>
       </div>
     </header>
 
     {error && <div className="reading-error" role="alert">{error}<button type="button" onClick={() => setRetry((value) => value + 1)}>다시 시도</button></div>}
-    {hasSnapshot && (showLoading || error) && <p className="reading-help" role="status">{showLoading ? "순위를 새로 불러오는 중이에요. 성장 정보는 마지막으로 확인한 누적 기록입니다." : "성장 정보는 마지막으로 확인한 누적 기록입니다. 새로고침해 주세요."}</p>}
+    {hasSnapshot && error && <p className="reading-help" role="status">성장 정보는 마지막으로 확인한 누적 기록입니다. 새로고침해 주세요.</p>}
     <section className="rlb-panel" id={`${viewId}-panel-map`} role="tabpanel" aria-labelledby={`${viewId}-tab-map`} hidden={view !== "map"} tabIndex={0}>
       {!hasSnapshot ? !error && <div className="reading-loading" role="status">우리 반 여정을 모으고 있어요.</div>
         : <ReadingWorldMap key={classId} rows={list} uid={uid} isTeacher={isTeacher} onOpenDetails={selectStudent} onSaveCharacter={characterOn ? saveCharacter : null} />}
@@ -207,8 +208,7 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, c
               <div className="rlb-card-head"><h3 id="rlb-rank-title">독서 랭킹</h3></div>
               <div className="reading-filters" aria-label="순위 기간">{PERIODS.map(([key, label]) => <button key={key} type="button" className={period === key ? "active" : ""} aria-pressed={period === key} onClick={() => setPeriod(key)}>{label}</button>)}</div>
               <p className="reading-help">순위는 고른 기간에 이 반에서 얻은 경험치로 · 한국 시간 · 주간은 월요일 시작 · 같은 점수는 공동 순위</p>
-              {showLoading ? <div className="reading-loading" role="status">{periodLabel} 순위를 불러오는 중이에요.</div>
-                : error ? <p className="reading-help">순위를 갱신하지 못했어요. 다시 시도해 주세요.</p>
+              {error ? <p className="reading-help">순위를 갱신하지 못했어요. 다시 시도해 주세요.</p>
                   : <ul className="rlb-list">{list.map((row) => {
                     const me = row.uid === uid;
                     const progress = growthOf(row);

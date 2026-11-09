@@ -1,7 +1,7 @@
 // 화면이 보일 때만 되풀이하는 확인(lib/visiblePoll.js).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { startVisiblePoll } from "@/lib/visiblePoll";
+import { startVisiblePoll, RANKING_POLL_MS, RANKING_WAKE_GAP_MS } from "@/lib/visiblePoll";
 
 function fakeEnv() {
   let clock = 0;
@@ -98,5 +98,29 @@ test("document · window가 없는 곳(서버)에서도 깨지지 않음", () =>
   const poll = startVisiblePoll(() => { runs += 1; }, { doc: null, win: null, now: () => 100000, setTimer: (fn) => { tickFn = fn; return 1; }, clearTimer: () => {} });
   tickFn();
   assert.equal(runs, 1);
+  poll.stop();
+});
+
+test("리더보드 — 10분마다, 탭으로 돌아오면 마지막으로 받은 지 5분이 넘었을 때만(선생님 요청)", () => {
+  assert.equal(RANKING_POLL_MS, 10 * 60000);
+  assert.equal(RANKING_WAKE_GAP_MS, 5 * 60000);
+  const env = fakeEnv();
+  let runs = 0;
+  const poll = startVisiblePoll(() => { runs += 1; }, { ...env.opts, intervalMs: RANKING_POLL_MS, wakeGapMs: RANKING_WAKE_GAP_MS });
+  poll.mark(); // 처음 받은 때
+  // 4분 뒤에 다른 탭에서 돌아옴 — 5분이 안 됐으니 다시 안 받음
+  env.advance(4 * 60000);
+  env.visibility("hidden"); env.visibility("visible"); env.focus();
+  assert.equal(runs, 0);
+  // 6분째에 돌아옴 — 5분이 넘어 한 번 받음(visibilitychange와 focus가 함께 와도 한 번)
+  env.advance(2 * 60000);
+  env.visibility("hidden"); env.visibility("visible"); env.focus();
+  assert.equal(runs, 1);
+  // 10분째 주기 — 돌아와 받은 지 4분뿐이라 건너뜀
+  env.advance(4 * 60000); env.tick();
+  assert.equal(runs, 1);
+  // 20분째 주기 — 받음
+  env.advance(10 * 60000); env.tick();
+  assert.equal(runs, 2);
   poll.stop();
 });

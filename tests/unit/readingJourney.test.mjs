@@ -5,7 +5,9 @@ import { initialReadingState, applyReadingAction, deriveReading } from "../../li
 import {
   journeyAvatar, journeyTitle, journeyStage, levelProgress, journeyTrackMax, journeyPosition,
   currentStreakOf, memberSnapshot, memberStats, sortJourney, journeyNarrative,
+  RANKING_PERIODS, rankingsForPeriod, sortReadingRankings,
 } from "../../lib/readingJourney.js";
+import { sortReadingRankings as serverSort } from "../../lib/server/readingPolicy.js";
 
 const NOW = "2026-10-29T03:00:00.000Z";
 const ctx = (id) => ({ uid: "s", classId: "c", now: NOW, id });
@@ -222,4 +224,33 @@ test("독서 TOP 3는 그 주 월요일 전날(일요일)까지의 기록으로 
   // 이번 주에 처음 읽은 학생은 0 — TOP 3에서 빠짐
   assert.deepEqual(readingTopAsOf({ totalXp: 40, events: [{ date: "2026-11-10", xp: 40 }] }, "2026-11-09"), { totalXp: 0, level: 1, xpReachedOn: null });
   assert.deepEqual(readingTopAsOf(undefined, "2026-11-09"), { totalXp: 0, level: 1, xpReachedOn: null });
+});
+
+test("순위 — 한 번 받은 네 기간의 경험치로 기간 단추마다 그 자리에서 다시 세움(다시 묻지 않음)", () => {
+  assert.deepEqual(RANKING_PERIODS, ["daily", "weekly", "monthly", "all-time"]);
+  // 서버와 화면이 같은 셈 하나를 씀
+  assert.equal(serverSort, sortReadingRankings);
+  const rows = [
+    { uid: "a", studentId: "10102", xp: 5, rank: 2, xpBy: { daily: 0, weekly: 5, monthly: 40, "all-time": 90 } },
+    { uid: "b", studentId: "10101", xp: 5, rank: 2, xpBy: { daily: 3, weekly: 5, monthly: 10, "all-time": 200 } },
+    { uid: "c", studentId: "10103", xp: 9, rank: 1, xpBy: { daily: 3, weekly: 9, monthly: 40, "all-time": 50 } },
+  ];
+  const view = (period) => rankingsForPeriod(rows, period).map((r) => [r.uid, r.xp, r.rank]);
+  // 같은 경험치는 공동 순위, 그다음 학번(숫자로) 차례
+  assert.deepEqual(view("daily"), [["b", 3, 1], ["c", 3, 1], ["a", 0, 3]]);
+  assert.deepEqual(view("weekly"), [["c", 9, 1], ["b", 5, 2], ["a", 5, 2]]);
+  assert.deepEqual(view("monthly"), [["a", 40, 1], ["c", 40, 1], ["b", 10, 3]]);
+  assert.deepEqual(view("all-time"), [["b", 200, 1], ["a", 90, 2], ["c", 50, 3]]);
+  // 받아 둔 줄은 그대로(단추를 오가도 처음 값으로 다시 셈)
+  assert.deepEqual(rows.map((r) => [r.xp, r.rank]), [[5, 2], [5, 2], [9, 1]]);
+  // 다른 칸(이름 · 캐릭터 · 쪽수)은 그대로 따라감
+  const withInfo = rankingsForPeriod([{ uid: "z", studentId: "1", name: "홍길동", totalPages: 30, xpBy: { weekly: 4 } }], "weekly");
+  assert.deepEqual(withInfo, [{ uid: "z", studentId: "1", name: "홍길동", totalPages: 30, xpBy: { weekly: 4 }, xp: 4, rank: 1 }]);
+  // 기간 칸이 비었거나 이상하면 0
+  assert.equal(rankingsForPeriod([{ uid: "q", xpBy: { weekly: -3 } }], "weekly")[0].xp, 0);
+  assert.equal(rankingsForPeriod([{ uid: "q", xpBy: {} }], "monthly")[0].xp, 0);
+  // xpBy가 없는 줄(옛 서버)은 받아 온 xp 그대로 · uid가 없어도 멈추지 않음
+  assert.deepEqual(rankingsForPeriod([{ uid: "x", xp: 7 }, { uid: "y", xp: 9 }], "monthly").map((r) => [r.uid, r.rank]), [["y", 1], ["x", 2]]);
+  assert.deepEqual(rankingsForPeriod([{ xp: 1 }, { xp: 1 }], "daily").map((r) => r.rank), [1, 1]);
+  assert.deepEqual(rankingsForPeriod(undefined, "weekly"), []);
 });

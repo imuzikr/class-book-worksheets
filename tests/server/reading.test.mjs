@@ -83,6 +83,13 @@ test("record creation, rank projection and correction are atomic and exclude pri
   assert.equal(ranking.rankings.length, 1);
   assert.equal(ranking.rankings[0].name, "김학생");
   assert.equal(ranking.rankings[0].xp, saved.summary.classScores["api-class"].daily);
+  // 네 기간의 경험치가 한 번에 옵니다 — 화면은 기간 단추를 눌러도 다시 묻지 않고 이것으로 다시 세웁니다
+  const scores = saved.summary.classScores["api-class"];
+  assert.deepEqual(ranking.rankings[0].xpBy, { daily: scores.daily, weekly: scores.weekly, monthly: scores.monthly, "all-time": scores.allTime });
+  assert.equal(ranking.rankings[0].allTimeXp, scores.allTime);
+  const weekly = await getReadingRankings(principal("student"), "api-class", "weekly");
+  assert.deepEqual(weekly.rankings[0].xpBy, ranking.rankings[0].xpBy);
+  assert.equal(weekly.rankings[0].xp, scores.weekly);
   assert.equal(JSON.stringify(ranking).includes(log.notes), false);
   assert.equal(JSON.stringify(ranking).includes("익명으로"), false);
   // 리더보드 — 쪽수 · 완독 · 뱃지는 함께 오고, 책 제목은 오지 않습니다
