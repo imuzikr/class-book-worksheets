@@ -331,3 +331,16 @@ test("책나눔 상태 — 평소에는 반 집계의 과일 날로, fresh일 �
   assert.equal((await getReading(principal("student"), "api-class")).summary.fruitCount, fresh.summary.fruitCount);
   assert.ok(Array.isArray((await memberRef.get()).data().allFruits));
 });
+
+test("책나눔 상태 — 과일이 하나도 없는 학생도 처음 한 번 집계에 과일 날(빈 목록)을 적어, 그 뒤로는 다시 세지 않음", async () => {
+  const uid = "fruitless-student";
+  await db.doc(`users/${uid}`).set({ role: "student", realName: "과일없음", studentId: "20199" });
+  await db.doc(`memberships/${uid}_api-class`).set({ uid, classId: "api-class" });
+  const who = { uid, roleClaim: null, db };
+  const ref = db.doc(`classes/api-class/readingMembers/${uid}`);
+  assert.equal((await ref.get()).exists, false);
+  assert.equal((await getReading(who, "api-class")).summary.fruitCount, 0);
+  const written = (await ref.get()).data();
+  assert.deepEqual(written.allFruits, []);
+  assert.equal(written.formula, READING_FORMULA);
+});
