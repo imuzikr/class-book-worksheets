@@ -4,8 +4,8 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { initializeApp, deleteApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
-import { getReading, mutateReading, getReadingRankings, readingPrincipal, refreshReadingMember, saveReadingCharacter } from "../../lib/server/readingService.js";
-import { FRUIT_XP, READING_FORMULA } from "../../lib/reading.js";
+import { getReading, mutateReading, getReadingRankings, getReadingTop, readingPrincipal, refreshReadingMember, saveReadingCharacter } from "../../lib/server/readingService.js";
+import { FRUIT_XP, READING_FORMULA, getReadingLevel, readingTopWeek } from "../../lib/reading.js";
 
 const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID || "demo-reading-api";
 if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST || !projectId.startsWith("demo-")) {
@@ -242,4 +242,92 @@ test("same-formula projections missing global XP are repaired rather than treate
   assert.deepEqual(row.badges, canonical.summary.earnedBadges.map((badge) => badge.id));
   await db.doc(`users/${ids.student}`).update({ readingCharacter: { number: 11, style: "advanced" } });
   assert.equal((await getReadingRankings(principal("teacher"), "api-class", "all-time")).rankings[0].character, null);
+});
+
+// 상단바 '독서 TOP 3' — 서울 시각 월요일 07:00에 한 주가 바뀌고, 그 주 내내 같은 셋(선생님 요청).
+test("독서 TOP 3 — 한 주에 한 번 셈해 적어 두고, 그 주에는 같은 셋 · 반에서 빠진 학생은 빼고 채움", async () => {
+  const week = readingTopWeek(new Date());
+  const before = new Date(Date.parse(`${week}T00:00:00Z`) - 3 * 86400000).toISOString().slice(0, 10); // 지난주 목요일쯤
+  const top = ["top-a", "top-b", "top-c", "top-d"];
+  const snapshot = (uid, pastXp, thisWeekXp) => {
+    const totalXp = pastXp + thisWeekXp;
+    return { uid, level: getReadingLevel(totalXp), featuredBadge: null, formula: READING_FORMULA,
+      events: [{ date: before, xp: pastXp }, ...(thisWeekXp ? [{ date: week, xp: thisWeekXp }] : [])],
+      totalXp, badges: [], totalPages: 0, completedBooks: 0, reviewCount: 0, longestStreak: 0, streakRun: 0,
+      lastReadDate: before, fruitCount: 0, xpReachedOn: thisWeekXp ? week : before, fruits: [] };
+  };
+  const batch = db.batch();
+  batch.set(db.doc("classes/api-top"), { createdBy: ids.teacher, readingEnabled: true, archived: false });
+  top.forEach((uid, i) => {
+    batch.set(db.doc(`users/${uid}`), { role: "student", realName: `상위${i + 1}`, studentId: `3010${i + 1}` });
+    batch.set(db.doc(`memberships/${uid}_api-top`), { uid, classId: "api-top" });
+  });
+  // a: 지난주까지 300(새 집계 — 날마다의 경험치 xpDays) · b: 200(+이번 주 500 — 이번 주 셋에는 안 듦, 옛 집계)
+  // · c: 150 · d: 이번 주에 처음 읽음 · api-student: 다른 반에서 이번 주에만 얻은 경험치(이 반 집계는 그 자리에서 셈)
+  batch.set(db.doc("classes/api-top/readingMembers/top-a"), { ...snapshot("top-a", 300, 40), events: [], xpDays: [{ date: before, xp: 300 }, { date: week, xp: 40 }] });
+  batch.set(db.doc("classes/api-top/readingMembers/top-b"), snapshot("top-b", 200, 500));
+  batch.set(db.doc("classes/api-top/readingMembers/top-c"), snapshot("top-c", 150, 0));
+  batch.set(db.doc("classes/api-top/readingMembers/top-d"), { ...snapshot("top-d", 0, 90), events: [{ date: week, xp: 90 }] });
+  batch.set(db.doc(`memberships/${ids.student}_api-top`), { uid: ids.student, classId: "api-top" });
+  await batch.commit();
+
+  const first = await getReadingTop(principal("teacher"), "api-top");
+  assert.equal(first.week, week);
+  assert.deepEqual(first.rows.map((r) => r.uid), ["top-a", "top-b", "top-c"]);
+  assert.deepEqual(first.rows.map((r) => r.totalXp), [300, 200, 150]); // a의 이번 주 40 · b의 이번 주 500은 빠짐
+  // 다른 반에서 이번 주에만 얻은 경험치도 빠짐 — 그 학생은 다섯 자리 후보에도 없음
+  const studentSnap = (await db.doc(`classes/api-top/readingMembers/${ids.student}`).get()).data();
+  assert.ok(Array.isArray(studentSnap.xpDays) && studentSnap.xpDays.length > 0);
+  assert.equal(first.rows[1].level, getReadingLevel(200));
+  assert.equal(first.rows[0].name, "상위1");
+  const saved = (await db.doc("classes/api-top/readingTop/current").get()).data();
+  assert.equal(saved.week, week);
+  assert.equal(saved.formula, READING_FORMULA);
+  assert.ok(saved.rows.length <= 5);
+  assert.ok(!saved.rows.some((r) => r.uid === ids.student || r.uid === "top-d"));
+
+  // 그 주 안에서는 다시 세지 않음 — 반 집계가 바뀌어도 같은 셋(학생이 물어도 같음)
+  await db.doc("classes/api-top/readingMembers/top-c").set(snapshot("top-c", 900, 0));
+  assert.deepEqual((await getReadingTop(principal("student"), "api-top")).rows.map((r) => r.uid), ["top-a", "top-b", "top-c"]);
+
+  // 반에서 빠진 학생은 그 자리에서 빼고 다음 학생이 올라옴 — 적어 둔 한 장에서도 이름을 지움
+  await db.doc("memberships/top-a_api-top").delete();
+  const after = await getReadingTop(principal("teacher"), "api-top");
+  assert.deepEqual(after.rows.map((r) => r.uid), ["top-b", "top-c"]);
+  assert.ok(!(await db.doc("classes/api-top/readingTop/current").get()).data().rows.some((r) => r.uid === "top-a"));
+
+  // 주가 바뀌면(적어 둔 주가 지난주) 그때 다시 셈 — 바뀐 집계가 들어옴
+  await db.doc("classes/api-top/readingTop/current").update({ week: "2000-01-03" });
+  assert.deepEqual((await getReadingTop(principal("teacher"), "api-top")).rows.map((r) => r.uid), ["top-c", "top-b"]);
+
+  // 다른 반 학생 · 랭킹을 끈 반은 막음
+  await assert.rejects(() => getReadingTop(principal("other"), "api-top"), (e) => e.status === 403);
+  await db.doc("classes/api-top").update({ rankingEnabled: false });
+  await assert.rejects(() => getReadingTop(principal("teacher"), "api-top"), (e) => e.code === "reading/ranking-disabled");
+});
+
+// 책나눔 상태 — 평소 다시 묻기(60초마다 · 돌아왔을 때)는 반 집계에 적어 둔 '모든 반의 과일 날'(allFruits)로,
+// 처음 열 때 · 과일 수가 바뀌었을 때(fresh)만 지급 이력에서 다시 셉니다.
+test("책나눔 상태 — 평소에는 반 집계의 과일 날로, fresh일 때만 지급 이력에서 다시 셈해 집계도 고쳐 적음", async () => {
+  const memberRef = db.doc(`classes/api-class/readingMembers/${ids.student}`);
+  const base = await getReading(principal("student"), "api-class", null, { fresh: true });
+  assert.ok(Array.isArray((await memberRef.get()).data().allFruits));
+  const count0 = base.summary.fruitCount;
+  // 선생님이 과일을 줬는데 '다시 세기'가 아직(또는 실패) — 평소 다시 묻기는 집계 그대로(지급 이력을 안 읽음)
+  await db.collection("classes/api-class/rewardEvents").add({ classId: "api-class", uid: ids.student, delta: 20, count: 99, byUid: ids.teacher, at: new Date() });
+  assert.equal((await getReading(principal("student"), "api-class")).summary.fruitCount, count0);
+  // 과일 수가 바뀌어 화면이 fresh로 물으면 — 다시 세고, 집계도 고쳐 적음(리더보드 · TOP 3가 같은 집계를 씀)
+  const fresh = await getReading(principal("student"), "api-class", null, { fresh: true });
+  assert.ok(fresh.summary.fruitCount > count0);
+  const healed = (await memberRef.get()).data();
+  assert.equal(healed.allFruits.reduce((n, f) => n + f.count, 0), fresh.summary.fruitCount);
+  assert.equal((await getReading(principal("student"), "api-class")).summary.fruitCount, fresh.summary.fruitCount);
+  // 교사가 보는 학생의 책나눔도 같은 길
+  assert.equal((await getReading(principal("teacher"), "api-class", ids.student)).summary.fruitCount, fresh.summary.fruitCount);
+  // 옛 집계(allFruits가 생기기 전)는 평소 다시 묻기에서도 다시 셈해 고쳐 적음
+  const { allFruits, ...old } = healed;
+  assert.ok(allFruits.length > 0);
+  await memberRef.set(old);
+  assert.equal((await getReading(principal("student"), "api-class")).summary.fruitCount, fresh.summary.fruitCount);
+  assert.ok(Array.isArray((await memberRef.get()).data().allFruits));
 });

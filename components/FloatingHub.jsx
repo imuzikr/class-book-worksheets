@@ -52,7 +52,7 @@ import {
   subscribeChatReads,
   subscribeStudyGroupAssignment,
 } from "@/lib/store";
-import { dmRoom, groupRoom, totalUnread, MESSENGER_OPEN_EVENT } from "@/lib/messenger";
+import { CHAT_ROOM_LIMIT, dmRoom, groupRoom, totalUnread, MESSENGER_OPEN_EVENT } from "@/lib/messenger";
 import { isFirebaseConfigured } from "@/lib/firebase";
 import MessengerWindow from "./MessengerWindow";
 import {
@@ -263,12 +263,24 @@ export default function FloatingHub({ classId: pageClassId, user, isTeacher, fru
     : "";
 
   const [messages, setMessages] = useState([]);
+  // 학생 — 방마다 최근 CHAT_ROOM_LIMIT개만 받고, 창의 '이전 대화 더 보기'가 그 방의 수를 늘립니다.
+  // moreRooms — 그보다 앞의 말이 남은 방. 반 · 방이 바뀌면 처음 수로 돌아갑니다.
+  const [roomLimits, setRoomLimits] = useState({});
+  const [moreRooms, setMoreRooms] = useState({});
+  const roomLimitsKey = JSON.stringify(roomLimits);
+  useEffect(() => { setRoomLimits({}); }, [classId, studentRoomsKey]);
   useEffect(() => {
     setMessages([]); // 앞 반의 말이 새 반 목록에 한 박자 남지 않게
+    setMoreRooms({});
     if (!classId || !myUid) return undefined;
     if (isTeacher) return subscribeClassChat(classId, setMessages);
-    return subscribeRoomsChat(classId, studentRoomsKey.split("|").filter(Boolean), setMessages);
-  }, [classId, myUid, isTeacher, studentRoomsKey]);
+    return subscribeRoomsChat(classId, studentRoomsKey.split("|").filter(Boolean), (list, more) => {
+      setMessages(list);
+      setMoreRooms(more ?? {});
+    }, JSON.parse(roomLimitsKey));
+  }, [classId, myUid, isTeacher, studentRoomsKey, roomLimitsKey]);
+  const loadOlder = (room) =>
+    setRoomLimits((prev) => ({ ...prev, [room]: (prev[room] ?? CHAT_ROOM_LIMIT) + CHAT_ROOM_LIMIT }));
 
   const [seen, setSeen] = useState({});
   useEffect(() => {
@@ -484,6 +496,8 @@ export default function FloatingHub({ classId: pageClassId, user, isTeacher, fru
           isTeacher={isTeacher}
           groups={groups}
           messages={messages}
+          moreRooms={isTeacher ? {} : moreRooms}
+          onLoadOlder={isTeacher ? null : loadOlder}
           seen={seen}
           initialRoom={openReq}
           onClose={() => { setMsgOpen(false); setOpenReq(null); fabRef.current?.focus(); }}

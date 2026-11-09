@@ -124,6 +124,13 @@ describe("간편 메신저 규칙", () => {
       const db = asStudent(env, "stu1").firestore();
       await assertSucceeds(getDocs(query(chats(db), where("room", "==", "dm_stu1"))));
     });
+    // 앱은 방마다 최근 말만 묻습니다(lib/data/messenger.js의 subscribeRoomsChat — at 내림차순 · 한도).
+    it("학생은 제 방의 최근 말만 정렬 · 한도로 묻고, 남의 방은 같은 모양으로도 못 묻는다", async () => {
+      const db = asStudent(env, "stu1").firestore();
+      await assertSucceeds(getDocs(query(chats(db), where("room", "==", "dm_stu1"), orderBy("at", "desc"), limit(61))));
+      await assertSucceeds(getDocs(query(chats(db), where("room", "==", "grp_group_1"), orderBy("at", "desc"), limit(61))));
+      await assertFails(getDocs(query(chats(db), where("room", "==", "dm_stu2"), orderBy("at", "desc"), limit(61))));
+    });
     it("학생은 남의 1:1 방을 못 읽는다", async () => {
       const db = asStudent(env, "stu2").firestore();
       await assertFails(getDocs(query(chats(db), where("room", "==", "dm_stu1"))));

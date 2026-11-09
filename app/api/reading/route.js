@@ -9,7 +9,9 @@ const headers = { "Cache-Control": "private, no-store, max-age=0" };
 export async function GET(request) {
   try {
     const principal = await readingPrincipal(request);
-    return NextResponse.json(await getReading(principal, request.nextUrl.searchParams.get("classId"), request.nextUrl.searchParams.get("uid")), { headers });
+    const query = request.nextUrl.searchParams;
+    // fresh=1 — 과일 경험치를 지급 이력에서 다시 셈(처음 열 때 · 과일 수가 바뀌었을 때만 화면이 보냄)
+    return NextResponse.json(await getReading(principal, query.get("classId"), query.get("uid"), { fresh: query.get("fresh") === "1" }), { headers });
   } catch (error) {
     const failure = readingErrorResponse(error);
     return NextResponse.json(failure.body, { status: failure.status, headers });

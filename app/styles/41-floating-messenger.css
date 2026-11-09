@@ -344,6 +344,19 @@
   line-height: 1.5;
 }
 .msgr-notice strong { color: var(--text); }
+/* 학생 방 — 최근 말만 받으므로 앞의 말은 이 단추로(lib/data/messenger.js의 subscribeRoomsChat) */
+.msgr-older {
+  display: block;
+  margin: 0 auto 10px;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 12px;
+  color: var(--text-sub);
+  cursor: pointer;
+}
+.msgr-older:hover { background: var(--primary-light); color: var(--primary-dark); border-color: var(--primary-light); }
 /* 1:1 방의 손들기 대화 카드 — 접힌 한 줄, 누르면 손바닥 창과 같은 말풍선(읽기 전용).
    메신저 말과 갈리도록 점선 테두리 · 가운데 정렬. */
 .msgr-sig { margin: 8px auto; width: min(100%, 420px); border: 1px dashed var(--border); border-radius: 12px; background: #fff; }

@@ -183,6 +183,9 @@ function MessengerWindowBody({
   isTeacher,
   groups = [],
   messages = [],
+  // 학생 — 그보다 앞의 말이 남은 방({ [방]: true })과 그 방의 말을 더 받는 길(FloatingHub)
+  moreRooms = {},
+  onLoadOlder = null,
   seen = {},
   classes = [],
   onClassChange = null,
@@ -293,11 +296,27 @@ function MessengerWindowBody({
     }
   }, [room, messages, seenMs, classId, myUid]);
 
-  // 새 말이 오면 맨 아래로
+  // 새 말이 오면 맨 아래로 — '이전 대화 더 보기'로 앞의 말이 들어올 때만은 보던 자리를 지킵니다.
+  const olderRef = useRef(null); // { room, count, height, top }
   useEffect(() => {
     const el = scrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (!el) return;
+    const keep = olderRef.current;
+    if (keep && keep.room === room) {
+      if (timeline.length > keep.count) {
+        el.scrollTop = el.scrollHeight - keep.height + keep.top;
+        olderRef.current = null;
+      }
+      return;
+    }
+    el.scrollTop = el.scrollHeight;
   }, [timeline.length, room]);
+  const loadOlder = () => {
+    const el = scrollRef.current;
+    if (!room || !onLoadOlder) return;
+    olderRef.current = el ? { room, count: timeline.length, height: el.scrollHeight, top: el.scrollTop } : null;
+    onLoadOlder(room);
+  };
 
   useEffect(() => {
     setDraft("");
@@ -653,6 +672,12 @@ function MessengerWindowBody({
               {isTeacher ? "이 대화는 기록되어 언제든 다시 볼 수 있어요." : "이 대화는 기록되고 선생님이 볼 수 있어요."}
               {isDmRoom(room) && " 손들고 나눈 대화(🖐️)도 여기 함께 남아요."}
             </p>
+            {/* 학생 방은 최근 말만 받습니다(lib/data/messenger.js의 subscribeRoomsChat) — 앞의 말은 눌러서 */}
+            {onLoadOlder && moreRooms?.[room] && (
+              <button type="button" className="msgr-older" onClick={loadOlder}>
+                이전 대화 더 보기
+              </button>
+            )}
             {timeline.length === 0 && sigThreads !== null && (
               <p className="msgr-empty msgr-empty--center">첫 메시지를 보내 보세요.</p>
             )}

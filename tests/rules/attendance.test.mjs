@@ -1,9 +1,10 @@
 // =============================================================
 // 공부방 출석부 — classes/{cId}/attendanceRecords/{date_uid}
 // =============================================================
+import assert from "node:assert/strict";
 import { describe, it, before, after, beforeEach } from "node:test";
 import { assertSucceeds, assertFails } from "@firebase/rules-unit-testing";
-import { doc, getDoc, setDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, setDoc, deleteDoc, serverTimestamp, where } from "firebase/firestore";
 import { makeEnv, asStudent, asTeacher, seed } from "./helpers.mjs";
 
 const DATE = "2026-08-23";
@@ -202,5 +203,26 @@ describe("출석부 규칙", () => {
   it("학생은 manualBy를 붙여 남길 수 없다", async () => {
     const db = asStudent(env, "stu1").firestore();
     await assertFails(setDoc(doc(db, ...recPath("cA", "stu1")), manualPayload("cA", "stu1", "stu1")));
+  });
+
+  // ── 그날 것만 받기(lib/data/attendance.js의 subscribeClassAttendanceOn · subscribeMyAttendanceOn) ──
+  // 화면이 학기 전체 대신 그날 기록만 묻습니다. 아직 출석 전이라 결과가 비어 있어도 질의는 통과해야 합니다.
+  const onDay = (db, ...filters) => query(collection(db, "classes", "cA", "attendanceRecords"), ...filters);
+  it("학생은 그날 제 기록을 uid · 날짜로 물을 수 있다(아직 없어도)", async () => {
+    const db = asStudent(env, "stu1").firestore();
+    await assertSucceeds(getDocs(onDay(db, where("uid", "==", "stu1"), where("date", "==", DATE))));
+    await seed(env, (sdb) => setDoc(doc(sdb, ...recPath("cA", "stu1")), { ...payload("cA", "stu1"), attendedAt: new Date(), createdAt: new Date() }));
+    const snap = await getDocs(onDay(db, where("uid", "==", "stu1"), where("date", "==", DATE)));
+    assert.equal(snap.size, 1);
+  });
+
+  it("학생은 날짜만으로(반 친구 기록까지) 물을 수 없다", async () => {
+    const db = asStudent(env, "stu1").firestore();
+    await assertFails(getDocs(onDay(db, where("date", "==", DATE))));
+  });
+
+  it("담당 교사는 그날 반 기록을 날짜로 물을 수 있고, 다른 반 교사는 못 한다", async () => {
+    await assertSucceeds(getDocs(onDay(asTeacher(env, "teacherA").firestore(), where("date", "==", DATE))));
+    await assertFails(getDocs(onDay(asTeacher(env, "teacherB").firestore(), where("date", "==", DATE))));
   });
 });

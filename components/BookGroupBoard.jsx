@@ -25,7 +25,7 @@ import {
   composeBookGroups,
   joinBookGroup,
   leaveBookGroup,
-  subscribeClassStudyAttendance,
+  subscribeClassAttendanceOn,
   todayDateKey,
   toDate,
 } from "@/lib/store";
@@ -148,16 +148,17 @@ export default function BookGroupBoard({
   // ── 결석 표시 ────────────────────────────────────────────────
   // 기준일은 '오늘'이 아니라 '활동을 연 날'입니다. 오늘 출석으로 판단하면
   // 지난주에 한 활동을 오늘 열어 봤을 때 엉뚱한 사람이 결석으로 찍힙니다.
-  const [attendance, setAttendance] = useState([]);
-  useEffect(() => {
-    if (!isTeacher || !activity?.classId) { setAttendance([]); return; }
-    return subscribeClassStudyAttendance(activity.classId, setAttendance);
-  }, [isTeacher, activity?.classId]);
-
   const activityDate = useMemo(() => {
     const d = activity?.createdAt ? toDate(activity.createdAt) : null;
     return d && !Number.isNaN(d.getTime()) ? todayDateKey(d) : todayDateKey();
   }, [activity?.createdAt]);
+
+  // 그날 기록만 받습니다(subscribeClassAttendanceOn) — 한때 학기 전체를 받아 그날 것만 골랐습니다.
+  const [attendance, setAttendance] = useState([]);
+  useEffect(() => {
+    if (!isTeacher || !activity?.classId) { setAttendance([]); return; }
+    return subscribeClassAttendanceOn(activity.classId, activityDate, setAttendance);
+  }, [isTeacher, activity?.classId, activityDate]);
 
   const presentUids = useMemo(() => {
     const set = new Set();

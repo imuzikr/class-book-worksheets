@@ -34,7 +34,8 @@ function useReportRequest(options, enabled, refresh, context = "") {
     if (!enabled) return undefined;
     const controller = new AbortController();
     setEnvelope({ key, data: null, error: "", status: "loading" });
-    fetchDashboard({ ...JSON.parse(optionsKey), signal: controller.signal })
+    // cacheTag — 새로고침 · 고친 뒤에는 기억해 둔 보고서 대신 새로 받습니다(lib/data/dashboard.js)
+    fetchDashboard({ ...JSON.parse(optionsKey), signal: controller.signal, cacheTag: refresh })
       .then((data) => { if (!controller.signal.aborted && current === sequence.current) setEnvelope({ key, data, error: "", status: "ready" }); })
       .catch((failure) => { if (!controller.signal.aborted && current === sequence.current) setEnvelope({ key, data: null, error: failure?.message || "분석 리포트를 불러오지 못했습니다.", status: "error" }); });
     return () => controller.abort();

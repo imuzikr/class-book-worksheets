@@ -186,3 +186,40 @@ test("상단바 독서 TOP 3 — 레벨 → 경험치 → 그 경험치에 먼�
   assert.deepEqual(topReaders(rows, 5).map((r) => r.uid), ["b", "d", "c", "a"]);
   assert.deepEqual(topReaders([{ uid: "z", totalXp: 0 }]), []);
 });
+
+test("독서 TOP 3의 한 주 — 서울 시각 월요일 07:00에 바뀜", async () => {
+  const { readingTopWeek, nextReadingTopRefresh } = await import("../../lib/reading.js");
+  const kst = (s) => new Date(`${s}+09:00`);
+  // 2026-11-09은 월요일
+  assert.equal(readingTopWeek(kst("2026-11-09T06:59:59")), "2026-11-02");
+  assert.equal(readingTopWeek(kst("2026-11-09T07:00:00")), "2026-11-09");
+  assert.equal(readingTopWeek(kst("2026-11-11T12:00:00")), "2026-11-09");
+  assert.equal(readingTopWeek(kst("2026-11-15T23:59:59")), "2026-11-09");
+  assert.equal(readingTopWeek(kst("2026-11-16T06:59:59")), "2026-11-09");
+  assert.equal(readingTopWeek(kst("2026-11-16T07:00:00")), "2026-11-16");
+  // 다음에 바뀌는 때 — 다음 월요일 07:00(서울). 바로 그 순간이면 그 다음 주.
+  assert.equal(nextReadingTopRefresh(kst("2026-11-09T06:59:59")), kst("2026-11-09T07:00:00").getTime());
+  assert.equal(nextReadingTopRefresh(kst("2026-11-09T07:00:00")), kst("2026-11-16T07:00:00").getTime());
+  assert.equal(nextReadingTopRefresh(kst("2026-11-12T20:00:00")), kst("2026-11-16T07:00:00").getTime());
+});
+
+test("독서 TOP 3는 그 주 월요일 전날(일요일)까지의 기록으로 — 이번 주 몫은 덜어 냄", async () => {
+  const { readingTopAsOf } = await import("../../lib/readingJourney.js");
+  const snap = {
+    totalXp: 300,
+    events: [
+      { date: "2026-11-01", xp: 100 }, // 지난주 일요일 — 셈에 듦
+      { date: "2026-11-08", xp: 150 }, // 이번 주 TOP 3가 정해지기 전날 — 셈에 듦
+      { date: "2026-11-09", xp: 30 },  // 이번 주 월요일 — 다음 주 TOP 3에
+      { date: "2026-11-11", xp: 20 },
+    ],
+  };
+  assert.deepEqual(readingTopAsOf(snap, "2026-11-09"), { totalXp: 250, level: 3, xpReachedOn: "2026-11-08" });
+  // 지난주 TOP 3 자리에서 보면
+  assert.deepEqual(readingTopAsOf(snap, "2026-11-02"), { totalXp: 100, level: 2, xpReachedOn: "2026-11-01" });
+  // 누적 칸이 없는 옛 집계는 그 반 기록의 합으로
+  assert.deepEqual(readingTopAsOf({ events: snap.events }, "2026-11-09"), { totalXp: 250, level: 3, xpReachedOn: "2026-11-08" });
+  // 이번 주에 처음 읽은 학생은 0 — TOP 3에서 빠짐
+  assert.deepEqual(readingTopAsOf({ totalXp: 40, events: [{ date: "2026-11-10", xp: 40 }] }, "2026-11-09"), { totalXp: 0, level: 1, xpReachedOn: null });
+  assert.deepEqual(readingTopAsOf(undefined, "2026-11-09"), { totalXp: 0, level: 1, xpReachedOn: null });
+});

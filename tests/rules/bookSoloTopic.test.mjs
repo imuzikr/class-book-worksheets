@@ -10,9 +10,10 @@
 //   · 개별 활동에서만 (모둠 활동에서는 불가 — 모둠 주제어는 교사 몫)
 //   · 잠긴 활동에서는 불가
 // =============================================================
+import assert from "node:assert/strict";
 import { describe, it, before, after, beforeEach } from "node:test";
 import { assertSucceeds, assertFails } from "@firebase/rules-unit-testing";
-import { doc, setDoc, updateDoc } from "firebase/firestore";
+import { collection, doc, getCountFromServer, query, setDoc, updateDoc, where } from "firebase/firestore";
 import { makeEnv, asStudent, asTeacher, seed } from "./helpers.mjs";
 
 const group = (uid, extra = {}) => ({
@@ -135,5 +136,22 @@ describe("개별 활동 주제어 규칙", () => {
     await assertFails(
       updateDoc(doc(db, "bookActivities", "solo1", "groups", "solo_stu1"), { topic: "남의 반 교사" })
     );
+  });
+
+  // 활동 목록 카드의 '모둠 n개 · 학생 n명' — 문서를 받지 않고 개수만 묻습니다(lib/data/books.js의
+  // fetchBookGroupCount: 전체 − 물러난 것). 같은 반 학생 · 담당 교사는 묻고, 반 밖은 못 묻습니다.
+  it("활동 카드 — 판(모둠) 수를 개수 묻기로 셈(물러난 판 빼기)", async () => {
+    await seed(env, (db) => setDoc(doc(db, "bookActivities", "solo1", "groups", "solo_old"), group("stu9", { retired: true })));
+    const count = async (db) => {
+      const col = collection(db, "bookActivities", "solo1", "groups");
+      const [all, retired] = await Promise.all([
+        getCountFromServer(col),
+        getCountFromServer(query(col, where("retired", "==", true))),
+      ]);
+      return all.data().count - retired.data().count;
+    };
+    assert.equal(await count(asStudent(env, "stu1").firestore()), 2);
+    assert.equal(await count(asTeacher(env, "teacherA").firestore()), 2);
+    await assertFails(getCountFromServer(collection(asStudent(env, "stuX").firestore(), "bookActivities", "solo1", "groups")));
   });
 });

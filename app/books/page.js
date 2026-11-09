@@ -26,6 +26,7 @@ import { characterChoiceEnabled } from "@/lib/readingCharacter";
 import {
   subscribeBookActivities,
   subscribeBookGroups,
+  fetchBookGroupCount,
   subscribeMyParatextEntry,
   BOOK_STUDENT_TOPIC_TYPES,
   addBookActivity,
@@ -43,6 +44,8 @@ import {
   addStudentReward,
   todayDateKey,
   subscribeClassStudyAttendance,
+  subscribeClassAttendanceOn,
+  subscribeMyAttendanceOn,
   subscribeClassRewards,
   subscribeJoinCodes,
   startClassAttendance,
@@ -248,8 +251,10 @@ function BooksPageInner() {
   // 편집 중인 활동 (교사)
   const [editingActivity, setEditingActivity] = useState(null);
   const [toast, setToast] = useState("");
-  // 오늘 출석 기록 — 출석 관리 · 학생 '출석하기' · '멋진 순간' 자리표가 봅니다
-  const [attendanceRecords, setAttendanceRecords] = useState([]);
+  // 출석 기록 — 오늘 것(늘 — 출석 관리 · 학생 '출석하기' · '멋진 순간' 자리표)과
+  // 학기 전체(출석 창을 열었을 때만). 아래 효과 둘.
+  const [todayRecords, setTodayRecords] = useState([]);
+  const [allAttendanceRecords, setAllAttendanceRecords] = useState(null);
   // 책 나눔에는 공부방이 없어, 공부방 머리말에 있던 창들을 여기서 엽니다 —
   // 반 관리하기 · 자리/모둠 · 출석 · 과일 바구니.
   // 떠 있는 동그라미(FloatingHub)는 `/books?open=…`으로 엽니다(아래).
@@ -358,13 +363,6 @@ function BooksPageInner() {
   // 왼쪽 '오늘' 패널 — 오늘 이 반이 어떻게 움직였는지(출석·성찰·과일)를
   // 활동을 하는 동안에도 볼 수 있게 놓습니다. 출석은 아래에서 구독합니다.
 
-  // 출석 기록 — 교사는 반 전체, 학생은 제 것만(출석하기 단추 · 내 출석부).
-  useEffect(() => {
-    if (!classId || !myUid) { setAttendanceRecords([]); return; }
-    if (admin) return subscribeClassStudyAttendance(classId, setAttendanceRecords);
-    return subscribeMyStudyAttendance(classId, myUid, setAttendanceRecords);
-  }, [admin, classId, myUid]);
-
   // 학생: 내 과일 수 — 과일 바구니 창을 열었을 때만(문서 1건).
   useEffect(() => {
     if (admin || !fruitBasketOpen || !classId || !myUid) return;
@@ -399,14 +397,32 @@ function BooksPageInner() {
   const todayKey = todayDateKey();
   const attendanceOpenToday =
     !!currentClass?.attendanceOpen && currentClass?.attendanceOpenDate === todayKey;
+
+  // 출석 기록 — **늘 받는 것은 오늘 것뿐**입니다(교사: 그날 반 전체 · 학생: 그날 제 것 한 건).
+  // 오늘 출석 · 자리표 · '출석하기' 단추가 쓰는 것이 그것뿐이라서요.
+  // 한때 화면이 뜰 때마다 학기 전체(학생 수 × 수업일 — 학기 말이면 수천 건)를 받았습니다.
+  useEffect(() => {
+    if (!classId || !myUid) { setTodayRecords([]); return; }
+    if (admin) return subscribeClassAttendanceOn(classId, todayKey, setTodayRecords);
+    return subscribeMyAttendanceOn(classId, myUid, todayKey, setTodayRecords);
+  }, [admin, classId, myUid, todayKey]);
+  // 학기 전체 — '출석 관리'(교사) · '내 출석부'(학생) 창을 연 동안만(달력 · 지난 날 · 내려받기).
+  // 첫 답이 오기 전에는 오늘 것으로 그립니다(창의 첫 화면이 오늘이라 비어 보이지 않게).
+  useEffect(() => {
+    setAllAttendanceRecords(null);
+    if (!attendanceOpen || !classId || !myUid) return;
+    if (admin) return subscribeClassStudyAttendance(classId, setAllAttendanceRecords);
+    return subscribeMyStudyAttendance(classId, myUid, setAllAttendanceRecords);
+  }, [attendanceOpen, admin, classId, myUid]);
+
   const todayPresentUids = useMemo(() => {
     if (!admin) return null;
-    const todays = attendanceRecords.filter((r) => r.date === todayKey);
+    const todays = todayRecords.filter((r) => r.date === todayKey);
     if (!attendanceOpenToday && todays.length === 0) return null;
     return new Set(todays.map((r) => r.uid).filter(Boolean));
-  }, [admin, attendanceRecords, todayKey, attendanceOpenToday]);
+  }, [admin, todayRecords, todayKey, attendanceOpenToday]);
 
-  const attendedToday = !admin && attendanceRecords.some((r) => r.date === todayKey);
+  const attendedToday = !admin && todayRecords.some((r) => r.date === todayKey);
 
   // ── 떠 있는 동그라미에서 온 바로가기 (?open=attendance|fruit|classes) ──
   // 처리 뒤 `open`만 지웁니다(이전 바로가기 주소도 남겨 두지 않습니다).
@@ -1222,7 +1238,7 @@ function BooksPageInner() {
           key={classId}
           seatLayout={seatLayout}
           isTeacher={admin}
-          records={attendanceRecords}
+          records={allAttendanceRecords ?? todayRecords}
           roster={admin ? roster : []}
           className={currentClass.name ?? ""}
           attendanceOpenToday={attendanceOpenToday}
@@ -1374,12 +1390,20 @@ function ActivityCard({ activity, isTeacher, uid, onOpen, onEdit, onDelete, onTo
   // 적힙니다(실제로 그랬습니다). 모둠 구독도 안 걸려 '모둠 n개'도 못 셉니다.
   const hasGroups = activity.type === "consonant" || isGroupedActivity(activity) || activity.type === "crossword" || activity.type === "bingo";
   const solo = !hasGroups;
-  const [groups, setGroups] = useState([]);
-  // 개인 활동은 모둠이 없으므로 모둠 구독 자체를 걸지 않습니다.
+  // 모둠(판) 수 — 문서를 받지 않고 개수만 묻습니다(fetchBookGroupCount — 카드 한 장에 2건 남짓,
+  // 이 탭에서 5분 기억). 한때 카드마다 모둠 문서를 통째로 구독해, 개별 활동은 카드 한 장이 학생
+  // 수만큼 읽었고 목록은 활동 수만큼 곱해졌습니다. 개인 활동은 모둠이 없어 묻지 않습니다.
+  const [groupCount, setGroupCount] = useState(null);
   useEffect(() => {
-    if (solo) return;
-    return subscribeBookGroups(activity.id, setGroups);
+    setGroupCount(null);
+    if (solo) return undefined;
+    let live = true;
+    fetchBookGroupCount(activity.id)
+      .then((n) => { if (live) setGroupCount(n); })
+      .catch(() => { if (live) setGroupCount(null); });
+    return () => { live = false; };
   }, [activity.id, solo]);
+  const countLabel = groupCount == null ? "…" : String(groupCount);
 
   // 학생이 제 주제어를 적는 활동(곁텍스트 읽기·RAFT)에서 교사가 주제어를
   // 비워 둔 경우에만 — 학생이 제 카드에 적은 책이름을 카드 제목으로 씁니다
@@ -1446,8 +1470,8 @@ function ActivityCard({ activity, isTeacher, uid, onOpen, onEdit, onDelete, onTo
             : solo
             ? "개인 활동"
             : perStudent
-              ? `학생 ${groups.length}명 · ${modeLabel}`
-              : `모둠 ${groups.length}개 · ${modeLabel}`}
+              ? `학생 ${countLabel}명 · ${modeLabel}`
+              : `모둠 ${countLabel}개 · ${modeLabel}`}
         </span>
         {/* 지금 상태 — 자물쇠 그림 + 글자. 종류·모둠 수를 적는 줄에
             ' · 잠김'으로 끼워 두었을 때는 딸림 정보처럼 읽혀 지나쳤습니다.

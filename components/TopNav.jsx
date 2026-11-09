@@ -154,15 +154,19 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
   const [fruitOn, setFruitOn] = useState(true);
   // 상단바 가운데 '독서 TOP 3' — 책나눔 성장 기능과 랭킹이 켜진 반에서만
   const [topOn, setTopOn] = useState(false);
+  // TOP 3에 고른 캐릭터를 그릴지(교사 · 학생 모두) — 반이 캐릭터를 끄면 기본 캐릭터로
+  const [topCharacters, setTopCharacters] = useState(false);
   const [myCharacter, setMyCharacter] = useState(null);
   useEffect(() => {
     setCharacterOn(false);
     setFruitOn(true);
     setTopOn(false);
+    setTopCharacters(false);
     if (!quizClassId) return;
     return subscribeClass(quizClassId, (c) => {
       setFruitOn(fruitBasketOn(c));
       setTopOn(!!c && !c.archived && readingEnabled(c) && rankingEnabled(c));
+      setTopCharacters(!!c && characterChoiceEnabled(c));
       if (!admin) setCharacterOn(!!c && readingEnabled(c) && rankingEnabled(c) && characterChoiceEnabled(c));
     });
   }, [admin, quizClassId]);
@@ -365,7 +369,7 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
           학교 전체에 하나인 전광판(meta/marquee, AppMarquee)이 섰는데 걷었습니다.
           책나눔 · 랭킹이 꺼진 반에서는 빈 칸만 남습니다. */}
       <div className="topbar-mq-slot">
-        <ClassTopReaders classId={quizClassId} enabled={topOn} />
+        <ClassTopReaders classId={quizClassId} enabled={topOn} charactersOn={topCharacters} myUid={myUid} myCharacter={myCharacter} />
       </div>
 
       {/* ④ 오른쪽 끝: 돌발 퀴즈 + 손들기 + 확성기 + 과일 뱃지 + 알림 + 프로필.
