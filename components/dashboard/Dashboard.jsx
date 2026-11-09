@@ -232,6 +232,12 @@ function DashboardSession({ user }) {
         setNotice(`${name || "학생"}을(를) 탈퇴시켰어요. 기록과 프로필이 지워졌습니다.`);
         setRefresh((value) => value + 1);
       }}
+      onRemoved={(name, className) => {
+        setProfileStudent(null);
+        setStudentChoice(null);
+        setNotice(`${name || "학생"}을(를) ${className || "이 반"}에서 뺐어요. 남긴 글 · 과일 · 출석 기록은 그대로입니다.`);
+        setRefresh((value) => value + 1);
+      }}
     />}
     {semesterChoice?.classId === classId && semesterChoice.uid === user.uid && teacher && <SemesterDialog classId={classId} className={classroom.name} start={classroom.dashboardSemesterStart} end={classroom.dashboardSemesterEnd} onClose={() => setSemesterChoice(null)} onSaved={() => { setSemesterChoice(null); setPeriod("semester"); setRefresh((value) => value + 1); }} />}
   </div>;

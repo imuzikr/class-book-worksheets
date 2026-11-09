@@ -4,23 +4,28 @@
 // 관리자 대시보드 — 학생 프로필 창 (개인별 보고서의 학생 이름 옆 '편집'을 누르면)
 // -------------------------------------------------------------
 // users/{uid} 한 건을 읽어 이름 · 학번 · 이메일 · 닉네임 · 소속 반을 보여 주고,
-// '편집'으로 이름 · 학번 · 이메일을 고칩니다(updateStudentProfile — 프로필 한 장만),
-// 아래 '탈퇴'로 그 학생을 탈퇴시킵니다(lib/data/withdraw.js — 서버 없이).
+// '편집'으로 이름 · 학번 · 이메일을 고칩니다(updateStudentProfile — 프로필 한 장만).
+// 아래 한 줄의 단추 넷 — 편집 · 이 반에서 빼기 · 사용 중지 · 탈퇴(가벼운 일에서 무거운 일 차례).
+//   · 이 반에서 빼기 — 지금 보는 반 하나에서만(lib/data/removeFromClass.js). 기록은 남고
+//     참여 코드로 다시 들어오면 이어집니다. 다른 선생님 반에도 있는 학생도 뺄 수 있습니다.
+//   · 사용 중지 · 탈퇴 — 계정 전체(lib/data/suspend.js · withdraw.js). 그 학생의 반이 모두
+//     내 반일 때만 되고, 다른 선생님 반에도 있으면 막고 '이 반에서 빼기'를 안내합니다.
 // 탈퇴는 학생 이름을 그대로 적어야 실행되고, 되돌릴 수 없습니다.
-// 다른 선생님 반에도 있는 학생은 탈퇴를 막고 '반에서 빼기'를 안내합니다.
 // =============================================================
 import { useEffect, useState } from "react";
-import { checkWithdraw, fetchStudentProfile, setStudentSuspended, syncStudentName, updateStudentProfile, withdrawStudent } from "@/lib/store";
+import { checkWithdraw, fetchStudentProfile, removeStudentFromClass, setStudentSuspended, syncStudentName, updateStudentProfile, withdrawStudent } from "@/lib/store";
 import { purgeNameMatches } from "@/lib/classPurge";
 import { Dialog, fullDate } from "./DashboardParts";
 
 const BLOCK_TEXT = {
-  "other-class": (names) => `다른 선생님 반(${names.join(" · ")})에도 있는 학생이라 탈퇴시킬 수 없어요. 내 반에서는 '반 관리하기'의 반에서 빼기를 써 주세요.`,
+  "other-class": (names) => `다른 선생님 반(${names.join(" · ")})에도 있는 학생이라 사용 중지 · 탈퇴는 할 수 없어요. 이 반에서만 빼려면 아래 '이 반에서 빼기'를 눌러 주세요.`,
   "too-many": () => "반이 다섯 개 이상인 학생은 관리자만 탈퇴시킬 수 있어요.",
   "no-class": () => "어느 반 학생인지 확인할 수 없어 탈퇴시킬 수 없어요. 학생이 반에 한 번 더 들어오면 탈퇴시킬 수 있어요.",
   "not-student": () => "학생 계정만 탈퇴시킬 수 있어요.",
   "no-profile": () => "프로필을 찾지 못했어요. 이미 탈퇴한 학생일 수 있어요.",
   self: () => "자기 계정은 탈퇴시킬 수 없어요.",
+  "not-mine": () => "내가 맡은 반에서만 뺄 수 있어요.",
+  archived: () => "보관된 반에서는 뺄 수 없어요. 반을 다시 꺼낸 뒤에 빼 주세요.",
 };
 const blockText = (reason, names = []) => (BLOCK_TEXT[reason] || (() => "탈퇴시킬 수 없어요."))(names);
 
@@ -45,7 +50,7 @@ function draftProblem(d) {
   return "";
 }
 
-export default function StudentProfileDialog({ student, myClasses, onClose, onWithdrawn, onUpdated }) {
+export default function StudentProfileDialog({ student, myClasses, onClose, onWithdrawn, onRemoved, onUpdated }) {
   const [profile, setProfile] = useState(undefined); // undefined = 읽는 중, null = 없음
   const [check, setCheck] = useState(null);
   const [confirming, setConfirming] = useState(false);
@@ -62,9 +67,17 @@ export default function StudentProfileDialog({ student, myClasses, onClose, onWi
   const [suspendAsk, setSuspendAsk] = useState(false);
   const [suspending, setSuspending] = useState(false);
   const [suspendMsg, setSuspendMsg] = useState("");
+  // 이 반에서 빼기 — 두 번 눌러 확정(첫 번째 누름은 무엇이 일어나는지 펼침)
+  const [removeAsk, setRemoveAsk] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [removeError, setRemoveError] = useState("");
 
   // 지금 보는 반 — 그 학생 프로필의 classIds에 이 반이 빠져 규칙에 막히면 한 번 메웁니다.
   const healClassId = student.classes?.[0]?.id || null;
+  // '이 반에서 빼기'를 할 반 — 내가 맡은 운영 중인 반일 때만(보관된 반은 모둠을 고칠 수 없음)
+  const here = myClasses.find((c) => c.id === healClassId) || null;
+  const removeBlocked = !here ? "not-mine" : here.archived ? "archived" : "";
+  const busy = running || syncing || suspending || removing;
 
   useEffect(() => {
     let alive = true;
@@ -121,6 +134,22 @@ export default function StudentProfileDialog({ student, myClasses, onClose, onWi
     }
   }
 
+  async function runRemove() {
+    if (removing || removeBlocked) return;
+    setRemoving(true);
+    setRemoveError("");
+    try {
+      await removeStudentFromClass(student.uid, here);
+      onRemoved?.(name, here.name);
+    } catch (e) {
+      console.warn("[반에서 빼기] 멈췄어요:", e?.code, e?.message);
+      setRemoveError(BLOCK_TEXT[e?.code]
+        ? blockText(e.code, e.classNames)
+        : "빼는 도중에 멈췄어요. 학생은 아직 이 반 명단에 있어요 — 다시 누르면 이어서 뺍니다.");
+      setRemoving(false);
+    }
+  }
+
   function startEdit() {
     setDraft({ realName: profile.realName || student.name || "", studentId: profile.studentId || student.studentId || "", email: profile.email || "" });
     setSaveError("");
@@ -167,7 +196,7 @@ export default function StudentProfileDialog({ student, myClasses, onClose, onWi
     ["가입일", toDateText(profile.createdAt)],
   ].filter(([, v]) => v) : [];
 
-  return <Dialog title="학생 프로필" onClose={running || syncing ? () => {} : onClose}>
+  return <Dialog title="학생 프로필" onClose={running || syncing || removing ? () => {} : onClose}>
     <div className="bb-profile-head">
       <span className="bb-profile-avatar" aria-hidden="true">{profile?.emoji || student.emoji || "📖"}</span>
       <div>
@@ -208,10 +237,11 @@ export default function StudentProfileDialog({ student, myClasses, onClose, onWi
             {saved && <p className="bb-profile-saved" role="status">{saved}</p>}
           </>}
 
-    {/* 편집 · 사용 중지 · 탈퇴 — 아래 한 줄에 같은 크기로(선생님 요청). 사용 중지 · 탈퇴를 누르면
-        그 자리가 확인 칸으로 바뀝니다. */}
-    {profile && !draft && !suspendAsk && !confirming && <section className="bb-profile-tools" aria-label="학생 관리">
+    {/* 편집 · 이 반에서 빼기 · 사용 중지 · 탈퇴 — 아래 한 줄에 같은 크기로(선생님 요청). 빼기 · 사용 중지 ·
+        탈퇴를 누르면 그 자리가 확인 칸으로 바뀝니다. */}
+    {profile && !draft && !suspendAsk && !confirming && !removeAsk && <section className="bb-profile-tools" aria-label="학생 관리">
       <ul className="bb-profile-tool-notes">
+        <li>이 반에서 빼기 — {here?.name || "이 반"} 명단 · 자리표 · 모둠에서만 뺍니다. 글 · 과일 · 출석 기록은 남고, 참여 코드로 다시 들어오면 이어집니다.</li>
         <li>{profile.suspended
           ? "사용 중지 상태예요. 다시 사용하게 하면 빠졌던 모둠 자리로 돌아갑니다."
           : "사용 중지 — 전학 등으로 더 쓰지 않을 때. 글 · 그림 · 기록은 그대로 두고 계정만 쉬게 합니다."}</li>
@@ -219,14 +249,33 @@ export default function StudentProfileDialog({ student, myClasses, onClose, onWi
       </ul>
       {check && !check.ok && <p className="bb-profile-block">{blockText(check.reason, check.classNames)}</p>}
       {suspendMsg && <p className="bb-profile-note" role="status">{suspendMsg}</p>}
-      <div className="bb-profile-trio">
-        <button type="button" className="bb-dash-secondary" onClick={startEdit} disabled={running || syncing || suspending}>편집</button>
+      <div className="bb-profile-buttons">
+        <button type="button" className="bb-dash-secondary" onClick={startEdit} disabled={busy}>편집</button>
+        <button type="button" className="bb-dash-secondary" disabled={!!removeBlocked || busy}
+          title={removeBlocked ? blockText(removeBlocked) : undefined}
+          onClick={() => { setRemoveError(""); setRemoveAsk(true); }}>이 반에서 빼기</button>
         <button type="button" className={profile.suspended ? "bb-dash-primary" : "bb-profile-suspend-btn"}
-          disabled={!check?.ok || suspending || running || syncing}
+          disabled={!check?.ok || busy}
           onClick={() => (profile.suspended ? toggleSuspend() : setSuspendAsk(true))}>
           {suspending ? "바꾸는 중…" : profile.suspended ? "다시 사용하게 하기" : "사용 중지"}
         </button>
-        <button type="button" className="bb-profile-withdraw" disabled={!check?.ok || syncing || suspending} onClick={() => setConfirming(true)}>탈퇴</button>
+        <button type="button" className="bb-profile-withdraw" disabled={!check?.ok || busy} onClick={() => setConfirming(true)}>탈퇴</button>
+      </div>
+    </section>}
+
+    {profile && !draft && removeAsk && here && <section className="bb-profile-suspend" aria-label="반에서 빼기">
+      <p><b>{here.name}</b>에서 <b>{name || "이 학생"}</b>을(를) 뺍니다. 다른 반 소속은 그대로예요.</p>
+      <ul className="bb-profile-suspend-list">
+        <li>이 반 명단 · 자리표 · 기본 모둠 · 독서 활동 모둠에서 빠지고, 이 반의 화면을 더 볼 수 없어요.</li>
+        <li>이 학생이 이 반에 남긴 글 · 그림 · 과일 · 출석 기록은 그대로 남아요.</li>
+        <li>참여 코드로 다시 들어오면 기록이 그대로 이어집니다(모둠 · 자리는 다시 정해 주세요).</li>
+      </ul>
+      {removeError && <p className="bb-profile-block" role="alert">{removeError}</p>}
+      <div className="bb-profile-actions">
+        <button type="button" className="bb-dash-secondary" disabled={removing} onClick={() => { setRemoveAsk(false); setRemoveError(""); }}>취소</button>
+        <button type="button" className="bb-profile-suspend-btn" disabled={removing || !!removeBlocked} onClick={runRemove}>
+          {removing ? "빼는 중…" : "이 반에서 빼기"}
+        </button>
       </div>
     </section>}
 
