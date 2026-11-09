@@ -7,7 +7,8 @@ import { deriveReading, kstToday, READING_BADGES } from "@/lib/reading";
 import { fetchReadingRankings, saveReadingCharacter, subscribeReadingState } from "@/lib/data/reading";
 import { startVisiblePoll, RANKING_POLL_MS, RANKING_WAKE_GAP_MS } from "@/lib/visiblePoll";
 import { journeyNarrative, journeyTitle, badgeHint, rankingsForPeriod } from "@/lib/readingJourney";
-import { defaultWorldAvatar, worldProgress } from "@/lib/readingWorldMap";
+import { worldProgress } from "@/lib/readingWorldMap";
+import { characterOf, characterImage } from "@/lib/readingCharacterCatalog";
 import { backdropClose } from "@/lib/modal";
 import ReadingBadge from "./ReadingBadge";
 import ReadingWorldMap from "./ReadingWorldMap";
@@ -33,12 +34,9 @@ function growthOf(row) {
 }
 
 function Character({ row, uid, className }) {
-  const fallback = defaultWorldAvatar(row?.uid || uid || "");
-  const chosen = row?.character;
-  const avatarNumber = Number.isInteger(chosen?.number) && chosen.number >= 1 && chosen.number <= 10 ? chosen.number : fallback;
-  const style = ["intermediate", "advanced"].includes(chosen?.style) ? chosen.style : "intermediate";
+  const character = characterOf({ uid: row?.uid || uid || "", character: row?.character });
   return <span className={className} aria-hidden="true"><img className="rlb-character-image"
-    src={`/reading-journey/${style}-${String(avatarNumber).padStart(2, "0")}.webp`} alt="" draggable={false} loading="lazy" /></span>;
+    src={characterImage(character)} alt="" draggable={false} loading="lazy" /></span>;
 }
 
 function Medal({ rank, size = 34 }) {
