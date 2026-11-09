@@ -317,6 +317,9 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
   - 그 학생의 해시태그 글에 친구가 댓글을 달려 하면 '입력할 수 없습니다.' 한 줄만(`HashtagComments`, 규칙
     `isSuspendedUser`도 막음). 동료 평가 · 브레인 라이팅은 모둠에서 빠져 칸 자체가 안 섭니다.
   - 소속 · 과일 · 출석 기록은 그대로입니다(선생님 화면의 명단에 남음).
+  - **리더보드 · 독서 TOP 3 순위에서는 빠집니다**(선생님 요청 — `lib/readingJourney.js`의 `isRankedStudent`,
+    독서 기록 · 경험치는 그대로). TOP 3는 한 주에 한 번 세므로 사용 중지 · 다시 사용을 누를 때 그 반의 TOP 3를
+    다시 셉니다(`READING_GROWTH.md`의 '독서 TOP 3').
   - 시험 `tests/rules/suspend.test.mjs` · `storage.test.mjs` · `tests/unit/suspendGroups.test.mjs`.
     **코드보다 규칙(Firestore · Storage)을 먼저 게시하세요.**
 - **반 공지는 교사가 곧바로 씁니다** — `classes/{cId}/classNotices`에 한 장(`sendClassNotice`,
@@ -3737,7 +3740,7 @@ FNV-1a 32비트 + 퍼즐마다 다른 `salt`) · 힌트만 있고 낱말이 없�
 > **지금은 걷었습니다 — 그 자리는 반별 '독서 TOP 3'입니다**(`components/ClassTopReaders.jsx`, 선생님 요청).
 > 지금 반(교사는 고른 반, 학생은 소속 반)에서 **레벨 → 누적 경험치 → 그 경험치에 먼저 이른 날
 > (`xpReachedOn` — 경험치가 붙은 마지막 기록의 날짜) → 학번** 차례로 셋을 캐릭터 · 레벨 · 이름으로
-> 보여 줍니다(셈은 `lib/readingJourney.js`의 `topReaders`, 0 EXP는 뺌). 책나눔 성장 기능과 랭킹이
+> 보여 줍니다(셈은 `lib/readingJourney.js`의 `topReaders`, 0 EXP · 사용 중지된 학생은 뺌). 책나눔 성장 기능과 랭킹이
 > 켜진 반에서만 섭니다. **한 주 내내 같은 셋입니다** — 서울 시각 월요일 오전 7시에 바뀌고, 지난 일요일까지의
 > 기록으로 셉니다(선생님 요청 · 서버가 반마다 한 주에 한 번 셈해 `classes/{c}/readingTop/current`에 적음 ·
 > `READING_GROWTH.md`의 '서버에 다시 묻는 때'). 한때 2분마다 다시 물었습니다 — **주기적으로 묻게 되돌리지

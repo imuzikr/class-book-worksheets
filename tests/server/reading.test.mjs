@@ -426,3 +426,61 @@ test("과일 — 이어 세기: 독서 기록 저장 · 책나눔 다시 셈(fre
   assert.equal((await getReading(who, classId, null, { fresh: true })).summary.fruitCount, before + 2);
   assert.equal((await ref.get()).data().fruitCursor[other], undefined);
 });
+
+// 사용 중지된 학생(전학 등)은 리더보드 순위 · 독서 TOP 3에 서지 않음(선생님 요청) — 기록 · 반 집계는 그대로.
+// TOP 3는 한 주에 한 번 세므로: 옛 기준으로 적힌 장은 한 번 다시 세고, 그 뒤 사용 중지는 선생님이 다시 세게(refresh) 함.
+test("사용 중지 — 리더보드 · TOP 3에서 빠지고, 옛 TOP 3 장은 새 기준으로 다시 셈 · 다시 세기는 담당 교사만", async () => {
+  const week = readingTopWeek(new Date());
+  const before = new Date(Date.parse(`${week}T00:00:00Z`) - 3 * 86400000).toISOString().slice(0, 10);
+  const snapshot = (uid, totalXp) => ({ uid, level: getReadingLevel(totalXp), featuredBadge: null, formula: READING_FORMULA,
+    events: [{ date: before, xp: totalXp }], xpDays: [{ date: before, xp: totalXp }],
+    totalXp, badges: [], totalPages: 0, completedBooks: 0, reviewCount: 0, longestStreak: 0, streakRun: 0,
+    lastReadDate: before, fruitCount: 0, xpReachedOn: before, fruits: [] });
+  const kids = { "su-a": 400, "su-b": 300, "su-c": 200, "su-d": 100 };
+  const batch = db.batch();
+  batch.set(db.doc("classes/api-susp"), { createdBy: ids.teacher, readingEnabled: true, archived: false });
+  Object.entries(kids).forEach(([uid, xp], i) => {
+    batch.set(db.doc(`users/${uid}`), { role: "student", realName: `중지${i + 1}`, studentId: `4010${i + 1}`, ...(uid === "su-a" ? { suspended: true } : {}) });
+    batch.set(db.doc(`memberships/${uid}_api-susp`), { uid, classId: "api-susp" });
+    batch.set(db.doc(`classes/api-susp/readingMembers/${uid}`), snapshot(uid, xp));
+  });
+  // 이번 주 TOP 3를 옛 서버가 이미 적어 둔 경우 — 고르는 기준 번호(rule)가 없고, 사용 중지된 su-a가 1위
+  batch.set(db.doc("classes/api-susp/readingTop/current"), { week, formula: READING_FORMULA,
+    rows: Object.entries(kids).map(([uid, xp]) => ({ uid, name: uid, studentId: "", character: null, totalXp: xp, level: getReadingLevel(xp), xpReachedOn: before })) });
+  await batch.commit();
+  const uids = (rows) => rows.map((r) => r.uid);
+
+  // 리더보드 순위 — 사용 중지된 su-a는 없음(누적 경험치가 가장 많아도)
+  const ranked = uids((await getReadingRankings(principal("teacher"), "api-susp", "all-time")).rankings);
+  assert.deepEqual(ranked, ["su-b", "su-c", "su-d"]);
+  // 기록 · 반 집계는 그대로
+  assert.equal((await db.doc("classes/api-susp/readingMembers/su-a").get()).data().totalXp, 400);
+
+  // 옛 기준으로 적힌 이번 주 TOP 3 — 그 자리에서 한 번 다시 셈해 su-a를 빼고, 새 기준 번호를 적음
+  assert.deepEqual(uids((await getReadingTop(principal("teacher"), "api-susp")).rows), ["su-b", "su-c", "su-d"]);
+  const saved = (await db.doc("classes/api-susp/readingTop/current").get()).data();
+  assert.equal(saved.rule, 2);
+  assert.ok(!saved.rows.some((r) => r.uid === "su-a"));
+
+  // 주 중간에 사용 중지 — 평소 묻기(GET)는 적어 둔 그 주의 셋 그대로(프로필을 다시 안 읽음)
+  await db.doc("users/su-b").update({ suspended: true });
+  assert.deepEqual(uids((await getReadingTop(principal("teacher"), "api-susp")).rows), ["su-b", "su-c", "su-d"]);
+  // 선생님이 사용 중지를 누르면 앱이 그 반 TOP 3를 다시 세게 함(refresh) — su-b가 빠짐
+  assert.deepEqual(uids((await getReadingTop(principal("teacher"), "api-susp", { refresh: true })).rows), ["su-c", "su-d"]);
+  assert.ok(!(await db.doc("classes/api-susp/readingTop/current").get()).data().rows.some((r) => r.uid === "su-b"));
+  assert.deepEqual(uids((await getReadingTop(principal("teacher"), "api-susp")).rows), ["su-c", "su-d"]);
+
+  // 다시 사용하게 하면 다시 세기로 되돌아옴(그 주 셈 그대로 — 지난 일요일까지의 기록)
+  await db.doc("users/su-a").update({ suspended: false });
+  assert.deepEqual(uids((await getReadingTop(principal("teacher"), "api-susp", { refresh: true })).rows), ["su-a", "su-c", "su-d"]);
+  assert.deepEqual(uids((await getReadingRankings(principal("teacher"), "api-susp", "all-time")).rankings), ["su-a", "su-c", "su-d"]);
+
+  // 다시 세기는 담당 교사 · 관리자만 — 그 반 학생 · 다른 반 사람은 막음
+  const studentC = { uid: "su-c", roleClaim: null, db };
+  assert.deepEqual(uids((await getReadingTop(studentC, "api-susp")).rows), ["su-a", "su-c", "su-d"]);
+  await assert.rejects(() => getReadingTop(studentC, "api-susp", { refresh: true }), (e) => e.status === 403 && e.code === "reading/forbidden");
+  await assert.rejects(() => getReadingTop(principal("other"), "api-susp", { refresh: true }), (e) => e.status === 403);
+  assert.deepEqual(uids((await getReadingTop(principal("admin"), "api-susp", { refresh: true })).rows), ["su-a", "su-c", "su-d"]);
+  // 사용 중지된 학생 본인은 책나눔 API를 못 씀(그대로)
+  await assert.rejects(() => getReadingTop({ uid: "su-b", roleClaim: null, db }, "api-susp"), (e) => e.status === 403 && e.code === "reading/suspended");
+});

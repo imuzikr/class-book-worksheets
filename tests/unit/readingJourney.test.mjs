@@ -5,7 +5,7 @@ import { initialReadingState, applyReadingAction, deriveReading } from "../../li
 import {
   journeyAvatar, journeyTitle, journeyStage, levelProgress, journeyTrackMax, journeyPosition,
   currentStreakOf, memberSnapshot, memberStats, sortJourney, journeyNarrative,
-  RANKING_PERIODS, rankingsForPeriod, sortReadingRankings,
+  RANKING_PERIODS, rankingsForPeriod, sortReadingRankings, isRankedStudent,
 } from "../../lib/readingJourney.js";
 import { sortReadingRankings as serverSort } from "../../lib/server/readingPolicy.js";
 
@@ -253,4 +253,18 @@ test("순위 — 한 번 받은 네 기간의 경험치로 기간 단추마다 �
   assert.deepEqual(rankingsForPeriod([{ uid: "x", xp: 7 }, { uid: "y", xp: 9 }], "monthly").map((r) => [r.uid, r.rank]), [["y", 1], ["x", 2]]);
   assert.deepEqual(rankingsForPeriod([{ xp: 1 }, { xp: 1 }], "daily").map((r) => r.rank), [1, 1]);
   assert.deepEqual(rankingsForPeriod(undefined, "weekly"), []);
+});
+
+test("순위에 서는 학생 — 교사 · 관리자와 사용 중지된 학생(전학 등)은 빼고, 역할이 비어 있으면 학생", () => {
+  assert.equal(isRankedStudent({ role: "student" }), true);
+  assert.equal(isRankedStudent({}), true); // 옛 계정 — 역할 칸이 없으면 학생
+  assert.equal(isRankedStudent({ role: "student", suspended: false }), true);
+  assert.equal(isRankedStudent({ role: "student", suspended: true }), false);
+  assert.equal(isRankedStudent({ suspended: true }), false);
+  assert.equal(isRankedStudent({ role: "teacher" }), false);
+  assert.equal(isRankedStudent({ role: "admin" }), false);
+  // 사용 중지는 참일 때만 — 이상한 값은 빼지 않음(규칙 · 서버 API의 판정과 같음)
+  assert.equal(isRankedStudent({ role: "student", suspended: "true" }), true);
+  assert.equal(isRankedStudent(null), false);
+  assert.equal(isRankedStudent(undefined), false);
 });

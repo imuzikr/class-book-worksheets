@@ -16,9 +16,12 @@
 //   · 캐릭터도 그 주에 셀 때의 것입니다. 내 캐릭터만은 바꾸면 곧바로 내 화면에 보이고
 //     (myCharacter — 상단바가 이미 구독), 친구 화면에는 다음 주에 바뀝니다.
 //     반이 캐릭터를 끄면 기본 캐릭터로 그립니다(charactersOn).
+//   · 사용 중지된 학생은 서지 않습니다. 선생님이 학생을 사용 중지하거나 다시 사용하게 하면 그 반의
+//     TOP 3를 다시 세고(lib/data/reading.js의 refreshReadingTop) 그 결과를 여기서 곧바로 씁니다
+//     (READING_TOP_EVENT — 묻지 않음). 다른 사람의 화면은 다음에 앱을 열 때 바뀝니다.
 // =============================================================
 import { useEffect, useState } from "react";
-import { fetchReadingTop } from "@/lib/data/reading";
+import { fetchReadingTop, READING_TOP_EVENT } from "@/lib/data/reading";
 import { nextReadingTopRefresh, readingTopWeek } from "@/lib/reading";
 import { dateKeyLabel } from "@/lib/dates";
 import { characterImage, characterOf } from "./reading/CharacterChooser";
@@ -28,6 +31,16 @@ const WEEK_MS = 7 * 86400000;
 const SKEW_RETRY_MS = 10 * 60 * 1000;
 // 반마다 받은 주 — 상단바는 화면을 옮길 때마다 새로 뜨므로 탭 안에서 나눠 씁니다.
 const cache = new Map(); // classId → { week, rows, at }
+
+// 선생님이 다시 센 TOP 3(refreshReadingTop) — 지금 보이지 않는 반의 것도 기억해 둔 것을 갈아 둡니다
+// (그 반으로 옮기면 곧바로 새것). 지금 보이는 반이면 아래 화면이 함께 바꿉니다.
+function remember(detail) {
+  if (!detail?.classId || !Array.isArray(detail.rows)) return null;
+  const entry = { week: detail.week || readingTopWeek(new Date()), rows: detail.rows, at: Date.now() };
+  cache.set(detail.classId, entry);
+  return entry;
+}
+if (typeof window !== "undefined") window.addEventListener(READING_TOP_EVENT, (e) => remember(e.detail));
 
 async function loadTop(classId) {
   const now = Date.now();
@@ -69,11 +82,19 @@ export default function ClassTopReaders({ classId, enabled, charactersOn = true,
       run();
       schedule();
     };
+    // 선생님이 이 반의 TOP 3를 다시 셌을 때(학생 사용 중지 · 다시 사용) — 받은 것을 곧바로 씁니다.
+    const onRefreshed = (e) => {
+      if (!live || e.detail?.classId !== classId) return;
+      const entry = remember(e.detail);
+      if (entry) setState({ classId, week: entry.week, rows: entry.rows });
+    };
     document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener(READING_TOP_EVENT, onRefreshed);
     return () => {
       live = false;
       clearTimeout(timer);
       document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener(READING_TOP_EVENT, onRefreshed);
     };
   }, [classId, enabled]);
 
