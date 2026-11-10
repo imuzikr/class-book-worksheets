@@ -10,7 +10,7 @@
 // 꾸밈 그림이라 읽어 주는 기기에는 감춥니다 — 이름 · 단계는 옆 글자가 말합니다.
 // =============================================================
 import { useId } from "react";
-import { petImageSrc, petSpecies, PET_STAGE_MAX } from "@/lib/readingPet";
+import { petImageSrc, petImageSrcSet, petSpecies, PET_STAGE_MAX } from "@/lib/readingPet";
 import "./pet.css";
 
 // 자리표시 동그라미의 옅은 바탕 — 종마다(그림이 오면 쓰지 않음)
@@ -53,7 +53,8 @@ export default function PetFigure({ species = null, stage = 1, ready = false, si
   if (src) {
     return (
       <span className={`pet-figure${egg && ready ? " is-ready" : ""} ${className}`.trim()} style={box} aria-hidden="true">
-        <img src={src} alt="" width={size} height={size} draggable={false} loading="lazy" />
+        {/* 자리 크기에 맞는 그림만 받습니다 — 작은 자리는 160px(petImageSrcSet) */}
+        <img src={src} srcSet={petImageSrcSet(src)} sizes={`${size}px`} alt="" width={size} height={size} draggable={false} loading="lazy" />
       </span>
     );
   }

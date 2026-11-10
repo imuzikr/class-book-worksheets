@@ -4,8 +4,10 @@ import assert from "node:assert/strict";
 import {
   PET_SPECIES, PET_SPECIES_KEYS, PET_STAGES, PET_STAGE_MAX, PET_HATCH_XP,
   normalizePetMirror, normalizePublicPet, petEnabled, petGrowthOfSummary, petGrowthXp,
-  petCheerKind, petImageSrc, petProgress, petSpecies, petStageName, pickPetSpecies, planPetAction, rankingPet,
+  PET_ART_READY, petCheerKind, petImageSrc, petImageSrcSet, petProgress, petSpecies, petStageName, pickPetSpecies,
+  planPetAction, rankingPet,
 } from "@/lib/readingPet";
+import { existsSync } from "node:fs";
 import { deriveReading, getExpForReadingLevel, initialReadingState } from "@/lib/reading";
 import { createDemoPet } from "@/lib/demoPets";
 
@@ -124,7 +126,7 @@ test("무작위 고르기 — 열 종 모두 나올 수 있고 범위 밖은 접
 });
 
 test("그림 주소 — 파일이 준비된 종만, 알은 늘 '비밀 알'", () => {
-  assert.equal(petImageSrc("owl", 3), null); // 아직 그림 없음 → 자리표시
+  assert.equal(petImageSrc("cat", 3), null); // 아직 그림 없음 → 자리표시
   const ready = new Set(["owl", "egg"]);
   assert.equal(petImageSrc("owl", 3, ready), "/reading-pets/owl-03.webp");
   assert.equal(petImageSrc("owl", 10, ready), "/reading-pets/owl-10.webp");
@@ -132,6 +134,23 @@ test("그림 주소 — 파일이 준비된 종만, 알은 늘 '비밀 알'", ()
   assert.equal(petImageSrc("owl", 1, ready), "/reading-pets/egg.webp"); // 알 단계는 종을 드러내지 않음
   assert.equal(petImageSrc("cat", 4, ready), null);
   assert.equal(petImageSrc("../x", 4, new Set(["../x"])), null);
+  // 작은 그림(160px)을 함께 적은 srcset — 자리 크기로 브라우저가 고름
+  assert.equal(petImageSrcSet("/reading-pets/owl-03.webp"), "/reading-pets/owl-03-160.webp 160w, /reading-pets/owl-03.webp 640w");
+  assert.equal(petImageSrcSet("/reading-pets/egg.webp"), "/reading-pets/egg-160.webp 160w, /reading-pets/egg.webp 640w");
+  assert.equal(petImageSrcSet(null), undefined);
+});
+
+test("그림 파일 — PET_ART_READY에 적은 종은 2~10단계 그림이 두 크기로 다 있음(알은 egg 한 장)", () => {
+  const dir = new URL("../../public/reading-pets/", import.meta.url);
+  const missing = [];
+  for (const key of PET_ART_READY) {
+    const names = key === "egg" ? ["egg"] : Array.from({ length: 9 }, (_, i) => `${key}-${String(i + 2).padStart(2, "0")}`);
+    for (const name of names) {
+      for (const file of [`${name}.webp`, `${name}-160.webp`]) if (!existsSync(new URL(file, dir))) missing.push(file);
+    }
+  }
+  assert.deepEqual(missing, [], "빠진 그림 — scripts/prepare-pet-art.mjs로 넣으세요");
+  assert.ok(PET_ART_READY.has("egg") && PET_ART_READY.has("owl"));
 });
 
 test("알 받기 — 처음 한 번만, 받을 때의 경험치가 바탕이 되고 종은 비밀 문서에만", () => {

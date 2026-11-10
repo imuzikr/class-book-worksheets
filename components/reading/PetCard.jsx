@@ -22,7 +22,7 @@ import { PET_HATCH_XP, PET_STAGES, petCheerKind, petProgress, petSpecies } from 
 import { iGa } from "@/lib/korean";
 import { backdropClose } from "@/lib/modal";
 import RewardCelebration from "@/components/RewardCelebration";
-import PetFigure, { PetEgg } from "./PetFigure";
+import PetFigure from "./PetFigure";
 import "./pet.css";
 
 const number = (v) => Number(v || 0).toLocaleString("ko-KR");
@@ -137,7 +137,7 @@ export default function PetCard({ classId, uid, growthXp, level = null, onLevelC
   const shown = frozen ?? progress;
   if (!shown) {
     return <div className="reading-pet reading-pet--waiting" role="status">
-      <PetEgg size={52} />
+      <PetFigure size={52} />
       <span className="reading-pet-text"><small>나의 펫</small><strong>{adoptFailed ? "알을 받지 못했어요" : "알을 받는 중…"}</strong>
         {adoptFailed && <em>잠시 뒤 새로고침해 주세요.</em>}</span>
     </div>;
@@ -235,7 +235,7 @@ export function PetCelebration({ kind, progress, level = null, onDone }) {
       <div className={`pet-burst${hatch ? " is-hatch" : " is-grow"}`} role="status">
         <span className="pet-burst-stage" aria-hidden="true">
           <span className="pet-burst-glow" />
-          {hatch && <span className="pet-burst-egg"><PetEgg size={130} /></span>}
+          {hatch && <span className="pet-burst-egg"><PetFigure size={150} /></span>}
           <span className="pet-burst-reveal"><PetFigure species={progress.species} stage={progress.stage} size={180} /></span>
         </span>
         <span className="pet-burst-note">
