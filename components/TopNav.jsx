@@ -40,7 +40,7 @@ import { useRewardCelebration } from "@/lib/useRewardCelebration";
 import { useClassMembers } from "@/lib/useClassRoster";
 import { IconLogo, IconBook, IconTrophy, IconSettings } from "./StatusIcons";
 import { ensureReadingPet, READING_PET_EVENT, saveReadingCharacter, subscribeMyReadingCharacter, subscribeMyReadingPet } from "@/lib/data/reading";
-import { readingEnabled, rankingEnabled, fruitBasketOn } from "@/lib/reading";
+import { readingEnabled, readingTopOn, fruitBasketOn } from "@/lib/reading";
 import { characterChoiceEnabled } from "@/lib/readingCharacter";
 import { petEnabled } from "@/lib/readingPet";
 import { characterOf } from "./reading/CharacterChooser";
@@ -152,7 +152,8 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
   const [characterOn, setCharacterOn] = useState(false);
   // 과일 바구니 — 관리자 설정에서 끄면 떠 있는 동그라미의 '과일 바구니'를 가립니다(교사 · 학생 모두).
   const [fruitOn, setFruitOn] = useState(true);
-  // 상단바 가운데 '독서 TOP 3' — 책나눔 성장 기능과 리더보드가 켜진 반에서만
+  // 상단바 가운데 '독서 TOP 3' — 책나눔 성장 기능이 켜지고 관리자 설정의 '독서 TOP 3'를 끄지 않은 반에서만
+  // (리더보드 스위치와는 따로 — 선생님 요청, lib/reading.js의 readingTopOn)
   const [topOn, setTopOn] = useState(false);
   // TOP 3에 고른 캐릭터를 그릴지(교사 · 학생 모두) — 반이 캐릭터를 끄면 기본 캐릭터로
   const [topCharacters, setTopCharacters] = useState(false);
@@ -168,7 +169,7 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
     if (!quizClassId) return;
     return subscribeClass(quizClassId, (c) => {
       setFruitOn(fruitBasketOn(c));
-      setTopOn(!!c && !c.archived && readingEnabled(c) && rankingEnabled(c));
+      setTopOn(!!c && !c.archived && readingTopOn(c));
       setTopCharacters(!!c && characterChoiceEnabled(c));
       if (!admin) setCharacterOn(!!c && readingEnabled(c) && characterChoiceEnabled(c));
       if (!admin) setPetOn(!!c && petEnabled(c));
@@ -364,7 +365,7 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
 
           지금은 **반별 독서 TOP 3**(ClassTopReaders — 선생님 요청)입니다. 한때
           학교 전체에 하나인 전광판(meta/marquee, AppMarquee)이 섰는데 걷었습니다.
-          책나눔 · 리더보드가 꺼진 반에서는 빈 칸만 남습니다. */}
+          책나눔이 꺼졌거나 독서 TOP 3를 끈 반에서는 빈 칸만 남습니다. */}
       <div className="topbar-mq-slot">
         <ClassTopReaders classId={quizClassId} enabled={topOn} charactersOn={topCharacters} myUid={myUid} myCharacter={myCharacter} />
       </div>

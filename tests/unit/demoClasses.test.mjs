@@ -154,3 +154,21 @@ test("중복 반 식별자는 설정 대상을 혼동하지 않도록 읽기·�
   assert.equal(readDemoClasses(storage), null);
   assert.throws(() => writeDemoClasses(duplicates, storage), /반 정보/);
 });
+
+test("관리자 설정 — 독서 TOP 3 · 학생 펫을 끈 값도 새로고침 뒤 그대로(값이 없으면 켜짐이라 끈 것만 남김)", () => {
+  const storage = memoryStorage();
+  writeDemoClasses([
+    classroom("class1", { readingEnabled: true, readingTopEnabled: false, petEnabled: false }),
+    classroom("class2", { readingEnabled: true, order: 1 }),
+  ], storage);
+  const afterReload = memoryStorage();
+  afterReload.setItem(DEMO_CLASSES_KEY, storage.getItem(DEMO_CLASSES_KEY));
+  const [one, two] = readDemoClasses(afterReload);
+  assert.equal(one.readingTopEnabled, false);
+  assert.equal(one.petEnabled, false);
+  assert.equal(Object.hasOwn(two, "readingTopEnabled"), false);
+  assert.equal(Object.hasOwn(two, "petEnabled"), false);
+  // 참 · 거짓이 아닌 값은 그 반을 통째로 버림(다른 스위치와 같음)
+  seed(afterReload, [classroom("class3", { readingTopEnabled: "false" })]);
+  assert.equal(readDemoClasses(afterReload), null);
+});

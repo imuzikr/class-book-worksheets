@@ -579,8 +579,8 @@ service cloud.firestore {
       // 설정까지 받았습니다. 시험 tests/rules/classesRead.test.mjs.
       allow list: if isAdmin() || (isTeacher() && resource.data.createdBy == uid());
       // 새 반은 기본 꺼짐. 켜기는 운영 중인 반의 담당 교사/관리자만 합니다.
-      // 관리자 설정 화면의 반별 스위치(책나눔 성장 · 랭킹 시스템)도 같은 판정 —
-      // 참·거짓만, 운영 중인 반에서만 바꿉니다.
+      // 관리자 설정 화면의 스위치(책나눔 성장 · 도서 검색 · 리더보드(rankingEnabled) · 독서 TOP 3 ·
+      // 학생 캐릭터 · 과일 바구니 · 학생 펫)도 같은 판정 — 참·거짓만, 운영 중인 반에서만 바꿉니다.
       function readingSettingValid() {
         let changed = request.resource.data.diff(resource.data).affectedKeys();
         return (!changed.hasAny(['readingEnabled']) || request.resource.data.get('readingEnabled', null) is bool)
@@ -589,7 +589,8 @@ service cloud.firestore {
                && (!changed.hasAny(['bookSearchEnabled']) || request.resource.data.get('bookSearchEnabled', null) is bool)
                && (!changed.hasAny(['fruitBasketEnabled']) || request.resource.data.get('fruitBasketEnabled', null) is bool)
                && (!changed.hasAny(['petEnabled']) || request.resource.data.get('petEnabled', null) is bool)
-               && (!changed.hasAny(['readingEnabled', 'rankingEnabled', 'characterEnabled', 'bookSearchEnabled', 'fruitBasketEnabled', 'petEnabled'])
+               && (!changed.hasAny(['readingTopEnabled']) || request.resource.data.get('readingTopEnabled', null) is bool)
+               && (!changed.hasAny(['readingEnabled', 'rankingEnabled', 'characterEnabled', 'bookSearchEnabled', 'fruitBasketEnabled', 'petEnabled', 'readingTopEnabled'])
                    || (resource.data.get('archived', false) != true
                        && request.resource.data.get('archived', false) != true));
       }

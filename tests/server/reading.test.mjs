@@ -109,21 +109,26 @@ test("idempotent retry returns current state after later edits", async () => {
   assert.equal(retried.state.logs[0].endPage, 20);
 });
 
-// 리더보드 스위치(관리자 설정)는 상단바 리더보드 화면과 독서 TOP 3만 켜고 끕니다 — 순위는 책나눔과 함께 늘 돌아,
-// 꺼도 책나눔의 '우리 반 랭킹' 탭이 같은 순위를 받습니다(선생님 요청).
-test("leaderboard switch off keeps rankings for the '우리 반 랭킹' tab and blocks only TOP 3 (admin settings)", async () => {
+// 리더보드 스위치(관리자 설정)는 상단바 리더보드 화면만 켜고 끕니다 — 순위는 책나눔과 함께 늘 돌아, 꺼도 책나눔의
+// '우리 반 랭킹' 탭이 같은 순위를 받고, 독서 TOP 3는 제 스위치(readingTopEnabled)를 따릅니다(선생님 요청).
+test("leaderboard switch off keeps rankings and TOP 3; the TOP 3 switch blocks only TOP 3 (admin settings)", async () => {
   const on = (await getReadingRankings(principal("student"), "api-class", "weekly")).rankings;
   await db.doc("classes/api-class").update({ rankingEnabled: false });
   try {
     assert.deepEqual((await getReadingRankings(principal("student"), "api-class", "weekly")).rankings, on);
     assert.ok((await getReading(principal("student"), "api-class")).state);
-    await assert.rejects(() => getReadingTop(principal("student"), "api-class"), (e) => e.status === 403 && e.code === "reading/ranking-disabled");
+    assert.ok(Array.isArray((await getReadingTop(principal("student"), "api-class")).rows));
   } finally { await db.doc("classes/api-class").update({ rankingEnabled: true }); }
+  await db.doc("classes/api-class").update({ readingTopEnabled: false });
+  try {
+    await assert.rejects(() => getReadingTop(principal("student"), "api-class"), (e) => e.status === 403 && e.code === "reading/top-disabled");
+    assert.deepEqual((await getReadingRankings(principal("student"), "api-class", "weekly")).rankings, on);
+  } finally { await db.doc("classes/api-class").update({ readingTopEnabled: true }); }
 });
 
 // 리더보드 스위치는 보이는 화면만 켜고 끕니다(선생님 요청) — 꺼 둔 동안에도 경험치 · 레벨 · 반 집계는 그대로 쌓여,
 // 다시 켜면 그동안의 순위가 곧바로 보입니다. 다른 시험과 섞이지 않게 제 반 · 제 학생으로.
-test("리더보드를 꺼도 경험치 · 반 집계 · '우리 반 랭킹'은 그대로 — 독서 TOP 3만 막힘", async () => {
+test("리더보드를 꺼도 경험치 · 반 집계 · '우리 반 랭킹' · 독서 TOP 3는 그대로", async () => {
   const uid = "api-lb-student";
   const me = { uid, roleClaim: null, db };
   await db.doc("classes/api-lb").set({ createdBy: ids.teacher, readingEnabled: true, archived: false, rankingEnabled: false });
@@ -136,11 +141,11 @@ test("리더보드를 꺼도 경험치 · 반 집계 · '우리 반 랭킹'은 �
   assert.equal(member.totalXp, saved.summary.xp);
   assert.equal(member.level, saved.summary.level);
   assert.equal(member.formula, READING_FORMULA);
-  // 꺼 둔 동안에도 순위는 나옵니다(학생 본인의 '우리 반 랭킹' 탭) — 막히는 것은 독서 TOP 3뿐
+  // 꺼 둔 동안에도 순위(학생 본인의 '우리 반 랭킹' 탭)와 독서 TOP 3(제 스위치)는 그대로 나옵니다
   const row = (await getReadingRankings(me, "api-lb", "all-time")).rankings.find((r) => r.uid === uid);
   assert.equal(row.totalXp, saved.summary.xp);
   assert.equal(row.xp, saved.summary.classScores["api-lb"].allTime);
-  await assert.rejects(() => getReadingTop(principal("teacher"), "api-lb"), (e) => e.code === "reading/ranking-disabled");
+  assert.ok(Array.isArray((await getReadingTop(me, "api-lb")).rows));
   await db.doc("classes/api-lb").update({ rankingEnabled: true });
   assert.deepEqual((await getReadingRankings(principal("teacher"), "api-lb", "all-time")).rankings.find((r) => r.uid === uid), row);
 });
@@ -342,10 +347,13 @@ test("독서 TOP 3 — 한 주에 한 번 셈해 적어 두고, 그 주에는 �
   await db.doc("classes/api-top/readingTop/current").update({ week: "2000-01-03" });
   assert.deepEqual((await getReadingTop(principal("teacher"), "api-top")).rows.map((r) => r.uid), ["top-c", "top-b"]);
 
-  // 다른 반 학생 · 리더보드를 끈 반은 막음
+  // 다른 반 학생 · 독서 TOP 3를 끈 반은 막음(리더보드를 끈 반은 그대로 — 따로 켜고 끔, 선생님 요청)
   await assert.rejects(() => getReadingTop(principal("other"), "api-top"), (e) => e.status === 403);
   await db.doc("classes/api-top").update({ rankingEnabled: false });
-  await assert.rejects(() => getReadingTop(principal("teacher"), "api-top"), (e) => e.code === "reading/ranking-disabled");
+  assert.deepEqual((await getReadingTop(principal("teacher"), "api-top")).rows.map((r) => r.uid), ["top-c", "top-b"]);
+  await db.doc("classes/api-top").update({ rankingEnabled: true, readingTopEnabled: false });
+  await assert.rejects(() => getReadingTop(principal("teacher"), "api-top"), (e) => e.code === "reading/top-disabled");
+  await assert.rejects(() => getReadingTop(principal("teacher"), "api-top", { refresh: true }), (e) => e.code === "reading/top-disabled");
 });
 
 // 책나눔 상태 — 서재(독서 기록) 한 장으로만 셉니다. 반 집계 · 과일 지급 이력을 읽지도 고쳐 적지도 않습니다

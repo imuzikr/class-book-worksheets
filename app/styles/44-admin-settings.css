@@ -4,7 +4,7 @@
 .adm-settings-foot { color: var(--text-faint); font-size: 12.5px; }
 .adm-settings-empty { margin: 0; padding: 24px; border: 1px dashed var(--border); border-radius: 12px; color: var(--text-sub); text-align: center; }
 .adm-settings-classes { display: block; margin-top: 4px; color: var(--text-faint); font-size: 12.5px; }
-/* 기능 카드 — 성격이 같은 것끼리 세 묶음(선생님 요청 — 독서 기록 2 · 랭킹·꾸미기 3(랭킹 · 캐릭터 · 학생 펫) · 교실 보상 1).
+/* 기능 카드 — 성격이 같은 것끼리 세 묶음(선생님 요청 — 독서 기록 2 · 리더보드·꾸미기 4(리더보드 · 독서 TOP 3 · 캐릭터 · 학생 펫) · 교실 보상 1).
    묶음마다 제 행입니다(선생님 요청 — 한때 세 묶음이 한 줄 2 : 2 : 1이었음). 행의 왼쪽이 묶음 이름 ·
    설명, 오른쪽이 카드이고, 카드 칸은 모든 행이 같은 두 칸 격자라 위아래 카드가 같은 폭 ·
    같은 세로선에 섭니다.

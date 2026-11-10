@@ -10,7 +10,7 @@
 
 학생 15명·독서 활동 11종·서재 24권의 데모 자료와 신원 전환은 `DEMO_CLASSROOM.md`를 참고하세요. `lib/demoClassroom.js`, `lib/demoBookActivities.js`, `lib/demoReading.js`가 공유 식별자와 목 데이터의 출처입니다. Firebase 미설정일 때만 사용하며 실제 데이터베이스에 시드하지 않습니다. 학생 전환 시 개인 편집 상태가 섞이지 않도록 `app/books/page.js`의 사용자별 `TopNav` 및 본문 key를 유지하세요.
 
-교사 상단바의 **관리자 설정**(`/books?area=settings`, 리더보드 오른쪽 · 교사만)이 **선생님의 모든 반에 한 값으로**(반마다 따로가 아님 · `setTeacherFeature`, 새 반도 따름) 과일 바구니(`fruitBasketEnabled` — 없으면 켜짐, 판정은 `lib/reading.js`의 `fruitBasketOn`, 끄면 떠 있는 동그라미의 '과일 바구니' 행성과 `?open=fruit` 창을 가림 · 담긴 과일은 보관) · 책나눔 성장 기능(`readingEnabled` — 켜면 경험치 · 레벨업 · 뱃지 · 순위 집계가 함께 돎) · 도서 검색(`bookSearchEnabled` — 기본 꺼짐, 켜면 내 서재 새 책 등록에 카카오 도서 검색 단추)과 리더보드(`rankingEnabled` — 칸 이름은 옛 그대로 · 없으면 켜짐, 판정은 `rankingEnabled()` 한 곳. **보이는 화면만**(상단바 리더보드 · 독서 TOP 3) 켜고 끄고, 꺼 둔 동안에도 경험치 · 반 집계와 책나눔의 '우리 반 랭킹' 탭은 그대로 — 선생님 요청, 한때 이름이 '랭킹 시스템') · 학생 캐릭터(`characterEnabled` — 없으면 켜짐, 판정은 `lib/readingCharacter.js`의 `characterChoiceEnabled`, 리더보드를 꺼도 '내 프로필'에서 고름) · 학생 펫(`petEnabled` — 없으면 켜짐, 판정은 `lib/readingPet.js`의 `petEnabled`)을 켜고 끕니다. 기준은 `READING_GROWTH.md`의 '관리자 설정' 절입니다.
+교사 상단바의 **관리자 설정**(`/books?area=settings`, 리더보드 오른쪽 · 교사만)이 **선생님의 모든 반에 한 값으로**(반마다 따로가 아님 · `setTeacherFeature`, 새 반도 따름) 과일 바구니(`fruitBasketEnabled` — 없으면 켜짐, 판정은 `lib/reading.js`의 `fruitBasketOn`, 끄면 떠 있는 동그라미의 '과일 바구니' 행성과 `?open=fruit` 창을 가림 · 담긴 과일은 보관) · 책나눔 성장 기능(`readingEnabled` — 켜면 경험치 · 레벨업 · 뱃지 · 순위 집계가 함께 돎) · 도서 검색(`bookSearchEnabled` — 기본 꺼짐, 켜면 내 서재 새 책 등록에 카카오 도서 검색 단추)과 리더보드(`rankingEnabled` — 칸 이름은 옛 그대로 · 없으면 켜짐, 판정은 `rankingEnabled()` 한 곳. **상단바 리더보드 화면만** 켜고 끄고, 꺼 둔 동안에도 경험치 · 반 집계와 책나눔의 '우리 반 랭킹' 탭은 그대로 — 선생님 요청, 한때 이름이 '랭킹 시스템') · 독서 TOP 3(`readingTopEnabled` — 없으면 켜짐, 판정은 `lib/reading.js`의 `readingTopOn`, 상단바 가운데의 TOP 3만 — 리더보드와 따로) · 학생 캐릭터(`characterEnabled` — 없으면 켜짐, 판정은 `lib/readingCharacter.js`의 `characterChoiceEnabled`, 리더보드를 꺼도 '내 프로필'에서 고름) · 학생 펫(`petEnabled` — 없으면 켜짐, 판정은 `lib/readingPet.js`의 `petEnabled`)을 켜고 끕니다. 기준은 `READING_GROWTH.md`의 '관리자 설정' 절입니다.
 
 **독서 펫**(학생마다 알 하나 → 10단계 · 리더보드와 '내 프로필'에 캐릭터와 함께)은 `READING_GROWTH.md`의 '독서 펫' 절이 기준이고, 셈은 `lib/readingPet.js` 한 곳 · 알 받기와 깨우기는 서버(`/api/reading/pet`)만 합니다. **알 단계의 종은 서버만 읽는 `users/{uid}/reading/pet`에만 두세요** — 급우도 읽는 프로필의 `readingPet`에 미리 적으면 비밀(선생님 결정)이 샙니다. 펫 경험치는 알을 받은 뒤에 쌓인 누적 경험치(모두 독서로 얻은 것)이고, 이미 경험치가 있던 학생도 알부터입니다. 선생님 · 관리자는 펫이 없습니다.
 
@@ -2757,8 +2757,8 @@ FNV-1a 32비트 + 퍼즐마다 다른 `salt`) · 힌트만 있고 낱말이 없�
 
 - 지금 반(교사는 고른 반, 학생은 소속 반)에서 **레벨 → 누적 경험치 → 그 경험치에 먼저 이른 날
   (`xpReachedOn` — 경험치가 붙은 마지막 기록의 날짜) → 학번** 차례로 셋을 캐릭터 · 레벨 · 이름으로
-  보여 줍니다(셈은 `lib/readingJourney.js`의 `topReaders`, 0 EXP · 사용 중지된 학생은 뺌). 책나눔 성장 기능과
-  리더보드가 켜진 반에서만 섭니다(선생님 요청 — 리더보드를 끄면 함께 빠짐).
+  보여 줍니다(셈은 `lib/readingJourney.js`의 `topReaders`, 0 EXP · 사용 중지된 학생은 뺌). 책나눔 성장 기능이
+  켜지고 관리자 설정의 '독서 TOP 3'를 끄지 않은 반에서만 섭니다(선생님 요청 — 리더보드와 따로 켜고 끔, `readingTopOn`).
 - **한 주 내내 같은 셋입니다** — 서울 시각 월요일 오전 7시에 바뀌고, 지난 일요일까지의 기록으로 셉니다
   (서버가 반마다 한 주에 한 번 셈해 `classes/{c}/readingTop/current`에 적음 · `READING_GROWTH.md`의
   '서버에 다시 묻는 때'). 한때 2분마다 다시 물었습니다 — **주기적으로 묻게 되돌리지 마세요.**
