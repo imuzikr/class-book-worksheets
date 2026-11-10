@@ -13,11 +13,15 @@
 #          번개 · 불꽃 조각은 두 윤곽 사이에 끼어 배경 쪽으로 갑니다.
 #   3단계  가는 밝은 줄(번개 끝) · 떨어진 부스러기를 걷고, 가장자리 색을 안쪽 색으로 채워 흰 테를 없앱니다.
 #   그래도 남는 곳(용의 민트빛 번짐 · 창날, 쥐 바지 옆 번짐 주머니)은 아래 PER_IMAGE에 눈으로 잰 점 · 다각형으로 적었습니다.
+#   4단계  걷어 낸 기운을 '반투명 금빛 층'으로 되살려 캐릭터 뒤에 깝니다(선생님 요청 — 원본의 불타는 듯한 아우라).
+#          흰 바탕 위 옅은 색을 2.2배 짙게 해 어두운 지도 · 친구 목록에서도 금빛으로 빛나고, 흰 바탕에서는 원본과 거의 같습니다.
+#          캐릭터 자체(불투명)는 1~3단계 그대로이고, 회색 바닥 그림자는 기운에 안 넣습니다. → aura()
 # 틀(640): 열 장 모두 같은 배율(가운데 960px 창 → 640)이라 그린 크기 그대로 견줘지고, 발끝은 아래에서 10px 위.
+#          틀은 캐릭터만으로 정하고(기운이 발밑으로 번져도 틀이 안 움직이게), 틀 가장자리 40px에서 기운이 사라집니다.
 import sys, os, glob, heapq
 from concurrent.futures import ProcessPoolExecutor
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 
 def box3(a):
@@ -277,12 +281,37 @@ def finish(rgb, subj):
 WIN, X0, OUT, FOOT = 960, 32, 640, 15
 
 
-def frame(im):
-    """1024px 투명 → 640×640: 가로는 원본 가운데(32~992), 세로는 발끝이 창 아래에서 15px(640에서 10px) 위."""
-    a = np.asarray(im)[..., 3]
-    ys, _ = np.nonzero(a > 8)
+def aura(rgb):
+    """원본의 기운(빛 번짐 · 번개 · 불꽃)을 반투명 층으로 — (색, 불투명도 0~1).
+    색이 있고(노랑 · 주황 · 민트) 밝은 칸만 기운으로 셉니다 — 회색 바닥 그림자는 빠짐.
+    세기는 5px 흐리게 한 '색의 짙기'로, 바깥으로 갈수록 옅게. 색은 흰 바탕 위 옅은 색을 2.2배 짙게."""
+    sm = box3(rgb)
+    chroma = sm.max(2) - sm.min(2)
+    bright = np.clip((sm.max(2) - 222.0) / 20.0, 0, 1)
+    env = Image.fromarray(np.clip(chroma * bright, 0, 255).astype(np.uint8), "L").filter(ImageFilter.GaussianBlur(5))
+    alpha = np.clip((np.asarray(env).astype(np.float64) - 4.0) / 36.0, 0, 1) ** 0.85
+    alpha *= 0.92
+    color = np.clip(255.0 - 2.2 * (255.0 - rgb), 0, 255)
+    return color, alpha
+
+
+def compose(rgb, subj):
+    """캐릭터(불투명, finish) 뒤에 기운 층을 깔고 640×640으로 — 가로는 원본 가운데(32~992),
+    세로는 캐릭터 발끝이 창 아래에서 15px(640에서 10px) 위."""
+    char = np.asarray(finish(rgb, subj)).astype(np.float64)
+    ca = char[..., 3:4] / 255.0
+    ys, _ = np.nonzero(char[..., 3] > 8)
     y0 = int(ys.max()) + FOOT - WIN
-    crop = im.crop((X0, y0, X0 + WIN, y0 + WIN))                     # 밖은 투명으로 채워짐
+    h, w = subj.shape
+    yy, xx = np.mgrid[0:h, 0:w]
+    edge = np.minimum.reduce([xx - X0, X0 + WIN - 1 - xx, yy - y0, y0 + WIN - 1 - yy]).astype(np.float64)
+    color, a = aura(rgb)
+    a = (a * np.clip(edge / 40.0, 0, 1))[..., None]          # 틀 가장자리 40px에서 기운이 사라지게(잘린 선이 안 보이게)
+    A = ca + (1 - ca) * a                                     # 캐릭터를 기운 위에 얹기(투명도를 곱한 셈)
+    P = ca * char[..., :3] + (1 - ca) * a * color
+    rgbo = np.where(A > 0, P / np.maximum(A, 1e-6), 0)
+    im = Image.fromarray(np.dstack([np.clip(rgbo, 0, 255), np.clip(A[..., 0] * 255, 0, 255)]).astype(np.uint8), "RGBA")
+    crop = im.crop((X0, y0, X0 + WIN, y0 + WIN))                                     # 밖은 투명으로 채워짐
     small = crop.convert("RGBa").resize((OUT, OUT), Image.LANCZOS).convert("RGBA")   # 투명도를 곱한 채로 줄여 테가 안 생김
     arr = np.asarray(small).copy()
     al = arr[..., 3]
@@ -295,7 +324,7 @@ def one(job):
     src, dst_dir = job
     key = os.path.basename(src).rsplit(".", 1)[0]
     rgb, subj = matte(src, PER_IMAGE.get(key, {}))
-    out = frame(finish(rgb, subj))
+    out = compose(rgb, subj)
     path = os.path.join(dst_dir, f"zodiac-{key[:2]}.webp")
     out.save(path, "WEBP", quality=85, method=6)
     return f"{os.path.basename(src)} → {os.path.basename(path)} ({os.path.getsize(path) // 1024}KB)"
