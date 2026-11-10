@@ -32,7 +32,8 @@
 .rwm-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:10px 12px; padding:10px 16px; }
 .rwm-chapter { display:flex; align-items:center; gap:9px; }
 .rwm-chapter>span { font-size:11px; color:#b0c4b9; white-space:nowrap; }
-.rwm-chapter select { max-width:100%; border:1px solid #526d61; background:#203f3e; color:#f0e8cb; padding:8px 11px; border-radius:7px; font-size:12px; }
+/* 한때 여정 10개를 고르는 select였던 자리 — 레벨 상한이 10이라 지도는 한 바퀴뿐이고, 같은 모양의 알약에 출발 · 도착만 적습니다 */
+.rwm-chapter b { border:1px solid #526d61; background:#203f3e; color:#f0e8cb; padding:7px 11px; border-radius:7px; font-size:12px; font-weight:600; white-space:nowrap; }
 .rwm-count { color:#abc0b4; font-size:11px; }
 .rwm-count b { color:#e5d3a4; }
 .rwm-map-actions { display:flex; flex-wrap:wrap; gap:5px; margin-left:auto; }

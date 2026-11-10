@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   initialReadingState, applyReadingAction, deriveReading, READING_BADGES,
-  kstToday, readingPeriodKey, readingEnabled, getExpForReadingLevel, getReadingLevel,
+  kstToday, readingPeriodKey, readingEnabled, getExpForReadingLevel, getReadingLevel, READING_LEVEL_MAX,
 } from "../../lib/reading.js";
 
 const NOW = "2026-10-29T03:00:00.000Z";
@@ -33,6 +33,33 @@ test("레벨은 누적 경계값으로 판정", () => {
   assert.deepEqual([1, 2, 3, 4, 5, 6, 7].map(getExpForReadingLevel), [0, 100, 250, 500, 1000, 1500, 2250]);
   assert.deepEqual([0, 99, 100, 249, 250, 999, 1000, 1500].map(getReadingLevel), [1, 1, 2, 2, 3, 4, 5, 6]);
   assert.equal(getReadingLevel(-50), 1);
+});
+
+test("레벨은 10이 끝 — 표는 그대로이고 그 위로는 오르지 않는다(선생님 결정 · 한 학기)", () => {
+  assert.equal(READING_LEVEL_MAX, 10);
+  assert.deepEqual([8, 9, 10].map(getExpForReadingLevel), [3375, 5063, 7595]);
+  // 11레벨 이상은 없으므로 10레벨 값 — '다음 레벨까지'는 최고 레벨인지 먼저 봅니다.
+  for (const level of [11, 12, 100, 1e9]) assert.equal(getExpForReadingLevel(level), 7595);
+  assert.deepEqual([5062, 5063, 7594, 7595, 11393, 1e9, Number.MAX_VALUE].map(getReadingLevel), [8, 9, 9, 10, 10, 10, 10]);
+});
+
+test("최고 레벨이면 다음 레벨까지 0 · 진행 100이고 경험치는 계속 쌓인다", () => {
+  let state = book(initialReadingState(), "book1", 9000);
+  state = log(state, "first", 1, 7000, "2026-10-28");
+  const below = deriveReading(state, NOW);
+  assert.equal(below.level, 9);
+  assert.equal(below.maxLevel, false);
+  assert.equal(below.nextXp, 7595);
+  assert.equal(below.expToNextLevel, 7595 - below.xp);
+  assert.ok(below.progress > 0 && below.progress < 100);
+  state = log(state, "second", 7001, 9000);
+  const top = deriveReading(state, NOW);
+  assert.equal(top.level, 10);
+  assert.equal(top.maxLevel, true);
+  assert.ok(top.xp > below.xp + 2000);
+  assert.equal(top.nextXp, getExpForReadingLevel(10));
+  assert.equal(top.expToNextLevel, 0);
+  assert.equal(top.progress, 100);
 });
 
 test("초기 상태와 6개 시리즈의 세 단계 뱃지 정의", () => {

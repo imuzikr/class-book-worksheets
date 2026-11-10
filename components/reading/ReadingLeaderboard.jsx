@@ -241,7 +241,7 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, c
                         <Face row={row} className="rlb-row-face" pet={petOf(row, petOn)} />
                         <span className="rlb-row-main">
                           <span className="rlb-row-name">{nameOf(row)}{me && <span className="reading-me-label">나</span>}</span>
-                          <span className="rlb-row-sub">{progress ? `Lv.${progress.level} ${journeyTitle(progress.level)} · ${period === "all-time" ? progress.level === 100 ? "최고 레벨에 도착했어요" : `다음 레벨까지 ${number(progress.toNext)} EXP` : `누적 ${number(xpOf(row))} EXP`}` : "누적 성장 정보 집계 중 · —"}</span>
+                          <span className="rlb-row-sub">{progress ? `Lv.${progress.level} ${journeyTitle(progress.level)} · ${period === "all-time" ? progress.complete ? "최고 레벨에 도착했어요" : `다음 레벨까지 ${number(progress.toNext)} EXP` : `누적 ${number(xpOf(row))} EXP`}` : "누적 성장 정보 집계 중 · —"}</span>
                           {progress && <Bar percent={progress.percent} label={`${row.name} 다음 레벨까지 진행률`} />}
                         </span>
                         <span className="rlb-row-side"><span>{periodLabel} {orDash(row.xp, " EXP")}</span><span>{orDash(row.totalPages, "쪽")} · 뱃지 {orDash(row.badgeCount, "개")}</span></span>
@@ -266,13 +266,13 @@ function MyJourney({ mine, row, uid, today, pet = null }) {
     <div className="rlb-mine-top">
       <Face row={row} uid={uid} className="rlb-mine-face" pet={pet} petSize={40} />
       <strong>{progress ? journeyTitle(progress.level) : "성장 정보 집계 중"}</strong>
-      {progress && <span className="rlb-stage">📍 제{progress.chapter}여정 · {progress.region.name}</span>}
+      {progress && <span className="rlb-stage">📍 {progress.region.name}</span>}
     </div>
     {pet && <div className="rlb-mine-pet"><PetFigure species={pet.species} stage={pet.stage} ready={pet.ready} size={44} /><span><strong>나의 펫 · {petName(pet)}</strong><small>{petLine(pet, true)}</small></span></div>}
     <dl className="rlb-facts">
       <div><dt>레벨</dt><dd>{progress ? `Lv.${progress.level}` : "—"}</dd></div>
       <div><dt>누적 경험치</dt><dd>{orDash(xpOf(row), " EXP")}</dd></div>
-      <div><dt>다음 레벨까지</dt><dd>{progress ? progress.level === 100 ? "최고 레벨 도착" : `${number(progress.toNext)} EXP` : "—"}</dd></div>
+      <div><dt>다음 레벨까지</dt><dd>{progress ? progress.complete ? "최고 레벨 도착" : `${number(progress.toNext)} EXP` : "—"}</dd></div>
       <div><dt>읽은 쪽수</dt><dd>{orDash(row?.totalPages, "쪽")}</dd></div>
       <div><dt>완독</dt><dd>{orDash(row?.completedBooks, "권")}</dd></div>
       <div><dt>감상문</dt><dd>{orDash(row?.reviewCount, "편")}</dd></div>
@@ -335,14 +335,14 @@ function StudentJourneyModal({ row, me, pet = null, onClose, onOpenLibrary = nul
     <div ref={modalRef} className="modal reading-modal rlb-modal" role="dialog" aria-modal="true" aria-labelledby="rlb-modal-title" onKeyDown={handleKeys}>
       <div className="rlb-modal-head">
         <Face row={row} className="rlb-mine-face" pet={pet} petSize={36} />
-        <div><h3 id="rlb-modal-title">{nameOf(row)}{me && <span className="reading-me-label">나</span>}</h3><p>{progress ? `Lv.${progress.level} ${journeyTitle(progress.level)} · 📍 제${progress.chapter}여정 · ${progress.region.name}` : "누적 성장 정보 집계 중"}</p></div>
+        <div><h3 id="rlb-modal-title">{nameOf(row)}{me && <span className="reading-me-label">나</span>}</h3><p>{progress ? `Lv.${progress.level} ${journeyTitle(progress.level)} · 📍 ${progress.region.name}` : "누적 성장 정보 집계 중"}</p></div>
         {/* 교사: 그 학생의 책나눔(읽기 전용 서재)으로 — 선생님 요청 */}
         {onOpenLibrary && <button type="button" className="btn-ghost rlb-to-library" onClick={onOpenLibrary}>서재로 이동</button>}
         <button type="button" className="btn-close" aria-label="닫기" onClick={onClose}>×</button>
       </div>
       <dl className="rlb-facts">
         <div><dt>누적 경험치</dt><dd>{orDash(xpOf(row), " EXP")}</dd></div>
-        <div><dt>다음 레벨까지</dt><dd>{progress ? progress.level === 100 ? "최고 레벨 도착" : `${number(progress.toNext)} EXP` : "—"}</dd></div>
+        <div><dt>다음 레벨까지</dt><dd>{progress ? progress.complete ? "최고 레벨 도착" : `${number(progress.toNext)} EXP` : "—"}</dd></div>
         <div><dt>읽은 쪽수</dt><dd>{orDash(row.totalPages, "쪽")}</dd></div>
         <div><dt>완독</dt><dd>{orDash(row.completedBooks, "권")}</dd></div>
         <div><dt>감상문</dt><dd>{orDash(row.reviewCount, "편")}</dd></div>

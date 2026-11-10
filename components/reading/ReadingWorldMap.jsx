@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { READING_BADGES } from "@/lib/reading";
+import { READING_BADGES, READING_LEVEL_MAX } from "@/lib/reading";
 import { journeyTitle } from "@/lib/readingJourney";
 import {
   WORLD_MAP, WORLD_REGIONS,
@@ -16,7 +16,6 @@ import "./reading-world-map.css";
 import "./pet.css";
 
 const number = (value) => value.toLocaleString("ko-KR");
-const chapterLabel = (chapter) => `제${chapter}여정 · Lv.${(chapter - 1) * 10 + 1}–${Math.min(chapter * 10 + 1, 100)}`;
 const growthOf = (row) => {
   const growth = worldProgress(row?.totalXp);
   return growth?.level === row?.level ? growth : null;
@@ -55,7 +54,6 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, petOn = false, o
   const suppressClick = useRef(false);
   const [selectedUid, setSelectedUid] = useState(uid);
   const [selectionPulse, setSelectionPulse] = useState(0);
-  const [chapter, setChapter] = useState(null);
   const [size, setSize] = useState({ width: 1, height: 1 });
   const [zoom, setZoom] = useState(1);
   const [routeVisible, setRouteVisible] = useState(true);
@@ -71,7 +69,6 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, petOn = false, o
   const pendingScroll = useRef(null);
 
   const initialView = useRef(false);
-  const previousGrowth = useRef(null);
 
   const travelers = useMemo(() => rows.slice().sort((a, b) => String(a.studentId || "").localeCompare(String(b.studentId || ""), "ko")
     || a.uid.localeCompare(b.uid)).map((row) => ({ ...row, world: growthOf(row) })), [rows]);
@@ -81,8 +78,9 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, petOn = false, o
     || travelers.find((row) => row.uid === uid) || travelers[0];
   const growth = selected?.world;
   const selectedIsLeader = selected && leaderSet.has(String(selected.uid));
-  const activeChapter = chapter ?? growth?.chapter ?? 1;
-  const checkpoints = useMemo(() => worldCheckpoints(activeChapter), [activeChapter]);
+  // 독서 레벨은 10이 끝이라 지도는 한 바퀴뿐입니다(Lv.1 출발 → Lv.10 도착 — lib/readingWorldMap.js).
+  // 한때 10레벨씩 여정 10개를 골라 보는 '여정 지도' 고르개가 있었습니다.
+  const checkpoints = useMemo(() => worldCheckpoints(), []);
   const scale = Math.min(size.width / WORLD_MAP.width, size.height / WORLD_MAP.height) * zoom;
   const canvasWidth = Math.max(size.width, WORLD_MAP.width * scale);
   const canvasHeight = Math.max(size.height, WORLD_MAP.height * scale);
@@ -91,9 +89,9 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, petOn = false, o
   // combines students on distant parts of the winding route.
   const tolerance = Math.min(0.08, 85 / (WORLD_MAP.length * scale));
   const groups = useMemo(() => splitWorldLeaderGroups(
-    groupWorldTravelers(travelers.filter((row) => row.world), { chapter: activeChapter, selectedUid: selected?.uid, epsilon: tolerance }),
+    groupWorldTravelers(travelers.filter((row) => row.world), { selectedUid: selected?.uid, epsilon: tolerance }),
     leaderUids, selected?.uid,
-  ), [travelers, activeChapter, selected?.uid, tolerance, leaderUids]);
+  ), [travelers, selected?.uid, tolerance, leaderUids]);
   const cluster = groups.find((group) => group.id === clusterId);
   const shownCount = groups.reduce((sum, group) => sum + group.members.length, 0);
   const pendingCount = travelers.filter((row) => !row.world).length;
@@ -122,25 +120,11 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, petOn = false, o
   }, [size.width, growth]);
 
   useEffect(() => {
-    const previous = previousGrowth.current;
-    // Ordinary selection keeps the first loaded chapter. Explicit navigation
-    // and actual progress can still change the chapter being viewed.
-    if (growth && chapter === null) {
-      setChapter(growth.chapter);
-    } else if (growth && previous?.uid === selected.uid && previous.chapter !== growth.chapter
-      && chapter === previous.chapter) {
-      pendingCenter.current = { progress: growth.progress, zoom };
-      setChapter(growth.chapter);
-    }
-    previousGrowth.current = growth ? { uid: selected.uid, chapter: growth.chapter } : null;
-  }, [growth, selected?.uid, chapter, zoom]);
-
-  useEffect(() => {
     if (pendingCenter.current === null || pendingCenter.current.zoom !== zoom || !viewport.current) return;
     const point = worldPoint(pendingCenter.current.progress);
     pendingCenter.current = null;
     viewport.current.scrollTo({ left: offset.x + point.x * scale - size.width / 2, top: offset.y + point.y * scale - size.height / 2 });
-  }, [zoom, activeChapter, scale, size.width, size.height, offset.x, offset.y]);
+  }, [zoom, scale, size.width, size.height, offset.x, offset.y]);
 
   function selectTraveler(row, center = false) {
     setSelectedUid(row.uid);
@@ -148,14 +132,9 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, petOn = false, o
     setClusterId(null);
     if (!center) return;
     const next = growthOf(row);
-    if (next) {
-      pendingCenter.current = { progress: next.progress, zoom };
-      setChapter(next.chapter);
-      if (viewport.current && next.chapter === activeChapter) {
-        const point = worldPoint(next.progress);
-        viewport.current.scrollTo({ left: offset.x + point.x * scale - size.width / 2, top: offset.y + point.y * scale - size.height / 2, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
-        pendingCenter.current = null;
-      }
+    if (next && viewport.current) {
+      const point = worldPoint(next.progress);
+      viewport.current.scrollTo({ left: offset.x + point.x * scale - size.width / 2, top: offset.y + point.y * scale - size.height / 2, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     }
   }
 
@@ -227,10 +206,8 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, petOn = false, o
     {/* 제목 줄(영문 머리 · 큰 제목 · 설명 · '개인 누적 성장 기준')은 걷었습니다 — 지도를
         최대한 크게 보이게, 위에는 이 한 줄(여정 지도 · 인원 · 단추)만 둡니다(선생님 요청). */}
     <div className="rwm-toolbar">
-      <label className="rwm-chapter"><span>여정 지도</span><select aria-label="여정 지도" value={activeChapter} onChange={(event) => { setChapter(Number(event.target.value)); setClusterId(null); setZoom(1); }}>
-        {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => <option value={value} key={value}>{chapterLabel(value)}</option>)}
-      </select></label>
-      <span className="rwm-count">이 지도 <b>{shownCount}</b>명 / 전체 {travelers.length}명{pendingCount > 0 && ` · 집계 대기 ${pendingCount}명`}</span>
+      <span className="rwm-chapter"><span>여정 지도</span><b>Lv.1 출발 → Lv.{READING_LEVEL_MAX} 도착</b></span>
+      <span className="rwm-count">지도 위 <b>{shownCount}</b>명 / 전체 {travelers.length}명{pendingCount > 0 && ` · 집계 대기 ${pendingCount}명`}</span>
       <div className="rwm-map-actions">
         {!isTeacher && selected?.uid === uid && onSaveCharacter && <button type="button" onClick={() => setChoosing(true)}>캐릭터 꾸미기</button>}
         {selected && <button type="button" onClick={() => selectTraveler(selected, true)} disabled={!growth}>선택 학생 위치</button>}
@@ -247,7 +224,7 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, petOn = false, o
               {routeVisible && <svg className="rwm-route" viewBox={`0 0 ${WORLD_MAP.width} ${WORLD_MAP.height}`} aria-hidden="true"><path d={WORLD_MAP.path} /></svg>}
             </div>
             {checkpoints.map((stop) => <span key={stop.level} className="rwm-checkpoint" style={{ left: offset.x + stop.x * scale, top: offset.y + stop.y * scale }} title={`${number(stop.xp)} EXP`}><span>Lv.{stop.level}</span></span>)}
-            {groups.map((group) => <TravelerToken key={group.id} group={group} petOn={petOn} selectedUid={selected?.uid} selectionPulse={selectionPulse} scale={scale} offset={offset} peerOffset={peerSlotOffset(group, scale, offset, canvasWidth)} chapter={activeChapter} onClick={() => {
+            {groups.map((group) => <TravelerToken key={group.id} group={group} petOn={petOn} selectedUid={selected?.uid} selectionPulse={selectionPulse} scale={scale} offset={offset} peerOffset={peerSlotOffset(group, scale, offset, canvasWidth)} onClick={() => {
               const row = group.representative;
               selectTraveler(row);
               if (group.members.length > 1) setClusterId(group.id);
@@ -256,7 +233,7 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, petOn = false, o
         </div>
         {cluster && cluster.members.length > 1 && <div className="rwm-cluster" role="group" aria-label="같은 구간의 학생 선택"><span>함께 걷는 {cluster.members.length}명</span>{cluster.members.map((row) => <button key={row.uid} type="button" onClick={() => selectTraveler(row)} aria-pressed={selected?.uid === row.uid}>{row.name} <small>{number(row.totalXp)} EXP</small></button>)}<button className="rwm-cluster-close" type="button" onClick={() => setClusterId(null)} aria-label="학생 선택 닫기">×</button></div>}
         {imageError && <p className="rwm-map-message" role="alert">지도 이미지를 불러오지 못했어요. 오른쪽 학생 목록에서 성장 기록을 확인할 수 있어요.</p>}
-        {!shownCount && !imageError && <p className="rwm-map-message">이 여정에 있는 학생은 아직 없어요. 학생을 고른 뒤 ‘선택 학생 위치’를 눌러 현재 여정을 확인하세요.</p>}
+        {!shownCount && !imageError && <p className="rwm-map-message">아직 지도에 나온 학생이 없어요. 독서 기록이 집계되면 길 위에 나타나요.</p>}
         <div className="rwm-zoom" role="group" aria-label="지도 크기 조절"><button type="button" onClick={() => zoomTo(zoom - 0.5)} disabled={zoom <= 1} aria-label="지도 축소">−</button><span>{Math.round(zoom * 100)}%</span><button type="button" onClick={() => zoomTo(zoom + 0.5)} disabled={zoom >= 4} aria-label="지도 확대">+</button><button type="button" onClick={() => { zoomRef.current = 1; pendingScroll.current = null; setZoom(1); viewport.current?.scrollTo({ left: 0, top: 0 }); }}>전체 보기</button></div>
         <p className="rwm-map-hint">캐릭터를 누르면 오른쪽에 성장 정보가 나타나요. + · − 로 확대하고, 드래그해서 둘러보세요.</p>
       </div>
@@ -269,7 +246,7 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, petOn = false, o
           <div className="rwm-identity"><span>선택한 여행자 {selected.uid === uid && <b>나</b>} {selectedIsLeader && <b className="rwm-leader-tag">{leaderUids.length > 1 ? "공동 독서 대장" : "독서 대장"}</b>}</span><strong data-testid="journey-selected-name">{selected.name || "이름 미설정"}</strong><small>{selected.studentId || "학번 미설정"} · {growth ? journeyTitle(growth.level) : "성장 정보 확인 중"}</small></div>
           <div className="rwm-growth">
             <div className="rwm-growth-values"><span><small>독서 레벨</small><strong data-testid="journey-selected-level">{growth ? `Lv.${growth.level}` : "—"}</strong></span><span><small>누적 경험치</small><strong data-testid="journey-selected-xp">{growth ? number(growth.xp) : "—"}<em> EXP</em></strong></span></div>
-            {growth ? <><div className="rwm-exp-bar" role="progressbar" aria-label="현재 레벨 진행률" aria-valuemin={0} aria-valuemax={100} aria-valuenow={growth.percent}><span style={{ width: `${growth.percent}%` }} /></div><p>{growth.complete ? "모든 여정을 완주했어요" : <>다음 레벨까지 <b>{number(growth.toNext)} EXP</b><span>{growth.percent}%</span></>}</p></> : <p>집계가 완료되면 위치가 표시돼요.</p>}
+            {growth ? <><div className="rwm-exp-bar" role="progressbar" aria-label="현재 레벨 진행률" aria-valuemin={0} aria-valuemax={100} aria-valuenow={growth.percent}><span style={{ width: `${growth.percent}%` }} /></div><p>{growth.complete ? "최고 레벨! 여정을 끝까지 걸었어요" : <>다음 레벨까지 <b>{number(growth.toNext)} EXP</b><span>{growth.percent}%</span></>}</p></> : <p>집계가 완료되면 위치가 표시돼요.</p>}
           </div>
           <div className="rwm-hud-badges">
             <span>모은 뱃지</span><div>{READING_BADGES.filter((badge) => selected.badges?.includes(badge.id)).slice(-3).map((badge) => <span key={badge.id} title={badge.label}><ReadingBadge badge={badge} size={30} /></span>)}<strong>{Array.isArray(selected.badges) ? `${selected.badges.length}개` : "—"}</strong></div>
@@ -283,30 +260,30 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, petOn = false, o
         </button>
         {rosterOpen && <div className="rwm-roster-list" aria-label="우리 반 전체 학생">
           {travelers.map((row) => <button type="button" className={`rwm-person${leaderSet.has(String(row.uid)) ? " is-leader" : ""}`} key={row.uid} aria-pressed={row.uid === selected?.uid} onClick={() => selectTraveler(row)}>
-            <div className="rwm-person-avatar">{leaderSet.has(String(row.uid)) && <LeaderSun />}<img src={characterImage(characterOf(row))} alt="" width={47} height={52} loading="lazy" /><TravelerPet row={row} petOn={petOn} size={24} className="rwm-person-pet" /></div><span><strong>{row.name || "이름 미설정"}{row.uid === uid && <i>나</i>}{leaderSet.has(String(row.uid)) && <b className="rwm-leader-tag">독서 대장</b>}</strong><small>{row.studentId}{row.world ? ` · 제${row.world.chapter}여정` : " · 집계 대기"}</small><em>{row.world ? `Lv.${row.world.level} · ${number(row.world.xp)} EXP` : "성장 정보 확인 중"}</em></span>
+            <div className="rwm-person-avatar">{leaderSet.has(String(row.uid)) && <LeaderSun />}<img src={characterImage(characterOf(row))} alt="" width={47} height={52} loading="lazy" /><TravelerPet row={row} petOn={petOn} size={24} className="rwm-person-pet" /></div><span><strong>{row.name || "이름 미설정"}{row.uid === uid && <i>나</i>}{leaderSet.has(String(row.uid)) && <b className="rwm-leader-tag">독서 대장</b>}</strong><small>{row.studentId}{row.world ? ` · ${row.world.region.name}` : " · 집계 대기"}</small><em>{row.world ? `Lv.${row.world.level} · ${number(row.world.xp)} EXP` : "성장 정보 확인 중"}</em></span>
           </button>)}
         </div>}
       </div>
       </aside>
     </div>
 
-    <div className="rwm-footer"><div className="rwm-regions" aria-label="지도 지형 순서">{WORLD_REGIONS.map((region, index) => <span key={region.id} className={growth?.region?.id === region.id && growth.chapter === activeChapter ? "is-current" : ""}><small>0{index + 1}</small>{region.name}</span>)}</div><p>독서 경험치가 쌓이면 길을 따라 나아가요. 캐릭터와 의상은 자유롭게 고를 수 있어요.</p></div>
+    <div className="rwm-footer"><div className="rwm-regions" aria-label="지도 지형 순서">{WORLD_REGIONS.map((region, index) => <span key={region.id} className={growth?.region?.id === region.id ? "is-current" : ""}><small>0{index + 1}</small>{region.name}</span>)}</div><p>독서 경험치가 쌓이면 길을 따라 나아가고, {READING_LEVEL_MAX}레벨이 되면 여정 끝에 도착해요. 캐릭터와 의상은 자유롭게 고를 수 있어요.</p></div>
 
     {choosing && selected?.uid === uid && <CharacterChooser row={selected} onClose={() => setChoosing(false)} onSave={async (character) => { await onSaveCharacter(character); setChoosing(false); }} />}
   </section>;
 }
 
-function TravelerToken({ group, petOn = false, selectedUid, selectionPulse, scale, offset, peerOffset, chapter, onClick }) {
+function TravelerToken({ group, petOn = false, selectedUid, selectionPulse, scale, offset, peerOffset, onClick }) {
   const row = group.representative;
   // A different representative must not move a group along the route.
   const target = group.progress;
   const image = useRef(null);
   const [point, setPoint] = useState(() => worldPoint(target));
-  const current = useRef({ progress: target, chapter });
+  const current = useRef({ progress: target });
   useEffect(() => {
     const from = current.current;
-    if (from.chapter !== chapter || window.matchMedia("(prefers-reduced-motion: reduce)").matches || Math.abs(from.progress - target) < 0.000001) {
-      current.current = { progress: target, chapter };
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || Math.abs(from.progress - target) < 0.000001) {
+      current.current = { progress: target };
       setPoint(worldPoint(target));
       return undefined;
     }
@@ -316,13 +293,13 @@ function TravelerToken({ group, petOn = false, selectedUid, selectionPulse, scal
       const t = Math.min(1, (now - start) / 1100);
       const eased = t * t * (3 - 2 * t);
       const progress = from.progress + (target - from.progress) * eased;
-      current.current = { progress, chapter };
+      current.current = { progress };
       setPoint(worldPoint(progress));
       if (t < 1) frame = requestAnimationFrame(animate);
     };
     frame = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(frame);
-  }, [target, chapter]);
+  }, [target]);
   const selected = group.members.some((member) => member.uid === selectedUid);
   useEffect(() => {
     if (!selected || selectionPulse === 0 || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
