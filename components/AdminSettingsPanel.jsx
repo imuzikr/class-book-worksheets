@@ -50,11 +50,13 @@ const FEATURES = [
     on: "학생 펫을 켰어요. 학생마다 알을 하나씩 받아요.", off: "학생 펫을 껐어요. 키우던 펫은 보관되고, 다시 켜면 그대로 이어져요." },
 ];
 
-// 성격이 같은 것끼리 세 묶음(선생님 요청 — 한때 2 · 2 · 1, 학생 펫이 교실 보상에 들어 2 · 2 · 2).
+// 성격이 같은 것끼리 세 묶음(선생님 요청 — 2 · 3 · 1). 학생 펫은 캐릭터 옆에 함께 서는 꾸미기라
+// '랭킹 · 꾸미기'에 둡니다(선생님 요청 — 한때 과일 바구니 옆 '교실 보상'에 두어 2 · 2 · 2였음).
+// 카드 칸은 늘 두 칸 격자라 이 묶음만 카드가 두 줄로 섭니다(셋째 카드는 첫 카드 아래).
 const GROUPS = [
   { key: "reading", title: "독서 기록", desc: "학생의 서재와 책 정보", keys: ["readingEnabled", "bookSearchEnabled"] },
-  { key: "growth", title: "랭킹 · 꾸미기", desc: "반 친구와 함께 보는 성장", keys: ["rankingEnabled", "characterEnabled"] },
-  { key: "reward", title: "교실 보상", desc: "과일 모으기와 이벤트 · 독서로 키우는 펫", keys: ["fruitBasketEnabled", "petEnabled"] },
+  { key: "growth", title: "랭킹 · 꾸미기", desc: "반 친구와 함께 보는 성장 · 캐릭터와 펫", keys: ["rankingEnabled", "characterEnabled", "petEnabled"] },
+  { key: "reward", title: "교실 보상", desc: "과일 모으기와 이벤트", keys: ["fruitBasketEnabled"] },
 ];
 
 export default function AdminSettingsPanel({ classes = [], onToast }) {
