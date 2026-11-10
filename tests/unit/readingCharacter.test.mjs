@@ -27,9 +27,9 @@ test("journey appearance accepts only a known numbered character and outfit", ()
 
 test("묶음을 바꾸기 전에 저장된 옛 열쇠는 같은 모습의 새 열쇠로 옮겨 읽는다", () => {
   for (let number = 1; number <= 10; number += 1) {
-    // 판타지 그림(옛 초급)은 그대로 판타지(지금 고급)
+    // 판타지 그림(옛 초급)은 그대로 판타지(지금 영웅)
     assert.deepEqual(normalizeReadingCharacter({ number, style: "beginner" }), { number, style: "fantasy" });
-    // 동물(옛 중급)은 그대로
+    // 동물(옛 중급)은 그대로(지금 무도가)
     assert.deepEqual(normalizeReadingCharacter({ number, style: "intermediate" }), { number, style: "animal" });
     // 전통 무술복 동물(옛 고급, 내린 묶음)은 같은 번호의 동물 — 곰은 곰, 토끼는 토끼
     assert.deepEqual(normalizeReadingCharacter({ number, style: "advanced" }), { number, style: "animal" });

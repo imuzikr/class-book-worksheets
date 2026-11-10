@@ -1,4 +1,4 @@
-# 캐릭터 '십이지' 묶음(초급) 그림 만들기 — 흰 바탕 PNG 10장 → 투명 640×640 WebP 10장.
+# 캐릭터 '십이지' 묶음(수련생 — 첫 등급) 그림 만들기 — 흰 바탕 PNG 10장 → 투명 640×640 WebP 10장.
 #
 #   python3 -I scripts/prepare-zodiac-art.py <풀어 둔 PNG 폴더> <내보낼 폴더>
 #   (입력: 사용자 제공 zodiac-martial-arts.zip의 01-rat.png … 10-pig.png, 1024×1024 · 흰 바탕)
