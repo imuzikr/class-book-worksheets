@@ -145,14 +145,14 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
     return subscribeBroadcast(broadcastClassId, setBroadcast);
   }, [broadcastClassId]);
 
-  // 학생 캐릭터 — 프로필 동그라미의 얼굴과 '내 프로필'의 '바꾸기'. 리더보드의
-  // '캐릭터 꾸미기'와 같은 조건(책나눔 · 랭킹 · 학생 캐릭터가 모두 켜진 반)에서만.
+  // 학생 캐릭터 — 프로필 동그라미의 얼굴과 '내 프로필'의 '바꾸기'. 책나눔 · 학생 캐릭터가 켜진 반에서
+  // (리더보드는 안 봄 — 선생님 요청: 리더보드는 보이는 화면만 켜고 끄고, 캐릭터는 꺼 둔 동안에도 그대로).
   // 반 문서 1건 · 내 프로필 1건을 구독합니다(학생만).
   const myUid = user?.uid;
   const [characterOn, setCharacterOn] = useState(false);
   // 과일 바구니 — 관리자 설정에서 끄면 떠 있는 동그라미의 '과일 바구니'를 가립니다(교사 · 학생 모두).
   const [fruitOn, setFruitOn] = useState(true);
-  // 상단바 가운데 '독서 TOP 3' — 책나눔 성장 기능과 랭킹이 켜진 반에서만
+  // 상단바 가운데 '독서 TOP 3' — 책나눔 성장 기능과 리더보드가 켜진 반에서만
   const [topOn, setTopOn] = useState(false);
   // TOP 3에 고른 캐릭터를 그릴지(교사 · 학생 모두) — 반이 캐릭터를 끄면 기본 캐릭터로
   const [topCharacters, setTopCharacters] = useState(false);
@@ -170,7 +170,7 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
       setFruitOn(fruitBasketOn(c));
       setTopOn(!!c && !c.archived && readingEnabled(c) && rankingEnabled(c));
       setTopCharacters(!!c && characterChoiceEnabled(c));
-      if (!admin) setCharacterOn(!!c && readingEnabled(c) && rankingEnabled(c) && characterChoiceEnabled(c));
+      if (!admin) setCharacterOn(!!c && readingEnabled(c) && characterChoiceEnabled(c));
       if (!admin) setPetOn(!!c && petEnabled(c));
     });
   }, [admin, quizClassId]);
@@ -297,7 +297,7 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
             onClick={() => go("/books?area=reading")} title="책나눔">
             <IconBook size={20} /> <span className="nav-label">책나눔</span>
           </button>}
-          {/* 리더보드 — 책나눔이 켜지고 관리자 설정에서 랭킹을 끄지 않은 반에만 섭니다 */}
+          {/* 리더보드 — 책나눔이 켜지고 관리자 설정에서 리더보드를 끄지 않은 반에만 섭니다 */}
           {growthEnabled && rankingOn && <button type="button"
             className={`btn-ghost ${leaderboardOpen ? "nav-active" : ""}`}
             aria-current={leaderboardOpen ? "page" : undefined}
@@ -364,7 +364,7 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
 
           지금은 **반별 독서 TOP 3**(ClassTopReaders — 선생님 요청)입니다. 한때
           학교 전체에 하나인 전광판(meta/marquee, AppMarquee)이 섰는데 걷었습니다.
-          책나눔 · 랭킹이 꺼진 반에서는 빈 칸만 남습니다. */}
+          책나눔 · 리더보드가 꺼진 반에서는 빈 칸만 남습니다. */}
       <div className="topbar-mq-slot">
         <ClassTopReaders classId={quizClassId} enabled={topOn} charactersOn={topCharacters} myUid={myUid} myCharacter={myCharacter} />
       </div>

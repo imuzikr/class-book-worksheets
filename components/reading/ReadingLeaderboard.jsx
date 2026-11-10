@@ -142,7 +142,7 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, c
     };
   }, [scope]);
 
-  // 본인 서재의 과일 이력을 포함한 정본은 개인 이야기 생성에만 사용합니다.
+  // 본인 서재의 정본은 개인 이야기 생성에만 사용합니다.
   useEffect(() => {
     let live = true;
     setMineState(null);
@@ -154,7 +154,7 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, c
         setMineState(null);
         if (DISABLED_CODES.has(error?.code)) disabledRef.current?.();
       },
-      // 이 화면의 순위와 같은 주기 — 과일을 받거나 내가 저장하면 지금처럼 곧바로 다시 받습니다.
+      // 이 화면의 순위와 같은 주기 — 내가 저장하면 지금처럼 곧바로 다시 받습니다.
       RANKING_POLL);
     return () => { live = false; unsubscribe(); };
   }, [classId, uid, isTeacher, scope]);
@@ -275,8 +275,8 @@ function MyJourney({ mine, row, uid, today, pet = null }) {
       <div><dt>다음 레벨까지</dt><dd>{progress ? progress.level === 100 ? "최고 레벨 도착" : `${number(progress.toNext)} EXP` : "—"}</dd></div>
       <div><dt>읽은 쪽수</dt><dd>{orDash(row?.totalPages, "쪽")}</dd></div>
       <div><dt>완독</dt><dd>{orDash(row?.completedBooks, "권")}</dd></div>
+      <div><dt>감상문</dt><dd>{orDash(row?.reviewCount, "편")}</dd></div>
       <div><dt>연속 독서</dt><dd>{orDash(row?.currentStreak, "일")}</dd></div>
-      <div><dt>받은 과일</dt><dd>{orDash(row?.fruitCount, "개")}</dd></div>
       <div><dt>뱃지</dt><dd>{earned ? `${earned.length} / ${READING_BADGES.length}개` : "—"}</dd></div>
     </dl>
     {progress && <Bar percent={progress.percent} label="다음 레벨까지 진행률" />}
@@ -348,7 +348,6 @@ function StudentJourneyModal({ row, me, pet = null, onClose, onOpenLibrary = nul
         <div><dt>감상문</dt><dd>{orDash(row.reviewCount, "편")}</dd></div>
         <div><dt>연속 독서</dt><dd>{orDash(row.currentStreak, "일")}</dd></div>
         <div><dt>가장 긴 연속</dt><dd>{orDash(row.longestStreak, "일")}</dd></div>
-        <div><dt>받은 과일</dt><dd>{orDash(row.fruitCount, "개")}</dd></div>
         <div><dt>뱃지</dt><dd>{known ? `${earned.size} / ${READING_BADGES.length}개` : "—"}</dd></div>
       </dl>
       {progress && <Bar percent={progress.percent} label="다음 레벨까지 진행률" />}

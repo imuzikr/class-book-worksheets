@@ -70,7 +70,7 @@ describe("책나눔 활성화와 서버 전용 보상 자료", () => {
     await assertSucceeds(updateDoc(doc(db, "classes", "archived"), { archived: true }));
   });
 
-  it("랭킹 시스템 스위치(관리자 설정) — 담당 교사 · 관리자만, 참·거짓만, 운영 중인 반에서만", async () => {
+  it("리더보드 스위치(rankingEnabled · 관리자 설정) — 담당 교사 · 관리자만, 참·거짓만, 운영 중인 반에서만", async () => {
     const ref = doc(asTeacher(env, "teacherA").firestore(), "classes", "active");
     await assertSucceeds(updateDoc(ref, { rankingEnabled: false }));
     await assertSucceeds(updateDoc(ref, { rankingEnabled: true }));

@@ -64,7 +64,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, rankingOn
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState(["library", "growth", ...(rankingOn ? ["ranking"] : [])].includes(initialTab) ? initialTab : "library");
-  // 관리자 설정에서 랭킹을 끄면 그 탭을 걷고, 보던 중이면 내 서재로 돌아갑니다.
+  // 관리자 설정에서 리더보드를 끄면 그 탭을 걷고, 보던 중이면 내 서재로 돌아갑니다.
   useEffect(() => { if (!rankingOn && tab === "ranking") setTab("library"); }, [rankingOn, tab]);
   const [filter, setFilter] = useState("all");
   const [dialog, setDialog] = useState(null);
@@ -122,8 +122,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, rankingOn
     setBusy(true); setError("");
     try {
       const result = await mutateReading(classId, action);
-      // 과일 날들(fruits)은 상태 밖에 따로 오므로 함께 담습니다 — 빠지면 저장 직후 과일 경험치가 빠진 레벨이 보입니다.
-      if (result?.state) setRaw((prev) => ({ ...result.state, fruits: result.fruits ?? prev?.fruits ?? [] }));
+      if (result?.state) setRaw(result.state);
       else if (Array.isArray(result?.books) && Array.isArray(result?.logs)) setRaw(result);
       if (success) setNotice(success);
       return true;
@@ -145,7 +144,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, rankingOn
       {readOnly ? <div><p className="reading-eyebrow">READING JOURNEY</p><h2>{student.name || "학생"}의 독서 여정</h2><p>학생이 남긴 서재 · 독서 발자국 · 한 권의 책을 읽기만 합니다.</p></div> : <div><p className="reading-eyebrow">MY READING JOURNEY</p><h2>한 페이지씩, 나의 가능성을 넓히다.</h2><p>읽은 순간을 기록하고 나만의 독서 컬렉션을 완성해 보세요.</p></div>}
       {(featured?.earned || showPet) && <div className="reading-intro-side">
         {featured?.earned && <div className="reading-featured"><ReadingBadge badge={featured} size={70} /><span>{readOnly ? "대표 뱃지" : "나의 대표 뱃지"}<strong>{featured.name}</strong></span></div>}
-        {/* 나의 펫 — 단계는 이미 받은 서재로 셉니다(과일 경험치 빼고 · lib/readingPet.js). 서재를 받기 전에는 카드도 기다립니다. */}
+        {/* 나의 펫 — 단계는 이미 받은 서재로 셉니다(lib/readingPet.js). 서재를 받기 전에는 카드도 기다립니다. */}
         {showPet && <PetCard classId={classId} uid={user.uid} growthXp={raw ? petGrowthOfSummary(stats) : null} />}
       </div>}
     </div>

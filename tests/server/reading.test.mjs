@@ -4,8 +4,8 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { initializeApp, deleteApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
-import { getReading, mutateReading, getReadingRankings, getReadingTop, readingPrincipal, refreshReadingMember, saveReadingCharacter } from "../../lib/server/readingService.js";
-import { FRUIT_XP, READING_FORMULA, getReadingLevel, readingTopWeek } from "../../lib/reading.js";
+import { getReading, mutateReading, getReadingRankings, getReadingTop, readingPrincipal, saveReadingCharacter } from "../../lib/server/readingService.js";
+import { READING_FORMULA, getReadingLevel, readingTopWeek } from "../../lib/reading.js";
 
 const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID || "demo-reading-api";
 if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST || !projectId.startsWith("demo-")) {
@@ -109,12 +109,35 @@ test("idempotent retry returns current state after later edits", async () => {
   assert.equal(retried.state.logs[0].endPage, 20);
 });
 
-test("ranking switch off blocks rankings only (admin settings)", async () => {
+test("leaderboard switch off blocks rankings only (admin settings)", async () => {
   await db.doc("classes/api-class").update({ rankingEnabled: false });
   await assert.rejects(() => getReadingRankings(principal("teacher"), "api-class", "weekly"), (e) => e.status === 403 && e.code === "reading/ranking-disabled");
   assert.ok((await getReading(principal("student"), "api-class")).state);
   await db.doc("classes/api-class").update({ rankingEnabled: true });
   assert.ok((await getReadingRankings(principal("teacher"), "api-class", "weekly")).rankings);
+});
+
+// 리더보드 스위치는 보이는 화면만 켜고 끕니다(선생님 요청) — 꺼 둔 동안에도 경험치 · 레벨 · 반 집계는 그대로 쌓여,
+// 다시 켜면 그동안의 순위가 곧바로 보입니다. 다른 시험과 섞이지 않게 제 반 · 제 학생으로.
+test("리더보드를 꺼도 경험치 · 반 집계는 쌓이고, 다시 켜면 그동안의 순위가 곧바로 보임", async () => {
+  const uid = "api-lb-student";
+  const me = { uid, roleClaim: null, db };
+  await db.doc("classes/api-lb").set({ createdBy: ids.teacher, readingEnabled: true, archived: false, rankingEnabled: false });
+  await db.doc(`users/${uid}`).set({ role: "student", realName: "리더보드학생", studentId: "20177" });
+  await db.doc(`memberships/${uid}_api-lb`).set({ uid, classId: "api-lb" });
+  await mutateReading(me, payload("api-lb-book-0001", { ...addBook, title: "리더보드를 꺼 둔 반" }, "api-lb"));
+  const saved = await mutateReading(me, payload("api-lb-log-0001", { type: "addLog", bookId: "api-lb-book-0001", date: today, startPage: 1, endPage: 30, notes: "리더보드를 꺼 둔 날의 감상" }, "api-lb"));
+  assert.ok(saved.summary.xp > 0);
+  await assert.rejects(() => getReadingRankings(principal("teacher"), "api-lb", "all-time"), (e) => e.code === "reading/ranking-disabled");
+  await assert.rejects(() => getReadingTop(principal("teacher"), "api-lb"), (e) => e.code === "reading/ranking-disabled");
+  const member = (await db.doc(`classes/api-lb/readingMembers/${uid}`).get()).data();
+  assert.equal(member.totalXp, saved.summary.xp);
+  assert.equal(member.level, saved.summary.level);
+  assert.equal(member.formula, READING_FORMULA);
+  await db.doc("classes/api-lb").update({ rankingEnabled: true });
+  const row = (await getReadingRankings(principal("teacher"), "api-lb", "all-time")).rankings.find((r) => r.uid === uid);
+  assert.equal(row.totalXp, saved.summary.xp);
+  assert.equal(row.xp, saved.summary.classScores["api-lb"].allTime);
 });
 
 test("disabling a class immediately blocks private reads, rankings and writes, retaining state", async () => {
@@ -161,22 +184,23 @@ test("oversized Korean state is rejected before any transaction writes", async (
   assert.equal((await db.doc(`classes/${classId}/readingMembers/${uid}`).get()).exists, false);
 });
 
-test("과일 — 선생님이 준 과일이 다시 세기(refresh) 뒤 랭킹 경험치에 들어가고, 학생은 다시 세기를 못 부름", async () => {
-  const before = (await getReadingRankings(principal("teacher"), "api-class", "all-time")).rankings[0];
-  // 지급 이력의 시각은 늘 서버가 찍은 지금 시각입니다(규칙 at == request.time) — 시험도 미래 시각은 쓰지 않습니다.
-  // 과일은 '어디까지 셌나' 뒤의 이력만 이어서 세므로, 미래 시각을 적어 두면 그 앞에 나중에 적은 이력을 건너뜁니다.
-  const at = new Date(Date.now() - 2000);
-  await db.collection("classes/api-class/rewardEvents").add({ classId: "api-class", uid: ids.student, delta: 3, count: 3, byUid: ids.teacher, at });
-  await db.collection("classes/api-class/rewardEvents").add({ classId: "api-class", uid: ids.student, delta: -1, count: 2, byUid: ids.teacher, at: new Date(at.getTime() + 1000) });
-  await assert.rejects(() => refreshReadingMember(principal("student"), "api-class", ids.student), (e) => e.status === 403);
-  await refreshReadingMember(principal("teacher"), "api-class", ids.student);
-  const after = (await getReadingRankings(principal("teacher"), "api-class", "all-time")).rankings[0];
-  assert.equal(after.xp, before.xp + 3 * FRUIT_XP);
-  const snap = (await db.doc(`classes/api-class/readingMembers/${ids.student}`).get()).data();
+test("과일은 경험치가 아님 — 지급 이력이 있어도 경험치가 그대로, 옛 집계의 과일 칸은 다시 적을 때 사라짐(선생님 요청 · 과일은 펫 먹이로만)", async () => {
+  const ref = db.doc(`classes/api-class/readingMembers/${ids.student}`);
+  const before = (await getReadingRankings(principal("teacher"), "api-class", "all-time")).rankings.find((r) => r.uid === ids.student);
+  const own0 = (await getReading(principal("student"), "api-class")).summary;
+  await db.collection("classes/api-class/rewardEvents").add({ classId: "api-class", uid: ids.student, delta: 3, count: 3, byUid: ids.teacher, at: new Date() });
+  const own1 = (await getReading(principal("student"), "api-class")).summary;
+  assert.equal(own1.xp, own0.xp);
+  assert.equal(Object.hasOwn(own1, "fruitCount"), false);
+  // 옛 기준(2 — 과일 경험치가 들어 있던 때)의 집계는 랭킹을 읽을 때 새 기준으로 다시 적고, 과일 칸은 사라집니다
+  await ref.set({ ...(await ref.get()).data(), formula: 2, totalXp: before.totalXp + 30, fruitCount: 3,
+    fruits: [{ date: today, count: 3 }], allFruits: [{ classId: "api-class", date: today, count: 3 }], fruitCursor: {} });
+  const after = (await getReadingRankings(principal("teacher"), "api-class", "all-time")).rankings.find((r) => r.uid === ids.student);
+  assert.equal(after.totalXp, before.totalXp);
+  assert.equal(after.xp, before.xp);
+  const snap = (await ref.get()).data();
   assert.equal(snap.formula, READING_FORMULA);
-  assert.deepEqual(snap.fruits.map((f) => f.count), [3]);
-  const own = await getReading(principal("student"), "api-class");
-  assert.equal(own.summary.fruitCount, 3);
+  for (const field of ["fruitCount", "fruits", "allFruits", "fruitCursor"]) assert.equal(Object.hasOwn(snap, field), false, field);
 });
 
 test("계산 기준이 바뀐 옛 집계는 랭킹을 읽을 때 다시 셈", async () => {
@@ -225,9 +249,11 @@ test("journey appearance rejects other UIDs, malformed choices, teachers and dis
   await assert.rejects(() => saveReadingCharacter(principal("teacher"), { classId: "api-class", character }), (error) => error.status === 403);
   await assert.rejects(() => saveReadingCharacter(principal("admin"), { classId: "api-class", character }), (error) => error.status === 403);
   await assert.rejects(() => saveReadingCharacter(principal("student"), { classId: "api-off", character }), (error) => error.status === 403);
+  // 리더보드를 꺼 둔 반도 캐릭터는 고릅니다('내 프로필'에서 — 선생님 요청: 리더보드 스위치는 보이는 화면만).
   await db.doc("classes/api-class").update({ rankingEnabled: false });
   try {
-    await assert.rejects(() => saveReadingCharacter(principal("student"), { classId: "api-class", character }), (error) => error.code === "reading/ranking-disabled");
+    assert.deepEqual((await saveReadingCharacter(principal("student"), { classId: "api-class", character })).character, character);
+    assert.deepEqual((await db.doc(`users/${ids.student}`).get()).data().readingCharacter, character);
   } finally { await db.doc("classes/api-class").update({ rankingEnabled: true }); }
 });
 
@@ -265,7 +291,7 @@ test("독서 TOP 3 — 한 주에 한 번 셈해 적어 두고, 그 주에는 �
     return { uid, level: getReadingLevel(totalXp), featuredBadge: null, formula: READING_FORMULA,
       events: [{ date: before, xp: pastXp }, ...(thisWeekXp ? [{ date: week, xp: thisWeekXp }] : [])],
       totalXp, badges: [], totalPages: 0, completedBooks: 0, reviewCount: 0, longestStreak: 0, streakRun: 0,
-      lastReadDate: before, fruitCount: 0, xpReachedOn: thisWeekXp ? week : before, fruits: [] };
+      lastReadDate: before, xpReachedOn: thisWeekXp ? week : before };
   };
   const batch = db.batch();
   batch.set(db.doc("classes/api-top"), { createdBy: ids.teacher, readingEnabled: true, archived: false });
@@ -311,133 +337,33 @@ test("독서 TOP 3 — 한 주에 한 번 셈해 적어 두고, 그 주에는 �
   await db.doc("classes/api-top/readingTop/current").update({ week: "2000-01-03" });
   assert.deepEqual((await getReadingTop(principal("teacher"), "api-top")).rows.map((r) => r.uid), ["top-c", "top-b"]);
 
-  // 다른 반 학생 · 랭킹을 끈 반은 막음
+  // 다른 반 학생 · 리더보드를 끈 반은 막음
   await assert.rejects(() => getReadingTop(principal("other"), "api-top"), (e) => e.status === 403);
   await db.doc("classes/api-top").update({ rankingEnabled: false });
   await assert.rejects(() => getReadingTop(principal("teacher"), "api-top"), (e) => e.code === "reading/ranking-disabled");
 });
 
-// 책나눔 상태 — 평소 다시 묻기(60초마다 · 돌아왔을 때)는 반 집계에 적어 둔 '모든 반의 과일 날'(allFruits)로,
-// 처음 열 때 · 과일 수가 바뀌었을 때(fresh)만 지급 이력에서 다시 셉니다.
-test("책나눔 상태 — 평소에는 반 집계의 과일 날로, fresh일 때만 지급 이력에서 다시 셈해 집계도 고쳐 적음", async () => {
+// 책나눔 상태 — 서재(독서 기록) 한 장으로만 셉니다. 반 집계 · 과일 지급 이력을 읽지도 고쳐 적지도 않습니다
+// (한때 과일 경험치 때문에 둘 다 읽고, 다르면 집계를 고쳐 적었습니다).
+test("책나눔 상태 — 서재만으로 셈하고 반 집계는 건드리지 않음 · 교사가 보는 학생 책나눔도 같은 값", async () => {
   const memberRef = db.doc(`classes/api-class/readingMembers/${ids.student}`);
-  const base = await getReading(principal("student"), "api-class", null, { fresh: true });
-  assert.ok(Array.isArray((await memberRef.get()).data().allFruits));
-  const count0 = base.summary.fruitCount;
-  // 선생님이 과일을 줬는데 '다시 세기'가 아직(또는 실패) — 평소 다시 묻기는 집계 그대로(지급 이력을 안 읽음)
-  await db.collection("classes/api-class/rewardEvents").add({ classId: "api-class", uid: ids.student, delta: 20, count: 99, byUid: ids.teacher, at: new Date() });
-  assert.equal((await getReading(principal("student"), "api-class")).summary.fruitCount, count0);
-  // 과일 수가 바뀌어 화면이 fresh로 물으면 — 다시 세고, 집계도 고쳐 적음(리더보드 · TOP 3가 같은 집계를 씀)
-  const fresh = await getReading(principal("student"), "api-class", null, { fresh: true });
-  assert.ok(fresh.summary.fruitCount > count0);
-  const healed = (await memberRef.get()).data();
-  assert.equal(healed.allFruits.reduce((n, f) => n + f.count, 0), fresh.summary.fruitCount);
-  assert.equal((await getReading(principal("student"), "api-class")).summary.fruitCount, fresh.summary.fruitCount);
-  // 교사가 보는 학생의 책나눔도 같은 길
-  assert.equal((await getReading(principal("teacher"), "api-class", ids.student)).summary.fruitCount, fresh.summary.fruitCount);
-  // 옛 집계(allFruits가 생기기 전)는 평소 다시 묻기에서도 다시 셈해 고쳐 적음
-  const { allFruits, ...old } = healed;
-  assert.ok(allFruits.length > 0);
-  await memberRef.set(old);
-  assert.equal((await getReading(principal("student"), "api-class")).summary.fruitCount, fresh.summary.fruitCount);
-  assert.ok(Array.isArray((await memberRef.get()).data().allFruits));
+  const kept = (await memberRef.get()).data();
+  await memberRef.set({ ...kept, sentinel: "그대로" });
+  try {
+    const own = await getReading(principal("student"), "api-class");
+    assert.equal(Object.hasOwn(own, "fruits"), false);
+    assert.equal((await getReading(principal("teacher"), "api-class", ids.student)).summary.xp, own.summary.xp);
+    assert.equal((await memberRef.get()).data().sentinel, "그대로");
+  } finally { await memberRef.set(kept); }
 });
 
-test("책나눔 상태 — 과일이 하나도 없는 학생도 처음 한 번 집계에 과일 날(빈 목록)을 적어, 그 뒤로는 다시 세지 않음", async () => {
-  const uid = "fruitless-student";
-  await db.doc(`users/${uid}`).set({ role: "student", realName: "과일없음", studentId: "20199" });
-  await db.doc(`memberships/${uid}_api-class`).set({ uid, classId: "api-class" });
-  const who = { uid, roleClaim: null, db };
-  const ref = db.doc(`classes/api-class/readingMembers/${uid}`);
-  assert.equal((await ref.get()).exists, false);
-  assert.equal((await getReading(who, "api-class")).summary.fruitCount, 0);
-  const written = (await ref.get()).data();
-  assert.deepEqual(written.allFruits, []);
-  assert.equal(written.formula, READING_FORMULA);
-});
-
-// 과일 경험치는 이어서 셉니다 — 반 집계에 { 과일 날, 어디까지 셌나(fruitCursor) }를 적어 두고 그 뒤의 지급 이력만 읽습니다.
-// (lib/server/readingService.js의 fruitsFor · lib/reading.js의 readingFruitFold)
-test("과일 — 이어 세기: 이미 센 이력은 다시 읽지 않고, −1 뒤의 +1은 두 번 세지 않으며, 처음부터 센 값과 같음", async () => {
-  const uid = "fruit-cursor-student";
-  const classId = "api-fruit";
-  await db.doc(`classes/${classId}`).set({ createdBy: ids.teacher, readingEnabled: true, archived: false });
-  await db.doc(`users/${uid}`).set({ role: "student", realName: "이어세기", studentId: "20301" });
-  await db.doc(`memberships/${uid}_${classId}`).set({ uid, classId });
-  const who = { uid, roleClaim: null, db };
-  const ref = db.doc(`classes/${classId}/readingMembers/${uid}`);
-  const events = db.collection(`classes/${classId}/rewardEvents`);
-  const give = (delta, ms) => events.add({ classId, uid, delta, count: 0, byUid: ids.teacher, at: new Date(ms) });
-  const teacherRefresh = () => refreshReadingMember(principal("teacher"), classId, uid);
-  const t0 = Date.now() - 60000;
-  // +3, −1 → 누계 2 · 최고치 3 → 과일 3개
-  const first = await give(3, t0);
-  await give(-1, t0 + 1000);
-  await teacherRefresh();
-  let snap = (await ref.get()).data();
-  assert.equal(snap.fruitCursor[classId].total, 2);
-  assert.equal(snap.fruitCursor[classId].peak, 3);
-  assert.equal(snap.allFruits.reduce((n, f) => n + f.count, 0), 3);
-  // +1 → 누계 3(최고치를 못 넘음) — 과일 수 그대로
-  await give(1, t0 + 2000);
-  await teacherRefresh();
-  assert.equal((await getReading(who, classId)).summary.fruitCount, 3);
-  // +2 → 누계 5 · 최고치를 2 넘음 → 5개
-  await give(2, t0 + 3000);
-  await teacherRefresh();
-  assert.equal((await getReading(who, classId)).summary.fruitCount, 5);
-  // 이미 센 이력은 다시 읽지 않습니다 — 처음 이력을 지워도(앱에서는 못 지움 · 시험만) 이어 센 값은 그대로
-  await first.delete();
-  await give(1, t0 + 4000);
-  await teacherRefresh();
-  snap = (await ref.get()).data();
-  assert.equal(snap.allFruits.reduce((n, f) => n + f.count, 0), 6);
-  // cursor가 없는 옛 집계 모양이면 처음부터 셈 — 지운 +3이 빠진 이력: −1, +1, +2, +1 → 누계 3 · 과일 3개
-  const { fruitCursor, ...old } = snap;
-  assert.ok(fruitCursor[classId]);
-  await ref.set(old);
-  await teacherRefresh();
-  snap = (await ref.get()).data();
-  assert.equal(snap.allFruits.reduce((n, f) => n + f.count, 0), 3);
-  assert.deepEqual({ total: snap.fruitCursor[classId].total, peak: snap.fruitCursor[classId].peak }, { total: 3, peak: 3 });
-});
-
-test("과일 — 이어 세기: 독서 기록 저장 · 책나눔 다시 셈(fresh) · 새로 든 반도 같은 값", async () => {
-  const uid = "fruit-cursor-student";
-  const classId = "api-fruit";
-  const other = "api-fruit-2";
-  const who = { uid, roleClaim: null, db };
-  const ref = db.doc(`classes/${classId}/readingMembers/${uid}`);
-  const before = (await getReading(who, classId, null, { fresh: true })).summary.fruitCount;
-  // 독서 기록을 저장하면 그 사이 받은 과일도 이어 세어 함께 적음
-  await db.collection(`classes/${classId}/rewardEvents`).add({ classId, uid, delta: 2, count: 0, byUid: ids.teacher, at: new Date() });
-  const saved = await mutateReading(who, payload("fruit-cursor-book-01", { ...addBook, title: "이어 세기 책" }, classId));
-  assert.equal(saved.summary.fruitCount, before + 2);
-  assert.equal((await ref.get()).data().allFruits.reduce((n, f) => n + f.count, 0), before + 2);
-  // 다른 반에 새로 듦 — 그 반은 처음부터 읽고 cursor가 생김
-  await db.doc(`classes/${other}`).set({ createdBy: ids.teacher, readingEnabled: true, archived: false });
-  await db.doc(`memberships/${uid}_${other}`).set({ uid, classId: other });
-  await db.collection(`classes/${other}/rewardEvents`).add({ classId: other, uid, delta: 4, count: 4, byUid: ids.teacher, at: new Date(Date.now() - 5000) });
-  const fresh = await getReading(who, classId, null, { fresh: true });
-  assert.equal(fresh.summary.fruitCount, before + 6);
-  const snap = (await ref.get()).data();
-  assert.ok(snap.fruitCursor[other]);
-  assert.equal(snap.allFruits.reduce((n, f) => n + f.count, 0), before + 6);
-  // 그 반에서 빠지면 그 반 과일은 빠짐(처음부터 셀 때와 같음)
-  await db.doc(`memberships/${uid}_${other}`).delete();
-  assert.equal((await getReading(who, classId, null, { fresh: true })).summary.fruitCount, before + 2);
-  assert.equal((await ref.get()).data().fruitCursor[other], undefined);
-});
-
-// 사용 중지된 학생(전학 등)은 리더보드 순위 · 독서 TOP 3에 서지 않음(선생님 요청) — 기록 · 반 집계는 그대로.
-// TOP 3는 한 주에 한 번 세므로: 옛 기준으로 적힌 장은 한 번 다시 세고, 그 뒤 사용 중지는 선생님이 다시 세게(refresh) 함.
 test("사용 중지 — 리더보드 · TOP 3에서 빠지고, 옛 TOP 3 장은 새 기준으로 다시 셈 · 다시 세기는 담당 교사만", async () => {
   const week = readingTopWeek(new Date());
   const before = new Date(Date.parse(`${week}T00:00:00Z`) - 3 * 86400000).toISOString().slice(0, 10);
   const snapshot = (uid, totalXp) => ({ uid, level: getReadingLevel(totalXp), featuredBadge: null, formula: READING_FORMULA,
     events: [{ date: before, xp: totalXp }], xpDays: [{ date: before, xp: totalXp }],
     totalXp, badges: [], totalPages: 0, completedBooks: 0, reviewCount: 0, longestStreak: 0, streakRun: 0,
-    lastReadDate: before, fruitCount: 0, xpReachedOn: before, fruits: [] });
+    lastReadDate: before, xpReachedOn: before });
   const kids = { "su-a": 400, "su-b": 300, "su-c": 200, "su-d": 100 };
   const batch = db.batch();
   batch.set(db.doc("classes/api-susp"), { createdBy: ids.teacher, readingEnabled: true, archived: false });
@@ -489,10 +415,10 @@ test("사용 중지 — 리더보드 · TOP 3에서 빠지고, 옛 TOP 3 장은 
 
 test("독서 펫 — 학생만 알 하나(받을 때의 경험치가 바탕 · 종은 비밀 문서에만), 100 모이면 깨우기, 리더보드 줄에 펫", async () => {
   const { getReadingPet, readingPetAction } = await import("../../lib/server/readingService.js");
-  const snapshot = (uid, totalXp, fruitCount = 0) => ({ uid, level: getReadingLevel(totalXp), featuredBadge: null, formula: READING_FORMULA,
+  const snapshot = (uid, totalXp) => ({ uid, level: getReadingLevel(totalXp), featuredBadge: null, formula: READING_FORMULA,
     events: [{ date: today, xp: totalXp }], xpDays: [{ date: today, xp: totalXp }],
     totalXp, badges: [], totalPages: 0, completedBooks: 0, reviewCount: 0, longestStreak: 0, streakRun: 0,
-    lastReadDate: today, fruitCount, xpReachedOn: today, fruits: [] });
+    lastReadDate: today, xpReachedOn: today });
   const batch = db.batch();
   batch.set(db.doc("classes/api-pet"), { createdBy: ids.teacher, readingEnabled: true, archived: false });
   batch.set(db.doc("classes/api-pet-off"), { createdBy: ids.teacher, readingEnabled: true, archived: false, petEnabled: false });
@@ -501,20 +427,20 @@ test("독서 펫 — 학생만 알 하나(받을 때의 경험치가 바탕 · �
     batch.set(db.doc(`memberships/${uid}_api-pet`), { uid, classId: "api-pet" });
   }
   batch.set(db.doc("memberships/pet-a_api-pet-off"), { uid: "pet-a", classId: "api-pet-off" });
-  // pet-a는 이미 1,800 경험치(과일 3개 = 30 포함) — 알부터 시작해야 함
-  batch.set(db.doc("classes/api-pet/readingMembers/pet-a"), snapshot("pet-a", 1800, 3));
+  // pet-a는 이미 1,800 경험치 — 알부터 시작해야 함
+  batch.set(db.doc("classes/api-pet/readingMembers/pet-a"), snapshot("pet-a", 1800));
   batch.set(db.doc("classes/api-pet/readingMembers/pet-b"), snapshot("pet-b", 50));
   await batch.commit();
   const a = { uid: "pet-a", roleClaim: null, db };
 
-  // 알 받기 — 바탕은 독서로 얻은 경험치(1,800 − 30), 프로필에는 종이 없고 비밀 문서에만
+  // 알 받기 — 바탕은 그때의 누적 경험치(1,800), 프로필에는 종이 없고 비밀 문서에만
   const adopted = await readingPetAction(a, { classId: "api-pet", action: "adopt" });
   assert.equal(adopted.event, "adopted");
   assert.equal(adopted.pet.stage, 1);
   assert.equal(adopted.pet.xp, 0);
   const mirror = (await db.doc("users/pet-a").get()).data().readingPet;
   assert.equal(mirror.species, null);
-  assert.equal(mirror.baseXp, 1800 - 3 * FRUIT_XP);
+  assert.equal(mirror.baseXp, 1800);
   const secret = (await db.doc("users/pet-a/reading/pet").get()).data();
   assert.ok(typeof secret.species === "string" && secret.species.length > 0);
   assert.equal(secret.baseXp, mirror.baseXp);
@@ -535,8 +461,8 @@ test("독서 펫 — 학생만 알 하나(받을 때의 경험치가 바탕 · �
 
   // 아직 100이 안 모였으면 못 깨움
   await assert.rejects(() => readingPetAction(a, { classId: "api-pet", action: "hatch" }), (e) => e.status === 409 && e.code === "reading/pet-not-ready");
-  // 독서로 120을 더 얻음(과일이 아니라) → 깨울 수 있음 · 종은 비밀 문서의 것
-  await db.doc("classes/api-pet/readingMembers/pet-a").set(snapshot("pet-a", 1920, 3));
+  // 독서로 120을 더 얻음 → 깨울 수 있음 · 종은 비밀 문서의 것
+  await db.doc("classes/api-pet/readingMembers/pet-a").set(snapshot("pet-a", 1920));
   const ready = (await getReadingRankings(principal("teacher"), "api-pet", "all-time")).rankings.find((r) => r.uid === "pet-a").pet;
   assert.deepEqual(ready, { species: null, stage: 1, xp: 120, ready: true });
   const hatched = await readingPetAction(a, { classId: "api-pet", action: "hatch" });
@@ -545,8 +471,8 @@ test("독서 펫 — 학생만 알 하나(받을 때의 경험치가 바탕 · �
   assert.equal(hatched.pet.stage, 2);
   assert.equal((await db.doc("users/pet-a").get()).data().readingPet.species, secret.species);
   assert.equal((await getReadingPet(a, "api-pet")).pet.species, secret.species);
-  // 과일만 더 받으면 펫은 그대로(과일 경험치는 빼고 셈)
-  await db.doc("classes/api-pet/readingMembers/pet-a").set(snapshot("pet-a", 2920, 103));
+  // 선생님이 과일을 줘도 펫은 그대로 — 과일은 경험치가 아님(앞으로 펫 먹이로만 · 선생님 요청)
+  await db.collection("classes/api-pet/rewardEvents").add({ classId: "api-pet", uid: "pet-a", delta: 5, count: 5, byUid: ids.teacher, at: new Date() });
   assert.equal((await getReadingPet(a, "api-pet")).pet.xp, 120);
 
   // 막히는 길 — 선생님(펫 없음) · 다른 반 · 펫을 끈 반 · 모르는 요청 · 남의 uid를 끼워 넣기

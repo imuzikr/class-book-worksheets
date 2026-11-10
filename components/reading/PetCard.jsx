@@ -179,7 +179,7 @@ export function PetDetailModal({ progress, busy = false, error = "", onHatch = n
             </li>;
           })}
         </ol>
-        <p className="pet-modal-note">펫은 알을 받은 뒤부터 <b>독서로 얻은 경험치</b>로 자라요(과일 경험치는 빼고). 깨어난 펫은 다시 알로 돌아가지 않아요.</p>
+        <p className="pet-modal-note">펫은 알을 받은 뒤부터 <b>독서로 얻은 경험치</b>로 자라요. 깨어난 펫은 다시 알로 돌아가지 않아요.</p>
         {error && <p className="form-error" role="alert">{error}</p>}
         {onHatch && progress.ready && <div className="pet-modal-actions">
           <button type="button" className="btn-primary" disabled={busy} onClick={onHatch}>{busy ? "깨우는 중…" : "알 깨우기"}</button>

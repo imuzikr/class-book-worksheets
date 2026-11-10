@@ -6,7 +6,7 @@ import {
   normalizePetMirror, normalizePublicPet, petEnabled, petGrowthOfSummary, petGrowthXp,
   petImageSrc, petProgress, petSpecies, petStageName, pickPetSpecies, planPetAction, rankingPet,
 } from "@/lib/readingPet";
-import { FRUIT_XP, deriveReading, getExpForReadingLevel, initialReadingState } from "@/lib/reading";
+import { deriveReading, getExpForReadingLevel, initialReadingState } from "@/lib/reading";
 import { createDemoPet } from "@/lib/demoPets";
 
 test("열 종 · 열 단계 — 이름이 모두 다르고, 6~10단계는 선생님이 주신 이름 그대로", () => {
@@ -31,19 +31,17 @@ test("학생 펫 스위치 — 책나눔이 켜진 반에서, 값이 없으면 �
   assert.equal(petEnabled(null), false);
 });
 
-test("펫이 자라는 바탕 — 누적 경험치에서 과일 경험치를 뺀 값", () => {
-  assert.equal(petGrowthXp(500, 3), 500 - 3 * FRUIT_XP);
-  assert.equal(petGrowthXp(20, 5), 0); // 0 아래로 안 내려감
-  assert.equal(petGrowthXp(null, null), 0);
-  assert.equal(petGrowthXp("300", 0), 0); // 숫자가 아니면 0
-  // 책나눔 요약에서도 같은 값 — 과일 날이 있어도 과일 경험치만 빠짐
-  const state = initialReadingState();
-  const summary = deriveReading(state, new Date("2026-11-09T12:00:00+09:00"), {
-    fruits: [{ classId: "c", date: "2026-11-02", count: 4 }],
-  });
-  assert.equal(summary.fruitXp, 4 * FRUIT_XP);
-  assert.equal(petGrowthOfSummary(summary), summary.xp - summary.fruitXp);
-  assert.equal(petGrowthOfSummary(summary), petGrowthXp(summary.xp, summary.fruitCount));
+test("펫이 자라는 바탕 — 누적 경험치 그대로(과일은 경험치가 아님)", () => {
+  assert.equal(petGrowthXp(500), 500);
+  assert.equal(petGrowthXp(-20), 0); // 0 아래로 안 내려감
+  assert.equal(petGrowthXp(null), 0);
+  assert.equal(petGrowthXp("300"), 0); // 숫자가 아니면 0
+  // 책나눔 요약에서도 같은 값 — 옛 화면이 과일 날을 실어 보내도 경험치가 아니므로 그대로
+  const summary = deriveReading({ ...initialReadingState(), fruits: [{ classId: "c", date: "2026-11-02", count: 4 }] },
+    new Date("2026-11-09T12:00:00+09:00"));
+  assert.equal(summary.xp, 0);
+  assert.equal(petGrowthOfSummary(summary), 0);
+  assert.equal(petGrowthOfSummary({ xp: 730 }), 730);
 });
 
 test("프로필의 펫 — 모양이 틀리면 null, 모르는 종은 알로", () => {
@@ -100,10 +98,11 @@ test("깨어난 펫은 기록을 지워 경험치가 줄어도 알로 돌아가�
   assert.equal(petProgress(null, 999), null); // 알을 안 받았으면 없음
 });
 
-test("리더보드 한 줄 — 반 집계(누적 · 과일)로 셈하고, 알은 종을 싣지 않음", () => {
-  assert.deepEqual(rankingPet({ baseXp: 100, species: null }, { totalXp: 260, fruitCount: 6 }),
+test("리더보드 한 줄 — 반 집계의 누적 경험치로 셈하고, 알은 종을 싣지 않음", () => {
+  assert.deepEqual(rankingPet({ baseXp: 100, species: null }, { totalXp: 200 }),
     { species: null, stage: 1, xp: 100, ready: true });
-  assert.deepEqual(rankingPet({ baseXp: 0, species: "otter" }, { totalXp: 600, fruitCount: 0 }),
+  // 옛 집계에 남은 과일 수(fruitCount)는 안 봅니다 — 과일은 경험치가 아님
+  assert.deepEqual(rankingPet({ baseXp: 0, species: "otter" }, { totalXp: 600, fruitCount: 6 }),
     { species: "otter", stage: 4, xp: 600, ready: false });
   assert.deepEqual(rankingPet({ baseXp: 0, species: "otter" }, null), { species: "otter", stage: 2, xp: 0, ready: false });
   assert.equal(rankingPet(undefined, { totalXp: 10 }), null);
