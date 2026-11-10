@@ -126,7 +126,8 @@ test("무작위 고르기 — 열 종 모두 나올 수 있고 범위 밖은 접
 });
 
 test("그림 주소 — 파일이 준비된 종만, 알은 늘 '비밀 알'", () => {
-  assert.equal(petImageSrc("cat", 3), null); // 아직 그림 없음 → 자리표시
+  assert.equal(petImageSrc("cat", 3, new Set(["owl", "egg"])), null); // 그림이 없는 종 → 자리표시
+  assert.equal(petImageSrc("cat", 3), "/reading-pets/cat-03.webp"); // 지금은 열 종 모두 그림이 있음
   const ready = new Set(["owl", "egg"]);
   assert.equal(petImageSrc("owl", 3, ready), "/reading-pets/owl-03.webp");
   assert.equal(petImageSrc("owl", 10, ready), "/reading-pets/owl-10.webp");
@@ -150,7 +151,9 @@ test("그림 파일 — PET_ART_READY에 적은 종은 2~10단계 그림이 두 
     }
   }
   assert.deepEqual(missing, [], "빠진 그림 — scripts/prepare-pet-art.mjs로 넣으세요");
-  assert.ok(PET_ART_READY.has("egg") && PET_ART_READY.has("owl"));
+  // 선생님이 주신 그림으로 알과 열 종이 모두 들어갔습니다(2026년 11월)
+  assert.ok(PET_ART_READY.has("egg"));
+  assert.deepEqual(PET_SPECIES_KEYS.filter((key) => !PET_ART_READY.has(key)), [], "그림이 없는 종");
 });
 
 test("알 받기 — 처음 한 번만, 받을 때의 경험치가 바탕이 되고 종은 비밀 문서에만", () => {
