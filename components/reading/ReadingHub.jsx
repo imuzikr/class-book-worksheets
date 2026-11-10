@@ -55,7 +55,7 @@ function Modal({ title, onClose, children, wide = false, busy = false }) {
 }
 
 // petOn — 관리자 설정의 '학생 펫'(lib/readingPet.js의 petEnabled). 학생 본인 화면에만 '나의 펫' 카드가 섭니다.
-export default function ReadingHub({ classId, user, isTeacher = false, rankingOn = true, bookSearchOn = false, petOn = false, onDisabled, activities = [], onOpenActivity, initialBookId = null, initialTab = "library", student = null }) {
+export default function ReadingHub({ classId, user, isTeacher = false, bookSearchOn = false, petOn = false, onDisabled, activities = [], onOpenActivity, initialBookId = null, initialTab = "library", student = null }) {
   // student가 있으면 교사가 그 학생의 책나눔을 보는 읽기 전용 화면입니다(선생님 결정 — 감상·발자국까지 전부 보임).
   const readOnly = !!student?.uid;
   const viewUid = readOnly ? student.uid : user?.uid;
@@ -63,9 +63,9 @@ export default function ReadingHub({ classId, user, isTeacher = false, rankingOn
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState(["library", "growth", ...(rankingOn ? ["ranking"] : [])].includes(initialTab) ? initialTab : "library");
-  // 관리자 설정에서 리더보드를 끄면 그 탭을 걷고, 보던 중이면 내 서재로 돌아갑니다.
-  useEffect(() => { if (!rankingOn && tab === "ranking") setTab("library"); }, [rankingOn, tab]);
+  // '우리 반 랭킹' 탭은 책나눔이 켜져 있으면 늘 섭니다 — 관리자 설정의 '리더보드'를 꺼도 그대로(선생님 요청:
+  // 순위 셈은 책나눔과 함께 늘 돌고, 리더보드 스위치는 상단바 리더보드 화면 · 독서 TOP 3만 켜고 끔).
+  const [tab, setTab] = useState(["library", "growth", "ranking"].includes(initialTab) ? initialTab : "library");
   const [filter, setFilter] = useState("all");
   const [dialog, setDialog] = useState(null);
   const [confirm, setConfirm] = useState(null);
@@ -149,7 +149,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, rankingOn
       </div>}
     </div>
     <nav className="reading-tabs" aria-label="책나눔 메뉴">
-      {[["library", readOnly ? "서재" : "내 서재"], ["growth", "성장·뱃지"], ...(rankingOn ? [["ranking", "우리 반 랭킹"]] : [])].map(([key, label]) => <button type="button" key={key} className={tab === key ? "active" : ""} aria-current={tab === key ? "page" : undefined} onClick={() => { setTab(key); setDialog(null); setError(""); }}>{label}</button>)}
+      {[["library", readOnly ? "서재" : "내 서재"], ["growth", "성장·뱃지"], ["ranking", "우리 반 랭킹"]].map(([key, label]) => <button type="button" key={key} className={tab === key ? "active" : ""} aria-current={tab === key ? "page" : undefined} onClick={() => { setTab(key); setDialog(null); setError(""); }}>{label}</button>)}
     </nav>
     {error && !dialog && !confirm && <div className="reading-error" role="alert">{error}<button type="button" onClick={() => setError("")} aria-label="오류 안내 닫기">×</button></div>}
     {notice && <div className="reading-notice" role="status">{notice}</div>}
@@ -169,7 +169,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, rankingOn
       {/* 순위는 탭을 열 때 · 기간을 바꿀 때 · 새로고침을 누를 때만 받습니다(한 번에 반 전체를 읽음).
           한때 독서 자료 전체(raw)를 신호로 넘겨, 상태를 다시 물을 때마다(10초) 순위를 다시 받았습니다 —
           저장은 다른 탭에서만 하므로, 저장한 뒤 이 탭을 열면 새로 받습니다. */}
-      {rankingOn && tab === "ranking" && <Rankings key={classId} classId={classId} uid={viewUid} isTeacher={isTeacher} onDisabled={onDisabled} />}
+      {tab === "ranking" && <Rankings key={classId} classId={classId} uid={viewUid} isTeacher={isTeacher} onDisabled={onDisabled} />}
     </>}
 
     {dialog?.type === "book" && <BookForm key={selected?.id || "new"} book={selected} searchOn={bookSearchOn} pagesLocked={!!selected && [...(raw?.logs || []), ...(raw?.reviews || [])].some((r) => r.bookId === selected.id)} activities={activities} busy={busy} onClose={() => setDialog(null)} onSave={async (values) => { const ok = await run({ type: selected ? "updateBook" : "addBook", ...(selected ? { bookId: selected.id } : {}), ...values }, selected ? "책 정보를 고쳤어요." : "새 책을 서재에 놓았어요."); if (ok) setDialog(null); }} />}

@@ -109,17 +109,21 @@ test("idempotent retry returns current state after later edits", async () => {
   assert.equal(retried.state.logs[0].endPage, 20);
 });
 
-test("leaderboard switch off blocks rankings only (admin settings)", async () => {
+// 리더보드 스위치(관리자 설정)는 상단바 리더보드 화면과 독서 TOP 3만 켜고 끕니다 — 순위는 책나눔과 함께 늘 돌아,
+// 꺼도 책나눔의 '우리 반 랭킹' 탭이 같은 순위를 받습니다(선생님 요청).
+test("leaderboard switch off keeps rankings for the '우리 반 랭킹' tab and blocks only TOP 3 (admin settings)", async () => {
+  const on = (await getReadingRankings(principal("student"), "api-class", "weekly")).rankings;
   await db.doc("classes/api-class").update({ rankingEnabled: false });
-  await assert.rejects(() => getReadingRankings(principal("teacher"), "api-class", "weekly"), (e) => e.status === 403 && e.code === "reading/ranking-disabled");
-  assert.ok((await getReading(principal("student"), "api-class")).state);
-  await db.doc("classes/api-class").update({ rankingEnabled: true });
-  assert.ok((await getReadingRankings(principal("teacher"), "api-class", "weekly")).rankings);
+  try {
+    assert.deepEqual((await getReadingRankings(principal("student"), "api-class", "weekly")).rankings, on);
+    assert.ok((await getReading(principal("student"), "api-class")).state);
+    await assert.rejects(() => getReadingTop(principal("student"), "api-class"), (e) => e.status === 403 && e.code === "reading/ranking-disabled");
+  } finally { await db.doc("classes/api-class").update({ rankingEnabled: true }); }
 });
 
 // 리더보드 스위치는 보이는 화면만 켜고 끕니다(선생님 요청) — 꺼 둔 동안에도 경험치 · 레벨 · 반 집계는 그대로 쌓여,
 // 다시 켜면 그동안의 순위가 곧바로 보입니다. 다른 시험과 섞이지 않게 제 반 · 제 학생으로.
-test("리더보드를 꺼도 경험치 · 반 집계는 쌓이고, 다시 켜면 그동안의 순위가 곧바로 보임", async () => {
+test("리더보드를 꺼도 경험치 · 반 집계 · '우리 반 랭킹'은 그대로 — 독서 TOP 3만 막힘", async () => {
   const uid = "api-lb-student";
   const me = { uid, roleClaim: null, db };
   await db.doc("classes/api-lb").set({ createdBy: ids.teacher, readingEnabled: true, archived: false, rankingEnabled: false });
@@ -128,16 +132,17 @@ test("리더보드를 꺼도 경험치 · 반 집계는 쌓이고, 다시 켜면
   await mutateReading(me, payload("api-lb-book-0001", { ...addBook, title: "리더보드를 꺼 둔 반" }, "api-lb"));
   const saved = await mutateReading(me, payload("api-lb-log-0001", { type: "addLog", bookId: "api-lb-book-0001", date: today, startPage: 1, endPage: 30, notes: "리더보드를 꺼 둔 날의 감상" }, "api-lb"));
   assert.ok(saved.summary.xp > 0);
-  await assert.rejects(() => getReadingRankings(principal("teacher"), "api-lb", "all-time"), (e) => e.code === "reading/ranking-disabled");
-  await assert.rejects(() => getReadingTop(principal("teacher"), "api-lb"), (e) => e.code === "reading/ranking-disabled");
   const member = (await db.doc(`classes/api-lb/readingMembers/${uid}`).get()).data();
   assert.equal(member.totalXp, saved.summary.xp);
   assert.equal(member.level, saved.summary.level);
   assert.equal(member.formula, READING_FORMULA);
-  await db.doc("classes/api-lb").update({ rankingEnabled: true });
-  const row = (await getReadingRankings(principal("teacher"), "api-lb", "all-time")).rankings.find((r) => r.uid === uid);
+  // 꺼 둔 동안에도 순위는 나옵니다(학생 본인의 '우리 반 랭킹' 탭) — 막히는 것은 독서 TOP 3뿐
+  const row = (await getReadingRankings(me, "api-lb", "all-time")).rankings.find((r) => r.uid === uid);
   assert.equal(row.totalXp, saved.summary.xp);
   assert.equal(row.xp, saved.summary.classScores["api-lb"].allTime);
+  await assert.rejects(() => getReadingTop(principal("teacher"), "api-lb"), (e) => e.code === "reading/ranking-disabled");
+  await db.doc("classes/api-lb").update({ rankingEnabled: true });
+  assert.deepEqual((await getReadingRankings(principal("teacher"), "api-lb", "all-time")).rankings.find((r) => r.uid === uid), row);
 });
 
 test("disabling a class immediately blocks private reads, rankings and writes, retaining state", async () => {

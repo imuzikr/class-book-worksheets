@@ -22,20 +22,21 @@
   - 화면의 켜짐은 **운영 중인 반이 모두 켜졌을 때**이고, 반마다 다르면(이 바뀜 전의 반) 카드에 '반마다 다르게 켜져 있어요'가 서고 누르면 모두 켭니다(`lib/reading.js`의 `teacherFeatureSettings`).
   - **새 반도 같은 값을 따릅니다** — 반 관리하기에서 만들 때 `featuresForNewClass(내 반들)`을 `addClass`에 넘겨, 만든 뒤 한 번 더 씁니다(규칙이 만들 때 `readingEnabled`를 거짓으로만 받음).
   - 최고 관리자는 보이는 반 전부에 씁니다(남의 반 포함 — 규칙상 관리자는 됨).
-- **책나눔 성장 기능** — `classes/{cId}.readingEnabled`(기본 꺼짐). **켜면 경험치 · 레벨업 · 뱃지와 반 집계(순위 셈 — `readingMembers`)가 함께 돕니다** — 순위를 세는 스위치는 따로 없습니다(선생님 요청: '책나눔을 켜면 랭킹 시스템은 자동으로'). 아래 '리더보드'는 그것을 보여 주는 화면만 켜고 끕니다.
+- **책나눔 성장 기능** — `classes/{cId}.readingEnabled`(기본 꺼짐). **켜면 경험치 · 레벨업 · 뱃지와 반 집계(순위 셈 — `readingMembers`) · 책나눔의 '우리 반 랭킹' 탭이 함께 돕니다** — 순위를 세는 스위치는 따로 없습니다(선생님 요청: '책나눔을 켜면 랭킹 시스템은 자동으로'). 아래 '리더보드'는 상단바의 리더보드 화면과 독서 TOP 3만 켜고 끕니다.
 - **도서 검색** — `classes/{cId}.bookSearchEnabled`(기본 꺼짐 · 책나눔이 켜져 있어야 켬, 판정 `bookSearchEnabled(반)`). 카카오 REST API 키(아래 '도서 검색 (카카오)' 절)가 있어야 쓰는 기능이라, 키 없이 직접 입력만 쓰는 선생님을 위해 따로 둡니다.
   - 꺼져 있으면 내 서재 **'새 책 등록'은 직접 입력만**(검색 칸 없음). 켜져 있으면 맨 위에 **'도서 검색으로 책 정보 채우기'** 단추가 서고, 누르면 검색 칸으로 바뀌어 커서가 들어가며, 결과를 고르거나 '직접 입력하기'를 누르면 접힙니다(`ReadingHub`의 `BookForm` · `bookSearchOn`).
   - `/api/books/search` 자체는 이 스위치를 보지 않습니다(공개 서지 정보만, 키 · 빈도 제한이 지킴).
-- **리더보드** — `classes/{cId}.rankingEnabled`(칸 이름은 옛 그대로 · 값이 없으면 켜짐 · 끈 것만 `false`로 적음). **보이는 화면만 켜고 끕니다**(선생님 요청 — 한때 이름이 '랭킹 시스템'이라 순위 셈까지 끄는 것처럼 읽혔고, 끄면 캐릭터 고르기까지 잠겼습니다). 판정은 `lib/reading.js`의 `rankingEnabled(반)` 한 곳 — 책나눔이 켜져 있고 `rankingEnabled !== false`일 때만 참이라, 책나눔이 꺼지면 스위치도 꺼진 채 잠깁니다.
-  - 끄면: 상단바 **리더보드 단추가 사라지고**(`?area=leaderboard`로 와도 책방 목록), 책나눔의 **'우리 반 랭킹' 탭이 빠지고**(보던 중이면 내 서재로), 상단바 **'독서 TOP 3'도 빠집니다** — 반 친구와 견주어 보는 화면이 모두 없어집니다. 서버 `getReadingRankings` · `getReadingTop`도 `403 reading/ranking-disabled`로 막습니다(데모도 같음 — 화면이 없는데 순위만 내주지 않게).
-  - **경험치 · 레벨업 · 뱃지 · 반 집계(`readingMembers`)는 그대로 쌓입니다** — 학생은 책나눔 머리의 '독서 레벨'로 자기 성장을 계속 보고, 다시 켜면 그동안의 순위가 곧바로 보입니다(시험 `tests/server/reading.test.mjs` '리더보드를 꺼도…'). 학생 캐릭터 · 학생 펫은 리더보드에 매이지 않습니다(아래).
+- **리더보드** — `classes/{cId}.rankingEnabled`(칸 이름은 옛 그대로 · 값이 없으면 켜짐 · 끈 것만 `false`로 적음). **상단바의 리더보드 화면과 독서 TOP 3만 켜고 끕니다**(선생님 요청 — 한때 이름이 '랭킹 시스템'이라 순위 셈까지 끄는 것처럼 읽혔고, 끄면 '우리 반 랭킹' 탭과 캐릭터 고르기까지 함께 사라졌습니다). 판정은 `lib/reading.js`의 `rankingEnabled(반)` 한 곳 — 책나눔이 켜져 있고 `rankingEnabled !== false`일 때만 참이라, 책나눔이 꺼지면 스위치도 꺼진 채 잠깁니다.
+  - 끄면: 상단바 **리더보드 단추가 사라지고**(`?area=leaderboard`로 와도 책방 목록) 상단바 **'독서 TOP 3'도 빠집니다**. 서버 `getReadingTop`은 `403 reading/ranking-disabled`로 막습니다(데모도 같음).
+  - **책나눔의 '우리 반 랭킹' 탭은 그대로입니다**(선생님 요청 — 순위 셈이 책나눔과 함께 늘 돌므로). 그래서 순위를 주는 서버 `getReadingRankings`(데모 `fetchReadingRankings`)는 이 스위치를 안 봅니다 — 책나눔이 켜진 반이면 순위를 줍니다(시험 `tests/server/reading.test.mjs` 'leaderboard switch off keeps rankings…'). `ReadingHub`는 이 값을 받지 않습니다.
+  - **경험치 · 레벨업 · 뱃지 · 반 집계(`readingMembers`)는 그대로 쌓입니다** — 학생은 책나눔 머리의 '독서 레벨'과 '우리 반 랭킹'으로 계속 보고, 다시 켜면 리더보드에도 그동안의 순위가 곧바로 보입니다(시험 `tests/server/reading.test.mjs` '리더보드를 꺼도…'). 학생 캐릭터 · 학생 펫은 리더보드에 매이지 않습니다(아래).
 - **학생 캐릭터** — `classes/{cId}.characterEnabled`(값이 없으면 켜짐 · 끈 것만 `false`). 판정은 `lib/readingCharacter.js`의 `characterChoiceEnabled` 한 곳. 리더보드 '캐릭터 꾸미기'(초급·중급·고급 각 10종, 총 30종 — `public/reading-journey/`)를 켜고 끕니다. 책나눔이 켜져 있어야 켜고, **리더보드를 꺼 둔 반에서도 씁니다**(선생님 요청 — 그때는 '내 프로필'에서 고르고, 상단바 프로필 동그라미에 그 얼굴이 섭니다). 한때 랭킹이 꺼진 반에서는 스위치가 잠기고 서버도 `reading/ranking-disabled`로 저장을 막았습니다.
   - 끄면: 학생 화면에서 '캐릭터 꾸미기' 단추가 사라지고(`ReadingLeaderboard`의 `characterOn`), 서버 `saveReadingCharacter`가 `403 reading/character-disabled`로 막으며(데모도 같음), `getReadingRankings`가 고른 값 대신 `character: null`을 보내 모두 **기본 캐릭터**(`defaultWorldAvatar`)로 섭니다. 고른 값(`users/{uid}.readingCharacter`)은 지우지 않아 다시 켜면 돌아옵니다.
   - **바꾸는 자리는 둘이고 창은 하나**(`components/reading/CharacterChooser.jsx`): 지도의 '캐릭터 꾸미기'와 상단바 **프로필 메뉴 → '👤 내 프로필' → '내 캐릭터' 칸의 '바꾸기'**(그 창을 닫고 고르기 창을 엶 — 창 둘이 겹쳐 Esc가 둘 다 닫지 않게). 상단바 **프로필 동그라미에도 내 캐릭터 얼굴**이 섭니다(고른 적이 없으면 지도와 같은 기본 동물).
     - 조건은 그 반의 책나눔 · 학생 캐릭터가 켜졌을 때입니다 — 리더보드는 안 봅니다(`TopNav`가 반 문서 1건 · 내 `users` 문서 1건을 구독, `subscribeMyReadingCharacter`). 저장은 같은 `saveReadingCharacter`(서버 API)라 규칙을 안 건드립니다. 저장하면 `reading-character-change` 창 이벤트로 떠 있는 리더보드가 다시 읽습니다.
 - **학생 펫** — `classes/{cId}.petEnabled`(값이 없으면 켜짐 · 끈 것만 `false`, 책나눔이 켜져 있어야 켬). 판정은 `lib/readingPet.js`의 `petEnabled` 한 곳. 끄면 책나눔의 '나의 펫' 카드 · 리더보드의 펫 · '내 프로필'의 펫이 숨고 서버 `/api/reading/pet`이 `403 reading/pet-disabled`로 막습니다. 키우던 펫(`users/{uid}.readingPet`)은 지우지 않아 다시 켜면 그대로 이어집니다. 아래 '독서 펫' 절.
 - 규칙(`readingSettingValid`): 여섯 칸(`readingEnabled` · `rankingEnabled` · `characterEnabled` · `bookSearchEnabled` · `fruitBasketEnabled` · `petEnabled`)은 **참 · 거짓만**(지우기 불가), 보관된 반은 못 바꿈, 담당 교사 · 관리자만. 시험 `tests/rules/reading.test.mjs`('리더보드 스위치' · '도서 검색 스위치') · `tests/rules/readingPet.test.mjs`('학생 펫'). **코드보다 규칙을 먼저 배포하세요** — 안 그러면 도서 검색 · 학생 펫 스위치 저장이 권한 오류입니다.
-- 실측(데모 1440 · 420px): 교사 상단바 `책방 · 책나눔 · 리더보드 · 관리자 설정` · 학생은 관리자 설정 없음 · 체험반 리더보드를 끄면 리더보드 단추 · '우리 반 랭킹' 탭 · 독서 TOP 3가 빠지고 책나눔의 '독서 레벨' · 프로필 동그라미의 캐릭터 · 내 프로필의 '내 캐릭터'는 그대로 · 가로 넘침 0.
+- 실측(데모 1440 · 420px): 교사 상단바 `책방 · 책나눔 · 리더보드 · 관리자 설정` · 학생은 관리자 설정 없음 · 체험반 리더보드를 끄면 리더보드 단추 · 독서 TOP 3가 빠지고 책나눔의 '우리 반 랭킹' 탭(순위 15줄) · '독서 레벨' · 프로필 동그라미의 캐릭터 · 내 프로필의 '내 캐릭터'는 그대로 · 가로 넘침 0.
 
 ## 리더보드 — 독서 여정
 

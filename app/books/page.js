@@ -1052,11 +1052,11 @@ function BooksPageInner() {
               onDisabled={() => patchBooksQuery({ area: null }, { replace: true })} />
           ) : readingOpen && admin ? (
             <TeacherReadingView classId={classId} user={user} roster={roster}
-              studentUid={searchParams.get("student")} onPickStudent={(uid) => patchBooksQuery({ student: uid }, { replace: true })} rankingOn={rankingOn} bookSearchOn={bookSearchEnabled(currentClass)}
+              studentUid={searchParams.get("student")} onPickStudent={(uid) => patchBooksQuery({ student: uid }, { replace: true })} bookSearchOn={bookSearchEnabled(currentClass)}
               activities={liveActivities} onOpenActivity={goToActivity}
               onDisabled={() => patchBooksQuery({ area: null }, { replace: true })} />
           ) : readingOpen ? (
-            <ReadingHub key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin} rankingOn={rankingOn} bookSearchOn={bookSearchEnabled(currentClass)} petOn={petOn}
+            <ReadingHub key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin} bookSearchOn={bookSearchEnabled(currentClass)} petOn={petOn}
               activities={liveActivities} onOpenActivity={goToActivity}
               initialBookId={searchParams.get("book")} initialTab={searchParams.get("tab") || "library"}
               onDisabled={() => patchBooksQuery({ area: null }, { replace: true })} />
