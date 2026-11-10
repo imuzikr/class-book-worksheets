@@ -2,25 +2,38 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { deriveReading, initialReadingState, READING_FORMULA } from "../../lib/reading.js";
 import { memberSnapshot, memberStats } from "../../lib/readingJourney.js";
-import { characterChoiceEnabled, hasCurrentReadingSnapshot, normalizeReadingCharacter } from "../../lib/readingCharacter.js";
+import { CHARACTER_STYLES, characterChoiceEnabled, hasCurrentReadingSnapshot, normalizeReadingCharacter } from "../../lib/readingCharacter.js";
 
 test("journey appearance accepts only a known numbered character and outfit", () => {
-  for (const style of ["beginner", "intermediate", "advanced"]) {
+  assert.deepEqual(CHARACTER_STYLES, ["zodiac", "animal", "fantasy"]);
+  for (const style of CHARACTER_STYLES) {
     for (let number = 1; number <= 10; number += 1) {
       assert.deepEqual(normalizeReadingCharacter({ number, style }), { number, style });
     }
   }
   for (const value of [null, undefined, [], "1", {}, { number: 1 },
-    { number: "1", style: "advanced" }, { number: 1.5, style: "advanced" },
-    { number: 0, style: "advanced" }, { number: 11, style: "advanced" },
-    { number: 1, style: "unknown" }, { number: 1, style: "../beginner" },
-    { number: 1, style: "beginner/../../advanced" }, { number: 1, style: ["beginner"] },
-    { number: 1, style: "beginner", xp: 1000 }, { number: 1, style: "advanced", role: "admin" },
-    Object.assign(Object.create({ number: 1 }), { style: "beginner" })]) {
+    { number: "1", style: "fantasy" }, { number: 1.5, style: "fantasy" },
+    { number: 0, style: "zodiac" }, { number: 11, style: "zodiac" }, { number: 11, style: "advanced" },
+    { number: 1, style: "unknown" }, { number: 1, style: "../zodiac" }, { number: 1, style: "../beginner" },
+    { number: 1, style: "beginner/../../advanced" }, { number: 1, style: ["beginner"] }, { number: 1, style: ["zodiac"] },
+    { number: 1, style: "__proto__" }, { number: 1, style: "constructor" }, { number: 1, style: "toString" },
+    { number: 1, style: "zodiac", xp: 1000 }, { number: 1, style: "advanced", role: "admin" },
+    Object.assign(Object.create({ number: 1 }), { style: "zodiac" })]) {
     assert.equal(normalizeReadingCharacter(value), null, JSON.stringify(value));
   }
-  const original = { number: 1, style: "advanced" };
+  const original = { number: 1, style: "zodiac" };
   assert.notEqual(normalizeReadingCharacter(original), original);
+});
+
+test("묶음을 바꾸기 전에 저장된 옛 열쇠는 같은 모습의 새 열쇠로 옮겨 읽는다", () => {
+  for (let number = 1; number <= 10; number += 1) {
+    // 판타지 그림(옛 초급)은 그대로 판타지(지금 고급)
+    assert.deepEqual(normalizeReadingCharacter({ number, style: "beginner" }), { number, style: "fantasy" });
+    // 동물(옛 중급)은 그대로
+    assert.deepEqual(normalizeReadingCharacter({ number, style: "intermediate" }), { number, style: "animal" });
+    // 전통 무술복 동물(옛 고급, 내린 묶음)은 같은 번호의 동물 — 곰은 곰, 토끼는 토끼
+    assert.deepEqual(normalizeReadingCharacter({ number, style: "advanced" }), { number, style: "animal" });
+  }
 });
 
 const snapshot = () => {

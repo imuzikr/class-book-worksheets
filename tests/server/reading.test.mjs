@@ -233,7 +233,7 @@ test("journey appearance changes only the authenticated student's public charact
   const profileRef = db.doc(`users/${ids.student}`);
   const beforeProfile = (await profileRef.get()).data();
   const beforeReading = await getReading(principal("student"), "api-class");
-  for (const style of ["beginner", "intermediate", "advanced"]) {
+  for (const style of ["zodiac", "animal", "fantasy"]) {
     const character = { number: 9, style };
     assert.deepEqual(await saveReadingCharacter(principal("student"), { classId: "api-class", character }), { character }, style);
     assert.deepEqual((await profileRef.get()).data(), { ...beforeProfile, readingCharacter: character }, style);
@@ -248,8 +248,23 @@ test("journey appearance changes only the authenticated student's public charact
   }
 });
 
+// 2026년 11월 캐릭터 묶음 바꾸기: 옛 열쇠(beginner · intermediate · advanced)는 같은 모습의 새 열쇠로 옮겨 적고 읽습니다.
+test("old character keys are saved and read as the new set keys — the student keeps the same look", async () => {
+  const profileRef = db.doc(`users/${ids.student}`);
+  for (const [style, now] of [["beginner", "fantasy"], ["intermediate", "animal"], ["advanced", "animal"]]) {
+    const saved = await saveReadingCharacter(principal("student"), { classId: "api-class", character: { number: 3, style } });
+    assert.deepEqual(saved, { character: { number: 3, style: now } }, style);
+    assert.deepEqual((await profileRef.get()).data().readingCharacter, { number: 3, style: now }, style);
+  }
+  for (const [style, now] of [["beginner", "fantasy"], ["intermediate", "animal"], ["advanced", "animal"]]) {
+    await profileRef.update({ readingCharacter: { number: 7, style } });
+    const row = (await getReadingRankings(principal("teacher"), "api-class", "all-time")).rankings.find((r) => r.uid === ids.student);
+    assert.deepEqual(row.character, { number: 7, style: now }, style);
+  }
+});
+
 test("journey appearance rejects other UIDs, malformed choices, teachers and disabled access", async () => {
-  const character = { number: 1, style: "intermediate" };
+  const character = { number: 1, style: "animal" };
   for (const body of [null, [], { classId: "api-class", uid: ids.other, character },
     { classId: "api-class", character: { ...character, role: "admin" } },
     { classId: "api-class", character: { number: 11, style: "advanced" } }]) {
@@ -268,7 +283,7 @@ test("journey appearance rejects other UIDs, malformed choices, teachers and dis
 });
 
 test("character switch off blocks choosing and shows the default character, keeping the saved choice", async () => {
-  const character = { number: 4, style: "intermediate" };
+  const character = { number: 4, style: "zodiac" };
   await saveReadingCharacter(principal("student"), { classId: "api-class", character });
   await db.doc("classes/api-class").update({ characterEnabled: false });
   try {
