@@ -8,9 +8,13 @@
 //   · 책나눔 성장 기능(readingEnabled — 기본 꺼짐)
 //   · 도서 검색(bookSearchEnabled — 기본 꺼짐, 카카오 REST API 키가 있어야 씀. 끄면 내 서재
 //     새 책 등록이 직접 입력만, 켜면 '도서 검색' 단추가 섬)
-//   · 랭킹 시스템(rankingEnabled — 값이 없으면 켜짐)
-//   · 학생 캐릭터(characterEnabled — 값이 없으면 켜짐, 랭킹이 켜져 있어야 의미가 있음)
+//   · 리더보드(rankingEnabled — 값이 없으면 켜짐). 상단바 리더보드 화면만 켜고 끕니다(선생님 요청 — 한때 이름이
+//     '랭킹 시스템'). 경험치 · 레벨 · 순위 집계와 책나눔의 '우리 반 랭킹' 탭은 책나눔만 켜지면 늘 돕니다.
+//   · 독서 TOP 3(readingTopEnabled — 값이 없으면 켜짐, 책나눔이 켜져 있어야 씀). 상단바 가운데의 이번 주 TOP 3를
+//     보이고 숨깁니다(선생님 요청 — 한때 리더보드 스위치를 함께 따랐음 · 판정 lib/reading.js의 readingTopOn).
+//   · 학생 캐릭터(characterEnabled — 값이 없으면 켜짐, 책나눔이 켜져 있어야 씀. 리더보드를 꺼도 '내 프로필'에서 고름)
 //   · 과일 바구니(fruitBasketEnabled — 값이 없으면 켜짐, 끄면 떠 있는 동그라미에서도 가림)
+//   · 학생 펫(petEnabled — 값이 없으면 켜짐, 책나눔이 켜져 있어야 씀 · lib/readingPet.js)
 // 쓰기는 반 문서 한 칸씩이고, 규칙(readingSettingValid)이 참·거짓과 보관 안 된 반만 받습니다.
 // =============================================================
 import { useMemo, useState } from "react";
@@ -30,26 +34,35 @@ function Switch({ on, disabled, busy, label, describedBy, onClick }) {
 }
 
 const FEATURES = [
-  { key: "readingEnabled", label: "책나눔 성장 기능", hint: "내 서재 · 경험치 · 뱃지 · 랭킹. 꺼도 독서 활동은 그대로예요.",
+  { key: "readingEnabled", label: "책나눔 성장 기능", hint: "내 서재 · 경험치 · 레벨업 · 뱃지 · 우리 반 랭킹이 함께 켜져요. 꺼도 독서 활동은 그대로예요.",
     on: "책나눔 성장 기능을 켰어요.", off: "책나눔 성장 기능을 껐어요. 기존 기록은 보관됩니다." },
   { key: "bookSearchEnabled", label: "도서 검색", needs: ["readingEnabled"], needsText: "책나눔 성장 기능을 먼저 켜 주세요",
     hint: "내 서재에 책을 담을 때 카카오 책 검색으로 표지 · 정보를 채워요. 카카오 REST API 키가 있어야 써요. 끄면 직접 입력만 해요.",
     on: "도서 검색을 켰어요. 내 서재 새 책 등록에 '도서 검색' 단추가 생겨요.", off: "도서 검색을 껐어요. 책 정보는 직접 입력해요." },
-  { key: "rankingEnabled", label: "랭킹 시스템", needs: ["readingEnabled"], needsText: "책나눔 성장 기능을 먼저 켜 주세요",
-    hint: "상단바 리더보드 · 우리 반 랭킹. 책나눔이 켜져 있어야 써요.",
-    on: "랭킹 시스템을 켰어요.", off: "랭킹 시스템을 껐어요. 리더보드와 우리 반 랭킹이 숨겨져요." },
-  { key: "characterEnabled", label: "학생 캐릭터", needs: ["readingEnabled", "rankingEnabled"], needsText: "책나눔과 랭킹 시스템을 먼저 켜 주세요",
-    hint: "리더보드에서 학생이 동물 캐릭터를 골라요. 끄면 모두 기본 캐릭터예요. 랭킹이 켜져 있어야 써요.",
-    on: "학생이 리더보드에서 캐릭터를 고를 수 있어요.", off: "캐릭터 고르기를 껐어요. 모두 기본 캐릭터로 보이고, 고른 캐릭터는 보관됩니다." },
+  { key: "rankingEnabled", label: "리더보드", needs: ["readingEnabled"], needsText: "책나눔 성장 기능을 먼저 켜 주세요",
+    hint: "상단바 리더보드(독서 맵 · 독서 랭킹)를 보여요. 꺼도 경험치 · 레벨과 책나눔의 '우리 반 랭킹'은 그대로예요.",
+    on: "리더보드를 켰어요. 그동안 쌓인 순위가 곧바로 보여요.", off: "리더보드를 껐어요. 상단바 리더보드만 숨고, '우리 반 랭킹'과 경험치 · 레벨은 그대로예요." },
+  { key: "readingTopEnabled", label: "독서 TOP 3", needs: ["readingEnabled"], needsText: "책나눔 성장 기능을 먼저 켜 주세요",
+    hint: "상단바 가운데에 이번 주 우리 반 독서 TOP 3(캐릭터 · 레벨 · 이름)를 보여요. 월요일 아침마다 바뀌어요.",
+    on: "독서 TOP 3를 켰어요. 상단바 가운데에 이번 주 TOP 3가 보여요.", off: "독서 TOP 3를 껐어요. 상단바에서만 숨고, 순위 셈은 그대로예요." },
+  { key: "characterEnabled", label: "학생 캐릭터", needs: ["readingEnabled"], needsText: "책나눔 성장 기능을 먼저 켜 주세요",
+    hint: "학생이 캐릭터를 골라요(리더보드 · 내 프로필). 끄면 모두 기본 캐릭터예요.",
+    on: "학생이 캐릭터를 고를 수 있어요.", off: "캐릭터 고르기를 껐어요. 모두 기본 캐릭터로 보이고, 고른 캐릭터는 보관됩니다." },
   { key: "fruitBasketEnabled", label: "과일 바구니",
     hint: "학생이 받은 과일을 바구니에 담아 이벤트에 응모해요. 끄면 오른쪽 아래 동그라미 메뉴에서도 가려져요.",
     on: "과일 바구니를 켰어요.", off: "과일 바구니를 껐어요. 담긴 과일과 응모 기록은 보관됩니다." },
+  { key: "petEnabled", label: "학생 펫", needs: ["readingEnabled"], needsText: "책나눔 성장 기능을 먼저 켜 주세요",
+    hint: "학생마다 알을 하나씩 받아 독서 경험치로 키워요. 책나눔 · 리더보드 · 내 프로필에 보여요. 선생님은 펫이 없어요.",
+    on: "학생 펫을 켰어요. 학생마다 알을 하나씩 받아요.", off: "학생 펫을 껐어요. 키우던 펫은 보관되고, 다시 켜면 그대로 이어져요." },
 ];
 
-// 성격이 같은 것끼리 세 묶음(선생님 요청 — 2 · 2 · 1).
+// 성격이 같은 것끼리 세 묶음(선생님 요청 — 2 · 4 · 1). 리더보드 옆에 독서 TOP 3(보이는 화면 둘), 그 아래 줄에
+// 학생 캐릭터 · 학생 펫(꾸미기 둘)이 섭니다. 학생 펫은 캐릭터 옆에 함께 서는 꾸미기라
+// '리더보드 · 꾸미기'(한때 '랭킹 · 꾸미기')에 둡니다(선생님 요청 — 한때 과일 바구니 옆 '교실 보상'에 두어 2 · 2 · 2였음).
+// 카드 칸은 늘 두 칸 격자라 이 묶음만 카드가 두 줄로 섭니다.
 const GROUPS = [
   { key: "reading", title: "독서 기록", desc: "학생의 서재와 책 정보", keys: ["readingEnabled", "bookSearchEnabled"] },
-  { key: "growth", title: "랭킹 · 꾸미기", desc: "반 친구와 함께 보는 성장", keys: ["rankingEnabled", "characterEnabled"] },
+  { key: "growth", title: "리더보드 · 꾸미기", desc: "반 친구와 함께 보는 성장 · 캐릭터와 펫", keys: ["rankingEnabled", "readingTopEnabled", "characterEnabled", "petEnabled"] },
   { key: "reward", title: "교실 보상", desc: "과일 모으기와 이벤트", keys: ["fruitBasketEnabled"] },
 ];
 

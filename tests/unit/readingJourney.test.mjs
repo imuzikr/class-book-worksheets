@@ -59,8 +59,8 @@ test("나의 독서 여정 이야기", () => {
   assert.ok(lines.some((l) => /레벨 \d/.test(l)));
 });
 
-// ---- 경험치 균형: 연속 보너스 상한 · 최소 쪽수 · 과일 ----
-import { readingFruitGains, FRUIT_XP, STREAK_MIN_PAGES } from "../../lib/reading.js";
+// ---- 경험치 균형: 연속 보너스 상한 · 최소 쪽수 · 과일은 경험치 아님 ----
+import { STREAK_MIN_PAGES } from "../../lib/reading.js";
 
 function dailyReads(days, pagesPerDay) {
   let s = applyReadingAction(initialReadingState(), { type: "addBook", title: "긴 책", author: "작가", totalPages: 1000 }, ctx("b1"));
@@ -94,32 +94,17 @@ test("같은 날 나눠 읽은 쪽은 합쳐서 셈", () => {
   assert.equal(deriveReading(s, new Date(NOW)).longestStreak, 1);
 });
 
-test("과일 — 받은 누계의 최고치만큼만, 바로잡은 −1은 두 번 세지 않음", () => {
-  const at = (d, h = 3) => new Date(`2026-10-${d}T0${h}:00:00Z`);
-  const gains = readingFruitGains([
-    { classId: "c", delta: 1, at: at(27) },
-    { classId: "c", delta: 1, at: at(27, 4) },
-    { classId: "c", delta: -1, at: at(28) },
-    { classId: "c", delta: 1, at: at(28, 4) },
-    { classId: "c", delta: 2, at: at(29) },
-    { classId: "d", delta: 3, at: at(29) },
-  ], new Date(NOW));
-  assert.deepEqual(gains, [
-    { classId: "c", date: "2026-10-27", count: 2 },
-    { classId: "c", date: "2026-10-29", count: 2 },
-    { classId: "d", date: "2026-10-29", count: 3 },
-  ]);
-  const summary = deriveReading(initialReadingState(), new Date(NOW), { fruits: gains });
-  assert.equal(summary.fruitCount, 7);
-  assert.equal(summary.xp, 7 * FRUIT_XP);
-  assert.equal(summary.classScores.c.allTime, 4 * FRUIT_XP);
-  assert.equal(summary.longestStreak, 0);
-});
-
-test("과일 경험치로 레벨이 오르면 레벨 뱃지도", () => {
-  const summary = deriveReading(initialReadingState(), new Date(NOW), { fruits: [{ classId: "c", date: "2026-10-29", count: 25 }] });
-  assert.equal(summary.level, 3);
-  assert.ok(summary.earnedBadges.some((b) => b.id === "level_1"));
+test("과일은 경험치가 아님 — 옛 화면이 실어 보낸 과일 날이 있어도 안 셈(선생님 요청 · 과일은 펫 먹이로만)", () => {
+  const fruits = [{ classId: "c", date: "2026-10-29", count: 25 }];
+  // 상태에 실려 와도, 셋째 인자로 와도(옛 서버 · 옛 화면) 경험치 · 레벨 · 뱃지가 그대로
+  for (const summary of [deriveReading({ ...initialReadingState(), fruits }, new Date(NOW)), deriveReading(initialReadingState(), new Date(NOW), { fruits })]) {
+    assert.equal(summary.xp, 0);
+    assert.equal(summary.level, 1);
+    assert.equal(summary.earnedBadges.length, 0);
+    assert.equal(summary.events.some((e) => e.kind === "fruit"), false);
+    assert.equal(Object.hasOwn(summary, "fruitXp"), false);
+    assert.equal(Object.hasOwn(summary, "fruitCount"), false);
+  }
 });
 
 import { READING_BADGES } from "../../lib/reading.js";
@@ -135,7 +120,7 @@ test("뱃지 툴팁 — 18종 모두 조건 숫자와 보상을 말함", () => {
 });
 
 import { rankingEnabled } from "../../lib/reading.js";
-test("랭킹 시스템 — 책나눔이 켜져 있고 끄지 않았을 때만", () => {
+test("리더보드(rankingEnabled) — 책나눔이 켜져 있고 끄지 않았을 때만", () => {
   assert.equal(rankingEnabled({ readingEnabled: true }), true);
   assert.equal(rankingEnabled({ readingEnabled: true, rankingEnabled: false }), false);
   assert.equal(rankingEnabled({ readingEnabled: false }), false);

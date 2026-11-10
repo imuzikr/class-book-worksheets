@@ -39,7 +39,7 @@ test("same-formula legacy snapshots still need canonical global XP and badges", 
   assert.equal(hasCurrentReadingSnapshot({ ...good, level: 5 }), false);
   assert.equal(hasCurrentReadingSnapshot({ ...good, badges: ["unknown"] }), false);
   assert.equal(hasCurrentReadingSnapshot({ ...good, badges: null }), false);
-  for (const field of ["totalXp", "badges", "lastReadDate", "totalPages", "fruitCount"]) {
+  for (const field of ["totalXp", "badges", "lastReadDate", "totalPages"]) {
     const old = { ...good };
     delete old[field];
     assert.equal(hasCurrentReadingSnapshot(old), false, field);

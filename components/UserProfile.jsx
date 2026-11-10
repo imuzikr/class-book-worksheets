@@ -37,6 +37,8 @@ export default function UserProfile({
   // 학생 캐릭터(책나눔 · 랭킹 · 학생 캐릭터가 모두 켜진 반) — { number, style } · 저장 함수
   character = null,
   onSaveCharacter = null,
+  // 독서 펫 — 학생 펫이 켜진 반의 학생이고 알을 받았으면 { classId, mirror }(lib/readingPet.js)
+  pet = null,
   onLogout = null,
 }) {
   const user = useCurrentUser();
@@ -160,7 +162,7 @@ export default function UserProfile({
       )}
 
       {profileOpen && user && (
-        <ProfileModal user={user} onClose={() => setProfileOpen(false)} character={character}
+        <ProfileModal user={user} onClose={() => setProfileOpen(false)} character={character} pet={pet}
           onChangeCharacter={onSaveCharacter ? () => { setProfileOpen(false); setChoosing(true); } : null} />
       )}
       {choosing && character && onSaveCharacter && (

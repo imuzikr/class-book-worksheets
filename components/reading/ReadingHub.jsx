@@ -1,11 +1,14 @@
 "use client";
 
-import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
 import { deriveReading, initialReadingState, kstToday, READING_BADGES } from "@/lib/reading";
 import { subscribeReadingState, mutateReading, fetchReadingRankings } from "@/lib/data/reading";
 import { rankingsForPeriod } from "@/lib/readingJourney";
+import { petGrowthOfSummary } from "@/lib/readingPet";
 import ReadingBadge from "./ReadingBadge";
 import BookSearch from "./BookSearch";
+import { hasModalAbove } from "@/lib/modal";
+import PetCard from "./PetCard";
 import "./reading.css";
 
 const ReadingErrorContext = createContext("");
@@ -26,13 +29,29 @@ function Modal({ title, onClose, children, wide = false, busy = false }) {
   const titleId = useId();
   const error = useContext(ReadingErrorContext);
   const ref = useRef(null);
+  const backdropRef = useRef(null);
+  // onClose는 부르는 쪽이 렌더마다 새로 만듭니다. 한때 아래 효과가 그것에 걸려 있어, 책나눔이 다시
+  // 그려질 때마다(알림 줄이 뜨고 5초 뒤 사라질 때 등) 다시 돌며 초점을 창의 첫 칸으로 끌어왔습니다 —
+  // 감상을 쓰던 커서가 날짜 칸으로 튀고, 그때 위에 뜨던 펫 '자랐어요!' 창(지금은 창이 아닌 폭죽)의 초점을
+  // 빼앗아 Esc가 밑의 책 상세 창부터 닫았습니다. 그래서 최신 값은 ref로 들고, 초점 · 키 처리는 창이
+  // 열릴 때 한 번만 겁니다.
+  const closeRef = useRef(onClose); closeRef.current = onClose;
+  const busyRef = useRef(busy); busyRef.current = busy;
   useEffect(() => {
     const previous = document.activeElement;
     const el = ref.current;
+    const backdrop = backdropRef.current;
     const items = () => [...el.querySelectorAll('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [tabindex="0"]')];
-    (el.querySelector("[data-initial-focus]") || items()[0] || el).focus();
-    function key(e) {
-      if (e.key === "Escape" && !busy) { e.preventDefault(); onClose(); }
+    // 위에 다른 창이 이미 떠 있으면 초점을 가져오지 않습니다(lib/modal.js의 hasModalAbove).
+    if (!hasModalAbove(backdrop)) (el.querySelector("[data-initial-focus]") || items()[0] || el).focus();
+    // Esc는 화면 전체에서 받되 이 창이 맨 위일 때만 닫습니다 — 위에 창이 있으면 비켜 가(preventDefault도
+    // 안 부름) 공통 Esc 처리가 그 창부터 닫게 둡니다. 초점이 창 밖(위 창이 닫힌 뒤의 body)에 있어도 닫힙니다.
+    function escape(e) {
+      if (e.key !== "Escape" || e.isComposing || e.defaultPrevented) return;
+      if (busyRef.current || hasModalAbove(backdrop)) return;
+      e.preventDefault(); closeRef.current();
+    }
+    function tab(e) {
       if (e.key !== "Tab") return;
       const nodes = items();
       const first = nodes[0]; const last = nodes.at(-1);
@@ -40,10 +59,17 @@ function Modal({ title, onClose, children, wide = false, busy = false }) {
       if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
       else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     }
-    el.addEventListener("keydown", key);
-    return () => { el.removeEventListener("keydown", key); previous?.focus?.(); };
-  }, [onClose, busy]);
-  return <div className="reading-modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) onClose(); }}>
+    window.addEventListener("keydown", escape);
+    el.addEventListener("keydown", tab);
+    return () => {
+      window.removeEventListener("keydown", escape);
+      el.removeEventListener("keydown", tab);
+      // 닫힐 때 열기 전 자리로 초점을 돌려놓되, 위에 다른 창이 떠 있으면 그대로 둡니다 — 돌려놓으면
+      // 초점이 위 창 뒤 화면의 단추로 갑니다(펫 축하가 아직 창이던 때 겪음).
+      if (!hasModalAbove(backdrop)) previous?.focus?.();
+    };
+  }, []);
+  return <div className="reading-modal-backdrop" ref={backdropRef} onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) onClose(); }}>
     <section className={`reading-modal${wide ? " reading-modal--wide" : ""}`} ref={ref} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
       <header className="reading-modal-head"><h2 id={titleId}>{title}</h2><button type="button" className="reading-close" aria-label="닫기" onClick={onClose} disabled={busy}>×</button></header>
       {error && <div className="reading-error" role="alert">{error}</div>}
@@ -52,7 +78,8 @@ function Modal({ title, onClose, children, wide = false, busy = false }) {
   </div>;
 }
 
-export default function ReadingHub({ classId, user, isTeacher = false, rankingOn = true, bookSearchOn = false, onDisabled, activities = [], onOpenActivity, initialBookId = null, initialTab = "library", student = null }) {
+// petOn — 관리자 설정의 '학생 펫'(lib/readingPet.js의 petEnabled). 학생 본인 화면에만 '나의 펫' 카드가 섭니다.
+export default function ReadingHub({ classId, user, isTeacher = false, bookSearchOn = false, petOn = false, onDisabled, activities = [], onOpenActivity, initialBookId = null, initialTab = "library", student = null }) {
   // student가 있으면 교사가 그 학생의 책나눔을 보는 읽기 전용 화면입니다(선생님 결정 — 감상·발자국까지 전부 보임).
   const readOnly = !!student?.uid;
   const viewUid = readOnly ? student.uid : user?.uid;
@@ -60,9 +87,9 @@ export default function ReadingHub({ classId, user, isTeacher = false, rankingOn
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState(["library", "growth", ...(rankingOn ? ["ranking"] : [])].includes(initialTab) ? initialTab : "library");
-  // 관리자 설정에서 랭킹을 끄면 그 탭을 걷고, 보던 중이면 내 서재로 돌아갑니다.
-  useEffect(() => { if (!rankingOn && tab === "ranking") setTab("library"); }, [rankingOn, tab]);
+  // '우리 반 랭킹' 탭은 책나눔이 켜져 있으면 늘 섭니다 — 관리자 설정의 '리더보드'를 꺼도 그대로(선생님 요청:
+  // 순위 셈은 책나눔과 함께 늘 돌고, 리더보드 스위치는 상단바 리더보드 화면 · 독서 TOP 3만 켜고 끔).
+  const [tab, setTab] = useState(["library", "growth", "ranking"].includes(initialTab) ? initialTab : "library");
   const [filter, setFilter] = useState("all");
   const [dialog, setDialog] = useState(null);
   const [confirm, setConfirm] = useState(null);
@@ -107,9 +134,15 @@ export default function ReadingHub({ classId, user, isTeacher = false, rankingOn
   }, [notice]);
   const stats = useMemo(() => deriveReading(raw || initialReadingState(), new Date(`${day}T12:00:00+09:00`)), [raw, day]);
   const previousLevel = useRef(null);
+  // 펫 축하가 함께 알린 레벨 — 같은 저장에서 펫이 자라며 레벨도 오르면 폭죽 한 번에 함께 알리므로
+  // 알림 줄은 같은 말을 또 띄우지 않습니다. 펫 카드(자식)의 효과가 아래 효과보다 먼저 돌아 여기에 적습니다.
+  const petLevelRef = useRef(null);
+  const markPetLevel = useCallback((lv) => { petLevelRef.current = lv; }, []);
   useEffect(() => {
     if (!raw) return;
-    if (!readOnly && previousLevel.current != null && stats.level > previousLevel.current) setNotice(`레벨 ${stats.level} 달성! 독서의 깊이가 한 단계 더 자랐어요.`);
+    const petTold = petLevelRef.current === stats.level;
+    petLevelRef.current = null;
+    if (!readOnly && !petTold && previousLevel.current != null && stats.level > previousLevel.current) setNotice(`레벨 ${stats.level} 달성! 독서의 깊이가 한 단계 더 자랐어요.`);
     previousLevel.current = stats.level;
   }, [raw, stats.level, readOnly]);
   useEffect(() => { previousLevel.current = null; }, [classId, viewUid]);
@@ -119,8 +152,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, rankingOn
     setBusy(true); setError("");
     try {
       const result = await mutateReading(classId, action);
-      // 과일 날들(fruits)은 상태 밖에 따로 오므로 함께 담습니다 — 빠지면 저장 직후 과일 경험치가 빠진 레벨이 보입니다.
-      if (result?.state) setRaw((prev) => ({ ...result.state, fruits: result.fruits ?? prev?.fruits ?? [] }));
+      if (result?.state) setRaw(result.state);
       else if (Array.isArray(result?.books) && Array.isArray(result?.logs)) setRaw(result);
       if (success) setNotice(success);
       return true;
@@ -135,20 +167,25 @@ export default function ReadingHub({ classId, user, isTeacher = false, rankingOn
   const visibleBooks = books.filter((b) => filter === "archived" ? b.archived : !b.archived && (filter === "all" || b.status === filter));
   const selected = dialog?.bookId ? books.find((b) => b.id === dialog.bookId) : null;
   const featured = (stats.badges || []).find((b) => b.id === (stats.featuredBadge?.id || stats.featuredBadge));
+  const showPet = petOn && !readOnly && !isTeacher && !!user?.uid;
 
   return <ReadingErrorContext.Provider value={error}><section className="reading-hub" aria-label="책나눔 성장 기능" aria-busy={loading || busy}>
     <div className="reading-intro">
       {readOnly ? <div><p className="reading-eyebrow">READING JOURNEY</p><h2>{student.name || "학생"}의 독서 여정</h2><p>학생이 남긴 서재 · 독서 발자국 · 한 권의 책을 읽기만 합니다.</p></div> : <div><p className="reading-eyebrow">MY READING JOURNEY</p><h2>한 페이지씩, 나의 가능성을 넓히다.</h2><p>읽은 순간을 기록하고 나만의 독서 컬렉션을 완성해 보세요.</p></div>}
-      {featured?.earned && <div className="reading-featured"><ReadingBadge badge={featured} size={70} /><span>{readOnly ? "대표 뱃지" : "나의 대표 뱃지"}<strong>{featured.name}</strong></span></div>}
+      {(featured?.earned || showPet) && <div className="reading-intro-side">
+        {featured?.earned && <div className="reading-featured"><ReadingBadge badge={featured} size={70} /><span>{readOnly ? "대표 뱃지" : "나의 대표 뱃지"}<strong>{featured.name}</strong></span></div>}
+        {/* 나의 펫 — 단계는 이미 받은 서재로 셉니다(lib/readingPet.js). 서재를 받기 전에는 카드도 기다립니다. */}
+        {showPet && <PetCard classId={classId} uid={user.uid} growthXp={raw ? petGrowthOfSummary(stats) : null} level={raw ? stats.level : null} onLevelCheer={markPetLevel} />}
+      </div>}
     </div>
     <nav className="reading-tabs" aria-label="책나눔 메뉴">
-      {[["library", readOnly ? "서재" : "내 서재"], ["growth", "성장·뱃지"], ...(rankingOn ? [["ranking", "우리 반 랭킹"]] : [])].map(([key, label]) => <button type="button" key={key} className={tab === key ? "active" : ""} aria-current={tab === key ? "page" : undefined} onClick={() => { setTab(key); setDialog(null); setError(""); }}>{label}</button>)}
+      {[["library", readOnly ? "서재" : "내 서재"], ["growth", "성장·뱃지"], ["ranking", "우리 반 랭킹"]].map(([key, label]) => <button type="button" key={key} className={tab === key ? "active" : ""} aria-current={tab === key ? "page" : undefined} onClick={() => { setTab(key); setDialog(null); setError(""); }}>{label}</button>)}
     </nav>
     {error && !dialog && !confirm && <div className="reading-error" role="alert">{error}<button type="button" onClick={() => setError("")} aria-label="오류 안내 닫기">×</button></div>}
     {notice && <div className="reading-notice" role="status">{notice}</div>}
     {loading ? <div className="reading-loading" role="status"><span className="reading-loader" />독서 기록을 불러오고 있어요.</div> : !raw ? <div className="reading-empty"><BookIcon size={40} /><h3>독서 정보를 불러오지 못했어요.</h3><button type="button" className="btn-primary" onClick={() => setRevision((r) => r + 1)}>다시 불러오기</button></div> : <>
       <div className="reading-summary">
-        <div className="reading-level"><span>독서 레벨</span><strong><small>Lv.</small>{stats.level}</strong><div className="reading-progress" role="progressbar" aria-label="다음 레벨까지" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(stats.progress || 0)}><i style={{ width: `${stats.progress || 0}%` }} /></div><span>{number(stats.xp)} / {number(stats.nextXp)} EXP</span></div>
+        <div className="reading-level"><span>독서 레벨</span><strong><small>Lv.</small>{stats.level}</strong><div className="reading-progress" role="progressbar" aria-label={stats.maxLevel ? "최고 레벨" : "다음 레벨까지"} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(stats.progress || 0)}><i style={{ width: `${stats.progress || 0}%` }} /></div><span>{stats.maxLevel ? `${number(stats.xp)} EXP · 최고 레벨` : `${number(stats.xp)} / ${number(stats.nextXp)} EXP`}</span></div>
         <div><span>누적 독서량</span><strong>{number(stats.totalPages)}<small>쪽</small></strong><span>기록한 페이지가 경험치로</span></div>
         <div><span>완독한 책</span><strong>{number(stats.totalBooks)}<small>권</small></strong><span>다음 목표는 3권, 그리고 5권</span></div>
         <div><span>지금 이어가는 독서</span><strong>{number(stats.currentStreak)}<small>일</small></strong><span>최장 {number(stats.longestStreak)}일 연속</span></div>
@@ -162,7 +199,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, rankingOn
       {/* 순위는 탭을 열 때 · 기간을 바꿀 때 · 새로고침을 누를 때만 받습니다(한 번에 반 전체를 읽음).
           한때 독서 자료 전체(raw)를 신호로 넘겨, 상태를 다시 물을 때마다(10초) 순위를 다시 받았습니다 —
           저장은 다른 탭에서만 하므로, 저장한 뒤 이 탭을 열면 새로 받습니다. */}
-      {rankingOn && tab === "ranking" && <Rankings key={classId} classId={classId} uid={viewUid} isTeacher={isTeacher} onDisabled={onDisabled} />}
+      {tab === "ranking" && <Rankings key={classId} classId={classId} uid={viewUid} isTeacher={isTeacher} onDisabled={onDisabled} />}
     </>}
 
     {dialog?.type === "book" && <BookForm key={selected?.id || "new"} book={selected} searchOn={bookSearchOn} pagesLocked={!!selected && [...(raw?.logs || []), ...(raw?.reviews || [])].some((r) => r.bookId === selected.id)} activities={activities} busy={busy} onClose={() => setDialog(null)} onSave={async (values) => { const ok = await run({ type: selected ? "updateBook" : "addBook", ...(selected ? { bookId: selected.id } : {}), ...values }, selected ? "책 정보를 고쳤어요." : "새 책을 서재에 놓았어요."); if (ok) setDialog(null); }} />}

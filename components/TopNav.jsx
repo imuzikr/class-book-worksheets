@@ -6,7 +6,7 @@
 // 왼쪽: 책봄 로고 ｜ 책방 · 책나눔(관리자 설정에서 켰을 때)
 // 오른쪽: 역할 전환(개발용) ｜ 돌발 퀴즈 ｜ 손들기 ｜ 공지 ｜ 알림 ｜ 사용자 프로필(로그아웃은 그 메뉴 안)
 // =============================================================
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isAdmin, isTeacher } from "@/lib/user";
 import { isFirebaseConfigured, sampleMode } from "@/lib/firebase";
@@ -39,10 +39,12 @@ import ClassTopReaders from "./ClassTopReaders";
 import { useRewardCelebration } from "@/lib/useRewardCelebration";
 import { useClassMembers } from "@/lib/useClassRoster";
 import { IconLogo, IconBook, IconTrophy, IconSettings } from "./StatusIcons";
-import { saveReadingCharacter, subscribeMyReadingCharacter } from "@/lib/data/reading";
-import { readingEnabled, rankingEnabled, fruitBasketOn } from "@/lib/reading";
+import { ensureReadingPet, READING_PET_EVENT, saveReadingCharacter, subscribeMyReadingCharacter, subscribeMyReadingPet } from "@/lib/data/reading";
+import { readingEnabled, readingTopOn, fruitBasketOn } from "@/lib/reading";
 import { characterChoiceEnabled } from "@/lib/readingCharacter";
+import { petEnabled } from "@/lib/readingPet";
 import { characterOf } from "./reading/CharacterChooser";
+import Toast from "./Toast";
 
 export default function TopNav({ active, growthEnabled = false, rankingOn = true, readingOpen = false, leaderboardOpen = false, settingsOpen = false, onStudyExport = null }) {
   const router = useRouter();
@@ -143,31 +145,63 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
     return subscribeBroadcast(broadcastClassId, setBroadcast);
   }, [broadcastClassId]);
 
-  // 학생 캐릭터 — 프로필 동그라미의 얼굴과 '내 프로필'의 '바꾸기'. 리더보드의
-  // '캐릭터 꾸미기'와 같은 조건(책나눔 · 랭킹 · 학생 캐릭터가 모두 켜진 반)에서만.
+  // 학생 캐릭터 — 프로필 동그라미의 얼굴과 '내 프로필'의 '바꾸기'. 책나눔 · 학생 캐릭터가 켜진 반에서
+  // (리더보드는 안 봄 — 선생님 요청: 리더보드는 보이는 화면만 켜고 끄고, 캐릭터는 꺼 둔 동안에도 그대로).
   // 반 문서 1건 · 내 프로필 1건을 구독합니다(학생만).
   const myUid = user?.uid;
   const [characterOn, setCharacterOn] = useState(false);
   // 과일 바구니 — 관리자 설정에서 끄면 떠 있는 동그라미의 '과일 바구니'를 가립니다(교사 · 학생 모두).
   const [fruitOn, setFruitOn] = useState(true);
-  // 상단바 가운데 '독서 TOP 3' — 책나눔 성장 기능과 랭킹이 켜진 반에서만
+  // 상단바 가운데 '독서 TOP 3' — 책나눔 성장 기능이 켜지고 관리자 설정의 '독서 TOP 3'를 끄지 않은 반에서만
+  // (리더보드 스위치와는 따로 — 선생님 요청, lib/reading.js의 readingTopOn)
   const [topOn, setTopOn] = useState(false);
   // TOP 3에 고른 캐릭터를 그릴지(교사 · 학생 모두) — 반이 캐릭터를 끄면 기본 캐릭터로
   const [topCharacters, setTopCharacters] = useState(false);
   const [myCharacter, setMyCharacter] = useState(null);
+  // 독서 펫 — 관리자 설정의 '학생 펫'이 켜진 반의 학생만(선생님 · 관리자는 펫이 없음 · lib/readingPet.js)
+  const [petOn, setPetOn] = useState(false);
   useEffect(() => {
     setCharacterOn(false);
     setFruitOn(true);
     setTopOn(false);
     setTopCharacters(false);
+    setPetOn(false);
     if (!quizClassId) return;
     return subscribeClass(quizClassId, (c) => {
       setFruitOn(fruitBasketOn(c));
-      setTopOn(!!c && !c.archived && readingEnabled(c) && rankingEnabled(c));
+      setTopOn(!!c && !c.archived && readingTopOn(c));
       setTopCharacters(!!c && characterChoiceEnabled(c));
-      if (!admin) setCharacterOn(!!c && readingEnabled(c) && rankingEnabled(c) && characterChoiceEnabled(c));
+      if (!admin) setCharacterOn(!!c && readingEnabled(c) && characterChoiceEnabled(c));
+      if (!admin) setPetOn(!!c && petEnabled(c));
     });
   }, [admin, quizClassId]);
+
+  // 알 받기 — 가입한 학생(또는 이 기능이 생긴 뒤 처음 온 학생)에게 알을 한 번 줍니다. 종은 서버가
+  // 무작위로 고르고 알 단계 동안 비밀입니다(/api/reading/pet). 내 프로필의 펫(readingPet)을 구독해
+  // **서버에서 확인된 답이 '없음'일 때만** 부릅니다(기기에 남은 옛 값 · 아직 안 온 첫 답으로 부르지 않게).
+  // 책나눔의 펫 카드도 같은 약속(ensureReadingPet)을 나눠 가져 요청은 한 번입니다.
+  const [myPet, setMyPet] = useState({ loaded: false, mirror: null, fromCache: false, failed: false });
+  useEffect(() => {
+    setMyPet({ loaded: false, mirror: null, fromCache: false, failed: false });
+    if (admin || !myUid || !petOn) return;
+    return subscribeMyReadingPet(myUid, setMyPet);
+  }, [admin, myUid, petOn]);
+  const [petToast, setPetToast] = useState("");
+  const clearPetToast = useCallback(() => setPetToast(""), []);
+  const needsEgg = petOn && myPet.loaded && !myPet.failed && !myPet.fromCache && !myPet.mirror;
+  useEffect(() => {
+    if (!needsEgg || !quizClassId || !myUid) return;
+    ensureReadingPet(quizClassId, myUid).catch((e) => console.warn("[독서 펫] 알을 받지 못했어요:", e?.code || e?.message));
+  }, [needsEgg, quizClassId, myUid]);
+  // 새로 받은 순간 — 누가 불렀든(이 상단바 · 책나눔의 펫 카드) 한 번 알립니다(lib/data/reading.js의 ensureReadingPet).
+  useEffect(() => {
+    if (admin || !myUid) return undefined;
+    const onAdopted = (e) => {
+      if (e.detail?.uid === myUid) setPetToast("🥚 책 친구 알을 받았어요! 책나눔에서 만나 보세요.");
+    };
+    window.addEventListener(READING_PET_EVENT, onAdopted);
+    return () => window.removeEventListener(READING_PET_EVENT, onAdopted);
+  }, [admin, myUid]);
   useEffect(() => {
     setMyCharacter(null);
     if (admin || !myUid || !characterOn) return;
@@ -264,7 +298,7 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
             onClick={() => go("/books?area=reading")} title="책나눔">
             <IconBook size={20} /> <span className="nav-label">책나눔</span>
           </button>}
-          {/* 리더보드 — 책나눔이 켜지고 관리자 설정에서 랭킹을 끄지 않은 반에만 섭니다 */}
+          {/* 리더보드 — 책나눔이 켜지고 관리자 설정에서 리더보드를 끄지 않은 반에만 섭니다 */}
           {growthEnabled && rankingOn && <button type="button"
             className={`btn-ghost ${leaderboardOpen ? "nav-active" : ""}`}
             aria-current={leaderboardOpen ? "page" : undefined}
@@ -331,7 +365,7 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
 
           지금은 **반별 독서 TOP 3**(ClassTopReaders — 선생님 요청)입니다. 한때
           학교 전체에 하나인 전광판(meta/marquee, AppMarquee)이 섰는데 걷었습니다.
-          책나눔 · 랭킹이 꺼진 반에서는 빈 칸만 남습니다. */}
+          책나눔이 꺼졌거나 독서 TOP 3를 끈 반에서는 빈 칸만 남습니다. */}
       <div className="topbar-mq-slot">
         <ClassTopReaders classId={quizClassId} enabled={topOn} charactersOn={topCharacters} myUid={myUid} myCharacter={myCharacter} />
       </div>
@@ -402,6 +436,7 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
           onStudyExport={admin ? onStudyExport : null}
           character={characterOn && myUid ? characterOf({ uid: myUid, character: myCharacter }) : null}
           onSaveCharacter={characterOn ? saveMyCharacter : null}
+          pet={petOn && !admin && myPet.mirror ? { classId: quizClassId, mirror: myPet.mirror } : null}
           onLogout={handleLogout}
         />
       </div>
@@ -434,6 +469,9 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
 
     {/* 과일을 받은 순간 — 학생 화면 어디서든(위 훅 참고) */}
     <RewardCelebration amount={cheerAmount} onDone={clearCheer} />
+
+    {/* 독서 펫의 알을 처음 받은 순간 — 막지 않는 한 줄 알림(수업 중이어도 화면을 가리지 않게) */}
+    {petToast && <Toast message={petToast} duration={4200} onDone={clearPetToast} />}
 
     {/* 교사 화면 — 자기 반에 방송이 켜져 있으면 어디서든 바로 끌 수 있는 안전장치.
         책방 활동의 수업 화면 창이 떠 있어도 **비키지 않습니다**(선생님 요청 —

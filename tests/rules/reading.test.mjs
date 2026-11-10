@@ -70,7 +70,7 @@ describe("책나눔 활성화와 서버 전용 보상 자료", () => {
     await assertSucceeds(updateDoc(doc(db, "classes", "archived"), { archived: true }));
   });
 
-  it("랭킹 시스템 스위치(관리자 설정) — 담당 교사 · 관리자만, 참·거짓만, 운영 중인 반에서만", async () => {
+  it("리더보드 스위치(rankingEnabled · 관리자 설정) — 담당 교사 · 관리자만, 참·거짓만, 운영 중인 반에서만", async () => {
     const ref = doc(asTeacher(env, "teacherA").firestore(), "classes", "active");
     await assertSucceeds(updateDoc(ref, { rankingEnabled: false }));
     await assertSucceeds(updateDoc(ref, { rankingEnabled: true }));
@@ -80,6 +80,18 @@ describe("책나눔 활성화와 서버 전용 보상 자료", () => {
       await assertFails(updateDoc(doc(ctx.firestore(), "classes", "active"), { rankingEnabled: true }));
     }
     await assertFails(updateDoc(doc(asTeacher(env, "teacherA").firestore(), "classes", "archived"), { rankingEnabled: false }));
+  });
+
+  it("독서 TOP 3 스위치(readingTopEnabled · 관리자 설정) — 담당 교사 · 관리자만, 참·거짓만, 운영 중인 반에서만", async () => {
+    const ref = doc(asTeacher(env, "teacherA").firestore(), "classes", "active");
+    await assertSucceeds(updateDoc(ref, { readingTopEnabled: false }));
+    await assertSucceeds(updateDoc(ref, { readingTopEnabled: true }));
+    await assertSucceeds(updateDoc(doc(asAdmin(env, "admin").firestore(), "classes", "active"), { readingTopEnabled: false }));
+    for (const value of ["false", 0, null, deleteField()]) await assertFails(updateDoc(ref, { readingTopEnabled: value }));
+    for (const ctx of [asStudent(env, "studentA"), asTeacher(env, "teacherB")]) {
+      await assertFails(updateDoc(doc(ctx.firestore(), "classes", "active"), { readingTopEnabled: true }));
+    }
+    await assertFails(updateDoc(doc(asTeacher(env, "teacherA").firestore(), "classes", "archived"), { readingTopEnabled: false }));
   });
 
   it("학생 캐릭터 스위치(관리자 설정) — 담당 교사 · 관리자만, 참·거짓만, 운영 중인 반에서만", async () => {

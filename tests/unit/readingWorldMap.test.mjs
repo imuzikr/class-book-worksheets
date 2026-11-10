@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { getExpForReadingLevel } from "../../lib/reading.js";
+import { getExpForReadingLevel, READING_LEVEL_MAX } from "../../lib/reading.js";
 import {
   WORLD_MAP, WORLD_LEVEL_STOPS, WORLD_REGIONS, WORLD_CHARACTERS,
   worldProgress, worldPoint, worldCheckpoints, groupWorldTravelers, defaultWorldAvatar, readingLeaderUids, splitWorldLeaderGroups,
@@ -16,8 +16,10 @@ test("독서 대장은 학급의 검증된 최고 레벨 중 누적 경험치가
     { uid: "unknown", level: 100, xp: 999999, allTimeXp: 999999 },
   ];
   assert.deepEqual(readingLeaderUids(rows), ["leader"]);
-  // A later chapter is eligible even while the UI is viewing an earlier map.
-  assert.deepEqual(readingLeaderUids([...rows, { uid: "next-chapter", totalXp: 11393, level: 11 }]), ["next-chapter"]);
+  // 최고 레벨(10)에 닿은 학생이 대장 — 10레벨 위로 더 모은 경험치도 그대로 셉니다.
+  assert.deepEqual(readingLeaderUids([...rows, { uid: "top", totalXp: 11393, level: 10 }]), ["top"]);
+  // 레벨이 100까지이던 때의 낡은 레벨(11)은 집계 대기로 보고 대장으로 추정하지 않습니다.
+  assert.deepEqual(readingLeaderUids([...rows, { uid: "old-level", totalXp: 11393, level: 11 }]), ["leader"]);
 });
 
 test("최고 레벨과 누적 경험치가 완전히 같으면 공동 대장이며 입력 순서와 중복은 결과를 바꾸지 않는다", () => {
@@ -53,8 +55,8 @@ test("대장은 EXP 갱신·정정과 학급 구성에 따라 다시 계산하�
   assert.deepEqual(readingLeaderUids([rows[0], { ...rows[1], totalXp: 500, level: 4 }]), ["second"]);
   assert.deepEqual(readingLeaderUids([{ ...rows[0], totalXp: 400 }, rows[1]]), ["second"]);
   assert.deepEqual(readingLeaderUids([rows[1]]), ["second"]);
-  const maxXp = getExpForReadingLevel(100);
-  assert.deepEqual(readingLeaderUids([{ uid: "at-max", totalXp: maxXp, level: 100 }, { uid: "above-max", totalXp: maxXp * 2, level: 100 }]), ["above-max"]);
+  const maxXp = getExpForReadingLevel(READING_LEVEL_MAX);
+  assert.deepEqual(readingLeaderUids([{ uid: "at-max", totalXp: maxXp, level: 10 }, { uid: "above-max", totalXp: maxXp * 2, level: 10 }]), ["above-max"]);
 });
 
 test("근접 모임에서 다른 학생을 선택해도 공동 대장이 숨거나 대장 표시를 빌려주지 않는다", () => {
@@ -134,8 +136,8 @@ test("슬롯 분리는 원본을 변경하지 않고 부가 정보와 모든 학
 });
 
 test("최고 레벨의 같은 종점에 겹쳐도 EXP가 더 많은 대장은 별도 슬롯에 남는다", () => {
-  const maxXp = getExpForReadingLevel(100);
-  const rows = [{ uid: "peer", totalXp: maxXp, level: 100 }, { uid: "leader", totalXp: maxXp * 2, level: 100 }];
+  const maxXp = getExpForReadingLevel(READING_LEVEL_MAX);
+  const rows = [{ uid: "peer", totalXp: maxXp, level: 10 }, { uid: "leader", totalXp: maxXp * 2, level: 10 }];
   const groups = groupWorldTravelers(rows, { selectedUid: "peer" });
   const [leader, peer] = splitWorldLeaderGroups(groups, readingLeaderUids(rows), "peer");
   assert.equal(leader.representative.uid, "leader");
@@ -155,12 +157,13 @@ test("개인 전체 EXP가 없거나 유효하지 않으면 출발점으로 추�
 });
 
 test("레벨별 거점은 기존 도달 기준을 따르며 반이나 기간으로 재조정되지 않는다", () => {
-  for (let level = 1; level <= 10; level += 1) {
+  assert.equal(WORLD_LEVEL_STOPS.length, READING_LEVEL_MAX);
+  for (let level = 1; level <= READING_LEVEL_MAX; level += 1) {
     const world = worldProgress(getExpForReadingLevel(level));
     assert.equal(world.level, level);
-    assert.equal(world.chapter, 1);
     assert.equal(world.progress, WORLD_LEVEL_STOPS[level - 1]);
-    assert.equal(world.ratio, 0);
+    assert.equal(world.ratio, level === READING_LEVEL_MAX ? 1 : 0);
+    assert.equal(world.complete, level === READING_LEVEL_MAX);
   }
   const row = { uid: "one", totalXp: 2000, xp: 10, allTimeXp: 20 };
   const grouped = groupWorldTravelers([row, { uid: "other", totalXp: 600000 }]);
@@ -194,40 +197,30 @@ test("반올림한 표시 진행률이 100이어도 다음 거점에 미리 도�
   for (const [xp, level] of [[0, 1], [99, 1], [100, 2], [249, 2], [250, 3]]) assert.equal(worldProgress(xp).level, level);
 });
 
-test("챕터 경계의 이전 지도 도착과 다음 지도 출발은 같은 레벨이다", () => {
-  assert.equal(getExpForReadingLevel(11), 11393);
-  const before = worldProgress(11392);
-  assert.equal(before.chapter, 1);
-  assert.ok(before.progress < 1);
-  const after = worldProgress(11393);
-  assert.equal(after.chapter, 2);
-  assert.equal(after.startLevel, 11);
-  assert.equal(after.endLevel, 21);
-  assert.equal(after.progress, 0);
-  assert.equal(after.complete, false);
-  const previousEnd = worldCheckpoints(1).at(-1);
-  assert.equal(previousEnd.level, after.level);
-  assert.equal(previousEnd.xp, after.xp);
-  assert.equal(previousEnd.progress, 1);
-});
-
-test("마지막 챕터는 Lv.91~100이고, Lv.100은 0으로 나누지 않고 종점에 도착한다", () => {
-  const checkpoints = worldCheckpoints(10);
+test("여정은 한 바퀴 — Lv.1 출발 · Lv.10이 길 끝(도착)이고, 그 위 경험치도 0으로 나누지 않고 도착점에 머문다", () => {
+  const checkpoints = worldCheckpoints();
   assert.equal(checkpoints.length, 10);
-  assert.equal(checkpoints[0].level, 91);
+  assert.equal(checkpoints[0].level, 1);
   assert.equal(checkpoints[0].progress, 0);
-  assert.equal(checkpoints.at(-1).level, 100);
+  assert.equal(checkpoints.at(-1).level, 10);
+  assert.equal(checkpoints.at(-1).xp, 7595);
   assert.equal(checkpoints.at(-1).progress, 1);
-  const max = worldProgress(getExpForReadingLevel(100));
-  assert.equal(max.chapter, 10);
-  assert.equal(max.level, 100);
-  assert.equal(max.complete, true);
-  assert.equal(max.ratio, 1);
-  assert.equal(max.percent, 100);
-  assert.equal(max.progress, 1);
-  assert.equal(max.toNext, 0);
-  assert.ok(Object.values(worldPoint(max.progress)).every(Number.isFinite));
-  assert.equal(worldProgress(Number.MAX_VALUE).progress, 1);
+  const before = worldProgress(7594);
+  assert.equal(before.level, 9);
+  assert.equal(before.complete, false);
+  assert.ok(before.progress > 0.84 && before.progress < 1);
+  assert.equal(before.region.id, "storm");
+  for (const xp of [7595, 11393, 600000, Number.MAX_VALUE]) {
+    const max = worldProgress(xp);
+    assert.equal(max.level, 10);
+    assert.equal(max.complete, true);
+    assert.equal(max.ratio, 1);
+    assert.equal(max.percent, 100);
+    assert.equal(max.progress, 1);
+    assert.equal(max.toNext, 0);
+    assert.equal(max.region.id, "storm");
+    assert.ok(Object.values(worldPoint(max.progress)).every(Number.isFinite));
+  }
 });
 
 test("기록 정정으로 EXP가 줄면 실제 성장에 맞춰 거점도 뒤로 이동한다", () => {
@@ -259,18 +252,19 @@ test("렌더링 경로와 좌표 표본은 같은 원점·끝점·가상 좌표�
   }
 });
 
-test("각 챕터 거점 좌표는 경로 위에 놓이며 양 끝이 고정된다", () => {
-  for (let chapter = 1; chapter <= 10; chapter += 1) {
-    const checkpoints = worldCheckpoints(chapter);
-    assert.equal(checkpoints[0].progress, 0);
-    assert.equal(checkpoints.at(-1).progress, 1);
-    for (const checkpoint of checkpoints) {
-      const point = worldPoint(checkpoint.progress);
-      assert.equal(checkpoint.x, point.x);
-      assert.equal(checkpoint.y, point.y);
-      assert.equal(checkpoint.angle, point.angle);
-    }
+test("거점 좌표는 경로 위에 놓이며 양 끝(Lv.1 출발 · Lv.10 도착)이 고정된다", () => {
+  const checkpoints = worldCheckpoints();
+  assert.equal(checkpoints[0].progress, 0);
+  assert.equal(checkpoints.at(-1).progress, 1);
+  for (const checkpoint of checkpoints) {
+    const point = worldPoint(checkpoint.progress);
+    assert.equal(checkpoint.x, point.x);
+    assert.equal(checkpoint.y, point.y);
+    assert.equal(checkpoint.angle, point.angle);
+    assert.equal(checkpoint.xp, getExpForReadingLevel(checkpoint.level));
   }
+  // 지형이 바뀌는 곳에서 홀수 레벨이 시작합니다(숲 1 · 사막 3 · 계곡 5 · 설산 7 · 폭풍 해안 9).
+  assert.deepEqual(WORLD_REGIONS.map((region) => checkpoints.find((stop) => stop.progress === region.start)?.level), [1, 3, 5, 7, 9]);
 });
 
 test("같은 EXP 학생 15명은 한 모임이며 선택과 배열 순서가 위치를 바꾸지 않는다", () => {
@@ -288,10 +282,11 @@ test("같은 EXP 학생 15명은 한 모임이며 선택과 배열 순서가 위
   assert.ok(rows.every((row) => !Object.prototype.hasOwnProperty.call(row, "world")));
 });
 
-test("다른 챕터의 출발점을 같은 모임으로 묶거나 같은 학생을 두 번 표시하지 않는다", () => {
+test("출발점과 도착점의 학생을 한 모임으로 묶거나 같은 학생을 두 번 표시하지 않는다", () => {
   const rows = [{ uid: "a", totalXp: 0 }, { uid: "b", totalXp: 11393 }, { uid: "b", totalXp: 11393 }];
-  assert.equal(groupWorldTravelers(rows).length, 2);
-  assert.deepEqual(groupWorldTravelers(rows, { chapter: 2 })[0].members.map((row) => row.uid), ["b"]);
+  const groups = groupWorldTravelers(rows);
+  assert.deepEqual(groups.map((group) => group.members.map((row) => row.uid)), [["a"], ["b"]]);
+  assert.deepEqual(groups.map((group) => group.progress), [0, 1]);
 });
 
 test("가까운 진도를 묶더라도 원 EXP와 진도를 보존하고 이웃의 연쇄 병합을 막는다", () => {

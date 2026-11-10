@@ -483,10 +483,14 @@ service cloud.firestore {
       // 선생님은 학생으로 만든 뒤 교사 가입 코드로 바꿉니다(아래 update의
       // '교사 가입 코드' 갈래). requestedRole=='teacher'는 옛 '승인 신청'
       // 표시라 받아 두기만 합니다(관리자가 역할 관리 창에서 바꿔 줄 수 있음).
+      // 독서 펫(readingPet)은 서버만 적습니다(알 받기 · 깨우기 — lib/server/readingService.js).
+      // 만들 때 끼워 넣으면 마음에 드는 종 · 단계를 스스로 고를 수 있어 막습니다(고치기는
+      // 아래 update의 칸 목록에 없어 원래 막혀 있음). 시험 tests/rules/readingPet.test.mjs.
       allow create: if signedIn() && userId == uid()
                     && request.auth.token.firebase.sign_in_provider == 'google.com'
                     && request.resource.data.role == 'student'
-                    && request.resource.data.get('requestedRole', null) in [null, 'teacher'];
+                    && request.resource.data.get('requestedRole', null) in [null, 'teacher']
+                    && !('readingPet' in request.resource.data);
       // 쓰기 범위 — '누가' 뿐 아니라 '어떤 필드를' 쓰는지까지 제한합니다.
       //  · 최고 관리자: 전체. 역할 부여(역할 관리 창)가 여기에 해당합니다.
       //  · 본인: 이메일·알림토큰·신청 표시만. 실명·학번·역할 불가.
@@ -542,7 +546,8 @@ service cloud.firestore {
       allow delete: if isAdmin() || teacherMayWithdraw(userId, resource.data);
       // 독서 기록·보상 원장과 요청 영수증은 인증된 서버 API만 처리합니다.
       // Admin SDK는 규칙을 우회하므로 API가 활성 반/소속/본인 여부를 검사합니다.
-      // 학생 탈퇴 때만 교사가 지울 수 있습니다(읽기는 그대로 막힘 — reading/main).
+      // 학생 탈퇴 때만 교사가 지울 수 있습니다(읽기는 그대로 막힘 — reading/main ·
+      // 독서 펫의 비밀 문서 reading/pet — 알 단계의 종이라 학생 본인도 못 읽음).
       match /reading/{document} {
         allow read, write: if false;
         allow delete: if teacherMayWithdraw(userId,
@@ -574,8 +579,8 @@ service cloud.firestore {
       // 설정까지 받았습니다. 시험 tests/rules/classesRead.test.mjs.
       allow list: if isAdmin() || (isTeacher() && resource.data.createdBy == uid());
       // 새 반은 기본 꺼짐. 켜기는 운영 중인 반의 담당 교사/관리자만 합니다.
-      // 관리자 설정 화면의 반별 스위치(책나눔 성장 · 랭킹 시스템)도 같은 판정 —
-      // 참·거짓만, 운영 중인 반에서만 바꿉니다.
+      // 관리자 설정 화면의 스위치(책나눔 성장 · 도서 검색 · 리더보드(rankingEnabled) · 독서 TOP 3 ·
+      // 학생 캐릭터 · 과일 바구니 · 학생 펫)도 같은 판정 — 참·거짓만, 운영 중인 반에서만 바꿉니다.
       function readingSettingValid() {
         let changed = request.resource.data.diff(resource.data).affectedKeys();
         return (!changed.hasAny(['readingEnabled']) || request.resource.data.get('readingEnabled', null) is bool)
@@ -583,7 +588,9 @@ service cloud.firestore {
                && (!changed.hasAny(['characterEnabled']) || request.resource.data.get('characterEnabled', null) is bool)
                && (!changed.hasAny(['bookSearchEnabled']) || request.resource.data.get('bookSearchEnabled', null) is bool)
                && (!changed.hasAny(['fruitBasketEnabled']) || request.resource.data.get('fruitBasketEnabled', null) is bool)
-               && (!changed.hasAny(['readingEnabled', 'rankingEnabled', 'characterEnabled', 'bookSearchEnabled', 'fruitBasketEnabled'])
+               && (!changed.hasAny(['petEnabled']) || request.resource.data.get('petEnabled', null) is bool)
+               && (!changed.hasAny(['readingTopEnabled']) || request.resource.data.get('readingTopEnabled', null) is bool)
+               && (!changed.hasAny(['readingEnabled', 'rankingEnabled', 'characterEnabled', 'bookSearchEnabled', 'fruitBasketEnabled', 'petEnabled', 'readingTopEnabled'])
                    || (resource.data.get('archived', false) != true
                        && request.resource.data.get('archived', false) != true));
       }
