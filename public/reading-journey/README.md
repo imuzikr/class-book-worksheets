@@ -11,7 +11,9 @@
 
 ## 2026년 11월 묶음 바꾸기
 
-선생님 요청으로 십이지를 새 첫 등급(수련생)으로 들이고, 그때까지 초급이던 판타지를 맨 위 등급(영웅)으로 올리고, 그때까지 고급이던 전통 무술복 동물 세트(`advanced-*.webp`)는 내렸습니다. 파일은 `beginner-NN` → `fantasy-NN`, `intermediate-NN` → `animal-NN`으로 이름만 바꿨습니다(그림은 그대로). 이미 저장된 학생의 선택(`users/{uid}.readingCharacter`의 옛 열쇠)은 `lib/readingCharacter.js`가 같은 모습으로 옮겨 읽습니다 — `beginner` → 판타지, `intermediate` → 동물, `advanced`(내린 묶음) → 같은 번호의 동물.
+- **11월 9일**: 고급(`advanced-*.webp`)의 그림을 전통 무술복 동물 세트에서 같은 ZIP의 십이지로 갈아 끼웠습니다(이미지 도구로 배경을 걷고 옅은 번개빛만 남긴 그림 — 저장소 기록의 커밋 `f353db0`에 그대로 있습니다). 고급을 고른 학생에게는 고른 번호 그대로 십이지가 보였습니다.
+- **11월 10일**(선생님 요청): 십이지를 제 열쇠(`zodiac`)의 첫 등급(수련생)으로 내리고, 그때까지 초급이던 판타지를 맨 위 등급(영웅)으로 올리고, `advanced-*.webp`는 걷었습니다. 십이지 그림은 `scripts/prepare-zodiac-art.py`로 새로 만든 `zodiac-*.webp`(금빛 기운을 살림 — 선생님이 고름)입니다. 파일은 `beginner-NN` → `fantasy-NN`, `intermediate-NN` → `animal-NN`으로 이름만 바꿨습니다(그림은 그대로). 이어서 등급 이름을 수련생 · 무도가 · 영웅으로 바꿨습니다.
+- 이미 저장된 학생의 선택(`users/{uid}.readingCharacter`의 옛 열쇠)은 `lib/readingCharacter.js`가 같은 모습으로 옮겨 읽습니다 — `beginner` → 판타지, `intermediate` → 동물, `advanced` → 같은 번호의 십이지(쥐는 쥐, 용은 용).
 
 ## 수련생 · 십이지
 

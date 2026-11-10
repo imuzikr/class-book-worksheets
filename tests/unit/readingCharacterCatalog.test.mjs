@@ -32,15 +32,16 @@ test("무도가는 기존 동물과 ID를 그대로 사용하며 다른 묶음�
   assert.equal(characterName({ number: 10, style: "fantasy" }), "요정 · 영웅");
 });
 
-test("옛 열쇠로 저장된 선택은 같은 모습으로 보인다 — 판타지는 영웅, 내린 옛 고급은 같은 번호의 무도가 동물", () => {
+test("옛 열쇠로 저장된 선택은 같은 모습으로 보인다 — 판타지는 영웅, 옛 고급(십이지)은 같은 번호의 수련생", () => {
   assert.deepEqual(characterOf({ uid: "a", character: { number: 3, style: "beginner" } }), { number: 3, style: "fantasy" });
   assert.equal(characterImage({ number: 3, style: "beginner" }), "/reading-journey/fantasy-03.webp");
   assert.equal(characterName({ number: 3, style: "beginner" }), "드워프 · 영웅");
   assert.deepEqual(characterOf({ uid: "a", character: { number: 4, style: "intermediate" } }), { number: 4, style: "animal" });
   assert.equal(characterImage({ number: 4, style: "intermediate" }), "/reading-journey/animal-04.webp");
-  assert.deepEqual(characterOf({ uid: "a", character: { number: 2, style: "advanced" } }), { number: 2, style: "animal" });
-  assert.equal(characterImage({ number: 2, style: "advanced" }), "/reading-journey/animal-02.webp");
-  assert.equal(characterName({ number: 2, style: "advanced" }), "토끼 · 무도가");
+  assert.deepEqual(characterOf({ uid: "a", character: { number: 2, style: "advanced" } }), { number: 2, style: "zodiac" });
+  assert.equal(characterImage({ number: 2, style: "advanced" }), "/reading-journey/zodiac-02.webp");
+  assert.equal(characterName({ number: 2, style: "advanced" }), "소 · 수련생");
+  assert.equal(characterName({ number: 5, style: "advanced" }), "용 · 수련생");
 });
 
 test("모든 선택은 UID · 레벨 · 경험치와 무관하게 그대로 표시한다", () => {
