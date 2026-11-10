@@ -7,6 +7,7 @@ import { rankingsForPeriod } from "@/lib/readingJourney";
 import { petGrowthOfSummary } from "@/lib/readingPet";
 import ReadingBadge from "./ReadingBadge";
 import BookSearch from "./BookSearch";
+import { hasModalAbove } from "@/lib/modal";
 import PetCard from "./PetCard";
 import "./reading.css";
 
@@ -28,13 +29,29 @@ function Modal({ title, onClose, children, wide = false, busy = false }) {
   const titleId = useId();
   const error = useContext(ReadingErrorContext);
   const ref = useRef(null);
+  const backdropRef = useRef(null);
+  // onClose는 부르는 쪽이 렌더마다 새로 만듭니다. 한때 아래 효과가 그것에 걸려 있어, 책나눔이 다시
+  // 그려질 때마다(알림 줄이 뜨고 5초 뒤 사라질 때 등) 다시 돌며 초점을 창의 첫 칸으로 끌어왔습니다 —
+  // 감상을 쓰던 커서가 날짜 칸으로 튀고, 위에 뜬 펫 '자랐어요!' 창의 초점을 빼앗아 Esc가 밑의 책 상세
+  // 창부터 닫았습니다(축하 창은 Esc를 두 번 눌러야 닫힘). 그래서 최신 값은 ref로 들고, 초점 · 키
+  // 처리는 창이 열릴 때 한 번만 겁니다.
+  const closeRef = useRef(onClose); closeRef.current = onClose;
+  const busyRef = useRef(busy); busyRef.current = busy;
   useEffect(() => {
     const previous = document.activeElement;
     const el = ref.current;
+    const backdrop = backdropRef.current;
     const items = () => [...el.querySelectorAll('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [tabindex="0"]')];
-    (el.querySelector("[data-initial-focus]") || items()[0] || el).focus();
-    function key(e) {
-      if (e.key === "Escape" && !busy) { e.preventDefault(); onClose(); }
+    // 위에 다른 창(펫 축하 창 등)이 이미 떠 있으면 초점을 가져오지 않습니다(lib/modal.js의 hasModalAbove).
+    if (!hasModalAbove(backdrop)) (el.querySelector("[data-initial-focus]") || items()[0] || el).focus();
+    // Esc는 화면 전체에서 받되 이 창이 맨 위일 때만 닫습니다 — 위에 창이 있으면 비켜 가(preventDefault도
+    // 안 부름) 공통 Esc 처리가 그 창부터 닫게 둡니다. 초점이 창 밖(축하 창이 닫힌 뒤의 body)에 있어도 닫힙니다.
+    function escape(e) {
+      if (e.key !== "Escape" || e.isComposing || e.defaultPrevented) return;
+      if (busyRef.current || hasModalAbove(backdrop)) return;
+      e.preventDefault(); closeRef.current();
+    }
+    function tab(e) {
       if (e.key !== "Tab") return;
       const nodes = items();
       const first = nodes[0]; const last = nodes.at(-1);
@@ -42,10 +59,17 @@ function Modal({ title, onClose, children, wide = false, busy = false }) {
       if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
       else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     }
-    el.addEventListener("keydown", key);
-    return () => { el.removeEventListener("keydown", key); previous?.focus?.(); };
-  }, [onClose, busy]);
-  return <div className="reading-modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) onClose(); }}>
+    window.addEventListener("keydown", escape);
+    el.addEventListener("keydown", tab);
+    return () => {
+      window.removeEventListener("keydown", escape);
+      el.removeEventListener("keydown", tab);
+      // 닫힐 때 열기 전 자리로 초점을 돌려놓되, 위에 다른 창이 떠 있으면 그대로 둡니다 — 독서 발자국을
+      // 저장하면 이 창이 닫히는 순간 펫 축하 창이 떠 있어, 돌려놓으면 초점이 창 뒤 화면의 단추로 갔습니다.
+      if (!hasModalAbove(backdrop)) previous?.focus?.();
+    };
+  }, []);
+  return <div className="reading-modal-backdrop" ref={backdropRef} onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) onClose(); }}>
     <section className={`reading-modal${wide ? " reading-modal--wide" : ""}`} ref={ref} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
       <header className="reading-modal-head"><h2 id={titleId}>{title}</h2><button type="button" className="reading-close" aria-label="닫기" onClick={onClose} disabled={busy}>×</button></header>
       {error && <div className="reading-error" role="alert">{error}</div>}
