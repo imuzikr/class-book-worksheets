@@ -6,9 +6,11 @@
 // 단계는 내 프로필의 readingPet(subscribeMyReadingPet)과 지금의 '독서로 얻은 경험치'
 // (책나눔이 이미 받은 서재 — 부르는 쪽이 growthXp로 넘김)로 셉니다(lib/readingPet.js — 읽기 0).
 // · 알: 경험치 100이 모이면 흔들리며 '알 깨우기' 단추가 섭니다 → 서버가 종을 알려 주고
-//   깨어나는 장면(PetCheerModal)이 뜹니다. 그 전에는 어떤 친구인지 비밀입니다.
-// · 깨어난 펫: 단계가 오르면 '자랐어요!' 창이 한 번 뜹니다. 본 단계는 이 기기에 적어 둡니다
+//   깨어나는 장면(PetCelebration)이 뜹니다. 그 전에는 어떤 친구인지 비밀입니다.
+// · 깨어난 펫: 단계가 오르면 '자랐어요!'가 한 번 뜹니다. 본 단계는 이 기기에 적어 둡니다
 //   (localStorage — 다른 기기에서 처음 열면 지난 성장은 축하하지 않고 지금 단계부터 셈).
+// · 축하는 창이 아닙니다(선생님 요청) — 과일 축포와 같은 폭죽 위에 새 모습을 띄웠다가 저절로
+//   사라지고, 그동안에도 화면을 그대로 누를 수 있습니다. 한때 '좋아요'를 눌러 닫는 창이었습니다.
 // 알이 아직 없으면(가입 직후 · 이 기능이 생긴 뒤 처음) 상단바와 같은 길로 알을 받습니다
 // (ensureReadingPet — 한 번만 보냄).
 // =============================================================
@@ -16,9 +18,10 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ensureReadingPet, fetchMyReadingPet, hatchReadingPet, subscribeMyReadingPet } from "@/lib/data/reading";
 import { getExpForReadingLevel } from "@/lib/reading";
-import { PET_HATCH_XP, PET_STAGES, petProgress, petSpecies } from "@/lib/readingPet";
+import { PET_HATCH_XP, PET_STAGES, petCheerKind, petProgress, petSpecies } from "@/lib/readingPet";
 import { iGa } from "@/lib/korean";
 import { backdropClose } from "@/lib/modal";
+import RewardCelebration from "@/components/RewardCelebration";
 import PetFigure, { PetEgg } from "./PetFigure";
 import "./pet.css";
 
@@ -52,10 +55,17 @@ function Bar({ percent, label }) {
   </span>;
 }
 
-export default function PetCard({ classId, uid, growthXp }) {
+// level · onLevelCheer — 책나눔의 캐릭터 레벨. 같은 저장에서 펫이 자라며 레벨도 오르면(알을 경험치 0에서
+// 받은 학생은 둘의 기준표가 같아 늘 함께 오름) 축하 한 번에 함께 알리고, 책나눔에 그 레벨을 알려
+// 알림 줄이 같은 말('레벨 n 달성!')을 또 띄우지 않게 합니다.
+export default function PetCard({ classId, uid, growthXp, level = null, onLevelCheer = null }) {
   const [state, setState] = useState({ loaded: false, mirror: null, fromCache: false, failed: false });
   const [open, setOpen] = useState(false);
   const [cheer, setCheer] = useState(null);
+  const cheerSeq = useRef(0);
+  const prevLevel = useRef(null);
+  const levelCheerRef = useRef(onLevelCheer);
+  levelCheerRef.current = onLevelCheer;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [adoptFailed, setAdoptFailed] = useState(false);
@@ -81,16 +91,22 @@ export default function PetCard({ classId, uid, growthXp }) {
 
   const progress = useMemo(() => (growthXp == null ? null : petProgress(state.mirror, growthXp)), [state.mirror, growthXp]);
 
-  // 단계가 오르면 한 번 축하합니다 — 이 기기에서 본 단계와 견줌(처음이면 적어 두기만)
+  // 단계가 오르면 한 번 축하합니다 — 이 기기에서 본 단계와 견줌(처음이면 적어 두기만 — petCheerKind)
+  // 이 효과는 책나눔(부모)의 레벨 알림 효과보다 먼저 돕니다(React는 자식의 효과부터) — 그래서
+  // onLevelCheer로 알린 레벨을 책나눔이 같은 차례 안에서 보고 알림 줄을 거릅니다.
   useEffect(() => {
-    if (!progress || !uid || typeof window === "undefined") return;
-    const seen = readSeen(uid);
-    if (seen && !hatching.current) {
-      if (!seen.species && progress.hatched) setCheer({ kind: "hatch", progress });
-      else if (seen.species === progress.species && progress.hatched && progress.stage > seen.stage) setCheer({ kind: "grow", progress });
+    const before = prevLevel.current;
+    if (Number.isInteger(level)) prevLevel.current = level;
+    if (!progress || !uid || typeof window === "undefined" || hatching.current) return;
+    const kind = petCheerKind(readSeen(uid), progress);
+    if (kind) {
+      const levelUp = kind === "grow" && Number.isInteger(level) && before != null && level > before ? level : null;
+      if (levelUp) levelCheerRef.current?.(levelUp);
+      cheerSeq.current += 1;
+      setCheer({ id: cheerSeq.current, kind, progress, level: levelUp });
     }
-    if (!hatching.current) writeSeen(uid, progress);
-  }, [progress, uid]);
+    writeSeen(uid, progress);
+  }, [progress, uid, level]);
 
   async function hatch() {
     if (busy) return;
@@ -103,7 +119,8 @@ export default function PetCard({ classId, uid, growthXp }) {
       if (result?.pet?.hatched) {
         writeSeen(uid, result.pet);
         setOpen(false);
-        setCheer({ kind: "hatch", progress: result.pet });
+        cheerSeq.current += 1;
+        setCheer({ id: cheerSeq.current, kind: "hatch", progress: result.pet, level: null });
       } else {
         setFrozen(null);
       }
@@ -140,7 +157,7 @@ export default function PetCard({ classId, uid, growthXp }) {
     </div>
     {error && !open && <p className="reading-pet-error" role="alert">{error}</p>}
     {open && <PetDetailModal progress={shown} busy={busy} error={error} onHatch={hatch} onClose={() => setOpen(false)} />}
-    {cheer && <PetCheerModal kind={cheer.kind} progress={cheer.progress} onClose={() => { setCheer(null); setFrozen(null); }} />}
+    {cheer && <PetCelebration key={cheer.id} kind={cheer.kind} progress={cheer.progress} level={cheer.level} onDone={() => { setCheer(null); setFrozen(null); }} />}
   </>;
 }
 
@@ -190,25 +207,44 @@ export function PetDetailModal({ progress, busy = false, error = "", onHatch = n
   );
 }
 
-/** 알이 깨어남 · 펫이 자람 — 한 번 뜨는 축하 창. */
-export function PetCheerModal({ kind, progress, onClose }) {
-  const titleId = useId();
-  const sp = petSpecies(progress?.species);
-  if (!sp || typeof document === "undefined") return null;
+// 깨어날 때 알이 흔들리다 터지기까지(CSS의 .pet-burst.is-hatch — 펫은 1.05초에 튀어나옴). 그 순간
+// 폭죽을 한 번 더 쏘므로 축포가 그만큼(4.2초 → 5.2초) 길어집니다 — CSS의 깨어남 길이(5.2s)와 맞물립니다.
+const HATCH_REVEAL_MS = 1000;
+
+/**
+ * 알이 깨어남 · 펫이 자람 — 창이 아니라 과일 축포와 같은 폭죽(RewardCelebration) 위에 새 모습을
+ * 띄웠다가 저절로 사라집니다(자람 4.2초 · 깨어남 5.2초). 누를 단추가 없고, 그동안에도 아래 화면을
+ * 그대로 누를 수 있습니다(축포는 클릭을 가로채지 않음). level이 있으면 '레벨 n 달성!'도 함께.
+ */
+export function PetCelebration({ kind, progress, level = null, onDone }) {
   const hatch = kind === "hatch";
+  const sp = petSpecies(progress?.species);
+  const [shots, setShots] = useState(1);
+  const doneRef = useRef(onDone);
+  doneRef.current = onDone;
+  useEffect(() => {
+    if (!hatch) return undefined;
+    const timer = setTimeout(() => setShots(2), HATCH_REVEAL_MS);
+    return () => clearTimeout(timer);
+  }, [hatch]);
+  // 그릴 수 없는 펫(종을 모름)이면 곧바로 끝냅니다 — 안 그러면 카드가 알 모습에 묶여 있습니다.
+  useEffect(() => { if (!sp) doneRef.current?.(); }, [sp]);
+  if (!sp || typeof document === "undefined") return null;
   return createPortal(
-    <div className="modal-backdrop pet-layer" {...backdropClose(onClose)}>
-      <div className={`modal pet-cheer${hatch ? " is-hatch" : " is-grow"}`} role="dialog" aria-modal="true" aria-labelledby={titleId} onClick={(e) => e.stopPropagation()}>
-        <div className="pet-cheer-stage" aria-hidden="true">
-          <span className="pet-cheer-burst" />
-          {hatch && <span className="pet-cheer-egg"><PetEgg size={120} /></span>}
-          <span className="pet-cheer-reveal"><PetFigure species={progress.species} stage={progress.stage} size={150} /></span>
-        </div>
-        <h3 id={titleId}>{hatch ? `${iGa(sp.name)} 깨어났어요!` : `${iGa(sp.name)} 자랐어요!`}</h3>
-        <p>{hatch ? `${sp.animal} 친구예요. ${sp.intro}` : `${progress.stage}단계 · ${progress.stageName}`}</p>
-        <button type="button" className="btn-primary pet-cheer-ok" onClick={onClose} autoFocus>{hatch ? "반가워!" : "좋아요"}</button>
+    <RewardCelebration amount={shots} onDone={onDone}>
+      <div className={`pet-burst${hatch ? " is-hatch" : " is-grow"}`} role="status">
+        <span className="pet-burst-stage" aria-hidden="true">
+          <span className="pet-burst-glow" />
+          {hatch && <span className="pet-burst-egg"><PetEgg size={130} /></span>}
+          <span className="pet-burst-reveal"><PetFigure species={progress.species} stage={progress.stage} size={180} /></span>
+        </span>
+        <span className="pet-burst-note">
+          {level && <span className="pet-burst-level">레벨 {level} 달성!</span>}
+          <strong>{hatch ? `${iGa(sp.name)} 깨어났어요!` : `${iGa(sp.name)} 자랐어요!`}</strong>
+          <span className="pet-burst-sub">{hatch ? `${sp.animal} 친구예요. ${sp.intro}` : `${progress.stage}단계 · ${progress.stageName}`}</span>
+        </span>
       </div>
-    </div>,
+    </RewardCelebration>,
     document.body,
   );
 }

@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import {
   PET_SPECIES, PET_SPECIES_KEYS, PET_STAGES, PET_STAGE_MAX, PET_HATCH_XP,
   normalizePetMirror, normalizePublicPet, petEnabled, petGrowthOfSummary, petGrowthXp,
-  petImageSrc, petProgress, petSpecies, petStageName, pickPetSpecies, planPetAction, rankingPet,
+  petCheerKind, petImageSrc, petProgress, petSpecies, petStageName, pickPetSpecies, planPetAction, rankingPet,
 } from "@/lib/readingPet";
 import { deriveReading, getExpForReadingLevel, initialReadingState } from "@/lib/reading";
 import { createDemoPet } from "@/lib/demoPets";
@@ -187,4 +187,20 @@ test("데모 반의 펫 — 열 종이 모두 나오고, 알 둘(곧 깨어남 �
   assert.deepEqual(petProgress(pets[12].mirror, 300 + 12 * 10).xp, 60);
   assert.equal(petProgress(pets[13].mirror, 300 + 13 * 10).ready, true);
   assert.equal(petProgress(pets[12].mirror, 300 + 12 * 10).ready, false);
+});
+
+test("축하할 일 — 깨어남 · 자람만, 이 기기에서 처음 보면 축하하지 않음", () => {
+  const egg = petProgress({ baseXp: 0, species: null }, 50);
+  const owl2 = petProgress({ baseXp: 0, species: "owl" }, 120);
+  const owl3 = petProgress({ baseXp: 0, species: "owl" }, 300);
+  assert.equal(petCheerKind(null, owl3), null); // 이 기기에서 처음 — 지금 단계부터 셈
+  assert.equal(petCheerKind({ species: null, stage: 1 }, egg), null); // 아직 알
+  assert.equal(petCheerKind({ species: null, stage: 1 }, owl2), "hatch"); // 다른 기기에서 깨운 펫도 한 번
+  assert.equal(petCheerKind({ species: "owl", stage: 2 }, owl3), "grow");
+  assert.equal(petCheerKind({ species: "owl", stage: 3 }, owl3), null); // 그대로
+  assert.equal(petCheerKind({ species: "owl", stage: 4 }, owl3), null); // 내려감(기록을 지움)
+  assert.equal(petCheerKind({ species: "cat", stage: 2 }, owl3), null); // 다른 펫의 기록
+  assert.equal(petCheerKind({ species: "owl" }, owl3), null); // 단계가 없는 옛 값
+  assert.equal(petCheerKind("owl", owl3), null);
+  assert.equal(petCheerKind({ species: "owl", stage: 2 }, null), null);
 });

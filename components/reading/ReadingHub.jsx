@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
 import { deriveReading, initialReadingState, kstToday, READING_BADGES } from "@/lib/reading";
 import { subscribeReadingState, mutateReading, fetchReadingRankings } from "@/lib/data/reading";
 import { rankingsForPeriod } from "@/lib/readingJourney";
@@ -32,9 +32,9 @@ function Modal({ title, onClose, children, wide = false, busy = false }) {
   const backdropRef = useRef(null);
   // onClose는 부르는 쪽이 렌더마다 새로 만듭니다. 한때 아래 효과가 그것에 걸려 있어, 책나눔이 다시
   // 그려질 때마다(알림 줄이 뜨고 5초 뒤 사라질 때 등) 다시 돌며 초점을 창의 첫 칸으로 끌어왔습니다 —
-  // 감상을 쓰던 커서가 날짜 칸으로 튀고, 위에 뜬 펫 '자랐어요!' 창의 초점을 빼앗아 Esc가 밑의 책 상세
-  // 창부터 닫았습니다(축하 창은 Esc를 두 번 눌러야 닫힘). 그래서 최신 값은 ref로 들고, 초점 · 키
-  // 처리는 창이 열릴 때 한 번만 겁니다.
+  // 감상을 쓰던 커서가 날짜 칸으로 튀고, 그때 위에 뜨던 펫 '자랐어요!' 창(지금은 창이 아닌 폭죽)의 초점을
+  // 빼앗아 Esc가 밑의 책 상세 창부터 닫았습니다. 그래서 최신 값은 ref로 들고, 초점 · 키 처리는 창이
+  // 열릴 때 한 번만 겁니다.
   const closeRef = useRef(onClose); closeRef.current = onClose;
   const busyRef = useRef(busy); busyRef.current = busy;
   useEffect(() => {
@@ -42,10 +42,10 @@ function Modal({ title, onClose, children, wide = false, busy = false }) {
     const el = ref.current;
     const backdrop = backdropRef.current;
     const items = () => [...el.querySelectorAll('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [tabindex="0"]')];
-    // 위에 다른 창(펫 축하 창 등)이 이미 떠 있으면 초점을 가져오지 않습니다(lib/modal.js의 hasModalAbove).
+    // 위에 다른 창이 이미 떠 있으면 초점을 가져오지 않습니다(lib/modal.js의 hasModalAbove).
     if (!hasModalAbove(backdrop)) (el.querySelector("[data-initial-focus]") || items()[0] || el).focus();
     // Esc는 화면 전체에서 받되 이 창이 맨 위일 때만 닫습니다 — 위에 창이 있으면 비켜 가(preventDefault도
-    // 안 부름) 공통 Esc 처리가 그 창부터 닫게 둡니다. 초점이 창 밖(축하 창이 닫힌 뒤의 body)에 있어도 닫힙니다.
+    // 안 부름) 공통 Esc 처리가 그 창부터 닫게 둡니다. 초점이 창 밖(위 창이 닫힌 뒤의 body)에 있어도 닫힙니다.
     function escape(e) {
       if (e.key !== "Escape" || e.isComposing || e.defaultPrevented) return;
       if (busyRef.current || hasModalAbove(backdrop)) return;
@@ -64,8 +64,8 @@ function Modal({ title, onClose, children, wide = false, busy = false }) {
     return () => {
       window.removeEventListener("keydown", escape);
       el.removeEventListener("keydown", tab);
-      // 닫힐 때 열기 전 자리로 초점을 돌려놓되, 위에 다른 창이 떠 있으면 그대로 둡니다 — 독서 발자국을
-      // 저장하면 이 창이 닫히는 순간 펫 축하 창이 떠 있어, 돌려놓으면 초점이 창 뒤 화면의 단추로 갔습니다.
+      // 닫힐 때 열기 전 자리로 초점을 돌려놓되, 위에 다른 창이 떠 있으면 그대로 둡니다 — 돌려놓으면
+      // 초점이 위 창 뒤 화면의 단추로 갑니다(펫 축하가 아직 창이던 때 겪음).
       if (!hasModalAbove(backdrop)) previous?.focus?.();
     };
   }, []);
@@ -134,9 +134,15 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
   }, [notice]);
   const stats = useMemo(() => deriveReading(raw || initialReadingState(), new Date(`${day}T12:00:00+09:00`)), [raw, day]);
   const previousLevel = useRef(null);
+  // 펫 축하가 함께 알린 레벨 — 같은 저장에서 펫이 자라며 레벨도 오르면 폭죽 한 번에 함께 알리므로
+  // 알림 줄은 같은 말을 또 띄우지 않습니다. 펫 카드(자식)의 효과가 아래 효과보다 먼저 돌아 여기에 적습니다.
+  const petLevelRef = useRef(null);
+  const markPetLevel = useCallback((lv) => { petLevelRef.current = lv; }, []);
   useEffect(() => {
     if (!raw) return;
-    if (!readOnly && previousLevel.current != null && stats.level > previousLevel.current) setNotice(`레벨 ${stats.level} 달성! 독서의 깊이가 한 단계 더 자랐어요.`);
+    const petTold = petLevelRef.current === stats.level;
+    petLevelRef.current = null;
+    if (!readOnly && !petTold && previousLevel.current != null && stats.level > previousLevel.current) setNotice(`레벨 ${stats.level} 달성! 독서의 깊이가 한 단계 더 자랐어요.`);
     previousLevel.current = stats.level;
   }, [raw, stats.level, readOnly]);
   useEffect(() => { previousLevel.current = null; }, [classId, viewUid]);
@@ -169,7 +175,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
       {(featured?.earned || showPet) && <div className="reading-intro-side">
         {featured?.earned && <div className="reading-featured"><ReadingBadge badge={featured} size={70} /><span>{readOnly ? "대표 뱃지" : "나의 대표 뱃지"}<strong>{featured.name}</strong></span></div>}
         {/* 나의 펫 — 단계는 이미 받은 서재로 셉니다(lib/readingPet.js). 서재를 받기 전에는 카드도 기다립니다. */}
-        {showPet && <PetCard classId={classId} uid={user.uid} growthXp={raw ? petGrowthOfSummary(stats) : null} />}
+        {showPet && <PetCard classId={classId} uid={user.uid} growthXp={raw ? petGrowthOfSummary(stats) : null} level={raw ? stats.level : null} onLevelCheer={markPetLevel} />}
       </div>}
     </div>
     <nav className="reading-tabs" aria-label="책나눔 메뉴">

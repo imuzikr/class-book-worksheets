@@ -60,6 +60,12 @@
 //
 // [움직임을 줄인 설정] prefers-reduced-motion이면 아무것도 쏘지 않고 가운데
 // 뱃지만 잠깐 띄웁니다 — 알리는 일은 그대로 하되 흔들지 않습니다.
+//
+// [가운데에 다른 것을 띄울 때] `children`을 주면 과일 뱃지 대신 그것을 가운데에
+// 띄웁니다 — 펫이 깨어나거나 자랄 때(components/reading/PetCard.jsx의
+// PetCelebration). 폭죽 · 밤하늘 · 사라지는 시각은 그대로이고, `amount`는 '몇 번
+// 쏘았나'로만 씁니다(늘리면 한 번 더 쏘고 끝나는 시각이 그만큼 밀림). 과일 지급을
+// 지켜보는 구독(useRewardCelebration)은 여전히 TopNav 한 곳뿐입니다.
 // =============================================================
 import { useEffect, useRef, useState } from "react";
 
@@ -108,7 +114,7 @@ function rgba(hex, a) {
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
 }
 
-export default function RewardCelebration({ amount = 0, onDone }) {
+export default function RewardCelebration({ amount = 0, onDone, children = null }) {
   const canvasRef = useRef(null);
   const doneRef = useRef(onDone);
   // 캔버스가 살아 있는 동안만 채워집니다(움직임을 줄인 설정에서는 계속 null).
@@ -395,11 +401,13 @@ export default function RewardCelebration({ amount = 0, onDone }) {
       />
       <canvas ref={canvasRef} className="reward-cheer-canvas" aria-hidden="true" />
       <div className="reward-cheer-enter">
-        <div key={amount} className="reward-cheer-badge" role="status">
-          <span className="reward-cheer-emoji" aria-hidden="true">🍊</span>
-          <strong className="reward-cheer-plus">+{amount}</strong>
-          <span className="reward-cheer-text">과일을 받았어요!</span>
-        </div>
+        {children ?? (
+          <div key={amount} className="reward-cheer-badge" role="status">
+            <span className="reward-cheer-emoji" aria-hidden="true">🍊</span>
+            <strong className="reward-cheer-plus">+{amount}</strong>
+            <span className="reward-cheer-text">과일을 받았어요!</span>
+          </div>
+        )}
       </div>
     </div>
   );

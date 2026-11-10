@@ -4,7 +4,8 @@ import { backdropClose, hasModalAbove } from "../../lib/modal.js";
 
 // 가짜 DOM — 배경마다 z-index · 보임 · 문서 차례 · 품은 요소만 흉내 냅니다.
 // hasModalAbove가 공통 Esc의 '맨 위 창' 셈(isAbove — 안에 든 것 → z-index → 문서에서 뒤의 것)과
-// 같은 차례로 판정하는지 봅니다(책나눔 창 위에 펫 '자랐어요!' 창이 뜬 경우가 처음 까닭).
+// 같은 차례로 판정하는지 봅니다(책나눔 창 위에 펫 '자랐어요!' 창이 뜬 경우가 처음 까닭 — 지금 펫 축하는
+// 창이 아니라 폭죽이고, z 1250은 펫 자세히 보기 창의 층입니다).
 let all = [];
 function setup() {
   all = [];
@@ -23,7 +24,7 @@ function backdrop({ z, modalBackdrop = true, shown = true, inside = null, detach
 }
 afterEach(() => { delete globalThis.document; delete globalThis.getComputedStyle; delete globalThis.Node; });
 
-test("책나눔 창(z 1200) 위에 펫 축하 창(z 1250)이 뜨면 위에 창이 있다 — 닫히면(숨으면) 없다", () => {
+test("책나눔 창(z 1200) 위에 펫 창(z 1250)이 뜨면 위에 창이 있다 — 닫히면(숨으면) 없다", () => {
   setup();
   const reading = backdrop({ z: 1200, modalBackdrop: false });
   const cheer = backdrop({ z: 1250 });

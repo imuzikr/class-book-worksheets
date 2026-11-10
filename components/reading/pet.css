@@ -31,8 +31,8 @@
 /* 좁은 화면에서는 대표 뱃지가 숨으므로(reading.css 900px) 펫 카드가 머리말 아래 줄로 내려갑니다 */
 @media (max-width:900px) { .reading-intro { flex-wrap:wrap; } .reading-intro-side { width:100%; justify-content:flex-start; } }
 
-/* 펫 창(자세히 보기 · 축하)은 책나눔의 창(.reading-modal-backdrop — 1200)보다 한 층 위 —
-   독서 발자국을 저장하면 책 상세 창이 떠 있는 채로 '자랐어요!'가 뜨기 때문입니다(알림 줄 1300 아래). */
+/* 펫 자세히 보기 창은 책나눔의 창(.reading-modal-backdrop — 1200)보다 한 층 위입니다(알림 줄 1300 아래).
+   한때 '자랐어요!' 축하도 이 층의 창이었는데, 지금은 창이 아니라 폭죽입니다(아래 '깨어남 · 자람 축하'). */
 .modal-backdrop.pet-layer { z-index:1250; }
 
 /* ── 자세히 보기 ── */
@@ -61,24 +61,34 @@
 .pet-modal-actions { display:flex; justify-content:flex-end; }
 @media (max-width:560px) { .pet-stages { grid-template-columns:repeat(2, minmax(0,1fr)); } .pet-modal-hero { flex-direction:column; text-align:center; padding-right:0; } .pet-modal-hero h3 { justify-content:center; } }
 
-/* ── 깨어남 · 자람 축하 ── */
-.modal.pet-cheer { width:min(400px, 100%); max-width:400px; display:flex; flex-direction:column; align-items:center; gap:10px; text-align:center; overflow:hidden; }
-.pet-cheer h3 { margin:4px 0 0; font-size:22px; color:var(--dark); }
-.pet-cheer p { margin:0; color:var(--text-sub); font-size:13.5px; line-height:1.6; word-break:keep-all; }
-.pet-cheer-ok { margin-top:8px; min-width:140px; }
-.pet-cheer-stage { position:relative; width:180px; height:180px; display:flex; align-items:center; justify-content:center; }
-.pet-cheer-stage > span { position:absolute; display:flex; align-items:center; justify-content:center; }
-.pet-cheer-burst { inset:10px; border-radius:50%; background:radial-gradient(circle, rgba(255,214,150,.75) 0, rgba(255,214,150,0) 68%); opacity:0; }
-.pet-cheer.is-grow .pet-cheer-burst { animation:pet-burst 1.1s ease-out .1s forwards; }
-.pet-cheer.is-grow .pet-cheer-reveal { animation:pet-pop .7s cubic-bezier(.2,1.6,.4,1) both; }
-/* 깨어남 — 알이 흔들리다(0~0.9초) 부풀며 사라지고, 그 자리에서 펫이 튀어나옵니다 */
-.pet-cheer.is-hatch .pet-cheer-egg { animation:pet-shake .9s ease-in-out, pet-egg-out .35s ease-in .9s forwards; }
-.pet-cheer.is-hatch .pet-cheer-reveal { opacity:0; animation:pet-pop .7s cubic-bezier(.2,1.6,.4,1) 1.05s forwards; }
-.pet-cheer.is-hatch .pet-cheer-burst { animation:pet-burst 1.2s ease-out 1s forwards; }
+/* ── 깨어남 · 자람 축하 — 창이 아니라 폭죽(PetCard.jsx의 PetCelebration) ──
+   과일 축포(.reward-cheer — z 3200 · 밤하늘 · 클릭을 가로채지 않음) 한가운데에 새 모습을 띄웠다가 저절로
+   사라집니다(선생님 요청). 자람은 4.2초(축포의 LIFE_MS), 깨어남은 펫이 튀어나올 때(1초 뒤) 폭죽을 한 번
+   더 쏘아 5.2초 — .pet-burst의 animation 길이가 그 둘과 **같아야** 글자와 폭죽이 함께 걷힙니다.
+   글자는 흰 칸에 담습니다 — 움직임을 줄인 설정에서는 밤하늘이 없어 크림색 화면 위에 그대로 서기 때문입니다. */
+.pet-burst { position:relative; display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center; animation:pet-burst-fade 4.2s ease-out forwards; }
+.pet-burst.is-hatch { animation-duration:5.2s; }
+.pet-burst-stage { position:relative; width:220px; height:220px; display:flex; align-items:center; justify-content:center; }
+.pet-burst-stage > span { position:absolute; display:flex; align-items:center; justify-content:center; }
+/* 그림 뒤의 따뜻한 빛 — 어두운 밤하늘 위에서도 펫이 또렷하게. 자람은 곧바로, 깨어남은 알이 터질 때 */
+.pet-burst-glow { inset:0; border-radius:50%; background:radial-gradient(circle, rgba(255,234,190,.95) 0, rgba(255,214,150,.5) 42%, rgba(255,214,150,0) 70%); animation:pet-glow .9s ease-out both; }
+.pet-burst.is-hatch .pet-burst-glow { animation-delay:1s; }
+.pet-burst-reveal { animation:pet-pop .7s cubic-bezier(.2,1.6,.4,1) both; }
+/* 깨어남 — 알이 흔들리다(0~0.9초) 부풀며 사라지고, 그 자리에서 펫이 튀어나옵니다(1.05초) */
+.pet-burst.is-hatch .pet-burst-egg { animation:pet-shake .9s ease-in-out, pet-egg-out .35s ease-in .9s forwards; }
+.pet-burst.is-hatch .pet-burst-reveal { opacity:0; animation:pet-pop .7s cubic-bezier(.2,1.6,.4,1) 1.05s forwards; }
+.pet-burst-note { display:flex; flex-direction:column; align-items:center; gap:4px; max-width:min(440px, calc(100vw - 32px)); padding:14px 26px; border-radius:20px; background:rgba(255,255,255,.95); border:2px solid var(--primary); box-shadow:0 10px 30px rgba(46,36,26,.14); }
+/* 이름은 펫이 튀어나온 뒤에 — 먼저 적으면 알 속이 누구인지 미리 알려 줍니다 */
+.pet-burst.is-hatch .pet-burst-note { opacity:0; animation:pet-note-in .4s ease-out 1.05s forwards; }
+.pet-burst-note strong { font-size:21px; font-weight:800; color:var(--dark); }
+.pet-burst-sub { font-size:14px; color:var(--text-sub); line-height:1.55; word-break:keep-all; }
+.pet-burst-level { margin-bottom:2px; padding:3px 12px; border-radius:999px; background:#fff1dc; color:#9a5a33; font-size:12.5px; font-weight:800; }
+@keyframes pet-burst-fade { 0%, 80% { opacity:1; } 100% { opacity:0; } }
 @keyframes pet-shake { 0%,100% { transform:rotate(0); } 15% { transform:rotate(-10deg); } 30% { transform:rotate(9deg); } 45% { transform:rotate(-12deg); } 60% { transform:rotate(11deg); } 75% { transform:rotate(-6deg); } 90% { transform:rotate(4deg); } }
 @keyframes pet-egg-out { to { transform:scale(1.25); opacity:0; } }
 @keyframes pet-pop { 0% { transform:scale(.3); opacity:0; } 100% { transform:scale(1); opacity:1; } }
-@keyframes pet-burst { 0% { transform:scale(.4); opacity:0; } 35% { opacity:1; } 100% { transform:scale(1.25); opacity:0; } }
+@keyframes pet-glow { 0% { transform:scale(.4); opacity:0; } 100% { transform:scale(1); opacity:1; } }
+@keyframes pet-note-in { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
 
 /* ── 리더보드 — 캐릭터 옆의 펫 ── */
 .rlb-face-pair { position:relative; display:inline-flex; align-items:flex-end; flex-shrink:0; }
@@ -109,8 +119,8 @@
 
 @media (prefers-reduced-motion:reduce) {
   .pet-egg.is-ready, .pet-figure.is-ready img { animation:none; }
-  .pet-cheer .pet-cheer-egg { display:none; }
-  .pet-cheer .pet-cheer-reveal, .pet-cheer .pet-cheer-burst { animation:none !important; opacity:1; }
-  .pet-cheer .pet-cheer-burst { opacity:.6; }
+  /* 깨어남 · 자람 — 흔들고 튀어나오는 것 없이 새 모습만 떠 있다 사라집니다(폭죽 · 밤하늘도 안 그림 — .reward-cheer) */
+  .pet-burst .pet-burst-egg { display:none; }
+  .pet-burst .pet-burst-reveal, .pet-burst .pet-burst-glow, .pet-burst .pet-burst-note { animation:none !important; opacity:1; }
   .pet-bar i { transition:none; }
 }
