@@ -199,17 +199,19 @@ test("journey appearance changes only the authenticated student's public charact
   const profileRef = db.doc(`users/${ids.student}`);
   const beforeProfile = (await profileRef.get()).data();
   const beforeReading = await getReading(principal("student"), "api-class");
-  const character = { number: 9, style: "advanced" };
-  assert.deepEqual(await saveReadingCharacter(principal("student"), { classId: "api-class", character }), { character });
-  assert.deepEqual((await profileRef.get()).data(), { ...beforeProfile, readingCharacter: character });
-  const afterReading = await getReading(principal("student"), "api-class");
-  assert.deepEqual(afterReading.state, beforeReading.state);
-  assert.equal(afterReading.summary.xp, beforeReading.summary.xp);
-  const row = (await getReadingRankings(principal("teacher"), "api-class", "all-time")).rankings[0];
-  assert.deepEqual(row.character, character);
-  assert.equal(row.totalXp, beforeReading.summary.xp);
-  assert.equal(Object.hasOwn(row, "email"), false);
-  assert.equal(Object.hasOwn(row, "state"), false);
+  for (const style of ["beginner", "intermediate", "advanced"]) {
+    const character = { number: 9, style };
+    assert.deepEqual(await saveReadingCharacter(principal("student"), { classId: "api-class", character }), { character }, style);
+    assert.deepEqual((await profileRef.get()).data(), { ...beforeProfile, readingCharacter: character }, style);
+    const afterReading = await getReading(principal("student"), "api-class");
+    assert.deepEqual(afterReading.state, beforeReading.state, style);
+    assert.equal(afterReading.summary.xp, beforeReading.summary.xp, style);
+    const row = (await getReadingRankings(principal("teacher"), "api-class", "all-time")).rankings.find((item) => item.uid === ids.student);
+    assert.deepEqual(row.character, character, style);
+    assert.equal(row.totalXp, beforeReading.summary.xp, style);
+    assert.equal(Object.hasOwn(row, "email"), false, style);
+    assert.equal(Object.hasOwn(row, "state"), false, style);
+  }
 });
 
 test("journey appearance rejects other UIDs, malformed choices, teachers and disabled access", async () => {

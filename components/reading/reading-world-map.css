@@ -99,11 +99,11 @@
 .rwm-character-head h3 { color:#24463b; font-size:20px; margin:6px 0 0; }
 .rwm-character-head>button { border:0; background:none; font-size:28px; color:#5f7565; }
 .rwm-character-dialog>p { font-size:12px; color:#73806a; margin:12px 0 18px; }
-/* 스타일(중급 · 고급) — 같은 크기 두 칸. 앱 공용 입력칸 모양(폭 100% · 테두리 · 여백)이
+/* 등급(초급 · 중급 · 고급) — 같은 크기 세 칸. 앱 공용 입력칸 모양(폭 100% · 테두리 · 여백)이
    라디오에 걸려 글자가 세로로 접히던 것을 걷습니다. */
-.rwm-outfits { border:0; display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; max-width:320px; margin:0 0 18px; padding:0; }
+.rwm-outfits { border:0; display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; width:100%; max-width:360px; margin:0 0 18px; padding:0; }
 .rwm-outfits legend { margin-bottom:9px; font-size:12px; color:#4f6c53; }
-.rwm-outfits label { border:1px solid #cbd4bd; border-radius:8px; padding:9px 13px; font-size:13px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:8px; background:#fff; cursor:pointer; white-space:nowrap; }
+.rwm-outfits label { min-width:0; border:1px solid #cbd4bd; border-radius:8px; padding:9px; font-size:13px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:6px; background:#fff; cursor:pointer; white-space:nowrap; }
 .rwm-outfits label:has(input:checked) { border-color:#446a4c; background:#eef3e6; color:#24463b; }
 .rwm-outfits input { accent-color:#446a4c; width:auto; height:auto; margin:0; padding:0; border:0; box-shadow:none; flex:none; }
 .rwm-character-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px; }

@@ -7,7 +7,8 @@ import { deriveReading, kstToday, READING_BADGES } from "@/lib/reading";
 import { fetchReadingRankings, saveReadingCharacter, subscribeReadingState } from "@/lib/data/reading";
 import { startVisiblePoll, RANKING_POLL_MS, RANKING_WAKE_GAP_MS } from "@/lib/visiblePoll";
 import { journeyNarrative, journeyTitle, badgeHint, rankingsForPeriod } from "@/lib/readingJourney";
-import { defaultWorldAvatar, worldProgress } from "@/lib/readingWorldMap";
+import { worldProgress } from "@/lib/readingWorldMap";
+import { characterOf, characterImage } from "@/lib/readingCharacterCatalog";
 import { backdropClose } from "@/lib/modal";
 import { normalizePublicPet, PET_HATCH_XP, petSpecies, petStageName } from "@/lib/readingPet";
 import ReadingBadge from "./ReadingBadge";
@@ -36,12 +37,9 @@ function growthOf(row) {
 }
 
 function Character({ row, uid, className }) {
-  const fallback = defaultWorldAvatar(row?.uid || uid || "");
-  const chosen = row?.character;
-  const avatarNumber = Number.isInteger(chosen?.number) && chosen.number >= 1 && chosen.number <= 10 ? chosen.number : fallback;
-  const style = ["intermediate", "advanced"].includes(chosen?.style) ? chosen.style : "intermediate";
+  const character = characterOf({ uid: row?.uid || uid || "", character: row?.character });
   return <span className={className} aria-hidden="true"><img className="rlb-character-image"
-    src={`/reading-journey/${style}-${String(avatarNumber).padStart(2, "0")}.webp`} alt="" draggable={false} loading="lazy" /></span>;
+    src={characterImage(character)} alt="" draggable={false} loading="lazy" /></span>;
 }
 
 // 캐릭터 옆의 독서 펫(lib/readingPet.js) — 서버가 줄마다 실어 줍니다(알이면 종 없이). 관리자 설정에서 끈 반은 null.

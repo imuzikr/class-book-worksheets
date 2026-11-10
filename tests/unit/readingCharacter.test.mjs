@@ -5,7 +5,7 @@ import { memberSnapshot, memberStats } from "../../lib/readingJourney.js";
 import { characterChoiceEnabled, hasCurrentReadingSnapshot, normalizeReadingCharacter } from "../../lib/readingCharacter.js";
 
 test("journey appearance accepts only a known numbered character and outfit", () => {
-  for (const style of ["intermediate", "advanced"]) {
+  for (const style of ["beginner", "intermediate", "advanced"]) {
     for (let number = 1; number <= 10; number += 1) {
       assert.deepEqual(normalizeReadingCharacter({ number, style }), { number, style });
     }
@@ -13,7 +13,10 @@ test("journey appearance accepts only a known numbered character and outfit", ()
   for (const value of [null, undefined, [], "1", {}, { number: 1 },
     { number: "1", style: "advanced" }, { number: 1.5, style: "advanced" },
     { number: 0, style: "advanced" }, { number: 11, style: "advanced" },
-    { number: 1, style: "unknown" }, { number: 1, style: "advanced", role: "admin" }]) {
+    { number: 1, style: "unknown" }, { number: 1, style: "../beginner" },
+    { number: 1, style: "beginner/../../advanced" }, { number: 1, style: ["beginner"] },
+    { number: 1, style: "beginner", xp: 1000 }, { number: 1, style: "advanced", role: "admin" },
+    Object.assign(Object.create({ number: 1 }), { style: "beginner" })]) {
     assert.equal(normalizeReadingCharacter(value), null, JSON.stringify(value));
   }
   const original = { number: 1, style: "advanced" };
