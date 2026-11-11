@@ -168,9 +168,6 @@
 .reading-ranking-table tbody th { color:#536e44; font-weight:650; }
 .reading-ranking-table tbody tr:last-child td,.reading-ranking-table tbody tr:last-child th { border-bottom:0; }
 .reading-ranking-table tbody tr.is-me { background:#f3f7e9; }
-/* 학생은 상위 10명과 내 순위만 받습니다 — 10위 밖이면 '⋯' 아래에 내 줄(lib/readingJourney.js의 rankingResponse) */
-.reading-ranking-table tbody tr.reading-rank-gap td { padding:4px 18px; text-align:center; color:#a6b39c; letter-spacing:4px; border-bottom:1px dashed #dce5d3; }
-.reading-ranking-table tbody tr.reading-rank-none td { color:#8a9a80; text-align:center; }
 .reading-rank-number { display:inline-flex; align-items:center; justify-content:center; min-width:25px; height:25px; color:#96a086; font-size:12px; }
 .reading-rank-top { background:#eef2e3; border:1px solid #d6dfc1; border-radius:7px; color:#7b8b4f; font-weight:750; }
 .reading-ranking-table .reading-rank-exp { color:#5b7750; font-weight:750; font-variant-numeric:tabular-nums; }
@@ -273,9 +270,6 @@
 .rlb-row { width:100%; display:grid; grid-template-columns:auto auto minmax(0,1fr) auto; align-items:center; gap:12px; padding:12px 14px; border:1.5px solid #e3e8df; border-radius:12px; background:#fff; cursor:pointer; text-align:left; font:inherit; color:inherit; }
 .rlb-row:hover { border-color:#f3c9a6; }
 .rlb-row.is-me { background:#fff7ed; border-color:#fdba74; }
-/* 학생은 상위 10명과 내 순위만 — 10위 밖이면 '⋯' 아래에 내 줄 · 그 기간에 아무도 경험치가 없으면 한 줄 안내 */
-.rlb-gap { text-align:center; color:#a6b39c; font-size:16px; line-height:1; letter-spacing:4px; padding:2px 0; }
-.rlb-none { padding:12px 14px; border:1.5px dashed #e3e8df; border-radius:12px; color:#7f8f7d; font-size:12px; text-align:center; }
 .rlb-row-face { font-size:26px; line-height:1; }
 .rlb-row-main { display:flex; flex-direction:column; gap:4px; min-width:0; }
 .rlb-row-name { font-weight:720; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }

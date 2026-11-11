@@ -48,8 +48,7 @@ function TravelerPet({ row, petOn, size, className }) {
 }
 
 /** The map consumes the same public snapshot as the rankings, never a peer's library. */
-// limited — 학생 화면: 받은 여행자가 반 전체가 아니라 누적 상위 10명과 나입니다(lib/readingJourney.js의 rankingResponse).
-export default function ReadingWorldMap({ rows, uid, isTeacher, limited = false, petOn = false, onOpenDetails, onSaveCharacter }) {
+export default function ReadingWorldMap({ rows, uid, isTeacher, petOn = false, onOpenDetails, onSaveCharacter }) {
   const viewport = useRef(null);
   const pointer = useRef(null);
   const suppressClick = useRef(false);
@@ -208,7 +207,7 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, limited = false,
         최대한 크게 보이게, 위에는 이 한 줄(여정 지도 · 인원 · 단추)만 둡니다(선생님 요청). */}
     <div className="rwm-toolbar">
       <span className="rwm-chapter"><span>여정 지도</span><b>Lv.1 출발 → Lv.{READING_LEVEL_MAX} 도착</b></span>
-      <span className="rwm-count">지도 위 <b>{shownCount}</b>명 {limited ? "· 누적 상위 10명과 나" : `/ 전체 ${travelers.length}명`}{pendingCount > 0 && ` · 집계 대기 ${pendingCount}명`}</span>
+      <span className="rwm-count">지도 위 <b>{shownCount}</b>명 / 전체 {travelers.length}명{pendingCount > 0 && ` · 집계 대기 ${pendingCount}명`}</span>
       <div className="rwm-map-actions">
         {!isTeacher && selected?.uid === uid && onSaveCharacter && <button type="button" onClick={() => setChoosing(true)}>캐릭터 꾸미기</button>}
         {selected && <button type="button" onClick={() => selectTraveler(selected, true)} disabled={!growth}>선택 학생 위치</button>}
@@ -257,9 +256,9 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, limited = false,
       {/* <details>는 크롬 일부에서 flex 높이를 안 따라 목록이 칸 밖으로 넘쳐, 단추 + 상태로 접고 폅니다. */}
       <div className="rwm-roster">
         <button type="button" className="rwm-roster-head" aria-expanded={rosterOpen} onClick={() => setRosterOpen((v) => !v)}>
-          <span aria-hidden="true">{rosterOpen ? "▼" : "▶"}</span> {limited ? "누적 상위 10명과 나" : "함께 걷는 친구들"} <b>{travelers.length}</b>
+          <span aria-hidden="true">{rosterOpen ? "▼" : "▶"}</span> 함께 걷는 친구들 <b>{travelers.length}</b>
         </button>
-        {rosterOpen && <div className="rwm-roster-list" aria-label={limited ? "누적 상위 10명과 나" : "우리 반 전체 학생"}>
+        {rosterOpen && <div className="rwm-roster-list" aria-label="우리 반 전체 학생">
           {travelers.map((row) => <button type="button" className={`rwm-person${leaderSet.has(String(row.uid)) ? " is-leader" : ""}`} key={row.uid} aria-pressed={row.uid === selected?.uid} onClick={() => selectTraveler(row)}>
             <div className="rwm-person-avatar">{leaderSet.has(String(row.uid)) && <LeaderSun />}<img src={characterImage(characterOf(row))} alt="" width={47} height={52} loading="lazy" /><TravelerPet row={row} petOn={petOn} size={24} className="rwm-person-pet" /></div><span><strong>{row.name || "이름 미설정"}{row.uid === uid && <i>나</i>}{leaderSet.has(String(row.uid)) && <b className="rwm-leader-tag">독서 대장</b>}</strong><small>{row.studentId}{row.world ? ` · ${row.world.region.name}` : " · 집계 대기"}</small><em>{row.world ? `Lv.${row.world.level} · ${number(row.world.xp)} EXP` : "성장 정보 확인 중"}</em></span>
           </button>)}

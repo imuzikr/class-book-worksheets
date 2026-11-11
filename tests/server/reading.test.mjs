@@ -520,7 +520,7 @@ test("독서 펫 — 학생만 알 하나(받을 때의 경험치가 바탕 · �
 });
 
 // ── 반 순위 저장(10분) — 한 번 셈해 classes/{c}/readingRank/current에 적어 두고 여럿이 그대로 씀(선생님 요청) ──
-// 학생에게는 기간마다 상위 10명과 본인만, 교사는 반 전체. 아무도 안 보면 세지 않음.
+// 학생 · 교사 모두 반 전체를 받음(선생님 결정). 아무도 안 보면 세지 않음.
 function rankSnapshot(uid, xp) {
   return { uid, level: getReadingLevel(xp), featuredBadge: null, formula: READING_FORMULA,
     events: [{ date: today, xp }], xpDays: [{ date: today, xp }], totalXp: xp, badges: [], totalPages: 0,
@@ -545,7 +545,6 @@ test("반 순위 저장 — 10분 안에는 저장한 한 장 그대로(다시 �
   await seedRankClass("api-rank", 12);
   const teacher = principal("teacher");
   const first = await getReadingRankings(teacher, "api-rank", "weekly");
-  assert.equal(first.scope, "all");
   assert.equal(first.rankings.length, 12);
   const saved = (await savedRank("api-rank")).data();
   assert.equal(Object.keys(saved.rows).length, 12);
@@ -573,26 +572,23 @@ test("반 순위 저장 — 10분 안에는 저장한 한 장 그대로(다시 �
   assert.equal((await savedRank("api-rank")).exists, false);
 });
 
-test("반 순위 저장 — 학생에게는 기간마다 상위 10명과 본인만(이름도), 교사는 반 전체 · 셋이 물어도 센 것은 한 번", async () => {
-  await seedRankClass("api-top10", 13);
-  const low = await getReadingRankings(kid("api-top10", 13), "api-top10", "weekly");
-  assert.equal(low.scope, "top");
-  assert.equal(low.total, 13);
-  assert.deepEqual(low.periods.weekly.order.map((o) => o.uid), Array.from({ length: 10 }, (_, i) => `api-top10-s${String(i + 1).padStart(2, "0")}`));
-  assert.deepEqual(low.periods.weekly.me, { uid: "api-top10-s13", rank: 13, xp: 10 });
-  // 11 · 12번째 학생은 보내지 않음(이름도) · 옛 화면 자리(rankings)는 상위 10명 + 본인
-  assert.equal(low.people["api-top10-s11"], undefined);
-  assert.ok(!JSON.stringify(low).includes("순위11"));
-  assert.deepEqual(low.rankings.map((r) => r.uid).slice(-2), ["api-top10-s10", "api-top10-s13"]);
-  // 상위 학생 — 10줄 안에 본인
-  const high = await getReadingRankings(kid("api-top10", 5), "api-top10", "weekly");
-  assert.equal(high.periods.weekly.order.length, 10);
-  assert.equal(high.periods.weekly.me.rank, 5);
-  // 교사 — 반 전체
-  const all = await getReadingRankings(principal("teacher"), "api-top10", "weekly");
-  assert.equal(all.periods.weekly.order.length, 13);
-  assert.equal(Object.keys(all.people).length, 13);
-  assert.equal(all.periods.weekly.me, null);
+test("반 순위 저장 — 학생도 교사처럼 반 전체를 받음(10위 밖 학생 이름도) · 셋이 물어도 센 것은 한 번", async () => {
+  await seedRankClass("api-all", 13);
+  const low = await getReadingRankings(kid("api-all", 13), "api-all", "weekly");
+  // 13명 모두 순위 차례로 — 가장 적게 읽은 본인이 13위
+  const line = (res) => res.rankings.map((r) => [r.uid, r.rank, r.xp]);
+  assert.deepEqual(line(low), Array.from({ length: 13 }, (_, i) => [`api-all-s${String(i + 1).padStart(2, "0")}`, i + 1, (13 - i) * 10]));
+  assert.ok(JSON.stringify(low).includes("순위11"));
+  // 줄마다 네 기간 경험치가 함께 — 기간 단추는 다시 묻지 않음 · 기준 시각(오후 6:30 기준)과 묻는 주기
+  assert.equal(low.rankings[0].xpBy["all-time"], 130);
+  assert.equal(low.refreshMs, 600000);
+  // 상위 학생 · 교사도 같은 줄
+  const high = await getReadingRankings(kid("api-all", 5), "api-all", "weekly");
+  const all = await getReadingRankings(principal("teacher"), "api-all", "weekly");
+  assert.deepEqual(line(high), line(low));
+  assert.deepEqual(line(all), line(low));
+  // 기간마다 따로 고른 줄(옛 people · periods)은 보내지 않음
+  assert.deepEqual(Object.keys(low).sort(), ["computedAt", "period", "rankings", "refreshMs"]);
   // 셋이 물었지만 센 것은 한 번(같은 기준 시각)
   assert.equal(high.computedAt, low.computedAt);
   assert.equal(all.computedAt, low.computedAt);
@@ -624,8 +620,9 @@ test("반 순위 저장 — 학생이 캐릭터를 바꾸면 저장한 순위의
   assert.deepEqual(await saveReadingCharacter(me, { classId: "api-look", character }), { character });
   const after = await getReadingRankings(principal("teacher"), "api-look", "weekly");
   assert.equal(after.computedAt, before.computedAt);
-  assert.deepEqual(after.people[me.uid].character, character);
-  assert.equal(after.people[kid("api-look", 1).uid].character, null);
+  const rowOf = (uid) => after.rankings.find((r) => r.uid === uid);
+  assert.deepEqual(rowOf(me.uid).character, character);
+  assert.equal(rowOf(kid("api-look", 1).uid).character, null);
   // 저장한 순위가 없을 때도 캐릭터 저장은 그대로 됨
   await resetReadingRankings(principal("teacher"), "api-look");
   assert.deepEqual(await saveReadingCharacter(me, { classId: "api-look", character: { number: 5, style: "zodiac" } }), { character: { number: 5, style: "zodiac" } });
@@ -642,11 +639,12 @@ test("반 순위 저장 — 저장한 뒤 반에 들어온 학생은 1분이 지
   // 1분이 안 지났으면 저장한 것 그대로(본인 줄 없음)
   const soon = await getReadingRankings(late, "api-late", "weekly");
   assert.equal(soon.computedAt, first.computedAt);
-  assert.equal(soon.periods.weekly.me, null);
+  assert.equal(soon.rankings.some((r) => r.uid === "api-late-new"), false);
   // 1분이 지난 뒤 — 그 학생을 넣어 다시 셈
   await db.doc("classes/api-late/readingRank/current").update({ computedAt: Timestamp.fromMillis(Date.now() - 2 * 60000) });
   const later = await getReadingRankings(late, "api-late", "weekly");
   assert.notEqual(later.computedAt, first.computedAt);
-  assert.deepEqual(later.periods.weekly.me, { uid: "api-late-new", rank: 1, xp: 500 });
+  const mine = later.rankings.find((r) => r.uid === "api-late-new");
+  assert.deepEqual([mine.rank, mine.xp], [1, 500]);
   // (서울 날짜가 바뀌면 10분 안이어도 다시 세는 것은 단위 시험이 봄 — tests/unit/readingJourney.test.mjs)
 });

@@ -5,7 +5,7 @@ import { initialReadingState, applyReadingAction, deriveReading } from "../../li
 import {
   journeyTitle, currentStreakOf, memberSnapshot, memberStats, journeyNarrative,
   RANKING_PERIODS, rankingsForPeriod, sortReadingRankings, isRankedStudent,
-  RANKING_TOP_N, RANKING_REFRESH_MS, rankingResponse, rankingPeriodView, rankingWithMe, rankingCacheFresh, rankingAsOf,
+  RANKING_REFRESH_MS, rankingResponse, rankingCacheFresh, rankingAsOf,
 } from "../../lib/readingJourney.js";
 import { RANKING_POLL_MS } from "../../lib/visiblePoll.js";
 import { sortReadingRankings as serverSort } from "../../lib/server/readingPolicy.js";
@@ -224,7 +224,7 @@ test("순위에 서는 학생 — 교사 · 관리자와 사용 중지된 학생
   assert.equal(isRankedStudent(undefined), false);
 });
 
-// ── 반 순위 — 10분에 한 번 셈해 저장, 학생에게는 상위 10명과 본인만(선생님 요청) ──
+// ── 반 순위 — 10분에 한 번 셈해 저장하고 여럿이 그대로 씀 · 학생 · 교사 모두 반 전체(선생님 결정) ──
 // 학생 25명 반: 이번 주 경험치는 학번 차례로 250, 240, … 10 / 오늘은 셋만 / 누적은 9~12번째가 같은 점수(600)
 function classRows() {
   return Array.from({ length: 25 }, (_, i) => ({
@@ -234,57 +234,27 @@ function classRows() {
   }));
 }
 
-test("반 순위(학생) — 기간마다 상위 10명 + 본인, 본인이 상위면 한 번만, 경험치 0은 순위에서 빠짐", () => {
-  assert.equal(RANKING_TOP_N, 10);
-  const res = rankingResponse(classRows(), { viewerUid: "s20", period: "weekly", computedAt: "2026-11-11T09:30:00.000Z" });
-  assert.equal(res.scope, "top");
-  assert.equal(res.total, 25);
-  assert.equal(res.computedAt, "2026-11-11T09:30:00.000Z");
-  const weekly = rankingPeriodView(res, "weekly");
-  assert.deepEqual(weekly.rows.map((r) => [r.uid, r.rank, r.xp]), Array.from({ length: 10 }, (_, i) => [`s${String(i + 1).padStart(2, "0")}`, i + 1, (25 - i) * 10]));
-  assert.deepEqual([weekly.me.uid, weekly.me.rank, weekly.me.xp, weekly.meInRows], ["s20", 20, 60, false]);
-  // 줄에는 그 학생의 다른 칸(이름 · 쪽수)이 함께 · 네 기간 경험치(xpBy)도 그대로
-  assert.equal(weekly.me.name, "학생20");
-  assert.equal(weekly.me.totalPages, 19);
-  // 오늘 — 경험치를 얻은 셋만, 오늘 0인 본인은 순위 대신 null(화면 '—')
-  const daily = rankingPeriodView(res, "daily");
-  assert.deepEqual(daily.rows.map((r) => [r.uid, r.rank]), [["s01", 1], ["s02", 2], ["s03", 3]]);
-  assert.deepEqual([daily.me.rank, daily.me.xp], [null, 0]);
-  // 누적 — 같은 점수(600)로 9위에 묶인 넷은 함께(10명을 넘어도) · 그 아래(13번째 520부터)는 안 보냄
-  const allTime = rankingPeriodView(res, "all-time");
-  assert.deepEqual(allTime.rows.map((r) => [r.uid, r.rank]), [["s01", 1], ["s02", 2], ["s03", 3], ["s04", 4], ["s05", 5], ["s06", 6], ["s07", 7], ["s08", 8], ["s09", 9], ["s10", 9], ["s11", 9], ["s12", 9]]);
-  assert.equal(allTime.me.rank, 20);
-  // 보내는 학생은 어느 기간의 상위에 들었거나 본인뿐 — 13~19, 21~25번째는 안 보냄
-  assert.deepEqual(Object.keys(res.people).sort(), [...Array.from({ length: 12 }, (_, i) => `s${String(i + 1).padStart(2, "0")}`), "s20"].sort());
-  assert.ok(!JSON.stringify(res).includes("학생25"));
-  // 상위 안의 본인 — 한 번만 그림(meInRows)
-  const top = rankingPeriodView(rankingResponse(classRows(), { viewerUid: "s03" }), "weekly");
-  assert.deepEqual([top.me.rank, top.meInRows, top.rows.length], [3, true, 10]);
-  assert.equal(rankingWithMe(top).length, 10);
-  // 상위 밖 본인 — 독서 맵 · 옛 화면은 본인을 끝에 더함
-  assert.deepEqual(rankingWithMe(weekly).map((r) => r.uid).slice(-2), ["s10", "s20"]);
-  assert.deepEqual(res.rankings.map((r) => r.uid), [...weekly.rows.map((r) => r.uid), "s20"]);
-});
-
-test("반 순위(교사) — 반 전체를 기간마다, 경험치 0도 공동 순위로", () => {
-  const res = rankingResponse(classRows(), { full: true, period: "daily" });
-  assert.equal(res.scope, "all");
-  assert.equal(Object.keys(res.people).length, 25);
-  const daily = rankingPeriodView(res, "daily");
-  assert.equal(daily.rows.length, 25);
-  assert.equal(daily.me, null);
-  assert.deepEqual(daily.rows.slice(2, 5).map((r) => [r.uid, r.rank, r.xp]), [["s03", 3, 28], ["s04", 4, 0], ["s05", 4, 0]]);
-  assert.equal(rankingPeriodView(res, "weekly").rows.length, 25);
-});
-
-test("반 순위 — 옛 모양(줄 배열 · { rankings })이 와도 그 자리에서 다시 세워 그림", () => {
-  const rows = [{ uid: "a", studentId: "1", xpBy: { weekly: 3 } }, { uid: "b", studentId: "2", xpBy: { weekly: 9 } }];
-  assert.deepEqual(rankingPeriodView(rows, "weekly").rows.map((r) => [r.uid, r.rank]), [["b", 1], ["a", 2]]);
-  assert.deepEqual(rankingPeriodView({ rankings: rows }, "weekly").rows.map((r) => r.uid), ["b", "a"]);
-  assert.deepEqual(rankingPeriodView(null, "weekly"), { rows: [], me: null, meInRows: false, scope: "all" });
-  // 학생이 없으면 빈 줄
-  const empty = rankingResponse([], { viewerUid: "x" });
-  assert.deepEqual([rankingPeriodView(empty, "weekly").rows, rankingPeriodView(empty, "weekly").me], [[], null]);
+test("반 순위 응답 — 학생 · 교사 모두 반 전체, 물어 온 기간으로 세우고 네 기간 경험치를 함께", () => {
+  const res = rankingResponse(classRows(), { period: "weekly", computedAt: "2026-11-11T09:30:00.000Z" });
+  assert.deepEqual([res.period, res.computedAt, res.refreshMs], ["weekly", "2026-11-11T09:30:00.000Z", RANKING_REFRESH_MS]);
+  // 반 전체 25명 — 10위 밖 학생도 함께(한때 학생에게는 상위 10명과 본인만 보냄)
+  assert.deepEqual(res.rankings.map((r) => [r.uid, r.rank, r.xp]),
+    Array.from({ length: 25 }, (_, i) => [`s${String(i + 1).padStart(2, "0")}`, i + 1, (25 - i) * 10]));
+  assert.ok(JSON.stringify(res).includes("학생25"));
+  // 줄마다 다른 칸과 네 기간 경험치(xpBy)가 그대로 — 화면은 기간 단추를 누를 때 이것으로 다시 셈(다시 묻지 않음)
+  const s20 = res.rankings.find((r) => r.uid === "s20");
+  assert.deepEqual([s20.name, s20.totalPages, s20.xpBy.daily, s20.xpBy["all-time"]], ["학생20", 19, 0, 240]);
+  // 오늘 — 경험치 0도 공동 순위로(셋 다음은 모두 4위)
+  const daily = rankingsForPeriod(res.rankings, "daily");
+  assert.equal(daily.length, 25);
+  assert.deepEqual(daily.slice(2, 5).map((r) => [r.uid, r.rank, r.xp]), [["s03", 3, 28], ["s04", 4, 0], ["s05", 4, 0]]);
+  // 누적 — 같은 점수(600)인 넷은 공동 9위, 그다음은 13위
+  const allTime = rankingsForPeriod(res.rankings, "all-time");
+  assert.deepEqual(allTime.slice(7, 13).map((r) => [r.uid, r.rank]), [["s08", 8], ["s09", 9], ["s10", 9], ["s11", 9], ["s12", 9], ["s13", 13]]);
+  // 응답이 기간마다 따로 고른 줄(옛 people · periods · 상위 10명)을 담지 않음
+  assert.deepEqual(Object.keys(res).sort(), ["computedAt", "period", "rankings", "refreshMs"]);
+  // 학생이 없으면 빈 줄 · 기간을 안 주면 이번 주
+  assert.deepEqual([rankingResponse([]).rankings, rankingResponse([]).period], [[], "weekly"]);
 });
 
 test("저장한 반 순위 — 10분 안이고 서울 날짜가 같을 때만 그대로 씀", () => {
