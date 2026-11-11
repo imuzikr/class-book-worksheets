@@ -5,7 +5,9 @@ import { initialReadingState, applyReadingAction, deriveReading } from "../../li
 import {
   journeyTitle, currentStreakOf, memberSnapshot, memberStats, journeyNarrative,
   RANKING_PERIODS, rankingsForPeriod, sortReadingRankings, isRankedStudent,
+  RANKING_REFRESH_MS, rankingResponse, rankingCacheFresh, rankingAsOf,
 } from "../../lib/readingJourney.js";
+import { RANKING_POLL_MS } from "../../lib/visiblePoll.js";
 import { sortReadingRankings as serverSort } from "../../lib/server/readingPolicy.js";
 
 const NOW = "2026-10-29T03:00:00.000Z";
@@ -220,4 +222,62 @@ test("순위에 서는 학생 — 교사 · 관리자와 사용 중지된 학생
   assert.equal(isRankedStudent({ role: "student", suspended: "true" }), true);
   assert.equal(isRankedStudent(null), false);
   assert.equal(isRankedStudent(undefined), false);
+});
+
+// ── 반 순위 — 10분에 한 번 셈해 저장하고 여럿이 그대로 씀 · 학생 · 교사 모두 반 전체(선생님 결정) ──
+// 학생 25명 반: 이번 주 경험치는 학번 차례로 250, 240, … 10 / 오늘은 셋만 / 누적은 9~12번째가 같은 점수(600)
+function classRows() {
+  return Array.from({ length: 25 }, (_, i) => ({
+    uid: `s${String(i + 1).padStart(2, "0")}`, studentId: `301${String(i + 1).padStart(2, "0")}`, name: `학생${i + 1}`,
+    totalPages: i, character: null,
+    xpBy: { daily: i < 3 ? 30 - i : 0, weekly: (25 - i) * 10, monthly: (25 - i) * 20, "all-time": i >= 8 && i <= 11 ? 600 : (25 - i) * 40 },
+  }));
+}
+
+test("반 순위 응답 — 학생 · 교사 모두 반 전체, 물어 온 기간으로 세우고 네 기간 경험치를 함께", () => {
+  const res = rankingResponse(classRows(), { period: "weekly", computedAt: "2026-11-11T09:30:00.000Z" });
+  assert.deepEqual([res.period, res.computedAt, res.refreshMs], ["weekly", "2026-11-11T09:30:00.000Z", RANKING_REFRESH_MS]);
+  // 반 전체 25명 — 10위 밖 학생도 함께(한때 학생에게는 상위 10명과 본인만 보냄)
+  assert.deepEqual(res.rankings.map((r) => [r.uid, r.rank, r.xp]),
+    Array.from({ length: 25 }, (_, i) => [`s${String(i + 1).padStart(2, "0")}`, i + 1, (25 - i) * 10]));
+  assert.ok(JSON.stringify(res).includes("학생25"));
+  // 줄마다 다른 칸과 네 기간 경험치(xpBy)가 그대로 — 화면은 기간 단추를 누를 때 이것으로 다시 셈(다시 묻지 않음)
+  const s20 = res.rankings.find((r) => r.uid === "s20");
+  assert.deepEqual([s20.name, s20.totalPages, s20.xpBy.daily, s20.xpBy["all-time"]], ["학생20", 19, 0, 240]);
+  // 오늘 — 경험치 0도 공동 순위로(셋 다음은 모두 4위)
+  const daily = rankingsForPeriod(res.rankings, "daily");
+  assert.equal(daily.length, 25);
+  assert.deepEqual(daily.slice(2, 5).map((r) => [r.uid, r.rank, r.xp]), [["s03", 3, 28], ["s04", 4, 0], ["s05", 4, 0]]);
+  // 누적 — 같은 점수(600)인 넷은 공동 9위, 그다음은 13위
+  const allTime = rankingsForPeriod(res.rankings, "all-time");
+  assert.deepEqual(allTime.slice(7, 13).map((r) => [r.uid, r.rank]), [["s08", 8], ["s09", 9], ["s10", 9], ["s11", 9], ["s12", 9], ["s13", 13]]);
+  // 응답이 기간마다 따로 고른 줄(옛 people · periods · 상위 10명)을 담지 않음
+  assert.deepEqual(Object.keys(res).sort(), ["computedAt", "period", "rankings", "refreshMs"]);
+  // 학생이 없으면 빈 줄 · 기간을 안 주면 이번 주
+  assert.deepEqual([rankingResponse([]).rankings, rankingResponse([]).period], [[], "weekly"]);
+});
+
+test("저장한 반 순위 — 10분 안이고 서울 날짜가 같을 때만 그대로 씀", () => {
+  // 리더보드가 다시 묻는 주기와 같은 10분
+  assert.equal(RANKING_REFRESH_MS, 600000);
+  assert.equal(RANKING_REFRESH_MS, RANKING_POLL_MS);
+  const at = Date.parse("2026-11-11T09:30:00Z"); // 서울 18:30
+  assert.equal(rankingCacheFresh(at, at + 9 * 60000 + 59000), true);
+  assert.equal(rankingCacheFresh(at, at + 10 * 60000), false);
+  // 서울 자정을 넘기면 '오늘' 순위가 어제 것으로 남지 않게 다시 셈(23:58에 셈 → 00:02)
+  assert.equal(rankingCacheFresh(Date.parse("2026-11-11T14:58:00Z"), Date.parse("2026-11-11T15:02:00Z")), false);
+  // 서버끼리 시계가 조금 달라 살짝 미래로 보여도 그대로 · 크게 어긋나면 다시 셈
+  assert.equal(rankingCacheFresh(at + 30000, at), true);
+  assert.equal(rankingCacheFresh(at + 5 * 60000, at), false);
+  // 시험용 — 0이면 늘 다시 셈
+  assert.equal(rankingCacheFresh(at, at, 0), false);
+  assert.equal(rankingCacheFresh(NaN, at), false);
+  assert.equal(rankingCacheFresh(undefined, at), false);
+});
+
+test("저장한 반 순위의 기준 시각 — 서울 시각으로", () => {
+  assert.equal(rankingAsOf("2026-11-11T09:30:00.000Z"), "오후 6:30");
+  assert.equal(rankingAsOf(Date.parse("2026-11-11T00:05:00Z")), "오전 9:05");
+  assert.equal(rankingAsOf(null), "");
+  assert.equal(rankingAsOf("아님"), "");
 });

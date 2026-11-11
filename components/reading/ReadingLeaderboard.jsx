@@ -6,7 +6,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { deriveReading, kstToday, READING_BADGES } from "@/lib/reading";
 import { fetchReadingRankings, saveReadingCharacter, subscribeReadingState } from "@/lib/data/reading";
 import { startVisiblePoll, RANKING_POLL_MS, RANKING_WAKE_GAP_MS } from "@/lib/visiblePoll";
-import { journeyNarrative, journeyTitle, badgeHint, rankingsForPeriod } from "@/lib/readingJourney";
+import { journeyNarrative, journeyTitle, badgeHint, rankingAsOf, rankingsForPeriod } from "@/lib/readingJourney";
 import { worldProgress } from "@/lib/readingWorldMap";
 import { getReadingMapTheme } from "@/lib/readingMapCatalog";
 import { characterOf, characterImage } from "@/lib/readingCharacterCatalog";
@@ -87,6 +87,8 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, m
   const scope = `${classId || ""}:${uid || ""}`;
   const [period, setPeriod] = useState("weekly");
   const [rows, setRows] = useState(null);
+  // 서버가 반 순위를 센 때 — '오후 6:30 기준'. 서버는 10분에 한 번만 세고 그 안의 조회는 저장해 둔 것을 줍니다.
+  const [computedAt, setComputedAt] = useState(null);
   const [rowsScope, setRowsScope] = useState("");
   const [request, setRequest] = useState(null);
   const [retry, setRetry] = useState(0);
@@ -109,6 +111,7 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, m
     Promise.resolve(fetchReadingRankings(classId)).then((result) => {
       if (!live) return;
       setRows(Array.isArray(result) ? result : result?.rankings || []);
+      setComputedAt(Array.isArray(result) ? null : result?.computedAt ?? null);
       setRowsScope(scope);
       setRequest({ key: requestKey, status: "ready" });
     }).catch((error) => {
@@ -171,6 +174,7 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, m
   const myRow = list.find((row) => row.uid === uid);
   const picked = list.find((row) => row.uid === pickedUid);
   const periodLabel = PERIODS.find(([key]) => key === period)?.[1];
+  const asOf = hasSnapshot ? rankingAsOf(computedAt) : "";
   const selectStudent = useCallback((rowOrUid) => setPickedUid(typeof rowOrUid === "string" ? rowOrUid : rowOrUid?.uid || null), []);
   const closeStudent = useCallback(() => setPickedUid(null), []);
   const saveCharacter = useCallback(async (character) => {
@@ -233,6 +237,7 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, m
               <div className="rlb-card-head"><h3 id="rlb-rank-title">독서 랭킹</h3></div>
               <div className="reading-filters" aria-label="순위 기간">{PERIODS.map(([key, label]) => <button key={key} type="button" className={period === key ? "active" : ""} aria-pressed={period === key} onClick={() => setPeriod(key)}>{label}</button>)}</div>
               <p className="reading-help">순위는 고른 기간에 이 반에서 얻은 경험치로 · 한국 시간 · 주간은 월요일 시작 · 같은 점수는 공동 순위</p>
+              {asOf && <p className="reading-help rlb-asof">{asOf} 기준 · 순위는 10분마다 새로 세요</p>}
               {error ? <p className="reading-help">순위를 갱신하지 못했어요. 다시 시도해 주세요.</p>
                   : <ul className="rlb-list">{list.map((row) => {
                     const me = row.uid === uid;
