@@ -15,7 +15,7 @@
 //   · 학생 캐릭터(characterEnabled — 값이 없으면 켜짐, 책나눔이 켜져 있어야 씀. 리더보드를 꺼도 '내 프로필'에서 고름)
 //   · 과일 바구니(fruitBasketEnabled — 값이 없으면 켜짐, 끄면 떠 있는 동그라미에서도 가림)
 //   · 학생 펫(petEnabled — 값이 없으면 켜짐, 책나눔이 켜져 있어야 씀 · lib/readingPet.js)
-//   · 독서 맵(readingMapTheme — 구름섬 대모험 · 도전의 대륙)
+//   · 독서 맵(readingMapTheme — 모험 · 대륙)
 // 쓰기는 반 문서의 설정 칸이고, 규칙이 값과 보관 안 된 반만 받습니다.
 // =============================================================
 import { Fragment, useId, useMemo, useState } from "react";
