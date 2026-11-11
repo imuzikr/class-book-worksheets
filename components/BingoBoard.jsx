@@ -6,15 +6,16 @@
 // bingo.words(낱말 상자)에 적어 두었습니다(lib/data/books.js의 addBingoActivity).
 // 화면의 생김은 가로세로 낱말 퀴즈(CrosswordGroupBoard)를 그대로 따릅니다 —
 // 왼쪽 판별 진행(미니맵 순위) · 가운데 고른 판 크게 + 진행 단추.
-// 셈과 흐름은 배움나눔(class-peer-qna)의 같은 화면을 옮겨 왔고(2026년 11월), 책봄은
-// 머리말 짜임과 **떠 있는 '낱말 부르기' 패널**(선생님 요청 — 배움나눔은 판 오른쪽 목록)만 다릅니다.
+// 셈과 흐름 · 판 오른쪽 낱말 목록은 배움나눔(class-peer-qna)의 같은 화면을 옮겨 왔고(2026년 11월),
+// 책봄은 머리말 짜임만 다릅니다. 한때 책봄의 낱말 목록은 화면 위에 떠 있는 패널(FloatingPanel ·
+// 'bingo_call_float')이었는데, 판 오른쪽 목록으로 바꾸며 걷었습니다(선생님 요청).
 // -------------------------------------------------------------
 // 두 단계(활동 문서의 bingo.stage) — 판 크기(4×4 · 5×5)는 bingo.size
 //   판 채우기(fill) — 학생(모둠)이 낱말 상자에서 칸을 골라 채웁니다. 왼쪽은 채운 칸이 많은
 //                    차례, 목표 줄 수(1~5줄) · 낱말 부르기(누가 부를지) · 낱말 상자(많이 쓴
-//                    n개 / 전체)를 여기서 정합니다. 떠 있는 패널은 학생이 고르는 낱말 상자(보기만).
+//                    n개 / 전체)를 여기서 정합니다. 판 오른쪽은 학생이 고르는 낱말 상자(보기만).
 //   빙고(play)      — 판은 굳고(규칙도 같음), 부른 낱말이 든 칸이 모든 판에서 저절로 표시됩니다.
-//                    떠 있는 패널은 **판에 놓인 낱말**(ㄱ~ㅎ 줄 목록 — 불리면 색이 바뀜).
+//                    판 오른쪽은 **판에 놓인 낱말**(ㄱ~ㅎ 줄 목록 — 불리면 색이 바뀜).
 //     선생님이 진행 — 그 목록에서 누르거나 '무작위로 부르기'(판에 놓인 안 부른 낱말에서만 —
 //                    아무 판에도 없는 낱말을 부르면 수업만 늘어집니다).
 //     학생이 진행   — 학번 차례대로 학생이 제 판의 낱말을 고릅니다(BingoStudent). 판 위에 부르는
@@ -59,13 +60,12 @@ import {
 import { ROW_COLORS } from "@/lib/bookColors";
 import BingoGrid from "./BingoGrid";
 import ConfirmModal from "./ConfirmModal";
-import FloatingPanel from "./FloatingPanel";
 import { BOOK_LOCKED_TEACHER, BookLockToggle } from "./BookHeadParts";
 import { IconLock } from "./StatusIcons";
 
 const LEADS = [["teacher", "선생님이 진행"], ["student", "학생이 진행"]];
-// 떠 있는 패널의 이름 — 안내 글에서 '그 패널에서 누르세요'로 부릅니다
-const PANEL = "‘낱말 부르기’ 패널";
+// 낱말 목록의 자리 — 안내 글에서 '거기서 누르세요'로 부릅니다(배움나눔과 같은 말)
+const LIST = "오른쪽 목록";
 
 export default function BingoBoard({
   activity,
@@ -355,16 +355,16 @@ export default function BingoBoard({
   } else if (studentLead && turnUid) {
     const now = `지금 차례: ${turnNo}번째 ${nameOf(turnUid)}`;
     guide = turnLocked
-      ? `${now} — 활동이 잠겨 있어 학생은 부를 수 없어요. ${PANEL}에서 낱말을 눌러 대신 골라 주세요.`
+      ? `${now} — 활동이 잠겨 있어 학생은 부를 수 없어요. ${LIST}에서 낱말을 눌러 대신 골라 주세요.`
       : turnAbsent
-        ? `${now} — 오늘 결석이에요. ${PANEL}에서 낱말을 눌러 대신 골라 주세요(‘무작위로 대신 고르기’는 그 학생의 판에 남은 낱말에서 골라요).`
+        ? `${now} — 오늘 결석이에요. ${LIST}에서 낱말을 눌러 대신 골라 주세요(‘무작위로 대신 고르기’는 그 학생의 판에 남은 낱말에서 골라요).`
         : turnStuck
-          ? `${now} — 그 학생의 판에 부를 낱말이 남지 않았어요. ${PANEL}에서 낱말을 눌러 대신 골라 주세요.`
-          : `${now} — 학생이 제 판에서 낱말을 고르면 모든 판에 곧바로 표시돼요. 결석이면 ${PANEL}에서 대신 골라 주세요.`;
+          ? `${now} — 그 학생의 판에 부를 낱말이 남지 않았어요. ${LIST}에서 낱말을 눌러 대신 골라 주세요.`
+          : `${now} — 학생이 제 판에서 낱말을 고르면 모든 판에 곧바로 표시돼요. 결석이면 ${LIST}에서 대신 골라 주세요.`;
   } else if (studentLead) {
-    guide = `부르는 차례에 든 학생이 없어요(판에 든 학생이 있어야 차례가 생겨요). 그동안은 ${PANEL}에서 선생님이 불러요.`;
+    guide = `부르는 차례에 든 학생이 없어요(판에 든 학생이 있어야 차례가 생겨요). 그동안은 ${LIST}에서 선생님이 불러요.`;
   } else {
-    guide = `낱말 ${called.length}개를 불렀어요. ${PANEL}에서 누르거나 ‘무작위로 부르기’로 부르면 모든 판에 곧바로 표시돼요.`;
+    guide = `낱말 ${called.length}개를 불렀어요. ${LIST}에서 누르거나 ‘무작위로 부르기’로 부르면 모든 판에 곧바로 표시돼요.`;
   }
 
   return (
@@ -626,112 +626,114 @@ export default function BingoBoard({
               </div>
             )}
 
-            {pickedRow ? (
-              <BingoGrid
-                size={size}
-                cells={pickedRow.cells}
-                marked={pickedRow.marked}
-                lineCells={pickedRow.lineCells}
-                lines={pickedRow.lines}
-                lastWord={playing ? lastWord : ""}
-              />
-            ) : (
-              <p className="xw-empty">왼쪽에 판이 생기면 눌러서 크게 볼 수 있어요.</p>
-            )}
+            {/* 판 왼쪽 · 낱말 목록 오른쪽(배움나눔과 같은 짜임 — 선생님 요청으로 떠 있는 패널을 걷음).
+                판 채우기 동안은 학생이 고르는 낱말 상자, 빙고 중에는 판에 놓인 낱말(ㄱ~ㅎ 줄 목록 · 눌러서
+                부름). 가운데 칸이 좁으면 목록이 판 아래로 내려갑니다(43-bingo.css의 @container bingostage). */}
+            <div className="bingo-stage">
+              <div className="bingo-stage-board">
+                {pickedRow ? (
+                  <BingoGrid
+                    size={size}
+                    cells={pickedRow.cells}
+                    marked={pickedRow.marked}
+                    lineCells={pickedRow.lineCells}
+                    lines={pickedRow.lines}
+                    lastWord={playing ? lastWord : ""}
+                  />
+                ) : (
+                  <p className="xw-empty">왼쪽에 판이 생기면 눌러서 크게 볼 수 있어요.</p>
+                )}
+              </div>
+              {playing ? (
+                <section className={`bingo-callbox${studentLead && proxyNow ? " proxy" : ""}`} aria-label="판에 놓인 낱말">
+                  <header className="bingo-callbox-head">
+                    <h4>판에 놓인 낱말</h4>
+                    <span className="xw-badge">부름 {calledOnBoards} / {boardWords.length}</span>
+                  </header>
+                  <p className="xw-card-note">
+                    {studentLead
+                      ? turnUid
+                        ? proxyNow
+                          ? `지금은 선생님이 ${nameOf(turnUid)} 대신 고를 차례예요 — 누르면 곧바로 불러요.`
+                          : `학생이 고르면 그 낱말의 색이 바뀌어요. 누르면 ${nameOf(turnUid)} 대신 불러요(한 번 되물어요).`
+                        : "학생이 고른 낱말의 색이 바뀌어요. 누르면 선생님이 불러요."
+                      : "ㄱ~ㅎ 차례예요. 누르면 부릅니다."}
+                    {" "}동그라미 숫자는 부른 차례, ‘n판’은 그 낱말이 놓인 판 수예요.
+                  </p>
+                  {boardWords.length === 0 ? (
+                    <p className="xw-empty">아직 판에 놓인 낱말이 없어요.</p>
+                  ) : (
+                    /* 학생 화면 '불린 낱말'과 같은 줄 모양(배움나눔 선생님 요청 — 한때 알약) — 동그라미(부른
+                       차례) · 낱말 · 놓인 판 수. 목록 폭에 맞춰 여러 열로 서고 ㄱ~ㅎ는 왼쪽에서 오른쪽으로 */
+                    <ul className="bingo-wordlist">
+                      {boardWords.map(({ word, boards }) => {
+                        const n = calledOrder.get(word);
+                        const who = n ? bingo.by[n - 1] : "";
+                        return (
+                          <li key={word}>
+                            <button
+                              type="button"
+                              className={`bingo-wordrow${n ? " called" : ""}${word === lastWord ? " last" : ""}`}
+                              onClick={() => pickBoardWord(word)}
+                              disabled={!!n || busy}
+                              aria-label={`${word} — ${n ? `${n}번째로 불림 · ` : ""}${boards}판에 놓임`}
+                              title={n
+                                ? `${n}번째로 불렀어요${who ? ` · ${nameOf(who)} 차례` : ""}`
+                                : studentLead && turnUid ? `${nameOf(turnUid)} 대신 부르기` : "눌러서 부르기"}
+                            >
+                              <b aria-hidden="true">{n ?? ""}</b>
+                              <span>{word}</span>
+                              <em aria-hidden="true">{boards}판</em>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                  <p className="xw-card-note xwg-legend">
+                    <span className="bingo-swatch called" /> 부른 낱말 <span className="bingo-swatch just" /> 방금 부른 낱말
+                  </p>
+                </section>
+              ) : (
+                /* 낱말 상자 — 판 채우기 동안 보기만(학생이 고르는 낱말). 빙고 중에는 판에 놓인 낱말만
+                   부르므로 상자는 접어 둡니다(아무 판에도 없는 낱말을 부르지 않게). */
+                <section className="bingo-callbox" aria-label="낱말 상자">
+                  <header className="bingo-callbox-head">
+                    <h4>낱말 상자</h4>
+                    <span className="xw-badge">
+                      낱말 {boxWords.length}개{boxWords.length < words.length ? ` / 전체 ${words.length}개` : ""}
+                    </span>
+                  </header>
+                  <p className="xw-card-note">
+                    {boxWords.length < words.length
+                      ? `학생이 판을 채울 때 고르는 낱말이에요 — 닿소리 채우기에서 많이 쓴 차례로 ${boxWords.length}개(ㄱ~ㅎ 차례로 보여요).`
+                      : "학생이 판을 채울 때 고르는 낱말이에요 — 닿소리 채우기의 낱말 전부."}
+                    {" "}‘n판’은 지금 그 낱말을 놓은 판 수예요.
+                  </p>
+                  {words.length === 0 ? (
+                    <p className="xw-empty">낱말이 없어요. 닿소리 채우기에 낱말이 모이면 ‘낱말 새로 가져오기’를 눌러 주세요.</p>
+                  ) : (
+                    /* 빙고 중의 '판에 놓인 낱말'과 같은 줄 모양 — 보기만이라 동그라미 · 누름은 없음 */
+                    <ul className="bingo-wordlist">
+                      {boxWords.map((w) => (
+                        <li key={w}>
+                          <span className="bingo-wordrow view">
+                            <span>{w}</span>
+                            <em>{boardsWith.get(w) ?? 0}판</em>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {boxWords.length > 0 && boxWords.length < cellCount && (
+                    <p className="xw-card-note">낱말이 {cellCount}개보다 적어 판을 다 채울 수 없어요 — 빈칸은 표시되지 않아요.</p>
+                  )}
+                </section>
+              )}
+            </div>
           </section>
         </div>
       </div>
-
-      {/* 낱말 부르기 — 화면 위에 떠 있는 패널(책봄 선생님 요청 — 가로세로 퀴즈의 '낱말 힌트'와 같은
-          FloatingPanel). 끌어 옮기고 접었다 펴며, 판과 미니맵을 가리지 않습니다. 줄 모양은 학생
-          화면 '불린 낱말'과 같습니다(배움나눔 — 한때 알약). 빙고 중에는 판에 놓인 낱말만(아무 판에도
-          없는 낱말을 부르지 않게), 판 채우기 동안은 학생이 고르는 낱말 상자(보기만). */}
-      <FloatingPanel
-        title={playing ? "낱말 부르기" : "낱말 상자"}
-        storageKey="bingo_call_float"
-        width={380}
-        maxBody={480}
-        className={`bingo-float${playing && studentLead && proxyNow ? " proxy" : ""}`}
-        badge={
-          <span className="xw-badge">
-            {playing
-              ? `부름 ${calledOnBoards} / ${boardWords.length}`
-              : `낱말 ${boxWords.length}개${boxWords.length < words.length ? ` / 전체 ${words.length}개` : ""}`}
-          </span>
-        }
-      >
-        {playing ? (
-          <>
-            <p className="xw-card-note">
-              {studentLead
-                ? turnUid
-                  ? proxyNow
-                    ? `지금은 선생님이 ${nameOf(turnUid)} 대신 고를 차례예요 — 누르면 곧바로 불러요.`
-                    : `학생이 고르면 그 낱말의 색이 바뀌어요. 누르면 ${nameOf(turnUid)} 대신 불러요(한 번 되물어요).`
-                  : "학생이 고른 낱말의 색이 바뀌어요. 누르면 선생님이 불러요."
-                : "판에 놓인 낱말이에요(ㄱ~ㅎ 차례). 누르면 부릅니다."}
-              {" "}동그라미 숫자는 부른 차례, ‘n판’은 그 낱말이 놓인 판 수예요.
-            </p>
-            {boardWords.length === 0 ? (
-              <p className="xw-empty">아직 판에 놓인 낱말이 없어요.</p>
-            ) : (
-              <ul className="bingo-wordlist">
-                {boardWords.map(({ word, boards }) => {
-                  const n = calledOrder.get(word);
-                  const who = n ? bingo.by[n - 1] : "";
-                  return (
-                    <li key={word}>
-                      <button
-                        type="button"
-                        className={`bingo-wordrow${n ? " called" : ""}${word === lastWord ? " last" : ""}`}
-                        onClick={() => pickBoardWord(word)}
-                        disabled={!!n || busy}
-                        aria-label={`${word} — ${n ? `${n}번째로 불림 · ` : ""}${boards}판에 놓임`}
-                        title={n
-                          ? `${n}번째로 불렀어요${who ? ` · ${nameOf(who)} 차례` : ""}`
-                          : studentLead && turnUid ? `${nameOf(turnUid)} 대신 부르기` : "눌러서 부르기"}
-                      >
-                        <b aria-hidden="true">{n ?? ""}</b>
-                        <span>{word}</span>
-                        <em aria-hidden="true">{boards}판</em>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-            <p className="xw-card-note xwg-legend bingo-float-rest">
-              <span className="bingo-swatch called" /> 부른 낱말 <span className="bingo-swatch just" /> 방금 부른 낱말
-            </p>
-          </>
-        ) : (
-          <>
-            <p className="xw-card-note">
-              {boxWords.length < words.length
-                ? `학생이 판을 채울 때 고르는 낱말이에요 — 닿소리 채우기에서 많이 쓴 차례로 ${boxWords.length}개(ㄱ~ㅎ 차례로 보여요).`
-                : "학생이 판을 채울 때 고르는 낱말이에요 — 닿소리 채우기의 낱말 전부."}
-              {" "}‘n판’은 지금 그 낱말을 놓은 판 수예요.
-            </p>
-            {words.length === 0 ? (
-              <p className="xw-empty">낱말이 없어요. 닿소리 채우기에 낱말이 모이면 ‘낱말 새로 가져오기’를 눌러 주세요.</p>
-            ) : (
-              <ul className="bingo-wordlist">
-                {boxWords.map((w) => (
-                  <li key={w}>
-                    <span className="bingo-wordrow view">
-                      <span>{w}</span>
-                      <em>{boardsWith.get(w) ?? 0}판</em>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {boxWords.length > 0 && boxWords.length < cellCount && (
-              <p className="xw-card-note bingo-float-rest">낱말이 {cellCount}개보다 적어 판을 다 채울 수 없어요 — 빈칸은 표시되지 않아요.</p>
-            )}
-          </>
-        )}
-      </FloatingPanel>
 
       {confirm === "start" && (
         <ConfirmModal
