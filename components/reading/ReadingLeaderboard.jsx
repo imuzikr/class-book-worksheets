@@ -6,7 +6,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { deriveReading, kstToday, READING_BADGES } from "@/lib/reading";
 import { fetchReadingRankings, saveReadingCharacter, subscribeReadingState } from "@/lib/data/reading";
 import { startVisiblePoll, RANKING_POLL_MS, RANKING_WAKE_GAP_MS } from "@/lib/visiblePoll";
-import { journeyNarrative, journeyTitle, badgeHint, rankingsForPeriod } from "@/lib/readingJourney";
+import { journeyNarrative, journeyTitle, badgeHint, rankingAsOf, rankingPeriodView, rankingWithMe, RANKING_TOP_N } from "@/lib/readingJourney";
 import { worldProgress } from "@/lib/readingWorldMap";
 import { characterOf, characterImage } from "@/lib/readingCharacterCatalog";
 import { backdropClose } from "@/lib/modal";
@@ -64,11 +64,19 @@ function Face({ row, uid, className, pet, petSize = 26 }) {
   </span>;
 }
 
-function Medal({ rank, size = 34 }) {
+// 순위가 없으면(그 기간 경험치가 0인 본인 — lib/readingJourney.js의 rankingResponse) '—'
+function Medal({ rank, size = 34, emptyLabel = "순위 집계 중" }) {
   if (rank === 1) return <span className="rlb-medal" style={{ fontSize: size }} aria-label="1위">🥇</span>;
   if (rank === 2) return <span className="rlb-medal" style={{ fontSize: size }} aria-label="2위">🥈</span>;
   if (rank === 3) return <span className="rlb-medal" style={{ fontSize: size }} aria-label="3위">🥉</span>;
-  return <span className="rlb-medal rlb-medal--num" style={{ width: size, height: size, fontSize: size * 0.4 }} aria-label={numeric(rank) ? `${rank}위` : "순위 집계 중"}>{number(rank)}</span>;
+  return <span className="rlb-medal rlb-medal--num" style={{ width: size, height: size, fontSize: size * 0.4 }} aria-label={numeric(rank) ? `${rank}위` : emptyLabel}>{number(rank)}</span>;
+}
+
+// 저장해 둔 캐릭터를 내 줄에만 곧바로 입힙니다(받은 모양이 줄 배열이든 people이든)
+function withCharacter(board, uid, character) {
+  if (Array.isArray(board)) return board.map((row) => (row.uid === uid ? { ...row, character } : row));
+  if (!board?.people?.[uid]) return board;
+  return { ...board, people: { ...board.people, [uid]: { ...board.people[uid], character } } };
 }
 
 function Bar({ percent, label }) {
@@ -84,7 +92,8 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, c
   const uid = user?.uid;
   const scope = `${classId || ""}:${uid || ""}`;
   const [period, setPeriod] = useState("weekly");
-  const [rows, setRows] = useState(null);
+  // 받은 순위 한 벌 — 학생은 기간마다 상위 10명 + 본인, 교사는 반 전체(lib/readingJourney.js의 rankingResponse)
+  const [board, setBoard] = useState(null);
   const [rowsScope, setRowsScope] = useState("");
   const [request, setRequest] = useState(null);
   const [retry, setRetry] = useState(0);
@@ -93,7 +102,7 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, c
   const disabledRef = useRef(onDisabled); disabledRef.current = onDisabled;
   const scopeRef = useRef(scope); scopeRef.current = scope;
   const pollRef = useRef(null);
-  // 기간은 받을 열쇠에 넣지 않습니다 — 한 번 받으면 네 기간의 경험치가 함께 와서(xpBy) 단추를 눌러도 다시 안 받습니다.
+  // 기간은 받을 열쇠에 넣지 않습니다 — 한 번 받으면 네 기간이 함께 와서 단추를 눌러도 다시 안 받습니다.
   const requestKey = `${scope}:${retry}`;
   const requestCurrent = request?.key === requestKey;
   const loading = !requestCurrent || request.status === "loading";
@@ -106,14 +115,14 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, c
     setRequest({ key: requestKey, status: "loading" });
     Promise.resolve(fetchReadingRankings(classId)).then((result) => {
       if (!live) return;
-      setRows(Array.isArray(result) ? result : result?.rankings || []);
+      setBoard(result ?? null);
       setRowsScope(scope);
       setRequest({ key: requestKey, status: "ready" });
     }).catch((error) => {
       if (!live) return;
       setRequest({ key: requestKey, status: "error", error: error?.message || "리더보드를 불러오지 못했어요." });
       if (DISABLED_CODES.has(error?.code)) {
-        setRows(null);
+        setBoard(null);
         setPickedUid(null);
         disabledRef.current?.();
       }
@@ -162,20 +171,28 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, c
   const today = kstToday();
   // 상태는 내용이 바뀔 때만 오므로(같으면 안 넘김) 날짜가 바뀌면 오늘 기준으로 다시 셉니다(ReadingHub와 같은 셈).
   const mine = useMemo(() => mineState?.scope === scope ? deriveReading(mineState.value, new Date(`${today}T12:00:00+09:00`)) : null, [mineState, scope, today]);
-  const hasSnapshot = rowsScope === scope && rows !== null;
-  // 받아 둔 순위가 있으면 다시 받는 동안에도 그대로 둡니다(주기마다 깜빡이지 않게). 기간 단추는 받아 둔 네 기간의
-  // 경험치로 그 자리에서 다시 세웁니다(lib/readingJourney.js의 rankingsForPeriod) — 서버에 다시 묻지 않습니다.
-  const list = useMemo(() => hasSnapshot ? rankingsForPeriod(rows, period) : [], [hasSnapshot, rows, period]);
-  const myRow = list.find((row) => row.uid === uid);
-  const picked = list.find((row) => row.uid === pickedUid);
+  const hasSnapshot = rowsScope === scope && board !== null;
+  // 받아 둔 순위가 있으면 다시 받는 동안에도 그대로 둡니다(주기마다 깜빡이지 않게). 기간 단추는 받아 둔 네 기간에서
+  // 그 기간의 줄만 꺼냅니다(lib/readingJourney.js의 rankingPeriodView) — 서버에 다시 묻지 않습니다.
+  const periodView = useMemo(() => hasSnapshot ? rankingPeriodView(board, period) : null, [hasSnapshot, board, period]);
+  const list = useMemo(() => periodView?.rows ?? [], [periodView]);
+  const myRow = periodView?.me ?? list.find((row) => row.uid === uid) ?? null;
+  // 학생 — 상위 10명과 내 순위만 받습니다. 내가 10위 밖이면 표 아래에 '⋯'와 함께 내 줄을 한 번 더 그립니다(겹치지 않게).
+  const limited = !isTeacher && periodView?.scope === "top";
+  const meOutside = limited && !!myRow && !periodView.meInRows;
+  // 독서 맵 — 누적 기준(학생은 누적 상위 10명 + 나, 교사는 반 전체). 기간 단추와 상관없이 같은 여행자들입니다.
+  const mapRows = useMemo(() => hasSnapshot ? rankingWithMe(rankingPeriodView(board, "all-time")) : [], [hasSnapshot, board]);
+  const picked = useMemo(() => (pickedUid ? [...list, ...mapRows, myRow].find((row) => row?.uid === pickedUid) ?? null : null),
+    [list, mapRows, myRow, pickedUid]);
   const periodLabel = PERIODS.find(([key]) => key === period)?.[1];
+  const asOf = hasSnapshot && !Array.isArray(board) ? rankingAsOf(board.computedAt) : "";
   const selectStudent = useCallback((rowOrUid) => setPickedUid(typeof rowOrUid === "string" ? rowOrUid : rowOrUid?.uid || null), []);
   const closeStudent = useCallback(() => setPickedUid(null), []);
   const saveCharacter = useCallback(async (character) => {
     const savedScope = scope;
     const result = await saveReadingCharacter(classId, character);
     if (scopeRef.current === savedScope) {
-      setRows((previous) => previous?.map((row) => row.uid === uid ? { ...row, character: result.character } : row));
+      setBoard((previous) => withCharacter(previous, uid, result.character));
       setRetry((value) => value + 1);
     }
     return result.character;
@@ -211,7 +228,7 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, c
       >{item.label}</button>)}
       </div>
       <div className="rlb-head-side">
-        {view === "ranking" && !isTeacher && myRow && !error && <div className="rlb-myrank"><span>{periodLabel} 내 순위</span><Medal rank={myRow.rank} size={40} /></div>}
+        {view === "ranking" && !isTeacher && myRow && !error && <div className="rlb-myrank"><span>{periodLabel} 내 순위</span><Medal rank={myRow.rank} size={40} emptyLabel={`${periodLabel} 기록 없음`} /></div>}
         <button type="button" className="btn-ghost" disabled={loading} onClick={() => setRetry((value) => value + 1)}>새로고침</button>
       </div>
     </header>
@@ -220,34 +237,27 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, c
     {hasSnapshot && error && <p className="reading-help" role="status">성장 정보는 마지막으로 확인한 누적 기록입니다. 새로고침해 주세요.</p>}
     <section className="rlb-panel" id={`${viewId}-panel-map`} role="tabpanel" aria-labelledby={`${viewId}-tab-map`} hidden={view !== "map"} tabIndex={0}>
       {!hasSnapshot ? !error && <div className="reading-loading" role="status">우리 반 여정을 모으고 있어요.</div>
-        : <ReadingWorldMap key={classId} rows={list} uid={uid} isTeacher={isTeacher} petOn={petOn} onOpenDetails={selectStudent} onSaveCharacter={characterOn ? saveCharacter : null} />}
+        : <ReadingWorldMap key={classId} rows={mapRows} uid={uid} isTeacher={isTeacher} limited={limited} petOn={petOn} onOpenDetails={selectStudent} onSaveCharacter={characterOn ? saveCharacter : null} />}
     </section>
 
     <section className="rlb-panel" id={`${viewId}-panel-ranking`} role="tabpanel" aria-labelledby={`${viewId}-tab-ranking`} hidden={view !== "ranking"} tabIndex={0}>
       {!hasSnapshot ? !error && <div className="reading-loading" role="status">우리 반 순위를 모으고 있어요.</div>
-        : !list.length ? <div className="reading-empty"><h3>아직 함께 걸을 친구가 없어요.</h3><p>반에 학생이 들어오면 이곳에서 독서 여정을 확인할 수 있어요.</p></div>
+        : !list.length && !myRow ? <div className="reading-empty"><h3>아직 함께 걸을 친구가 없어요.</h3><p>반에 학생이 들어오면 이곳에서 독서 여정을 확인할 수 있어요.</p></div>
           : <div className={"rlb-cols" + (isTeacher ? " is-teacher" : "")}>
             <section className="rlb-card" aria-labelledby="rlb-rank-title" aria-busy={loading}>
               <div className="rlb-card-head"><h3 id="rlb-rank-title">독서 랭킹</h3></div>
               <div className="reading-filters" aria-label="순위 기간">{PERIODS.map(([key, label]) => <button key={key} type="button" className={period === key ? "active" : ""} aria-pressed={period === key} onClick={() => setPeriod(key)}>{label}</button>)}</div>
               <p className="reading-help">순위는 고른 기간에 이 반에서 얻은 경험치로 · 한국 시간 · 주간은 월요일 시작 · 같은 점수는 공동 순위</p>
+              {asOf && <p className="reading-help rlb-asof">{limited ? `상위 ${board?.top || RANKING_TOP_N}명과 내 순위만 보여요 · ` : ""}{asOf} 기준 · 순위는 10분마다 새로 세요</p>}
               {error ? <p className="reading-help">순위를 갱신하지 못했어요. 다시 시도해 주세요.</p>
-                  : <ul className="rlb-list">{list.map((row) => {
-                    const me = row.uid === uid;
-                    const progress = growthOf(row);
-                    return <li key={row.uid}>
-                      <button type="button" className={"rlb-row" + (me ? " is-me" : "")} onClick={() => selectStudent(row.uid)}>
-                        <Medal rank={row.rank} />
-                        <Face row={row} className="rlb-row-face" pet={petOf(row, petOn)} />
-                        <span className="rlb-row-main">
-                          <span className="rlb-row-name">{nameOf(row)}{me && <span className="reading-me-label">나</span>}</span>
-                          <span className="rlb-row-sub">{progress ? `Lv.${progress.level} ${journeyTitle(progress.level)} · ${period === "all-time" ? progress.complete ? "최고 레벨에 도착했어요" : `다음 레벨까지 ${number(progress.toNext)} EXP` : `누적 ${number(xpOf(row))} EXP`}` : "누적 성장 정보 집계 중 · —"}</span>
-                          {progress && <Bar percent={progress.percent} label={`${row.name} 다음 레벨까지 진행률`} />}
-                        </span>
-                        <span className="rlb-row-side"><span>{periodLabel} {orDash(row.xp, " EXP")}</span><span>{orDash(row.totalPages, "쪽")} · 뱃지 {orDash(row.badgeCount, "개")}</span></span>
-                      </button>
-                    </li>;
-                  })}</ul>}
+                  : <ul className="rlb-list">
+                    {!list.length && <li className="rlb-none">{periodLabel} 경험치를 얻은 친구가 아직 없어요.</li>}
+                    {list.map((row) => <RankRow key={row.uid} row={row} uid={uid} period={period} periodLabel={periodLabel} petOn={petOn} onPick={selectStudent} />)}
+                    {meOutside && <>
+                      {list.length > 0 && <li className="rlb-gap" aria-hidden="true">⋯</li>}
+                      <RankRow row={myRow} uid={uid} period={period} periodLabel={periodLabel} petOn={petOn} onPick={selectStudent} />
+                    </>}
+                  </ul>}
             </section>
             {isTeacher ? <ClassSummary rows={list} /> : <MyJourney mine={mine} row={myRow} uid={uid} today={today} pet={petOf(myRow, petOn)} />}
           </div>}
@@ -255,6 +265,24 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, c
 
     {picked && <StudentJourneyModal row={picked} me={picked.uid === uid} pet={petOf(picked, petOn)} onClose={closeStudent} onOpenLibrary={isTeacher && onOpenLibrary && picked.uid !== uid ? () => onOpenLibrary(picked.uid) : null} />}
   </div>;
+}
+
+// 순위 한 줄 — 상위 10명의 줄과 10위 밖 내 줄이 같은 모양입니다.
+function RankRow({ row, uid, period, periodLabel, petOn, onPick }) {
+  const me = row.uid === uid;
+  const progress = growthOf(row);
+  return <li>
+    <button type="button" className={"rlb-row" + (me ? " is-me" : "")} onClick={() => onPick(row.uid)}>
+      <Medal rank={row.rank} emptyLabel={`${periodLabel} 기록 없음`} />
+      <Face row={row} className="rlb-row-face" pet={petOf(row, petOn)} />
+      <span className="rlb-row-main">
+        <span className="rlb-row-name">{nameOf(row)}{me && <span className="reading-me-label">나</span>}</span>
+        <span className="rlb-row-sub">{progress ? `Lv.${progress.level} ${journeyTitle(progress.level)} · ${period === "all-time" ? progress.complete ? "최고 레벨에 도착했어요" : `다음 레벨까지 ${number(progress.toNext)} EXP` : `누적 ${number(xpOf(row))} EXP`}` : "누적 성장 정보 집계 중 · —"}</span>
+        {progress && <Bar percent={progress.percent} label={`${row.name} 다음 레벨까지 진행률`} />}
+      </span>
+      <span className="rlb-row-side"><span>{periodLabel} {orDash(row.xp, " EXP")}</span><span>{orDash(row.totalPages, "쪽")} · 뱃지 {orDash(row.badgeCount, "개")}</span></span>
+    </button>
+  </li>;
 }
 
 function MyJourney({ mine, row, uid, today, pet = null }) {

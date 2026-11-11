@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
 import { deriveReading, initialReadingState, kstToday, READING_BADGES } from "@/lib/reading";
 import { subscribeReadingState, mutateReading, fetchReadingRankings } from "@/lib/data/reading";
-import { rankingsForPeriod } from "@/lib/readingJourney";
+import { rankingAsOf, rankingPeriodView, RANKING_TOP_N } from "@/lib/readingJourney";
 import { petGrowthOfSummary } from "@/lib/readingPet";
 import ReadingBadge from "./ReadingBadge";
 import BookSearch from "./BookSearch";
@@ -370,20 +370,22 @@ function Growth({ stats, busy, readOnly = false, onSelect }) {
 
 function Rankings({ classId, uid, isTeacher, onDisabled }) {
   const [period, setPeriod] = useState("weekly");
-  const [rows, setRows] = useState([]);
+  // 받은 순위 한 벌 — 학생은 기간마다 상위 10명 + 본인, 교사는 반 전체(lib/readingJourney.js의 rankingResponse)
+  const [board, setBoard] = useState(null);
   const [rowsKey, setRowsKey] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);
   const disabledRef = useRef(onDisabled); disabledRef.current = onDisabled;
-  // 한 번 받으면 네 기간의 경험치가 함께 옵니다(xpBy) — 기간 단추는 서버에 다시 묻지 않고 그 자리에서
-  // 다시 세웁니다(lib/readingJourney.js의 rankingsForPeriod, 선생님 요청). 받는 때는 탭을 열 때 · 새로고침뿐입니다.
+  // 한 번 받으면 네 기간이 함께 옵니다 — 기간 단추는 서버에 다시 묻지 않고 그 기간의 줄만 꺼냅니다
+  // (lib/readingJourney.js의 rankingPeriodView, 선생님 요청). 받는 때는 탭을 열 때 · 새로고침뿐입니다.
+  // 서버는 순위를 10분에 한 번만 셉니다 — 그 안의 새로고침은 저장해 둔 순위를 그대로 받습니다.
   useEffect(() => {
     let live = true;
     setLoading(true); setError("");
     Promise.resolve(fetchReadingRankings(classId)).then((result) => {
       if (!live) return;
-      setRows(Array.isArray(result) ? result : result?.rankings || []);
+      setBoard(result ?? null);
       setRowsKey(classId);
     }).catch((e) => {
       if (!live) return;
@@ -394,13 +396,25 @@ function Rankings({ classId, uid, isTeacher, onDisabled }) {
   }, [classId, retry]);
   // 받아 둔 순위가 있으면 다시 받는 동안에도 표를 그대로 둡니다.
   const showLoading = loading && rowsKey !== classId;
-  const ranked = useMemo(() => rowsKey === classId ? rankingsForPeriod(rows, period) : [], [rows, rowsKey, classId, period]);
-  const mine = ranked.find((r) => (r.uid || r.userId) === uid) ?? null;
+  const periodView = useMemo(() => rowsKey === classId && board ? rankingPeriodView(board, period) : null, [board, rowsKey, classId, period]);
+  const ranked = periodView?.rows ?? [];
+  const mine = periodView?.me ?? ranked.find((r) => (r.uid || r.userId) === uid) ?? null;
+  // 학생 — 상위 10명과 내 순위만. 내가 10위 밖이면 표 아래에 '⋯'와 함께 내 줄을 한 번 더(겹치지 않게).
+  const limited = !isTeacher && periodView?.scope === "top";
+  const meOutside = limited && !!mine && !periodView.meInRows;
+  const asOf = board && !Array.isArray(board) ? rankingAsOf(board.computedAt) : "";
+  const periodLabel = PERIODS.find(([key]) => key === period)?.[1];
+  const rankRow = (r) => <tr key={r.uid || r.userId} className={(r.uid || r.userId) === uid ? "is-me" : ""}><td><span className={`reading-rank-number${r.rank <= 3 ? " reading-rank-top" : ""}`}>{r.rank ?? "—"}</span></td><th scope="row">{displayName({ ...r, realName: r.realName || r.name || r.userName })}{(r.uid || r.userId) === uid && <span className="reading-me-label">나</span>}</th><td>Lv. {r.level || 1}</td><td className="reading-rank-exp">{number(r.xp ?? r.totalExp ?? r.score)}</td><td>{r.featuredBadge ? <RankBadge badge={r.featuredBadge} /> : <span className="reading-muted">—</span>}</td></tr>;
   return <section className="reading-rankings"><div className="reading-section-head"><div><h3>우리 반의 독서 발자취</h3><p>각자의 속도로 쌓은 기록을 함께 응원해요.</p></div><button type="button" className="btn-ghost" disabled={loading} onClick={() => setRetry((v) => v + 1)}>새로고침</button></div>
     <div className="reading-filters" aria-label="랭킹 기간">{PERIODS.map(([key, label]) => <button key={key} type="button" className={period === key ? "active" : ""} aria-pressed={period === key} onClick={() => setPeriod(key)}>{label}</button>)}</div>
-    <p className="reading-help">한국 시간 기준 · 주간은 월요일 시작 · 같은 점수는 공동 순위 · 현재 반 학생만 표시</p>
-    {!isTeacher && mine && <div className="reading-my-rank"><span>이번 기간 나의 기록</span><strong>{mine.rank}위</strong><span>{number(mine.xp ?? mine.totalExp ?? mine.score)} EXP</span><span>Lv. {mine.level || 1}</span></div>}
-    {showLoading ? <div className="reading-loading" role="status">우리 반 기록을 모으고 있어요.</div> : error ? <div className="reading-error" role="alert">{error}<button type="button" onClick={() => setRetry((v) => v + 1)}>다시 시도</button></div> : !ranked.length ? <div className="reading-empty"><BookIcon size={40} /><h3>새로운 독서의 시작을 기다려요.</h3><p>우리 반 학생이 독서를 기록하면 이곳에서 함께 볼 수 있어요.</p></div> : <div className="reading-ranking-scroll"><table className="reading-ranking-table"><caption className="reading-sr-only">{PERIODS.find(([key]) => key === period)?.[1]} 우리 반 독서 랭킹</caption><thead><tr><th scope="col">순위</th><th scope="col">이름</th><th scope="col">레벨</th><th scope="col">경험치</th><th scope="col">대표 뱃지</th></tr></thead><tbody>{ranked.map((r) => <tr key={r.uid || r.userId} className={(r.uid || r.userId) === uid ? "is-me" : ""}><td><span className={`reading-rank-number${r.rank <= 3 ? " reading-rank-top" : ""}`}>{r.rank}</span></td><th scope="row">{displayName({ ...r, realName: r.realName || r.name || r.userName })}{(r.uid || r.userId) === uid && <span className="reading-me-label">나</span>}</th><td>Lv. {r.level || 1}</td><td className="reading-rank-exp">{number(r.xp ?? r.totalExp ?? r.score)}</td><td>{r.featuredBadge ? <RankBadge badge={r.featuredBadge} /> : <span className="reading-muted">—</span>}</td></tr>)}</tbody></table></div>}
+    <p className="reading-help">한국 시간 기준 · 주간은 월요일 시작 · 같은 점수는 공동 순위 · 현재 반 학생만 표시{limited ? ` · 상위 ${board?.top || RANKING_TOP_N}명과 내 순위만` : ""}{asOf ? ` · ${asOf} 기준(10분마다 새로 셈)` : ""}</p>
+    {!isTeacher && mine && <div className="reading-my-rank"><span>이번 기간 나의 기록</span><strong>{mine.rank ? `${mine.rank}위` : "—"}</strong><span>{number(mine.xp ?? mine.totalExp ?? mine.score)} EXP</span><span>Lv. {mine.level || 1}</span></div>}
+    {showLoading ? <div className="reading-loading" role="status">우리 반 기록을 모으고 있어요.</div> : error ? <div className="reading-error" role="alert">{error}<button type="button" onClick={() => setRetry((v) => v + 1)}>다시 시도</button></div> : !ranked.length && !mine ? <div className="reading-empty"><BookIcon size={40} /><h3>새로운 독서의 시작을 기다려요.</h3><p>우리 반 학생이 독서를 기록하면 이곳에서 함께 볼 수 있어요.</p></div> : <div className="reading-ranking-scroll"><table className="reading-ranking-table"><caption className="reading-sr-only">{periodLabel} 우리 반 독서 랭킹</caption><thead><tr><th scope="col">순위</th><th scope="col">이름</th><th scope="col">레벨</th><th scope="col">경험치</th><th scope="col">대표 뱃지</th></tr></thead><tbody>
+      {!ranked.length && <tr className="reading-rank-none"><td colSpan={5}>{periodLabel} 경험치를 얻은 친구가 아직 없어요.</td></tr>}
+      {ranked.map(rankRow)}
+      {meOutside && ranked.length > 0 && <tr className="reading-rank-gap" aria-hidden="true"><td colSpan={5}>⋯</td></tr>}
+      {meOutside && rankRow(mine)}
+    </tbody></table></div>}
   </section>;
 }
 
