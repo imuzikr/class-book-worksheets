@@ -1244,25 +1244,42 @@ service cloud.firestore {
                .data.get('memberUids', []).hasAny([uid()]);
     }
 
-    // 낱말 빙고 — 학생이 제 판의 칸을 눌러 낱말을 부릅니다(lib/data/books.js의 callBingoWord).
-    // 학생에게 열리는 것은 bingo.called 끝에 **낱말 하나를 붙이는 것**뿐입니다:
-    // 빙고 활동 · 빙고 중(play) · 안 잠김 · 다른 칸(활동 문서 · bingo 안)은 그대로 ·
-    // 붙인 낱말은 상자(words)에 있고 아직 안 부른 것. 되돌리기 · 지우기는 교사만.
-    function bingoStudentCall() {
-      let b0 = resource.data.get('bingo', null);
-      let b1 = request.resource.data.get('bingo', null);
-      let c0 = b0 == null ? [] : b0.get('called', []);
-      let c1 = b1 == null ? [] : b1.get('called', []);
-      return resource.data.get('type', '') == 'bingo'
-             && resource.data.get('locked', false) != true
-             && b0 != null && b1 != null
-             && b0.get('stage', '') == 'play'
-             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bingo'])
-             && b1.diff(b0).affectedKeys().hasOnly(['called'])
-             && c1 is list && c1.size() == c0.size() + 1
-             && c1 == c0.concat([c1[c1.size() - 1]])
-             && c1[c1.size() - 1] in b0.get('words', [])
-             && !(c1[c1.size() - 1] in c0);
+    // ── 낱말 빙고 '학생이 진행'(bingo.lead == 'student') — 학생의 부르기 ──
+    // 활동 문서는 교사만 쓰지만 이것 하나만 학생에게 엽니다. 모양을 못 박습니다
+    // (lib/bingo.js의 bingoCall · lib/data/books.js의 callBingoTurn과 같아야 합니다 — 배움나눔과 같은 규칙):
+    //   · 바뀌는 것은 bingo의 called · by · turn 세 칸뿐 — 다른 칸 · 다른 필드는 그대로
+    //   · 빙고 중(stage == 'play') · 잠기기 전 · order[turn]이 나(이 반 학생인지는 아래 update에서)
+    //   · called = 지금 목록 + 낱말 하나(낱말 상자 words에 있고 아직 안 불린 것)
+    //   · by = 지금 목록 + 나(지금 by가 called와 같은 길이일 때만) ·
+    //     turn = (turn + 1) % order 길이 — 마지막 번호 다음은 처음. 새 turn도 **정수**여야 합니다
+    //     (규칙의 == 는 1.0 == 1, -0.0 == 0을 같다고 봅니다. 소수로 적히면 다음 학생부터
+    //     `turn is int`에 걸려 모두의 부르기가 막힘 — 배움나눔 검토에서 찾음)
+    // '내 판에 있는 낱말인가'는 보지 않습니다(화면이 내 판의 칸만 누르게 함). 판 id를 알려면
+    // get()이 하나 더 들고, 상자의 낱말이라 남의 판이나 상태를 망가뜨릴 수는 없습니다.
+    // 한때 책봄은 차례 없이 반 학생 누구나 called 끝에 하나를 붙였습니다(bingoStudentCall — 걷음).
+    function bingoTurnCall() {
+      let before = resource.data.get('bingo', {});
+      let after = request.resource.data.get('bingo', {});
+      let c0 = before.get('called', []);
+      let order = before.get('order', []);
+      let turn = before.get('turn', 0);
+      return signedIn()
+        && resource.data.get('type', '') == 'bingo'
+        && resource.data.get('locked', false) != true
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bingo'])
+        && after.diff(before).affectedKeys().hasOnly(['called', 'by', 'turn'])
+        && before.get('stage', '') == 'play'
+        && before.get('lead', 'teacher') == 'student'
+        && turn is int && turn >= 0 && turn < order.size()
+        && order[turn] == uid()
+        && after.get('called', []).size() == c0.size() + 1
+        && after.called == c0.concat([after.called[c0.size()]])
+        && before.get('words', []).hasAny([after.called[c0.size()]])
+        && !c0.hasAny([after.called[c0.size()]])
+        && before.get('by', []).size() == c0.size()
+        && after.get('by', []) == before.get('by', []).concat([uid()])
+        && after.get('turn', -1) is int
+        && after.get('turn', -1) == (turn + 1) % order.size();
     }
 
     // 반 완전 삭제 · 학생 탈퇴 — 독서 활동과 그 아래 모든 기록(학생 글 · 낱말 · 메모 …).
@@ -1285,8 +1302,10 @@ service cloud.firestore {
       );
       allow create: if isAdmin()
                     || (isTeacher() && ownsClassEditable(request.resource.data.classId));
+      // 낱말 빙고 '학생이 진행' — 제 차례인 학생이 낱말 하나를 부릅니다(위 bingoTurnCall).
+      // 값싼 칸 검사가 먼저, 소속 확인(get)은 그 뒤에.
       allow update: if isAdmin() || ownsClassEditable(resource.data.classId)
-                    || (isClassMember(resource.data.classId) && bingoStudentCall());
+                    || (bingoTurnCall() && isClassMember(resource.data.classId));
       allow delete: if isAdmin() || ownsClassEditable(resource.data.classId);
 
       match /groups/{gId} {

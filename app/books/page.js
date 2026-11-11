@@ -900,6 +900,8 @@ function BooksPageInner() {
           classPicker={classPicker}
           user={user}
           roster={roster}
+          presentUids={todayPresentUids}
+          attendanceOpen={attendanceOpenToday}
           onBack={goToList}
           onToast={setToast}
         />
@@ -907,6 +909,7 @@ function BooksPageInner() {
         <BingoStudent
           activity={activeActivity}
           groupId={studentCanvasGroupId}
+          user={user}
           onBack={goToList}
         />
       ) : isBingo ? (

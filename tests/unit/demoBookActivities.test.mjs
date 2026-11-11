@@ -172,6 +172,16 @@ test("낱말 빙고 — 모둠마다 판 하나, 낱말은 상자 안에서 겹�
   const first = bingoProgress(data.bookBingoBoards[0].cells, bingo.called, bingo.goal);
   assert.equal(first.bingo, true);
   assert.equal(first.count, 2);
+  // 판은 많이 쓴 앞의 35개(상자 크기)로만 채우고, 선생님이 진행 · 부르는 차례는 판에 든 학생 학번순
+  assert.equal(bingo.box, 35);
+  assert.equal(bingo.ranked, true);
+  assert.equal(bingo.lead, "teacher");
+  const boxWords = new Set(bingo.words.slice(0, bingo.box));
+  for (const board of data.bookBingoBoards) assert.ok(Object.values(board.cells).every((w) => boxWords.has(w)));
+  const uids = groups.flatMap((g) => g.memberUids);
+  assert.deepEqual([...bingo.order].sort(), [...uids].sort());
+  const ids = bingo.order.map((uid) => groups.flatMap((g) => g.members).find((m) => m.uid === uid).studentId);
+  assert.deepEqual(ids, [...ids].sort());
 });
 
 test("RAFT 선생님 피드백 메모 — 첫 학생의 글에서 칠한 자리가 그 글 그대로이고, 하나는 새 피드백", async () => {

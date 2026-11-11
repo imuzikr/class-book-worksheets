@@ -1,19 +1,32 @@
 /* =============================================================
    낱말 빙고 (BingoBoard · BingoStudent · BingoGrid)
    화면의 뼈대(카드 · 세 칸 · 왼쪽 순위 · 단추 줄)는 가로세로 낱말 퀴즈의 클래스를
-   그대로 씁니다(56-crossword.css · 57-crossword-group.css — .xw-card · .xwg · .xwg-rank ·
-   .xw-gen-*). 여기에는 빙고판 · 낱말 칩 · 부른 낱말만 둡니다.
+   그대로 씁니다(40-crossword.css — .xw-card · .xwg · .xwg-rank · .xw-gen-* · 떠 있는
+   패널 .float-panel). 여기에는 빙고판 · 낱말 칩 · 낱말 목록 · 부른 낱말 ·
+   부르는 차례만 둡니다. 배움나눔(class-peer-qna)의 61-bingo.css를 옮겨 왔고(2026년 11월),
+   책봄은 교사의 낱말 목록이 판 오른쪽 상자가 아니라 **떠 있는 패널**입니다(선생님 요청).
    ============================================================= */
 
-/* ── 판 ── 4×4 · 5×5(--bingo-n, BingoGrid가 줌), 카드 폭에 맞춰 칸이 함께 커지고 줄어듭니다(글자는 판 폭의 cqw) */
+/* ── 판 ── 4×4 · 5×5(열 수는 BingoGrid가 주는 --bingo-n), 카드 폭에 맞춰 칸이 함께 커지고
+   줄어듭니다(글자는 판 폭의 cqw — 칸이 큰 4×4는 그만큼 크게, 천장도 칸 크기에 맞춰) */
 .bingo-board-wrap { display: flex; justify-content: center; }
 .bingo-grid {
   display: grid;
   grid-template-columns: repeat(var(--bingo-n, 5), minmax(0, 1fr));
+  /* 행도 명시 — 완성된 줄의 직선(.bingo-strike)이 행 번호로 자리를 잡습니다 */
+  grid-template-rows: repeat(var(--bingo-n, 5), auto);
   gap: 6px;
   width: min(100%, 520px);
-  margin: 0 auto;
+  /* 위아래 6px — 완성된 줄의 직선이 판 바깥으로 나갈 자리. 선생님 화면은 판과 위 '방금 부른 낱말'
+     띠 사이가 카드 간격 12px뿐이라, 이 자리가 없으면 직선 끝이 띠에 닿습니다 */
+  margin: 6px auto;
   container-type: inline-size;
+  position: relative;
+  /* 완성된 줄의 직선 — 붉은색(선생님 요청 — 한때 회색). 큰 판은 글자가 비치게 반투명, 굵기는
+     판 폭을 따라감. 판 바깥으로 나가는 길이(--strike-out)는 굵기의 2배 — 큰 판 12px · 미니맵 4~5px */
+  --strike-w: max(3px, 1.15cqw);
+  --strike-c: rgba(224, 49, 49, 0.78);
+  --strike-out: calc(var(--strike-w) * 2);
 }
 .bingo-cell {
   aspect-ratio: 1 / 1;
@@ -24,7 +37,7 @@
   background: #fff;
   color: var(--text);
   font-family: inherit;
-  font-size: clamp(11px, calc(18.5cqw / var(--bingo-n, 5)), 22px); /* 4×4는 칸이 커서 글자도 함께 */
+  font-size: clamp(11px, calc(18.5cqw / var(--bingo-n, 5)), calc(95px / var(--bingo-n, 5)));
   font-weight: 800;
   line-height: 1.2;
   display: flex;
@@ -42,12 +55,55 @@
 .bingo-cell:disabled { cursor: default; color: var(--text); }
 .bingo-cell.sel { border-color: var(--primary); background: #fff4e8; box-shadow: 0 0 0 2px var(--primary); }
 .bingo-cell.marked { background: #e8f7ed; border-color: #a6d8b6; color: #2f7a45; }
-.bingo-cell.line { background: #6fbf8a; border-color: #4fa56d; color: #fff; }
+/* 완성된 줄의 칸은 불린 칸과 같은 색이고, 줄은 위에 긋는 붉은 직선으로 보입니다(아래 .bingo-strike —
+   선생님 요청: 한때 줄의 칸을 짙은 초록으로 칠했는데 줄이 여럿이면 어느 줄인지 안 보였음).
+   직선은 판 바깥까지 --strike-out만큼 더 나갑니다(선생님 요청 — 한때 판 끝보다 3% 안쪽에서
+   멈췄음). 한때 판 폭의 4%(큰 판 21px)였는데 판 둘레 여백(12~20px)을 넘어 위 띠와 카드 테두리에
+   닿았습니다 — 늘이려면 .bingo-grid의 위아래 margin도 함께 늘리세요. */
+.bingo-strike { position: absolute; z-index: 1; pointer-events: none; }
+.bingo-strike--row {
+  left: calc(-1 * var(--strike-out));
+  right: calc(-1 * var(--strike-out));
+  top: 50%;
+  height: var(--strike-w);
+  transform: translateY(-50%);
+  border-radius: 999px;
+  background: var(--strike-c);
+}
+.bingo-strike--col {
+  top: calc(-1 * var(--strike-out));
+  bottom: calc(-1 * var(--strike-out));
+  left: 50%;
+  width: var(--strike-w);
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: var(--strike-c);
+}
+/* 대각선 — SVG 상자를 판 바깥으로 넓히고 그 모서리끼리 잇습니다(BingoGrid). 둥근 끝이 굵기의 반만큼
+   더 나가므로 상자는 그만큼 덜 넓혀, 네 가지 직선의 끝이 모두 판에서 --strike-out 떨어진 곳에 섭니다 */
+.bingo-strike--diag {
+  inset: calc(var(--strike-w) / 2 - var(--strike-out));
+  /* 너비 · 높이도 못 박습니다 — 바깥 <svg>는 대체 요소라 인셋만으로는 늘어나지 않는 브라우저가
+     있습니다(사파리 · WebKit 7624 이전은 판 크기 그대로 왼쪽 위에 서서 대각선이 칸 한가운데를
+     비껴감 — 배움나눔 검토에서 찾음). 크롬은 인셋으로도 늘여 같은 결과 */
+  width: calc(100% + 2 * var(--strike-out) - var(--strike-w));
+  height: calc(100% + 2 * var(--strike-out) - var(--strike-w));
+  overflow: visible;
+}
+.bingo-strike--diag line {
+  stroke: var(--strike-c);
+  stroke-width: var(--strike-w);
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
 .bingo-cell.last { box-shadow: 0 0 0 3px var(--primary); }
 .bingo-word { display: block; max-width: 100%; }
 
-/* 미니맵 — 글자 없이 색만(채운 칸 회색 · 불린 칸 옅은 색 · 빙고 줄 짙은 색) */
+/* 미니맵 — 글자 없이 색만(채운 칸 회색 · 불린 칸 옅은 색 · 빙고 줄은 붉은 직선).
+   4×4는 칸을 키워 5×5 미니맵과 거의 같은 폭(68 · 66px)으로 섭니다. */
 .bingo-grid--mini {
+  --strike-w: 2px;
+  --strike-c: #e03131;
   grid-template-columns: repeat(var(--bingo-n, 5), 12px);
   gap: 2px;
   width: max-content;
@@ -64,12 +120,41 @@
 }
 .bingo-grid--mini .bingo-cell.filled { background: #e9e6e1; }
 .bingo-grid--mini .bingo-cell.sel { box-shadow: 0 0 0 1.5px var(--primary); }
+.bingo-grid--mini.bingo-grid--4 { grid-template-columns: repeat(4, 15px); }
 .xwg-rank .bingo-grid--mini { align-self: center; }
 /* 학생 왼쪽 칸 — 나의 판 · 가장 앞선 친구는 조금 크게, 카드 가운데 */
 .xwg-mymap .bingo-grid--mini,
-.xwg-leader .bingo-grid--mini { grid-template-columns: repeat(var(--bingo-n, 5), 18px); margin: 0 auto; }
+.xwg-leader .bingo-grid--mini { grid-template-columns: repeat(var(--bingo-n, 5), 18px); margin: 0 auto; --strike-w: 2.5px; }
+.xwg-mymap .bingo-grid--mini.bingo-grid--4,
+.xwg-leader .bingo-grid--mini.bingo-grid--4 { grid-template-columns: repeat(4, 23px); }
 
 .bingo-rank-at { font-size: 11.5px; font-weight: 700; color: #2f7a45; align-self: center; }
+/* 0줄끼리 가르는 기준(가로 · 세로로 이어진 칸) — 빙고 표시보다 옅게 */
+.bingo-rank-run { color: var(--text-sub); }
+/* 왼쪽 판 카드의 머리줄 — 책봄은 왼쪽 칸이 좁아(양옆 패널 — 1440px 창에서 카드 210px 안팎)
+   '차례 · 이름' 표시가 이름과 한 줄에 서면 모둠 이름이 한 글자씩 세로로 쪼개졌습니다(실측 —
+   배움나눔은 칸이 넓어 안 드러남). 빙고 화면에서만 머리줄을 격자로 짭니다: 번호 · 이름 · 진행
+   배지가 한 줄, 차례 표시는 이름 아래 둘째 줄. 가로세로 퀴즈의 같은 카드(.xwg-rank-head)는 그대로. */
+.bingo-main .xwg-rank-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  column-gap: 8px;
+  row-gap: 4px;
+}
+.bingo-main .xwg-rank-head strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bingo-main .xwg-rank-head .xw-badge { grid-column: 3; grid-row: 1; margin-left: 0; }
+.bingo-main .xwg-rank-head .bingo-rank-turn { grid-column: 2 / -1; grid-row: 2; justify-self: start; }
+/* 학생이 진행 — 지금 차례인 판 */
+.bingo-rank-turn {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
 
 /* 범례 */
 .bingo-swatch {
@@ -84,9 +169,13 @@
 .bingo-swatch:first-child { margin-left: 0; }
 .bingo-swatch.filled { background: #e9e6e1; }
 .bingo-swatch.marked { background: #e8f7ed; border-color: #a6d8b6; }
-.bingo-swatch.line { background: #6fbf8a; border-color: #4fa56d; }
+/* 빙고 줄 — 판에 긋는 붉은 직선과 같은 짧은 막대 */
+.bingo-swatch.line { width: 14px; height: 3px; border: none; border-radius: 999px; background: #e03131; vertical-align: 3px; }
 .bingo-swatch.sel { background: #fff4e8; border-color: var(--primary); }
 .bingo-swatch.last { background: #fff; border: 2px solid var(--primary); }
+/* 판에 놓인 낱말 목록의 범례 — 부른 낱말(초록 줄) · 방금 부른 낱말(초록 줄 + 살구 테두리) */
+.bingo-swatch.called { background: #e8f7ed; border-color: #a6d8b6; }
+.bingo-swatch.just { background: #e8f7ed; border: 2px solid var(--primary); }
 
 /* ── 방금 부른 낱말 ── 학급 화면에서도 읽히게 크게 */
 .bingo-last {
@@ -106,11 +195,19 @@
 .bingo-last.won { background: #e8f7ed; color: #2f7a45; }
 .bingo-last.won strong { color: #2f7a45; }
 
-/* ── 빙고 목표(교사) ── */
-.bingo-goal { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; }
+/* ── 빙고 목표 · 낱말 부르기 · 낱말 상자(교사) ── 이름표와 단추 묶음이 한 덩이로 접힙니다 */
+.bingo-goal { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 22px; }
+.bingo-opt { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; min-width: 0; }
 .bingo-goal-label { font-size: 13px; font-weight: 700; color: var(--text); }
-.bingo-goal-seg { flex: 1 1 auto; }
 .bingo-goal-seg .book-seg-btn { flex: 0 0 56px; }
+/* 이어 놓인 두 단추는 같은 폭(CLAUDE.md의 repeat(n, minmax(0, 1fr))) — 낱말 부르기 · 낱말 상자.
+   묶음은 줄어들지 않고(flex: none — 긴 글자 두 칸만큼), 자리가 모자라면 묶음째 다음 줄로
+   내려갑니다. 한때 repeat(2, 1fr)라 좁은 폭(가운데 칸 250px 안팎)에서 긴 쪽이 글자 폭을 지키고
+   짧은 쪽이 나머지를 받아 두 단추 폭이 달랐습니다(배움나눔 검토에서 찾음). */
+.book-seg.bingo-lead-seg,
+.book-seg.bingo-box-seg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); flex: none; }
+.bingo-lead-seg .book-seg-btn,
+.bingo-box-seg .book-seg-btn { max-width: none; padding: 8px 12px; }
 .bingo-reset {
   margin-left: auto;
   padding: 0;
@@ -126,7 +223,7 @@
 }
 .bingo-reset:disabled { opacity: 0.5; cursor: default; }
 
-/* ── 낱말 칩(낱말 상자 · 부르기) ── */
+/* ── 낱말 칩(학생 화면의 낱말 상자) ── 교사 화면의 낱말 목록은 아래 .bingo-wordlist(줄 모양) */
 .bingo-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .bingo-chip {
   display: inline-flex;
@@ -149,24 +246,163 @@
 .bingo-chip.on { background: var(--primary); border-color: var(--primary); color: #fff; }
 .bingo-board-wrap.picking .bingo-cell:not(:disabled) { border-color: var(--primary); border-style: dashed; }
 .bingo-board-wrap.picking .bingo-cell.filled:not(:disabled) { border-style: solid; }
-.bingo-chip.called { background: #e8f7ed; border-color: #a6d8b6; color: #2f7a45; }
-.bingo-chip.last { background: var(--primary); border-color: var(--primary); color: #fff; }
-.bingo-chip-no {
-  min-width: 18px;
-  height: 18px;
+
+/* ── 교사의 낱말 목록(떠 있는 패널 — 빙고 중 판에 놓인 낱말 · 판 채우기의 낱말 상자) ──
+   학생 화면 '불린 낱말'(.bingo-called)과 같은 줄 모양 — 동그라미 · 낱말 · 오른쪽 작은 글자
+   (배움나눔 선생님 요청 — 한때 알약이라 낱말이 작고 들쭉날쭉했음). 패널 폭(380px)이면 두 열
+   (140px 이상씩), ㄱ~ㅎ는 왼쪽에서 오른쪽으로 — 넘치면 패널 몸통이 굴러갑니다(FloatingPanel의
+   maxBody). 부른 줄은 판의 불린 칸과 같은 초록(동그라미는 흰 숫자가 읽히게 짙은 초록), 방금
+   부른 줄은 학생 목록처럼 살구 테두리. */
+.bingo-wordlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 2px 8px;
+  align-content: start;
+}
+.bingo-wordlist > li { display: flex; min-width: 0; }
+.bingo-wordrow {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.3;
+  color: var(--text);
+  text-align: left;
+}
+button.bingo-wordrow { cursor: pointer; }
+button.bingo-wordrow:hover:not(:disabled) { border-color: var(--primary); }
+button.bingo-wordrow:hover:not(:disabled) b { border-color: var(--primary); }
+button.bingo-wordrow:disabled { cursor: default; }
+/* 동그라미 — 부른 차례. 아직 안 부른 줄은 빈 점선 동그라미(학생 목록의 번호 자리) */
+.bingo-wordrow b {
+  flex: none;
+  min-width: 20px;
+  height: 20px;
   padding: 0 4px;
   border-radius: 999px;
+  border: 1.5px dashed #d5cfc5;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+}
+.bingo-wordrow span { flex: 1; min-width: 0; font-weight: 700; word-break: keep-all; overflow-wrap: anywhere; }
+.bingo-wordrow em { flex: none; font-style: normal; font-size: 11.5px; font-weight: 700; color: var(--text-faint); }
+.bingo-wordrow.called { background: #e8f7ed; border-color: #a6d8b6; color: #2f7a45; }
+/* 부른 차례 숫자 — 흰 11px 글자라 바탕은 짙은 초록(대비 5.3:1 · 한때 #6fbf8a로 2.2:1) */
+.bingo-wordrow.called b { border: none; background: #2f7a45; }
+.bingo-wordrow.called em { color: #2f7a45; opacity: 0.8; }
+/* 방금 부른 줄 — 테두리 1px + 안쪽 그림자 1px로 학생 목록의 살구 테두리(2px)와 같은 굵기 */
+.bingo-wordrow.last { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+
+/* 교사 '낱말 부르기' — 떠 있는 패널(FloatingPanel) 안 */
+.bingo-float .xw-card-note { margin: 0 0 10px; }
+.bingo-float .bingo-float-rest { margin: 10px 0 0; }
+/* 학생이 진행인데 지금 차례 학생이 결석 · 부를 낱말 없음 · 잠김 — 선생님이 이 패널에서 대신
+   고를 차례(배움나눔의 .bingo-callbox.proxy와 같은 표시). 떠 있는 그림자는 그대로 둡니다. */
+.float-panel.bingo-float.proxy {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-light), 0 12px 32px rgba(46, 36, 26, 0.14), 0 2px 6px rgba(46, 36, 26, 0.06);
+}
+/* 안내 줄 — 지금 차례 학생이 결석이면 눈에 띄게 */
+.xw-gen-note.bingo-note-away { color: var(--primary-dark); font-weight: 700; }
+
+/* ── 학생이 진행 — 부르는 차례(교사 · 학번순 알약 줄) ──
+   지금 차례는 살구로 채우고, 이번 바퀴에 이미 고른 학생은 옅게, 결석은 점선 + '결석' */
+.bingo-turns-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+.bingo-turns-head {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  font-size: 12.5px;
+  color: var(--text-sub);
+}
+.bingo-turns-head strong { font-size: 13.5px; color: var(--text); }
+.bingo-turns-head em { margin-left: auto; font-style: normal; color: var(--text-faint); }
+.bingo-turns { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 5px; }
+.bingo-turn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px 3px 4px;
+  border-radius: 999px;
+  border: 1.5px solid var(--border);
   background: #fff;
-  color: #2f7a45;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+}
+.bingo-turn b {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--neutral);
+  color: var(--text-sub);
   font-size: 11px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
-.bingo-chip.last .bingo-chip-no { color: var(--primary-dark); }
-.bingo-chip-count { font-style: normal; font-size: 11px; font-weight: 600; color: var(--text-faint); }
-.bingo-chip.called .bingo-chip-count,
-.bingo-chip.last .bingo-chip-count { color: inherit; opacity: 0.75; }
+.bingo-turn em { font-style: normal; font-size: 10.5px; font-weight: 800; color: var(--danger); }
+.bingo-turn.done { opacity: 0.5; }
+.bingo-turn.away { border-style: dashed; border-color: var(--danger); }
+.bingo-turn.now { border-color: var(--primary); background: var(--primary); color: #fff; opacity: 1; }
+.bingo-turn.now b { background: #fff; color: var(--primary-dark); }
+.bingo-turn.now em { color: #fff; }
+
+/* ── 학생이 진행 — 학생 화면 ── 내 차례 알림 · 지금 누구 차례인지 */
+.bingo-myturn {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 2px solid var(--primary);
+  background: #fff4e8;
+  color: var(--primary-dark);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+.bingo-myturn strong { font-size: 17px; font-weight: 900; }
+.bingo-waitturn {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text-sub);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.bingo-waitturn strong { color: var(--text); }
+/* 학생 오른쪽 '부르는 차례' — 교사와 같은 알약 줄(.bingo-turns)에 '나'만 더 짙게 */
+.bingo-turn.me { border-color: var(--primary-dark); }
+.bingo-turn.me em { color: var(--primary-dark); }
+.bingo-turn.now.me em { color: #fff; }
+/* 내 차례 — 누를 수 있는 칸(내 판의 안 불린 낱말)에 살구 테두리 */
+.bingo-board-wrap.calling .bingo-cell:not(:disabled) { border-color: var(--primary); }
 
 /* ── 불린 낱말(학생 오른쪽) ── 최근 것이 위 */
 .bingo-called { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
@@ -194,7 +430,8 @@
 .bingo-called li span { flex: 1; min-width: 0; font-weight: 700; }
 .bingo-called li em { font-style: normal; font-size: 11.5px; font-weight: 700; color: #2f7a45; }
 .bingo-called li.hit { background: #f3faf5; }
-.bingo-called li.hit b { background: #6fbf8a; color: #fff; }
+/* 교사 화면 목록의 동그라미와 같은 짙은 초록 — 흰 숫자 대비 5.3:1(한때 #6fbf8a로 2.2:1) */
+.bingo-called li.hit b { background: #2f7a45; color: #fff; }
 .bingo-called li.last { box-shadow: inset 0 0 0 2px var(--primary); }
 
 .bingo-how { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 1.55; color: var(--text-sub); }
@@ -213,10 +450,3 @@
   cursor: pointer;
 }
 .bingo-missing:disabled { opacity: 0.5; cursor: default; }
-
-/* 빙고 중 학생 판 — 칸을 눌러 낱말을 부른다는 안내 한 줄(판 바로 아래) */
-.bingo-call-hint { margin: 8px 0 0; text-align: center; }
-
-/* 교사 '낱말 부르기' — 떠 있는 패널(FloatingPanel) 안 */
-.bingo-float .xw-card-note { margin: 0 0 10px; }
-.bingo-float .bingo-float-rest { margin: 10px 0 0; }
