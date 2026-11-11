@@ -210,6 +210,11 @@
   .topbar-book-navigation .topnav-menu > .btn-ghost svg { width: 14px; height: 14px; }
   .topbar-book-navigation .logo > svg { width: 24px; height: 24px; }
 }
+/* 320px에서도 관리자 설정까지 가리지 않도록 로고와 메뉴를 같은 묶음 안에서 줄바꿈합니다. */
+@media (max-width: 360px) {
+  .topbar-book-navigation .topbar-left { flex-wrap: wrap; max-width: 100%; row-gap: 6px; }
+  .topbar-book-navigation .topbar-left > .topnav-menu { flex: 1 1 100%; width: 100%; max-width: 100%; }
+}
 /* 휴대폰 상단바 — 누르는 곳은 모두 36px 이상(검수반장 지적, 손가락 기준).
    이동 메뉴(책방·책나눔)는 위 480px 규칙에서 34px → 36px로 맞췄습니다.
    책봄 홈·과일은 min-height로 상자를 키워도 가로가 늘지 않아 줄이 안 늘어납니다.

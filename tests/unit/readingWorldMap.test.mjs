@@ -2,11 +2,63 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { getExpForReadingLevel, READING_LEVEL_MAX } from "../../lib/reading.js";
 import {
-  WORLD_MAP, WORLD_LEVEL_STOPS, WORLD_REGIONS, WORLD_CHARACTERS,
+  WORLD_MAP, WORLD_MAPS, getWorldMap, WORLD_LEVEL_STOPS, WORLD_REGIONS, WORLD_CHARACTERS,
   worldProgress, worldPoint, worldCheckpoints, groupWorldTravelers, defaultWorldAvatar, readingLeaderUids, splitWorldLeaderGroups,
 } from "../../lib/readingWorldMap.js";
 
 const near = (actual, expected, epsilon = 1e-10) => assert.ok(Math.abs(actual - expected) < epsilon, `${actual} ≈ ${expected}`);
+
+test("구름섬의 레벨 거점은 선택한 원화의 숲·사막·폭포·설산·등대 위에 놓인다", () => {
+  const map = getWorldMap("cloud-islands");
+  const expected = [[399, 913], [349, 705], [268, 382], [365, 286], [708, 551],
+    [820, 710], [879, 342], [905, 177], [1203, 250], [1358, 247]];
+  const stops = worldCheckpoints(map);
+  assert.deepEqual(stops.map((stop) => [stop.x, stop.y]), expected);
+  assert.deepEqual(stops.map(({ level, xp, progress }) => ({ level, xp, progress })),
+    worldCheckpoints(WORLD_MAP).map(({ level, xp, progress }) => ({ level, xp, progress })));
+  assert.deepEqual(stops.filter((stop) => stop.level % 2 === 1).map((stop) => worldProgress(stop.xp).region.id),
+    ["forest", "desert", "valley", "mountains", "storm"]);
+  assert.notEqual(map.path, WORLD_MAP.path);
+  assert.equal(getWorldMap("continent"), WORLD_MAP);
+  assert.equal(getWorldMap("unrecognized"), map);
+});
+
+test("두 지도 모두 경로가 유한하고, 지형 경계에서 좌표가 튀거나 역행하지 않는다", () => {
+  for (const map of Object.values(WORLD_MAPS)) {
+    assert.equal(map.levelDistances[0], 0);
+    assert.equal(map.levelDistances.at(-1), map.length);
+    assert.ok(map.levelDistances.every((distance, i, all) => i === 0 || distance > all[i - 1]));
+    for (let i = 0; i <= 1000; i += 1) {
+      const point = worldPoint(i / 1000, map);
+      assert.ok(Object.values(point).every(Number.isFinite));
+      assert.ok(point.x >= 0 && point.x <= map.width && point.y >= 0 && point.y <= map.height);
+    }
+    for (const boundary of WORLD_LEVEL_STOPS.slice(1, -1)) {
+      const before = worldPoint(boundary - 1e-8, map);
+      const after = worldPoint(boundary + 1e-8, map);
+      assert.ok(Math.hypot(after.x - before.x, after.y - before.y) < 0.01);
+    }
+    assert.deepEqual(worldPoint(-1, map), worldPoint(0, map));
+    assert.deepEqual(worldPoint(Infinity, map), worldPoint(0, map));
+    assert.deepEqual(worldPoint(2, map), worldPoint(1, map));
+  }
+});
+
+test("구름섬의 학생 묶음은 논리 진도가 아닌 선택한 길 위의 실제 거리를 따른다", () => {
+  const map = getWorldMap("cloud-islands");
+  const rows = [{ uid: "near-desert", totalXp: 500 }, { uid: "far-desert", totalXp: 800 }];
+  // The same logical progress span covers a longer bridge approach on this map.
+  assert.equal(groupWorldTravelers(rows, { epsilon: 0.05 }).length, 1);
+  const split = groupWorldTravelers(rows, { epsilon: 0.05, map });
+  assert.equal(split.length, 2);
+  assert.deepEqual(split.flatMap((group) => group.members.map((row) => row.uid)).sort(), rows.map((row) => row.uid).sort());
+  for (const selectedUid of rows.map((row) => row.uid)) {
+    const selected = groupWorldTravelers(rows, { epsilon: 0.05, map, selectedUid });
+    assert.deepEqual(selected.map(({ id, progress }) => ({ id, progress })), split.map(({ id, progress }) => ({ id, progress })));
+  }
+  const nearby = [{ uid: "one", totalXp: 500 }, { uid: "two", totalXp: 510 }];
+  assert.equal(groupWorldTravelers(nearby, { epsilon: 0.05, map }).length, 1);
+});
 
 test("독서 대장은 학급의 검증된 최고 레벨 중 누적 경험치가 가장 많은 학생이다", () => {
   const rows = [

@@ -2,7 +2,7 @@
 import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { assertFails, assertSucceeds } from "@firebase/rules-unit-testing";
-import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, setDoc, updateDoc } from "firebase/firestore";
+import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, setDoc, updateDoc, writeBatch } from "firebase/firestore";
 import { makeEnv, asStudent, asTeacher, asAdmin, seed } from "./helpers.mjs";
 
 describe("책나눔 활성화와 서버 전용 보상 자료", () => {
@@ -134,6 +134,59 @@ describe("책나눔 활성화와 서버 전용 보상 자료", () => {
     const db = asTeacher(env, "teacherA").firestore();
     await assertSucceeds(updateDoc(doc(db, "classes", "legacy"), { name: "새 이름", attendanceOpen: true }));
     await assertSucceeds(updateDoc(doc(db, "classes", "active"), { attendanceOpen: false }));
+  });
+
+  it("독서 맵 — 담당 교사·관리자만 두 지도 사이를 변경하고 학생·다른 교사·비로그인은 거부", async () => {
+    const ref = doc(asTeacher(env, "teacherA").firestore(), "classes", "active");
+    await assertSucceeds(updateDoc(ref, { readingMapTheme: "continent" }));
+    await assertSucceeds(updateDoc(ref, { readingMapTheme: "cloud-islands" }));
+    await assertSucceeds(updateDoc(doc(asAdmin(env, "admin").firestore(), "classes", "active"), { readingMapTheme: "continent" }));
+    for (const ctx of [asStudent(env, "studentA"), asStudent(env, "studentB"), asTeacher(env, "teacherB"), env.unauthenticatedContext()]) {
+      await assertFails(updateDoc(doc(ctx.firestore(), "classes", "active"), { readingMapTheme: "cloud-islands" }));
+    }
+  });
+
+  it("독서 맵 — 임의 경로·이름·타입·필드 삭제는 거부하고 기존 선택 유지", async () => {
+    const ref = doc(asTeacher(env, "teacherA").firestore(), "classes", "active");
+    await assertSucceeds(updateDoc(ref, { readingMapTheme: "continent" }));
+    for (const readingMapTheme of ["unknown", "/uploads/map.png", "", null, false, 0, {}, [], deleteField()]) {
+      await assertFails(updateDoc(ref, { readingMapTheme }));
+    }
+    assert.equal((await getDoc(ref)).data().readingMapTheme, "continent");
+  });
+
+  it("독서 맵 — 보관 반은 관리자도 수정할 수 없고 복원과 동시에 선택하는 우회도 거부", async () => {
+    for (const ctx of [asTeacher(env, "teacherA"), asAdmin(env, "admin")]) {
+      const ref = doc(ctx.firestore(), "classes", "archived");
+      await assertFails(updateDoc(ref, { readingMapTheme: "continent" }));
+      await assertFails(updateDoc(ref, { archived: false, readingMapTheme: "cloud-islands" }));
+    }
+  });
+
+  it("새 반의 독서 맵은 누락 또는 두 지도만 허용", async () => {
+    const db = asTeacher(env, "teacherA").firestore();
+    for (const readingMapTheme of ["continent", "cloud-islands"]) {
+      await assertSucceeds(setDoc(doc(db, "classes", `new-${readingMapTheme}`), { name: "새 반", createdBy: "teacherA", readingEnabled: false, readingMapTheme }));
+    }
+    for (const readingMapTheme of ["unknown", null, false, {}, []]) {
+      await assertFails(setDoc(doc(db, "classes", "new-invalid"), { name: "새 반", createdBy: "teacherA", readingEnabled: false, readingMapTheme }));
+    }
+  });
+
+  it("여러 반의 독서 맵을 한 묶음으로 바꿀 때 권한 없는 반을 끼우면 전체 거부", async () => {
+    const db = asTeacher(env, "teacherA").firestore();
+    const ok = writeBatch(db);
+    ok.update(doc(db, "classes", "legacy"), { readingMapTheme: "continent" });
+    ok.update(doc(db, "classes", "active"), { readingMapTheme: "continent" });
+    await assertSucceeds(ok.commit());
+    await seed(env, async (adminDb) => {
+      await setDoc(doc(adminDb, "classes", "foreign"), { name: "다른 반", createdBy: "teacherB", archived: false });
+    });
+    const bad = writeBatch(db);
+    bad.update(doc(db, "classes", "active"), { readingMapTheme: "cloud-islands" });
+    bad.update(doc(db, "classes", "foreign"), { readingMapTheme: "cloud-islands" });
+    await assertFails(bad.commit());
+    assert.equal((await getDoc(doc(db, "classes", "active"))).data().readingMapTheme, "continent");
   });
 
   it("학생은 자기 프로필에 임의의 경험치·레벨·뱃지를 덧쓸 수 없다", async () => {

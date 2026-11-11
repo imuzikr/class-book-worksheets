@@ -15,11 +15,13 @@
 //   · 학생 캐릭터(characterEnabled — 값이 없으면 켜짐, 책나눔이 켜져 있어야 씀. 리더보드를 꺼도 '내 프로필'에서 고름)
 //   · 과일 바구니(fruitBasketEnabled — 값이 없으면 켜짐, 끄면 떠 있는 동그라미에서도 가림)
 //   · 학생 펫(petEnabled — 값이 없으면 켜짐, 책나눔이 켜져 있어야 씀 · lib/readingPet.js)
-// 쓰기는 반 문서 한 칸씩이고, 규칙(readingSettingValid)이 참·거짓과 보관 안 된 반만 받습니다.
+//   · 독서 맵(readingMapTheme — 구름섬 대모험 · 도전의 대륙)
+// 쓰기는 반 문서의 설정 칸이고, 규칙이 값과 보관 안 된 반만 받습니다.
 // =============================================================
-import { useMemo, useState } from "react";
-import { setTeacherFeature } from "@/lib/store";
+import { Fragment, useId, useMemo, useState } from "react";
+import { setTeacherFeature, setTeacherReadingMapTheme } from "@/lib/store";
 import { teacherFeatureSettings } from "@/lib/reading";
+import { READING_MAP_THEMES, readingMapThemeSettings } from "@/lib/readingMapCatalog";
 
 const byName = (a, b) => String(a.name || "").localeCompare(String(b.name || ""), "ko", { numeric: true });
 
@@ -69,6 +71,8 @@ const GROUPS = [
 export default function AdminSettingsPanel({ classes = [], onToast }) {
   const rows = useMemo(() => classes.filter((c) => !c.archived).slice().sort(byName), [classes]);
   const settings = useMemo(() => teacherFeatureSettings(rows), [rows]);
+  const mapSetting = useMemo(() => readingMapThemeSettings(rows), [rows]);
+  const mapId = useId();
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
 
@@ -88,10 +92,24 @@ export default function AdminSettingsPanel({ classes = [], onToast }) {
     }
   }
 
+  async function chooseMap(theme) {
+    if (busy || (!mapSetting.mixed && mapSetting.value === theme.id)) return;
+    setBusy(`readingMapTheme:${theme.id}`);
+    setError("");
+    try {
+      await setTeacherReadingMapTheme(rows.map((c) => c.id), theme.id);
+      onToast?.(`독서 맵을 ‘${theme.name}’으로 바꿨어요.${rows.length > 1 ? ` (반 ${rows.length}개 모두)` : ""}`);
+    } catch (e) {
+      setError(e?.message || "독서 맵을 저장하지 못했어요.");
+    } finally {
+      setBusy("");
+    }
+  }
+
   return (
     <section className="adm-settings" aria-label="관리자 설정">
       <p className="adm-settings-lead">
-        기능을 켜고 끄면 선생님의 <strong>모든 반</strong>에 같이 적용되고, 학생 화면에 곧바로 반영돼요.
+        선택한 설정은 선생님의 <strong>모든 반</strong>에 같이 적용되고, 학생 화면에 곧바로 반영돼요.
         {rows.length > 0 && <span className="adm-settings-classes"> 적용되는 반: {rows.map((c) => c.name).join(" · ")}</span>}
       </p>
       {error && <p className="form-error" role="alert">{error}</p>}
@@ -100,7 +118,8 @@ export default function AdminSettingsPanel({ classes = [], onToast }) {
       ) : (
         <div className="adm-groups">
           {GROUPS.map((g) => (
-            <section key={g.key} className={`adm-group adm-group--${g.keys.length}`} aria-labelledby={`adm-group-${g.key}`}>
+            <Fragment key={g.key}>
+            <section className={`adm-group adm-group--${g.keys.length}`} aria-labelledby={`adm-group-${g.key}`}>
               <header className="adm-group-head"><h3 id={`adm-group-${g.key}`}>{g.title}</h3><span>{g.desc}</span></header>
               <ul className="adm-features">
           {g.keys.map((k) => FEATURES.find((f) => f.key === k)).map((f) => {
@@ -113,13 +132,53 @@ export default function AdminSettingsPanel({ classes = [], onToast }) {
                   <small id={`adm-hint-${f.key}`}>{f.hint}</small>
                   {st.mixed && <small className="adm-feature-mixed">반마다 다르게 켜져 있어요 — 누르면 모든 반을 같게 맞춰요.</small>}
                 </div>
-                <Switch on={ready && st.on} disabled={!ready} busy={busy === f.key} describedBy={`adm-hint-${f.key}`}
+                <Switch on={ready && st.on} disabled={!ready || !!busy} busy={busy === f.key} describedBy={`adm-hint-${f.key}`}
                   label={f.label} onClick={() => toggle(f)} />
               </li>
             );
           })}
               </ul>
             </section>
+            {g.key === "growth" && (
+              <section className="adm-group adm-map-group" aria-labelledby={`${mapId}-title`}>
+                <header className="adm-group-head">
+                  <h3 id={`${mapId}-title`}>독서 맵</h3>
+                  <span>캐릭터와 함께 걸을 지도</span>
+                </header>
+                <div className="adm-map-picker" role="radiogroup" aria-labelledby={`${mapId}-title`}
+                  aria-describedby={`${mapId}-hint`} aria-busy={busy.startsWith("readingMapTheme:")}>
+                  <p className="adm-map-picker-hint" id={`${mapId}-hint`}>
+                    {settings.readingEnabled.on && settings.rankingEnabled.on
+                      ? "선택한 지도는 리더보드의 ‘독서 맵’에 보여요."
+                      : "지도를 미리 골라 두세요. 책나눔 성장 기능과 리더보드를 켜면 보여요."}
+                  </p>
+                  {mapSetting.mixed && <p className="adm-map-picker-mixed">반마다 지도가 달라요. 하나를 고르면 모든 반에 같이 적용돼요.</p>}
+                  <div className="adm-map-options">
+                    {READING_MAP_THEMES.map((theme) => {
+                      const selected = !mapSetting.mixed && mapSetting.value === theme.id;
+                      const saving = busy === `readingMapTheme:${theme.id}`;
+                      const descriptionId = `${mapId}-${theme.id}-description`;
+                      const previewSrc = theme.preview || theme.image;
+                      return (
+                        <label key={theme.id} className={`adm-map-option${selected ? " is-selected" : ""}${busy ? " is-busy" : ""}`}>
+                          <img src={previewSrc} alt={theme.alt} width={384} height={256} loading="lazy" decoding="async" />
+                          <span className="adm-map-option-body">
+                            <span className="adm-map-option-head">
+                              <input type="radio" name={`${mapId}-theme`} value={theme.id} checked={selected} disabled={!!busy}
+                                aria-label={theme.name} aria-describedby={descriptionId} onChange={() => chooseMap(theme)} />
+                              <strong>{theme.name}</strong>
+                              <span className="adm-map-option-state">{saving ? "저장 중…" : selected ? "선택됨" : "선택하기"}</span>
+                            </span>
+                            <span className="adm-map-option-description" id={descriptionId}>{theme.description}</span>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              </section>
+            )}
+            </Fragment>
           ))}
         </div>
       )}

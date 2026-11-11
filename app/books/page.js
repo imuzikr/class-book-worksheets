@@ -24,6 +24,7 @@ import AdminSettingsPanel from "@/components/AdminSettingsPanel";
 import { readingEnabled, rankingEnabled, bookSearchEnabled, fruitBasketOn } from "@/lib/reading";
 import { characterChoiceEnabled } from "@/lib/readingCharacter";
 import { petEnabled } from "@/lib/readingPet";
+import { readingMapThemeOf } from "@/lib/readingMapCatalog";
 import {
   subscribeBookActivities,
   subscribeBookGroups,
@@ -1050,7 +1051,7 @@ function BooksPageInner() {
           {settingsOpen ? (
             <AdminSettingsPanel classes={myClasses} onToast={setToast} />
           ) : leaderboardOpen ? (
-            <ReadingLeaderboard key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin} characterOn={characterOn} petOn={petOn}
+            <ReadingLeaderboard key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin} mapTheme={readingMapThemeOf(currentClass)} characterOn={characterOn} petOn={petOn}
               onOpenLibrary={admin ? (uid) => patchBooksQuery({ area: "reading", student: uid }) : undefined}
               onDisabled={() => patchBooksQuery({ area: null }, { replace: true })} />
           ) : readingOpen && admin ? (

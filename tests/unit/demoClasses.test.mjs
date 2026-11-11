@@ -172,3 +172,40 @@ test("관리자 설정 — 독서 TOP 3 · 학생 펫을 끈 값도 새로고침
   seed(afterReload, [classroom("class3", { readingTopEnabled: "false" })]);
   assert.equal(readDemoClasses(afterReload), null);
 });
+
+test("독서 맵 선택은 두 지도 모두 직렬화·새로고침 후 유지하고 다른 반 설정을 바꾸지 않음", () => {
+  const storage = memoryStorage();
+  writeDemoClasses([
+    classroom("class1", { readingMapTheme: "continent", petEnabled: false }),
+    classroom("class2", { readingMapTheme: "cloud-islands", bookSearchEnabled: true }),
+    classroom("legacy"),
+  ], storage);
+  const afterReload = memoryStorage();
+  afterReload.setItem(DEMO_CLASSES_KEY, storage.getItem(DEMO_CLASSES_KEY));
+  const [one, two, legacy] = readDemoClasses(afterReload);
+  assert.equal(one.readingMapTheme, "continent");
+  assert.equal(one.petEnabled, false);
+  assert.equal(two.readingMapTheme, "cloud-islands");
+  assert.equal(two.bookSearchEnabled, true);
+  assert.equal(Object.hasOwn(legacy, "readingMapTheme"), false);
+  writeDemoClasses([one, two].map((c) => ({ ...c, readingMapTheme: "cloud-islands" })), afterReload);
+  assert.ok(readDemoClasses(afterReload).every((c) => c.readingMapTheme === "cloud-islands"));
+});
+
+test("독서 맵의 알 수 없는 이름·경로·잘못된 타입은 저장된 설정으로 받아들이지 않음", () => {
+  const storage = memoryStorage();
+  for (const readingMapTheme of ["unknown", "/private/map.png", "", null, false, 0, {}, []]) {
+    const classes = [classroom("class1", { readingMapTheme })];
+    seed(storage, classes);
+    assert.equal(readDemoClasses(storage), null);
+    assert.throws(() => writeDemoClasses(classes, storage), /반 정보/);
+  }
+});
+
+test("독서 맵 저장 실패 때 이전 선택을 그대로 보관", () => {
+  const persisted = memoryStorage();
+  writeDemoClasses([classroom("class1", { readingMapTheme: "continent" })], persisted);
+  const blocked = { getItem: persisted.getItem, setItem() { throw new Error("Quota exceeded"); } };
+  assert.throws(() => writeDemoClasses([classroom("class1", { readingMapTheme: "cloud-islands" })], blocked), /저장|브라우저/);
+  assert.equal(readDemoClasses(persisted)[0].readingMapTheme, "continent");
+});

@@ -8,6 +8,7 @@ import { fetchReadingRankings, saveReadingCharacter, subscribeReadingState } fro
 import { startVisiblePoll, RANKING_POLL_MS, RANKING_WAKE_GAP_MS } from "@/lib/visiblePoll";
 import { journeyNarrative, journeyTitle, badgeHint, rankingsForPeriod } from "@/lib/readingJourney";
 import { worldProgress } from "@/lib/readingWorldMap";
+import { getReadingMapTheme } from "@/lib/readingMapCatalog";
 import { characterOf, characterImage } from "@/lib/readingCharacterCatalog";
 import { backdropClose } from "@/lib/modal";
 import { normalizePublicPet, PET_HATCH_XP, petSpecies, petStageName } from "@/lib/readingPet";
@@ -77,7 +78,8 @@ function Bar({ percent, label }) {
   </span>;
 }
 
-export default function ReadingLeaderboard({ classId, user, isTeacher = false, characterOn = true, petOn = true, onDisabled, onOpenLibrary }) {
+export default function ReadingLeaderboard({ classId, user, isTeacher = false, mapTheme, characterOn = true, petOn = true, onDisabled, onOpenLibrary }) {
+  const selectedMap = getReadingMapTheme(mapTheme).id;
   const viewId = useId();
   const tabRefs = useRef([]);
   const [view, setView] = useState("map");
@@ -220,7 +222,7 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, c
     {hasSnapshot && error && <p className="reading-help" role="status">성장 정보는 마지막으로 확인한 누적 기록입니다. 새로고침해 주세요.</p>}
     <section className="rlb-panel" id={`${viewId}-panel-map`} role="tabpanel" aria-labelledby={`${viewId}-tab-map`} hidden={view !== "map"} tabIndex={0}>
       {!hasSnapshot ? !error && <div className="reading-loading" role="status">우리 반 여정을 모으고 있어요.</div>
-        : <ReadingWorldMap key={classId} rows={list} uid={uid} isTeacher={isTeacher} petOn={petOn} onOpenDetails={selectStudent} onSaveCharacter={characterOn ? saveCharacter : null} />}
+        : <ReadingWorldMap key={`${classId}:${selectedMap}`} mapTheme={selectedMap} rows={list} uid={uid} isTeacher={isTeacher} petOn={petOn} onOpenDetails={selectStudent} onSaveCharacter={characterOn ? saveCharacter : null} />}
     </section>
 
     <section className="rlb-panel" id={`${viewId}-panel-ranking`} role="tabpanel" aria-labelledby={`${viewId}-tab-ranking`} hidden={view !== "ranking"} tabIndex={0}>

@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { READING_BADGES, READING_LEVEL_MAX } from "@/lib/reading";
 import { journeyTitle } from "@/lib/readingJourney";
 import {
-  WORLD_MAP, WORLD_REGIONS,
+  WORLD_REGIONS, getWorldMap,
   groupWorldTravelers, readingLeaderUids, splitWorldLeaderGroups,
   worldCheckpoints, worldPoint, worldProgress,
 } from "@/lib/readingWorldMap";
@@ -23,10 +23,10 @@ const growthOf = (row) => {
 
 // Only unfold a mixed leader/peer group. Its layout depends on the map and
 // growth data, so choosing another student never moves either character.
-function peerSlotOffset(group, scale, offset, canvasWidth) {
+function peerSlotOffset(group, scale, offset, canvasWidth, map) {
   if (typeof group.leaderProgress !== "number") return 0;
-  const peer = worldPoint(group.progress);
-  const leader = worldPoint(group.leaderProgress);
+  const peer = worldPoint(group.progress, map);
+  const leader = worldPoint(group.leaderProgress, map);
   if (Math.hypot(peer.x - leader.x, peer.y - leader.y) * scale >= 96) return 0;
   const leaderX = offset.x + leader.x * scale;
   const rightSpace = canvasWidth - 44 - leaderX;
@@ -48,7 +48,10 @@ function TravelerPet({ row, petOn, size, className }) {
 }
 
 /** The map consumes the same public snapshot as the rankings, never a peer's library. */
-export default function ReadingWorldMap({ rows, uid, isTeacher, petOn = false, onOpenDetails, onSaveCharacter }) {
+export default function ReadingWorldMap({ rows, uid, isTeacher, mapTheme, petOn = false, onOpenDetails, onSaveCharacter }) {
+  const map = getWorldMap(mapTheme);
+  // A bundled URL from the fixed map catalog, never an uploaded/student URL.
+  const backgroundSrc = map.image;
   const viewport = useRef(null);
   const pointer = useRef(null);
   const suppressClick = useRef(false);
@@ -80,18 +83,18 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, petOn = false, o
   const selectedIsLeader = selected && leaderSet.has(String(selected.uid));
   // 독서 레벨은 10이 끝이라 지도는 한 바퀴뿐입니다(Lv.1 출발 → Lv.10 도착 — lib/readingWorldMap.js).
   // 한때 10레벨씩 여정 10개를 골라 보는 '여정 지도' 고르개가 있었습니다.
-  const checkpoints = useMemo(() => worldCheckpoints(), []);
-  const scale = Math.min(size.width / WORLD_MAP.width, size.height / WORLD_MAP.height) * zoom;
-  const canvasWidth = Math.max(size.width, WORLD_MAP.width * scale);
-  const canvasHeight = Math.max(size.height, WORLD_MAP.height * scale);
-  const offset = { x: (canvasWidth - WORLD_MAP.width * scale) / 2, y: (canvasHeight - WORLD_MAP.height * scale) / 2 };
+  const checkpoints = useMemo(() => worldCheckpoints(map), [map]);
+  const scale = Math.min(size.width / map.width, size.height / map.height) * zoom;
+  const canvasWidth = Math.max(size.width, map.width * scale);
+  const canvasHeight = Math.max(size.height, map.height * scale);
+  const offset = { x: (canvasWidth - map.width * scale) / 2, y: (canvasHeight - map.height * scale) / 2 };
   // Unfold nearby travelers as the user zooms in. Grouping never changes XP or
   // combines students on distant parts of the winding route.
-  const tolerance = Math.min(0.08, 85 / (WORLD_MAP.length * scale));
+  const tolerance = Math.min(0.08, 85 / (map.length * scale));
   const groups = useMemo(() => splitWorldLeaderGroups(
-    groupWorldTravelers(travelers.filter((row) => row.world), { selectedUid: selected?.uid, epsilon: tolerance }),
+    groupWorldTravelers(travelers.filter((row) => row.world), { selectedUid: selected?.uid, epsilon: tolerance, map }),
     leaderUids, selected?.uid,
-  ), [travelers, selected?.uid, tolerance, leaderUids]);
+  ), [travelers, selected?.uid, tolerance, leaderUids, map]);
   const cluster = groups.find((group) => group.id === clusterId);
   const shownCount = groups.reduce((sum, group) => sum + group.members.length, 0);
   const pendingCount = travelers.filter((row) => !row.world).length;
@@ -121,10 +124,10 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, petOn = false, o
 
   useEffect(() => {
     if (pendingCenter.current === null || pendingCenter.current.zoom !== zoom || !viewport.current) return;
-    const point = worldPoint(pendingCenter.current.progress);
+    const point = worldPoint(pendingCenter.current.progress, map);
     pendingCenter.current = null;
     viewport.current.scrollTo({ left: offset.x + point.x * scale - size.width / 2, top: offset.y + point.y * scale - size.height / 2 });
-  }, [zoom, scale, size.width, size.height, offset.x, offset.y]);
+  }, [zoom, scale, size.width, size.height, offset.x, offset.y, map]);
 
   function selectTraveler(row, center = false) {
     setSelectedUid(row.uid);
@@ -133,7 +136,7 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, petOn = false, o
     if (!center) return;
     const next = growthOf(row);
     if (next && viewport.current) {
-      const point = worldPoint(next.progress);
+      const point = worldPoint(next.progress, map);
       viewport.current.scrollTo({ left: offset.x + point.x * scale - size.width / 2, top: offset.y + point.y * scale - size.height / 2, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     }
   }
@@ -146,20 +149,20 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, petOn = false, o
     if (bounded === current) return;
     const element = viewport.current;
     if (element) {
-      const fit = Math.min(size.width / WORLD_MAP.width, size.height / WORLD_MAP.height);
+      const fit = Math.min(size.width / map.width, size.height / map.height);
       const ax = anchor?.x ?? size.width / 2;
       const ay = anchor?.y ?? size.height / 2;
       const from = pendingScroll.current ?? { left: element.scrollLeft, top: element.scrollTop };
       const curScale = fit * current;
-      const curX = Math.max(0, size.width - WORLD_MAP.width * curScale) / 2;
-      const curY = Math.max(0, size.height - WORLD_MAP.height * curScale) / 2;
+      const curX = Math.max(0, size.width - map.width * curScale) / 2;
+      const curY = Math.max(0, size.height - map.height * curScale) / 2;
       const x = (from.left + ax - curX) / curScale;
       const y = (from.top + ay - curY) / curScale;
       const nextScale = fit * bounded;
-      const nextX = Math.max(0, size.width - WORLD_MAP.width * nextScale) / 2;
-      const nextY = Math.max(0, size.height - WORLD_MAP.height * nextScale) / 2;
-      const maxLeft = Math.max(0, WORLD_MAP.width * nextScale - size.width);
-      const maxTop = Math.max(0, WORLD_MAP.height * nextScale - size.height);
+      const nextX = Math.max(0, size.width - map.width * nextScale) / 2;
+      const nextY = Math.max(0, size.height - map.height * nextScale) / 2;
+      const maxLeft = Math.max(0, map.width * nextScale - size.width);
+      const maxTop = Math.max(0, map.height * nextScale - size.height);
       pendingScroll.current = {
         left: Math.min(maxLeft, Math.max(0, nextX + x * nextScale - ax)),
         top: Math.min(maxTop, Math.max(0, nextY + y * nextScale - ay)),
@@ -202,11 +205,11 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, petOn = false, o
     }
   }
 
-  return <section className="rwm" aria-label="우리 반 독서 여정 지도">
+  return <section className={`rwm rwm--${map.id}`} aria-label={`${map.name} · 우리 반 독서 여정 지도`}>
     {/* 제목 줄(영문 머리 · 큰 제목 · 설명 · '개인 누적 성장 기준')은 걷었습니다 — 지도를
         최대한 크게 보이게, 위에는 이 한 줄(여정 지도 · 인원 · 단추)만 둡니다(선생님 요청). */}
     <div className="rwm-toolbar">
-      <span className="rwm-chapter"><span>여정 지도</span><b>Lv.1 출발 → Lv.{READING_LEVEL_MAX} 도착</b></span>
+      <span className="rwm-chapter"><span>{map.name}</span><b>Lv.1 출발 → Lv.{READING_LEVEL_MAX} 도착</b></span>
       <span className="rwm-count">지도 위 <b>{shownCount}</b>명 / 전체 {travelers.length}명{pendingCount > 0 && ` · 집계 대기 ${pendingCount}명`}</span>
       <div className="rwm-map-actions">
         {!isTeacher && selected?.uid === uid && onSaveCharacter && <button type="button" onClick={() => setChoosing(true)}>캐릭터 꾸미기</button>}
@@ -219,12 +222,12 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, petOn = false, o
       <div className="rwm-map-panel">
         <div ref={viewport} className="rwm-viewport" tabIndex={0} aria-label="독서 여정 지도. 확대 후 드래그하거나 방향키로 지도를 이동하세요." onPointerDown={startPan} onPointerMove={movePan} onPointerUp={() => { pointer.current = null; }} onPointerCancel={() => { pointer.current = null; }} onClickCapture={(event) => { if (suppressClick.current) { event.preventDefault(); event.stopPropagation(); suppressClick.current = false; } }}>
           <div className="rwm-canvas" style={{ width: canvasWidth, height: canvasHeight }}>
-            <div className="rwm-terrain" style={{ left: offset.x, top: offset.y, width: WORLD_MAP.width * scale, height: WORLD_MAP.height * scale }}>
-              <img className="rwm-background" src="/reading-journey/map.webp" alt="울창한 숲에서 사막과 급류 계곡, 설산과 폭풍 해안으로 이어지는 독서 여정 지도" width={WORLD_MAP.width} height={WORLD_MAP.height} draggable={false} onError={() => setImageError(true)} />
-              {routeVisible && <svg className="rwm-route" viewBox={`0 0 ${WORLD_MAP.width} ${WORLD_MAP.height}`} aria-hidden="true"><path d={WORLD_MAP.path} /></svg>}
+            <div className="rwm-terrain" style={{ left: offset.x, top: offset.y, width: map.width * scale, height: map.height * scale }}>
+              <img className="rwm-background" src={backgroundSrc} alt={map.alt} width={map.width} height={map.height} draggable={false} onError={() => setImageError(true)} />
+              {routeVisible && <svg className="rwm-route" viewBox={`0 0 ${map.width} ${map.height}`} aria-hidden="true"><path d={map.path} /></svg>}
             </div>
             {checkpoints.map((stop) => <span key={stop.level} className="rwm-checkpoint" style={{ left: offset.x + stop.x * scale, top: offset.y + stop.y * scale }} title={`${number(stop.xp)} EXP`}><span>Lv.{stop.level}</span></span>)}
-            {groups.map((group) => <TravelerToken key={group.id} group={group} petOn={petOn} selectedUid={selected?.uid} selectionPulse={selectionPulse} scale={scale} offset={offset} peerOffset={peerSlotOffset(group, scale, offset, canvasWidth)} onClick={() => {
+            {groups.map((group) => <TravelerToken key={group.id} group={group} map={map} petOn={petOn} selectedUid={selected?.uid} selectionPulse={selectionPulse} scale={scale} offset={offset} peerOffset={peerSlotOffset(group, scale, offset, canvasWidth, map)} onClick={() => {
               const row = group.representative;
               selectTraveler(row);
               if (group.members.length > 1) setClusterId(group.id);
@@ -273,18 +276,18 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, petOn = false, o
   </section>;
 }
 
-function TravelerToken({ group, petOn = false, selectedUid, selectionPulse, scale, offset, peerOffset, onClick }) {
+function TravelerToken({ group, map, petOn = false, selectedUid, selectionPulse, scale, offset, peerOffset, onClick }) {
   const row = group.representative;
   // A different representative must not move a group along the route.
   const target = group.progress;
   const image = useRef(null);
-  const [point, setPoint] = useState(() => worldPoint(target));
+  const [point, setPoint] = useState(() => worldPoint(target, map));
   const current = useRef({ progress: target });
   useEffect(() => {
     const from = current.current;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || Math.abs(from.progress - target) < 0.000001) {
       current.current = { progress: target };
-      setPoint(worldPoint(target));
+      setPoint(worldPoint(target, map));
       return undefined;
     }
     let frame;
@@ -294,12 +297,12 @@ function TravelerToken({ group, petOn = false, selectedUid, selectionPulse, scal
       const eased = t * t * (3 - 2 * t);
       const progress = from.progress + (target - from.progress) * eased;
       current.current = { progress };
-      setPoint(worldPoint(progress));
+      setPoint(worldPoint(progress, map));
       if (t < 1) frame = requestAnimationFrame(animate);
     };
     frame = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(frame);
-  }, [target]);
+  }, [target, map]);
   const selected = group.members.some((member) => member.uid === selectedUid);
   useEffect(() => {
     if (!selected || selectionPulse === 0 || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
