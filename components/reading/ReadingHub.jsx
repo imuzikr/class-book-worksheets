@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { deriveReading, initialReadingState, kstToday, READING_BADGES } from "@/lib/reading";
 import { subscribeReadingState, mutateReading, fetchReadingRankings } from "@/lib/data/reading";
 import { rankingAsOf, rankingsForPeriod } from "@/lib/readingJourney";
@@ -10,6 +11,14 @@ import BookSearch from "./BookSearch";
 import { hasModalAbove } from "@/lib/modal";
 import PetCard from "./PetCard";
 import "./reading.css";
+import "./plaza.css";
+
+// 독서 광장의 무대 · 창 · 걷는 길은 광장 탭을 열 때만 내려받습니다 — 광장을 안 쓰는 반 · 서재만 보는 학생의
+// 책방 첫 화면이 무거워지지 않게(넣기 전후 First Load JS: 그대로 두면 +13KB).
+const ReadingPlaza = dynamic(() => import("./ReadingPlaza"), {
+  ssr: false,
+  loading: () => <div className="reading-loading" role="status"><span className="reading-loader" />독서 광장을 펼치고 있어요.</div>,
+});
 
 const ReadingErrorContext = createContext("");
 const TIER_NAMES = { 1: "초급", 2: "중급", 3: "고급", beginner: "초급", intermediate: "중급", advanced: "고급" };
@@ -79,7 +88,9 @@ function Modal({ title, onClose, children, wide = false, busy = false }) {
 }
 
 // petOn — 관리자 설정의 '학생 펫'(lib/readingPet.js의 petEnabled). 학생 본인 화면에만 '나의 펫' 카드가 섭니다.
-export default function ReadingHub({ classId, user, isTeacher = false, bookSearchOn = false, petOn = false, onDisabled, activities = [], onOpenActivity, initialBookId = null, initialTab = "library", student = null }) {
+// plazaOn — 관리자 설정의 '독서 광장'(lib/reading.js의 plazaOn). 켠 반은 셋째 탭이 '우리 반 랭킹' 대신 '독서 광장'입니다.
+// characterOn — 관리자 설정의 '학생 캐릭터'(끄면 광장에서도 기본 캐릭터).
+export default function ReadingHub({ classId, user, isTeacher = false, bookSearchOn = false, petOn = false, plazaOn = false, characterOn = true, onDisabled, activities = [], onOpenActivity, initialBookId = null, initialTab = "library", student = null }) {
   // student가 있으면 교사가 그 학생의 책나눔을 보는 읽기 전용 화면입니다(선생님 결정 — 감상·발자국까지 전부 보임).
   const readOnly = !!student?.uid;
   const viewUid = readOnly ? student.uid : user?.uid;
@@ -89,7 +100,28 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
   const [busy, setBusy] = useState(false);
   // '우리 반 랭킹' 탭은 책나눔이 켜져 있으면 늘 섭니다 — 관리자 설정의 '리더보드'를 꺼도 그대로(선생님 요청:
   // 순위 셈은 책나눔과 함께 늘 돌고, 리더보드 스위치는 상단바 리더보드 화면 · 독서 TOP 3만 켜고 끔).
-  const [tab, setTab] = useState(["library", "growth", "ranking"].includes(initialTab) ? initialTab : "library");
+  // 독서 광장을 켠 반은 그 자리에 '독서 광장'이 섭니다(선생님 요청 — 순위는 상단바 리더보드에서 봄). 끈 반은 지금처럼 '우리 반 랭킹'.
+  const thirdTab = plazaOn ? "plaza" : "ranking";
+  const [tab, setTab] = useState(() => (initialTab === "plaza" || initialTab === "ranking" ? thirdTab : ["library", "growth"].includes(initialTab) ? initialTab : "library"));
+  // 선생님이 설정을 바꿔 셋째 탭이 달라지면(광장 ↔ 랭킹) 보던 탭도 따라갑니다.
+  useEffect(() => { setTab((current) => (current === "plaza" || current === "ranking" ? thirdTab : current)); }, [thirdTab]);
+  // 서재에서 '광장에서 보기'로 넘어갈 때 곧바로 열 책({ uid, bookId, place, key })
+  const [plazaJump, setPlazaJump] = useState(null);
+  // 내 광장 목록 한 장 — 선생님이 내린 책 · 내 책에 달린 댓글 수(학생 본인 화면 · 광장을 켠 반에서만, 읽기 1)
+  const [myShelf, setMyShelf] = useState(null);
+  const ownPlaza = plazaOn && !readOnly && !isTeacher && !!user?.uid;
+  const myUid = user?.uid;
+  // 광장의 자료 함수도 광장을 켠 반에서만 내려받습니다(무대와 같은 까닭 — 아래 dynamic 주석).
+  useEffect(() => {
+    setMyShelf(null);
+    if (!ownPlaza || !classId || !myUid) return undefined;
+    let alive = true;
+    let off = null;
+    import("@/lib/data/plaza").then((plaza) => {
+      if (alive) off = plaza.subscribeMyPlazaShelf(classId, myUid, setMyShelf, () => setMyShelf(null));
+    }).catch(() => {});
+    return () => { alive = false; off?.(); };
+  }, [ownPlaza, classId, myUid]);
   const [filter, setFilter] = useState("all");
   const [dialog, setDialog] = useState(null);
   const [confirm, setConfirm] = useState(null);
@@ -168,8 +200,14 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
   const selected = dialog?.bookId ? books.find((b) => b.id === dialog.bookId) : null;
   const featured = (stats.badges || []).find((b) => b.id === (stats.featuredBadge?.id || stats.featuredBadge));
   const showPet = petOn && !readOnly && !isTeacher && !!user?.uid;
+  // 독서 광장 — 이 책이 지금 광장에 어떻게 올라가 있는지(책 상세 창)
+  const plazaInfo = (bookId) => ({
+    blocked: Array.isArray(myShelf?.blocked) && myShelf.blocked.includes(bookId),
+    comments: Math.max(0, Number(myShelf?.counts?.[bookId]) || 0),
+    entry: (Array.isArray(myShelf?.books) ? myShelf.books : []).find((b) => b?.id === bookId) ?? null,
+  });
 
-  return <ReadingErrorContext.Provider value={error}><section className="reading-hub" aria-label="책나눔 성장 기능" aria-busy={loading || busy}>
+  return <ReadingErrorContext.Provider value={error}><section className={`reading-hub${tab === "plaza" ? " reading-hub--plaza" : ""}`} aria-label="책나눔 성장 기능" aria-busy={loading || busy}>
     <div className="reading-intro">
       {readOnly ? <div><p className="reading-eyebrow">READING JOURNEY</p><h2>{student.name || "학생"}의 독서 여정</h2><p>학생이 남긴 서재 · 독서 발자국 · 한 권의 책을 읽기만 합니다.</p></div> : <div><p className="reading-eyebrow">MY READING JOURNEY</p><h2>한 페이지씩, 나의 가능성을 넓히다.</h2><p>읽은 순간을 기록하고 나만의 독서 컬렉션을 완성해 보세요.</p></div>}
       {(featured?.earned || showPet) && <div className="reading-intro-side">
@@ -179,11 +217,13 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
       </div>}
     </div>
     <nav className="reading-tabs" aria-label="책나눔 메뉴">
-      {[["library", readOnly ? "서재" : "내 서재"], ["growth", "성장·뱃지"], ["ranking", "우리 반 랭킹"]].map(([key, label]) => <button type="button" key={key} className={tab === key ? "active" : ""} aria-current={tab === key ? "page" : undefined} onClick={() => { setTab(key); setDialog(null); setError(""); }}>{label}</button>)}
+      {[["library", readOnly ? "서재" : "내 서재"], ["growth", "성장·뱃지"], [thirdTab, plazaOn ? "독서 광장" : "우리 반 랭킹"]].map(([key, label]) => <button type="button" key={key} className={tab === key ? "active" : ""} aria-current={tab === key ? "page" : undefined} onClick={() => { setTab(key); setDialog(null); setError(""); setPlazaJump(null); }}>{label}</button>)}
     </nav>
     {error && !dialog && !confirm && <div className="reading-error" role="alert">{error}<button type="button" onClick={() => setError("")} aria-label="오류 안내 닫기">×</button></div>}
     {notice && <div className="reading-notice" role="status">{notice}</div>}
-    {loading ? <div className="reading-loading" role="status"><span className="reading-loader" />독서 기록을 불러오고 있어요.</div> : !raw ? <div className="reading-empty"><BookIcon size={40} /><h3>독서 정보를 불러오지 못했어요.</h3><button type="button" className="btn-primary" onClick={() => setRevision((r) => r + 1)}>다시 불러오기</button></div> : <>
+    {/* 독서 광장은 서재(정본)를 기다리지 않습니다 — 반의 공유 사본을 제 손으로 구독합니다. 펫의 단계만 서재에서 받습니다. */}
+    {tab === "plaza" ? <ReadingPlaza key={plazaJump?.key ?? "plaza"} classId={classId} user={user} isTeacher={isTeacher} characterOn={characterOn} petOn={showPet} growthXp={raw ? petGrowthOfSummary(stats) : null} initialBook={plazaJump} />
+    : loading ? <div className="reading-loading" role="status"><span className="reading-loader" />독서 기록을 불러오고 있어요.</div> : !raw ? <div className="reading-empty"><BookIcon size={40} /><h3>독서 정보를 불러오지 못했어요.</h3><button type="button" className="btn-primary" onClick={() => setRevision((r) => r + 1)}>다시 불러오기</button></div> : <>
       <div className="reading-summary">
         <div className="reading-level"><span>독서 레벨</span><strong><small>Lv.</small>{stats.level}</strong><div className="reading-progress" role="progressbar" aria-label={stats.maxLevel ? "최고 레벨" : "다음 레벨까지"} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(stats.progress || 0)}><i style={{ width: `${stats.progress || 0}%` }} /></div><span>{stats.maxLevel ? `${number(stats.xp)} EXP · 최고 레벨` : `${number(stats.xp)} / ${number(stats.nextXp)} EXP`}</span></div>
         <div><span>누적 독서량</span><strong>{number(stats.totalPages)}<small>쪽</small></strong><span>기록한 페이지가 경험치로</span></div>
@@ -203,9 +243,13 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
     </>}
 
     {dialog?.type === "book" && <BookForm key={selected?.id || "new"} book={selected} searchOn={bookSearchOn} pagesLocked={!!selected && [...(raw?.logs || []), ...(raw?.reviews || [])].some((r) => r.bookId === selected.id)} activities={activities} busy={busy} onClose={() => setDialog(null)} onSave={async (values) => { const ok = await run({ type: selected ? "updateBook" : "addBook", ...(selected ? { bookId: selected.id } : {}), ...values }, selected ? "책 정보를 고쳤어요." : "새 책을 서재에 놓았어요."); if (ok) setDialog(null); }} />}
-    {dialog?.type === "detail" && selected && <BookDetail book={selected} classId={classId} readOnly={readOnly} activity={activities.find((a) => a.id === selected.activityId)} onOpenActivity={onOpenActivity} logs={(stats.logs || raw?.logs || []).filter((l) => l.bookId === selected.id)} review={(stats.reviews || raw?.reviews || []).find((r) => r.bookId === selected.id)} busy={busy} onClose={() => setDialog(null)} onEdit={() => setDialog({ type: "book", bookId: selected.id })} onLog={(log) => setDialog({ type: "log", bookId: selected.id, log })} onReview={() => setDialog({ type: "review", bookId: selected.id })} onDeleteLog={(log) => ask("이 독서 기록을 삭제할까요? 경험치와 달성 기록도 다시 계산해요.", { type: "deleteLog", logId: log.id })} onDeleteReview={() => ask("이 ‘한 권의 책’을 삭제할까요? 받은 보상도 함께 정정해요.", { type: "deleteReview", bookId: selected.id })} onArchive={() => ask(selected.archived ? "이 책을 서재로 돌려놓을까요?" : "이 책을 보관함으로 옮길까요? 독서 기록은 그대로 남아요.", { type: "archiveBook", bookId: selected.id, archived: !selected.archived })} />}
-    {dialog?.type === "log" && selected && <LogForm key={dialog.log?.id || selected.id} book={selected} log={dialog.log} today={day} busy={busy} onClose={() => setDialog({ type: "detail", bookId: selected.id })} onSave={async (values) => { const ok = await run({ type: dialog.log ? "updateLog" : "addLog", bookId: selected.id, ...(dialog.log ? { logId: dialog.log.id } : {}), ...values }, "오늘의 독서를 기록했어요."); if (ok) setDialog({ type: "detail", bookId: selected.id }); }} />}
-    {dialog?.type === "review" && selected && <ReviewForm key={selected.id} book={selected} review={(stats.reviews || raw?.reviews || []).find((r) => r.bookId === selected.id)} busy={busy} onClose={() => setDialog({ type: "detail", bookId: selected.id })} onSave={async (values) => { const ok = await run({ type: "saveReview", bookId: selected.id, ...values }, "책을 읽고 남긴 생각을 저장했어요."); if (ok) setDialog({ type: "detail", bookId: selected.id }); }} />}
+    {dialog?.type === "detail" && selected && <BookDetail book={selected} classId={classId} readOnly={readOnly} activity={activities.find((a) => a.id === selected.activityId)} onOpenActivity={onOpenActivity} logs={(stats.logs || raw?.logs || []).filter((l) => l.bookId === selected.id)} review={(stats.reviews || raw?.reviews || []).find((r) => r.bookId === selected.id)} busy={busy} onClose={() => setDialog(null)} onEdit={() => setDialog({ type: "book", bookId: selected.id })} onLog={(log) => setDialog({ type: "log", bookId: selected.id, log })} onReview={() => setDialog({ type: "review", bookId: selected.id })} onDeleteLog={(log) => ask("이 독서 기록을 삭제할까요? 경험치와 달성 기록도 다시 계산해요.", { type: "deleteLog", logId: log.id })} onDeleteReview={() => ask("이 ‘한 권의 책’을 삭제할까요? 받은 보상도 함께 정정해요.", { type: "deleteReview", bookId: selected.id })} onArchive={() => ask(selected.archived ? "이 책을 서재로 돌려놓을까요?" : "이 책을 보관함으로 옮길까요? 독서 기록은 그대로 남아요.", { type: "archiveBook", bookId: selected.id, archived: !selected.archived })}
+      plaza={ownPlaza ? plazaInfo(selected.id) : null}
+      onPlazaHide={(hidden) => run({ type: "setBookPlaza", bookId: selected.id, hidden }, hidden ? "이 책의 독서 발자국을 광장에서 내렸어요." : "이 책의 독서 발자국을 광장에 보이게 했어요.")}
+      onShelve={(shelved) => run({ type: "shelveReview", bookId: selected.id, shelved }, shelved ? "광장 책꽂이에 꽂았어요." : "광장 책꽂이에서 뺐어요.")}
+      onOpenPlaza={(place) => { setDialog(null); setError(""); setPlazaJump({ uid: viewUid, bookId: selected.id, place, key: `jump-${Date.now()}` }); setTab("plaza"); }} />}
+    {dialog?.type === "log" && selected && <LogForm key={dialog.log?.id || selected.id} book={selected} log={dialog.log} today={day} busy={busy} plaza={ownPlaza ? (plazaInfo(selected.id).blocked ? "blocked" : selected.plazaHidden ? "hidden" : "shown") : null} onClose={() => setDialog({ type: "detail", bookId: selected.id })} onSave={async (values) => { const ok = await run({ type: dialog.log ? "updateLog" : "addLog", bookId: selected.id, ...(dialog.log ? { logId: dialog.log.id } : {}), ...values }, "오늘의 독서를 기록했어요."); if (ok) setDialog({ type: "detail", bookId: selected.id }); }} />}
+    {dialog?.type === "review" && selected && <ReviewForm key={selected.id} book={selected} review={(stats.reviews || raw?.reviews || []).find((r) => r.bookId === selected.id)} busy={busy} plaza={ownPlaza && selected.status === "completed" && !plazaInfo(selected.id).blocked} onClose={() => setDialog({ type: "detail", bookId: selected.id })} onSave={async (values) => { const ok = await run({ type: "saveReview", bookId: selected.id, ...values }, "책을 읽고 남긴 생각을 저장했어요."); if (ok) setDialog({ type: "detail", bookId: selected.id }); }} />}
     {confirm && <Modal title="기록 확인" busy={busy} onClose={() => setConfirm(null)}><p className="reading-confirm-copy">{confirm.title}</p><div className="reading-form-actions"><button type="button" className="btn-ghost" onClick={() => setConfirm(null)} disabled={busy}>취소</button><button type="button" className="reading-danger-button" disabled={busy} onClick={async () => { if (await run(confirm.action, "기록을 정리했어요.")) setConfirm(null); }}>{busy ? "처리 중…" : "확인"}</button></div></Modal>}
   </section></ReadingErrorContext.Provider>;
 }
@@ -295,7 +339,8 @@ function BookForm({ book, searchOn = false, pagesLocked, activities, busy, onSav
   </Modal>;
 }
 
-function LogForm({ book, log, today, busy, onSave, onClose }) {
+// plaza — 독서 광장을 켠 반의 학생: 이 발자국이 반 친구에게 보이는지 알려 줍니다("shown" · "hidden" · "blocked").
+function LogForm({ book, log, today, busy, plaza = null, onSave, onClose }) {
   const [form, setForm] = useState({ date: log?.date || today, startPage: log?.startPage || Math.min((book.currentPage || 0) + 1, book.totalPages), endPage: log?.endPage || "", notes: log?.notes || "" });
   const change = (key, v) => setForm((p) => ({ ...p, [key]: v }));
   return <Modal title={log ? "독서 발자국 고치기" : "오늘의 독서 발자국"} onClose={onClose} busy={busy}>
@@ -304,32 +349,63 @@ function LogForm({ book, log, today, busy, onSave, onClose }) {
       <label>읽은 날짜<input data-initial-focus required type="date" max={today} value={form.date} onChange={(e) => change("date", e.target.value)} /></label>
       <div className="reading-form-row"><label>시작 쪽<input required type="number" min={1} max={book.totalPages} step={1} value={form.startPage} onChange={(e) => change("startPage", e.target.value)} inputMode="numeric" /></label><label>마지막 쪽<input required type="number" min={Math.max(1, Number(form.startPage) || 1)} max={book.totalPages} step={1} value={form.endPage} onChange={(e) => change("endPage", e.target.value)} inputMode="numeric" /></label></div>
       <label>오늘의 짧은 감상<textarea required maxLength={2000} rows={4} value={form.notes} onChange={(e) => change("notes", e.target.value)} placeholder="마음에 남은 장면이나 새롭게 떠오른 생각을 적어 보세요." /><span className="reading-field-count">{form.notes.length} / 2,000</span></label>
+      {plaza === "shown" && <p className="plaza-note">이 발자국은 독서 광장 가판대에서 반 친구들이 함께 읽어요.</p>}
+      {plaza === "hidden" && <p className="plaza-note plaza-note--off">이 책은 광장에 보이지 않게 해 두어, 이 발자국은 나와 선생님만 봐요.</p>}
+      {plaza === "blocked" && <p className="plaza-note plaza-note--off">선생님이 이 책을 광장에서 내려, 이 발자국은 나와 선생님만 봐요.</p>}
       <p className="reading-help">1쪽당 1 EXP. 그날 5쪽 이상 읽으면 연속 독서일로 쳐서 하루 한 번 보너스(연속일 × 15, 7일째부터 105)를 받아요. 이미 기록한 페이지는 중복 적립하지 않아요.</p>
       <div className="reading-form-actions"><button type="button" className="btn-ghost" onClick={onClose} disabled={busy}>취소</button><button type="submit" className="btn-primary" disabled={busy || !form.notes.trim()}>{busy ? "저장 중…" : "독서 발자국 저장"}</button></div>
     </form>
   </Modal>;
 }
 
-function ReviewForm({ book, review, busy, onSave, onClose }) {
+// plaza — 독서 광장을 켠 반에서 완독한 책이면 '광장 책꽂이에 꽂기'를 함께 고릅니다(기본은 안 꽂음 — 학생이 고름).
+function ReviewForm({ book, review, busy, plaza = false, onSave, onClose }) {
   const [text, setText] = useState(review?.text || "");
   const [rating, setRating] = useState(review?.rating || 5);
+  const [shelved, setShelved] = useState(review?.shelved === true);
   return <Modal title={review ? "한 권의 책 고치기" : "한 권의 책"} onClose={onClose} busy={busy}>
-    <form className="reading-form" onSubmit={(e) => { e.preventDefault(); onSave({ text: text.trim(), rating: Number(rating) }); }}>
+    <form className="reading-form" onSubmit={(e) => { e.preventDefault(); onSave({ text: text.trim(), rating: Number(rating), ...(plaza ? { shelved } : {}) }); }}>
       <div className="reading-form-book"><BookIcon /><strong>{book.title}</strong></div>
       <label>나의 별점<select value={rating} onChange={(e) => setRating(e.target.value)}>{[5, 4, 3, 2, 1].map((n) => <option key={n} value={n}>{n}점</option>)}</select></label>
       <label>읽고 남은 생각<textarea data-initial-focus required rows={8} maxLength={5000} value={text} onChange={(e) => setText(e.target.value)} placeholder="이 책이 내게 남긴 것, 친구와 나누고 싶은 생각을 써 보세요." /><span className="reading-field-count">{text.length} / 5,000</span></label>
+      {plaza && <label className="plaza-check"><input type="checkbox" checked={shelved} onChange={(e) => setShelved(e.target.checked)} />광장 책꽂이에 꽂기 — 반 친구들이 이 글을 읽고 댓글을 남길 수 있어요.</label>}
       <p className="reading-help">다 읽은 책을 마무리하는 총평이에요. 서로 다른 책의 첫 ‘한 권의 책’에 70 EXP를 받아요. 고쳐 쓸 때는 중복 지급하지 않아요.</p>
       <div className="reading-form-actions"><button type="button" className="btn-ghost" disabled={busy} onClick={onClose}>취소</button><button type="submit" className="btn-primary" disabled={busy || !text.trim()}>{busy ? "저장 중…" : "한 권의 책 저장"}</button></div>
     </form>
   </Modal>;
 }
 
-function BookDetail({ book, classId, readOnly = false, activity, onOpenActivity, logs, review, busy, onClose, onEdit, onLog, onReview, onDeleteLog, onDeleteReview, onArchive }) {
+// 독서 광장 — 이 책을 반 친구들과 어떻게 나누는지(책 상세 창 · 광장을 켠 반의 학생 본인에게만).
+//   · 발자국 보이기(기본 켜짐) — 끄면 이 책의 독서 발자국이 광장에 안 보입니다.
+//   · 책꽂이에 꽂기(완독한 책 · 기본 꺼짐) — '한 권의 책'을 쓴 뒤에 꽂습니다.
+// info — { blocked(선생님이 내림), comments(달린 댓글 수), entry(지금 광장에 올라가 있는 모습) }
+function PlazaOwn({ book, review, classId, info, busy, onHide, onShelve, onOpen }) {
+  if (info.blocked) return <div className="plaza-own"><div className="plaza-own-text"><strong>독서 광장</strong><span>선생님이 이 책을 광장에서 내렸어요. 이 책의 글은 나와 선생님만 봐요.</span></div></div>;
+  const completed = book.status === "completed";
+  const otherClass = !!review && review.classId !== classId;
+  const text = completed
+    ? (!review ? "‘한 권의 책’을 쓰면 광장 책꽂이에 꽂을 수 있어요."
+      : review.shelved ? "이 책의 ‘한 권의 책’이 광장 책꽂이에 꽂혀 있어요. 반 친구들이 읽고 댓글을 남길 수 있어요."
+        : "‘책꽂이에 꽂기’를 켜면 반 친구들이 광장 책꽂이에서 이 책의 ‘한 권의 책’을 읽을 수 있어요.")
+    : (book.plazaHidden ? "이 책의 독서 발자국은 광장에 보이지 않아요. 나와 선생님만 봐요."
+      : "이 책에 남기는 독서 발자국을 반 친구들이 광장 가판대에서 함께 읽어요(광장이 열린 뒤에 쓴 발자국부터).");
+  return <div className="plaza-own">
+    <div className="plaza-own-text"><strong>독서 광장</strong><span>{text}</span></div>
+    <div className="plaza-own-actions">
+      {completed && <button type="button" role="switch" aria-checked={review?.shelved === true} className="plaza-switch" disabled={busy || !review || otherClass} onClick={() => onShelve(review?.shelved !== true)}><i aria-hidden="true" />책꽂이에 꽂기</button>}
+      {(!completed || review?.shelved === true) && <button type="button" role="switch" aria-checked={book.plazaHidden !== true} className="plaza-switch" disabled={busy} onClick={() => onHide(book.plazaHidden !== true)}><i aria-hidden="true" />발자국 보이기</button>}
+      {info.entry && <button type="button" className="btn-ghost" disabled={busy} onClick={() => onOpen(info.entry.place)}>광장에서 보기{info.comments ? ` · 댓글 ${number(info.comments)}` : ""}</button>}
+    </div>
+  </div>;
+}
+
+function BookDetail({ book, classId, readOnly = false, activity, onOpenActivity, logs, review, busy, onClose, onEdit, onLog, onReview, onDeleteLog, onDeleteReview, onArchive, plaza = null, onPlazaHide, onShelve, onOpenPlaza }) {
   const sorted = [...logs].sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.createdAt).localeCompare(String(a.createdAt)));
   return <Modal title={book.title} wide busy={busy} onClose={onClose}>
     <div className="reading-detail-overview"><BookCover book={book} /><div className="reading-detail-meta"><span>{book.author}</span>{book.publisher && <span>{book.publisher}</span>}{book.isbn && <span>ISBN {book.isbn}</span>}<span>{number(book.pagesRead ?? book.currentPage)} / {number(book.totalPages)}쪽 읽음</span><span>{book.status === "completed" ? "완독" : book.status === "paused" ? "잠시 멈춤" : "읽는 중"}</span>{book.bookLink && <a href={book.bookLink} target="_blank" rel="noopener noreferrer">도서 정보 보기 ↗</a>}</div></div>
     {!readOnly && <div className="reading-detail-tools"><button type="button" className="btn-ghost" disabled={busy} onClick={onEdit}>책 정보 고치기</button><button type="button" className="btn-ghost" disabled={busy} onClick={onArchive}>{book.archived ? "서재로 복원" : "보관함으로"}</button></div>}
     {activity && onOpenActivity && !readOnly && <div className="reading-linked-activity"><div><span>함께 연결한 독서 활동</span><strong>{activity.title}</strong></div><button type="button" className="btn-ghost" disabled={busy} onClick={() => onOpenActivity(activity)}>활동 열기 →</button></div>}
+    {plaza && !readOnly && !book.archived && <PlazaOwn book={book} review={review} classId={classId} info={plaza} busy={busy} onHide={onPlazaHide} onShelve={onShelve} onOpen={onOpenPlaza} />}
     <section className="reading-detail-section"><header><h3>한 권의 책</h3>{!book.archived && !readOnly && <div className="reading-detail-section-actions">{book.status === "completed" && <button type="button" className="btn-ghost" disabled={busy || (review && review.classId !== classId)} onClick={onReview}>{review ? "한 권의 책 고치기" : "한 권의 책"}</button>}<button type="button" className="btn-primary" disabled={busy} onClick={() => onLog(null)}>독서 발자국</button></div>}</header>{review ? <article className="reading-review"><p className="reading-review-rating">{readOnly ? "별점" : "나의 별점"} {review.rating} / 5</p><p>{review.text}</p>{!readOnly && review.classId !== classId && <p className="reading-help">다른 반에서 작성한 ‘한 권의 책’이에요. 작성한 반에서 고치거나 삭제할 수 있어요.</p>}{!readOnly && <button type="button" className="reading-text-danger" disabled={busy || review.classId !== classId} onClick={onDeleteReview}>한 권의 책 삭제</button>}</article> : readOnly ? <p className="reading-muted">아직 ‘한 권의 책’을 남기지 않았어요.</p> : <p className="reading-muted">{book.status === "completed" ? "다 읽은 책에 대한 나의 총평을 ‘한 권의 책’으로 남겨 보세요." : "책을 끝까지 읽으면 총평 ‘한 권의 책’을 쓸 수 있어요. 읽은 날마다 ‘독서 발자국’을 남겨 보세요."}</p>}</section>
     <section className="reading-detail-section"><header><h3>독서의 발자취 <small>{logs.length}</small></h3></header>{sorted.length ? <ol className="reading-log-list">{sorted.map((log) => <li key={log.id}><div className="reading-log-date"><strong>{shortDate(log.date)}</strong><span>{log.startPage}–{log.endPage}쪽 · {number(log.endPage - log.startPage + 1)}쪽</span></div><p>{log.notes}</p>{!readOnly && log.classId !== classId && <p className="reading-help">다른 반에서 작성한 기록 · 작성한 반에서만 수정 가능</p>}{!readOnly && <div className="reading-log-tools"><button type="button" className="btn-ghost" disabled={busy || log.classId !== classId} onClick={() => onLog(log)}>고치기</button><button type="button" className="reading-text-danger" disabled={busy || log.classId !== classId} onClick={() => onDeleteLog(log)}>삭제</button></div>}</li>)}</ol> : <p className="reading-muted">{readOnly ? "아직 독서 기록이 없어요." : "아직 독서 기록이 없어요. 첫 페이지의 생각부터 남겨 보세요."}</p>}</section>
   </Modal>;

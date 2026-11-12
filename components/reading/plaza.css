@@ -1,0 +1,244 @@
+/* =============================================================
+   독서 광장 (components/reading/ReadingPlaza.jsx · PlazaPanel.jsx)
+   -------------------------------------------------------------
+   · 무대(.plaza-stage)는 배경 그림(1672×941)의 비율 그대로 — 그 위의 캐릭터 · 이름표는 %로 놓습니다
+     (좌표의 셈은 lib/readingPlaza.js). 화면 높이에 맞춰 줄어들어 한 화면에 다 보입니다.
+   · 캐릭터의 자리는 '발'입니다(left/top = 발, 그림은 그 위로).
+   · 창(.plaza-panel)은 책나눔의 다른 창(.reading-modal)과 같은 종이 빛입니다.
+   · 접는 기준은 창 폭(@media)이 아니라 창(.plaza-panel)의 폭(@container)입니다.
+   ============================================================= */
+/* 광장 탭에서는 책나눔의 머리띠(소개 · 대표 뱃지 · 펫 카드)를 접어 무대가 한 화면에 들어오게 합니다.
+   떼어 내지 않고 가리기만 합니다 — 펫 카드가 다시 마운트되며 알 받기 · 축하를 또 돌리지 않게. */
+.reading-hub--plaza .reading-intro { display: none; }
+.reading-hub--plaza .reading-tabs { padding-top: 0; margin-bottom: 14px; }
+.reading-hub.reading-hub--plaza { padding-bottom: 4px; }
+/* 교사의 책나눔 — 광장은 반 전체의 자리라 왼쪽 학생 명단을 접어 무대를 넓힙니다(다른 탭으로 가면 돌아옴). */
+.reading-teacher:has(.reading-hub--plaza) { grid-template-columns: minmax(0, 1fr); }
+.reading-teacher:has(.reading-hub--plaza) .reading-teacher-rail { display: none; }
+.plaza { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+/* 머리 한 줄 — 제목(과 한 줄 설명) · 오른쪽에 가판대 · 책꽂이 단추. 줄이 늘면 그만큼 무대가 내려앉습니다. */
+.plaza-head { display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap; }
+.plaza-head h3 { display: flex; align-items: baseline; gap: 10px; min-width: 0; margin: 0; font-size: 19px; font-weight: 750; letter-spacing: -.03em; white-space: nowrap; }
+.plaza-head h3 small { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: #7a8578; font-size: 12px; font-weight: 500; letter-spacing: 0; }
+/* 이어 놓인 두 단추는 같은 크기 */
+.plaza-head-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.plaza-head-actions button { display: flex; align-items: center; justify-content: center; gap: 6px; height: 38px; padding: 0 14px; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.plaza-head-actions small { font-size: 11.5px; font-weight: 500; color: var(--text-faint); }
+.plaza-head-actions b { min-width: 22px; padding: 1px 6px; border-radius: 999px; background: #e8f1e6; color: #2f6150; font-size: 12px; font-variant-numeric: tabular-nums; }
+
+.plaza-stage-wrap { display: flex; justify-content: center; }
+.plaza-stage {
+  position: relative;
+  /* 무대가 한 화면에 다 들어오게 높이에 맞춰 폭을 줄입니다 — 남은 높이(--plaza-fit-h)는 화면이 재서 줍니다
+     (ReadingPlaza.jsx — 책방 본문이 제 안에서 구르는 칸이라 CSS만으로는 모름). 너무 작아지지 않게 바닥 폭을 둡니다. */
+  width: min(100%, calc(var(--plaza-fit-h, 62vh) * 1672 / 941));
+  min-width: min(100%, 560px);
+  aspect-ratio: 1672 / 941;
+  /* 이름표 · 이름 글자는 무대 폭에 맞춰 커집니다(cqw) */
+  container: plazastage / inline-size;
+  /* 무대 안의 겹침 차례(캐릭터 10~ · 이름표 2000)가 밖으로 새지 않게 — 안 가두면 이름표가 책 보기 창(1200) 위로 올라옵니다 */
+  isolation: isolate;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #e9d6bd;
+  box-shadow: 0 6px 26px #2a3f2f1f, inset 0 0 0 1px #00000014;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  outline: none;
+}
+.plaza-stage:focus-visible { box-shadow: 0 0 0 3px #478fbd, 0 6px 26px #2a3f2f1f; }
+.plaza-bg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+
+/* 이름표 — 책꽂이 · 가판대 위에 떠 있는 나무 팻말 */
+.plaza-sign {
+  position: absolute;
+  z-index: 2000;
+  transform: translate(-50%, -100%);
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 10px 5px 12px;
+  border: 2px solid #8a5a2b;
+  border-radius: 12px;
+  background: #fff6e2f2;
+  color: #5a3a1b;
+  font: inherit; font-size: clamp(10px, 1.4cqw, 14px); font-weight: 750; white-space: nowrap;
+  box-shadow: 0 3px 0 #8a5a2b55, 0 6px 14px #3a26122e;
+  cursor: pointer;
+  transition: transform .15s, background .15s;
+}
+.plaza-sign:hover { background: #fffdf5; transform: translate(-50%, -100%) translateY(-2px); }
+.plaza-sign b { min-width: 20px; padding: 0 6px; border-radius: 999px; background: #8a5a2b; color: #fff; font-size: .92em; text-align: center; font-variant-numeric: tabular-nums; }
+.plaza-sign i { font-style: normal; font-weight: 600; font-size: .86em; color: #2f7a5c; }
+.plaza-sign em { font-style: normal; font-size: .86em; color: #b6532f; }
+.plaza-sign--shelf { transform: translate(-50%, 0); }
+.plaza-sign--shelf:hover { transform: translate(-50%, 0) translateY(-2px); }
+/* 가장자리의 가판대 — 이름표가 무대 밖으로 잘리지 않게 안쪽으로 뻗습니다 */
+.plaza-sign--left { transform: translate(0, -100%); }
+.plaza-sign--left:hover { transform: translate(0, -100%) translateY(-2px); }
+.plaza-sign--right { transform: translate(-100%, -100%); }
+.plaza-sign--right:hover { transform: translate(-100%, -100%) translateY(-2px); }
+@container plazastage (max-width: 860px) { .plaza-sign i { display: none; } .plaza-sign { padding: 4px 8px 4px 10px; border-radius: 10px; } }
+.plaza-sign.is-near { background: #fff; border-color: #c2622f; animation: plaza-sign-pulse 1.1s ease-in-out infinite; }
+@keyframes plaza-sign-pulse { 0%, 100% { box-shadow: 0 3px 0 #8a5a2b55, 0 0 0 0 #e58a4f66; } 50% { box-shadow: 0 3px 0 #8a5a2b55, 0 0 0 7px #e58a4f00; } }
+
+/* 눌러서 갈 곳 — 잠깐 퍼지는 동그라미 */
+.plaza-marker { position: absolute; z-index: 5; width: 3.2%; aspect-ratio: 2 / 1; transform: translate(-50%, -50%); border: 2px solid #ffffffd9; border-radius: 50%; box-shadow: 0 0 0 1px #5a3a1b40; pointer-events: none; animation: plaza-marker .9s ease-out infinite; }
+@keyframes plaza-marker { from { opacity: .95; transform: translate(-50%, -50%) scale(.45); } to { opacity: 0; transform: translate(-50%, -50%) scale(1.25); } }
+
+/* 캐릭터 */
+.plaza-avatar { position: absolute; transform: translate(-50%, -95%); pointer-events: none; }
+.plaza-avatar-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 2px 2px #0000002b); }
+.plaza-avatar-shadow { position: absolute; left: 18%; right: 18%; bottom: 0; height: 13%; border-radius: 50%; background: #3a261233; filter: blur(2px); }
+.plaza-avatar-pet { position: absolute; bottom: 2%; display: block; }
+.plaza-avatar-pet .pet-figure { display: block; }
+.plaza-avatar-name {
+  position: absolute; left: 50%; bottom: 100%; transform: translate(-50%, 2px);
+  max-width: 220%; padding: 2px 9px; border-radius: 999px;
+  background: #20364ad9; color: #fff; font-size: clamp(10px, 1.3cqw, 13px); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.plaza-avatar.is-me .plaza-avatar-name { background: #c2622fe6; }
+.plaza-avatar.is-moving .plaza-avatar-img { animation: plaza-bob .36s ease-in-out infinite; }
+.plaza-avatar.is-moving .plaza-avatar-pet { animation: plaza-bob .36s ease-in-out infinite .12s; }
+@keyframes plaza-bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -5%; } }
+@media (prefers-reduced-motion: reduce) {
+  .plaza-avatar.is-moving .plaza-avatar-img, .plaza-avatar.is-moving .plaza-avatar-pet, .plaza-sign.is-near, .plaza-marker { animation: none; }
+}
+.plaza-help { margin: 0; color: var(--text-faint); font-size: 12px; line-height: 1.6; text-align: center; }
+
+/* ── 창 ── */
+.plaza-panel-backdrop { position: fixed; z-index: 1200; inset: 0; display: flex; align-items: safe center; justify-content: center; padding: 24px 16px; background: #14291f7a; backdrop-filter: blur(3px); overflow-y: auto; }
+.plaza-panel {
+  container: plazapanel / inline-size;
+  width: min(940px, 100%); height: min(820px, calc(100dvh - 48px));
+  display: flex; flex-direction: column;
+  overflow-y: auto;
+  border: 1px solid #d8e3d6; border-radius: 18px;
+  padding: 0 26px 26px;
+  background: #fffef9; color: #284135;
+  box-shadow: 0 20px 80px #132c2850;
+  outline: none;
+}
+.plaza-panel * { box-sizing: border-box; }
+.plaza-panel-head { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; gap: 12px; margin: 0 -26px 16px; padding: 18px 26px 14px; background: #fffef9; border-bottom: 1px solid #e6ece2; }
+.plaza-panel-head h2 { margin: 0; font-size: 17px; font-weight: 750; letter-spacing: -.03em; white-space: nowrap; }
+.plaza-close { margin-left: auto; }
+.plaza-back { height: 36px; padding: 0 14px; font-size: 13px; font-weight: 700; }
+/* 가판대 · 책꽂이 — 같은 크기 두 칸 */
+.plaza-place-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; flex: 0 1 380px; }
+.plaza-place-tabs button { display: flex; align-items: center; justify-content: center; gap: 6px; height: 40px; line-height: 1; padding: 0 12px; border: 1px solid #d6e0d4; border-radius: 10px; background: #f6f8f1; color: #5f7366; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.plaza-place-tabs button small { font-size: 11.5px; font-weight: 500; color: #8b9984; }
+.plaza-place-tabs button.on { border-color: #4c846c; background: #e8f1e6; color: #254f44; }
+.plaza-place-tabs button.on small { color: #4e7262; }
+
+.plaza-list-tools { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+.plaza-list-tools p { flex: 1 1 260px; margin: 0; color: #7a8578; font-size: 12px; line-height: 1.6; }
+.plaza-friend { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700; color: #5f7366; white-space: nowrap; }
+.plaza-friend select { height: 36px; min-width: 170px; padding: 0 10px; border: 1px solid #d6e0d4; border-radius: 9px; background: #fff; color: inherit; font: inherit; font-size: 13px; }
+.plaza-group { margin-top: 6px; }
+.plaza-group + .plaza-group { margin-top: 22px; }
+.plaza-group h4, .plaza-book h4, .plaza-comments h4 { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 14px; font-weight: 750; color: #2c4c3f; }
+.plaza-group h4 span, .plaza-book h4 > span:not(.plaza-stars), .plaza-comments h4 span { color: #7c8b79; font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.plaza-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.plaza-card { display: flex; gap: 14px; width: 100%; height: 100%; padding: 14px; border: 1px solid #dde5df; border-radius: 14px; background: #fff; color: inherit; font: inherit; text-align: left; cursor: pointer; transition: border-color .15s, box-shadow .15s, transform .15s; }
+.plaza-card:hover { border-color: #b7cbbd; box-shadow: 0 5px 18px #29452f12; transform: translateY(-1px); }
+.plaza-card-body { display: flex; flex-direction: column; gap: 5px; min-width: 0; flex: 1; }
+.plaza-card-who { display: inline-flex; align-items: center; gap: 6px; color: #547466; font-size: 11.5px; font-weight: 700; }
+.plaza-card-who em { padding: 0 6px; border-radius: 999px; background: #fbe3d6; color: #a8502a; font-style: normal; font-size: 10.5px; }
+.plaza-card-title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 14.5px; font-weight: 750; line-height: 1.4; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.plaza-card-author { color: #7c8b79; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.plaza-card-progress { display: flex; align-items: center; gap: 8px; color: #657d70; font-size: 11.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.plaza-card-progress .reading-progress { flex: 1; min-width: 40px; }
+.plaza-card-excerpt { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: #4c5f55; font-size: 12.5px; line-height: 1.55; overflow-wrap: anywhere; }
+.plaza-card-meta { display: flex; gap: 10px; margin-top: auto; padding-top: 4px; color: #8b9984; font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.plaza-card-meta .has { color: #b6532f; font-weight: 700; }
+.plaza-stars { color: #e0a23a; font-size: 13px; letter-spacing: 1px; }
+.plaza-stars i { color: #e3e6dc; font-style: normal; }
+.plaza-empty { margin-top: 8px; }
+
+/* 책 표지 — 그림이 없으면 제목을 적은 책등 */
+.plaza-cover { position: relative; display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 72px; height: 104px; padding: 8px 6px 8px 10px; border-radius: 2px 6px 6px 2px; color: #eef4ea; background: linear-gradient(130deg, #345e58, #1c4441); box-shadow: 2px 3px 0 #bbc6b867, inset 4px 0 0 #ffffff19; overflow: hidden; }
+.plaza-cover--1 { background: linear-gradient(130deg, #6a5a8c, #463a66); }
+.plaza-cover--2 { background: linear-gradient(130deg, #a36a4a, #7b4a31); }
+.plaza-cover--3 { background: linear-gradient(130deg, #4d6f97, #2f4d73); }
+.plaza-cover.has-image { padding: 0; background: #f1f1ea; }
+.plaza-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.plaza-cover-title { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; font-size: 11px; font-weight: 650; line-height: 1.4; text-align: center; overflow-wrap: anywhere; }
+.plaza-cover--small { width: 34px; height: 48px; padding: 3px; }
+.plaza-cover--small .plaza-cover-title { font-size: 7px; -webkit-line-clamp: 3; }
+
+/* 책 한 권 */
+.plaza-book { display: flex; flex-direction: column; gap: 20px; }
+.plaza-book-top { display: flex; gap: 18px; align-items: flex-start; }
+.plaza-book-top .plaza-cover { width: 92px; height: 132px; }
+.plaza-book-info { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1; }
+.plaza-book-info h3 { margin: 0; font-size: 20px; font-weight: 750; letter-spacing: -.03em; line-height: 1.35; overflow-wrap: anywhere; }
+.plaza-book-info p { margin: 0; color: #7c8b79; font-size: 13px; }
+.plaza-book-info .plaza-card-progress { max-width: 360px; font-size: 12px; }
+.plaza-block { align-self: flex-start; padding-left: 0; }
+.plaza-review, .plaza-logs, .plaza-others, .plaza-comments { border-top: 1px solid #e6ece2; padding-top: 16px; }
+.plaza-review p { margin: 0; padding: 14px 16px; border-radius: 12px; background: #f6f8f1; font-size: 14px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
+.plaza-logs ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.plaza-logs li { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 14px; padding: 12px 14px; border: 1px solid #e6ece2; border-radius: 12px; background: #fff; }
+.plaza-log-date { display: flex; flex-direction: column; gap: 3px; }
+.plaza-log-date strong { font-size: 13px; color: #2c4c3f; }
+.plaza-log-date span { color: #8b9984; font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.plaza-logs li p { margin: 0; font-size: 13.5px; line-height: 1.75; white-space: pre-wrap; overflow-wrap: anywhere; }
+.plaza-others ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.plaza-others button { display: flex; align-items: center; gap: 10px; max-width: 260px; padding: 6px 12px 6px 6px; border: 1px solid #dde5df; border-radius: 10px; background: #fff; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.plaza-others button:hover { border-color: #b7cbbd; background: #f8faf3; }
+.plaza-others button span:last-child { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.plaza-others strong { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.plaza-others small { color: #8b9984; font-size: 11px; }
+
+/* 댓글 */
+.plaza-comment-list { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 8px; }
+.plaza-comment-list li { padding: 10px 14px; border-radius: 12px; background: #f4f6ef; }
+.plaza-comment-list li.by-me { background: #fdf0e7; }
+.plaza-comment-list li.by-teacher { background: #e8f3ea; }
+.plaza-comment-head { display: flex; align-items: center; gap: 8px; min-height: 24px; }
+.plaza-comment-head strong { font-size: 12.5px; color: #2c4c3f; }
+.plaza-comment-head span { color: #8b9984; font-size: 11.5px; }
+.plaza-comment-head button { margin-left: auto; }
+.plaza-comment-list p { margin: 3px 0 0; font-size: 13.5px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+.plaza-comment-form textarea { width: 100%; min-height: 64px; padding: 10px 12px; border: 1px solid #d6e0d4; border-radius: 10px; background: #fff; color: inherit; font: inherit; font-size: 13.5px; line-height: 1.6; resize: vertical; }
+.plaza-comment-form textarea:focus-visible { outline: 3px solid #478fbd; outline-offset: 2px; }
+.plaza-comment-send { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; }
+.plaza-comment-send .btn-primary { padding: 9px 18px; font-size: 13px; }
+.plaza-panel .reading-field-count { color: #8b9984; font-size: 11px; }
+.plaza-panel .reading-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.plaza-comment-form { position: relative; }
+
+/* 서재 쪽 — 책 상세의 '독서 광장' 칸과 발자국 · 한 권의 책 창의 안내 */
+.plaza-note { margin: 0; padding: 9px 12px; border-radius: 9px; background: #eef5ec; color: #3d6654; font-size: 12px; line-height: 1.6; }
+.plaza-note--off { background: #f4f3ee; color: #7a8578; }
+.plaza-own { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 16px 0 20px; padding: 12px 14px; border: 1px solid #dce8dc; border-radius: 12px; background: #f6faf3; }
+.plaza-own-text { flex: 1 1 240px; min-width: 0; }
+.plaza-own-text strong { display: block; font-size: 13px; color: #2c4c3f; }
+.plaza-own-text span { display: block; margin-top: 3px; color: #6f8276; font-size: 11.5px; line-height: 1.55; }
+.plaza-own-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.plaza-switch { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px 0 6px; border: 1px solid #cfdccf; border-radius: 999px; background: #fff; color: #5f7366; font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.plaza-switch i { position: relative; width: 34px; height: 20px; border-radius: 999px; background: #cfd6cc; transition: background .15s; }
+.plaza-switch i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px #0003; transition: left .15s; }
+.plaza-switch[aria-checked="true"] { border-color: #4c846c; color: #254f44; }
+.plaza-switch[aria-checked="true"] i { background: #4c846c; }
+.plaza-switch[aria-checked="true"] i::after { left: 16px; }
+.plaza-switch:disabled { opacity: .55; cursor: not-allowed; }
+.plaza-check { display: flex !important; flex-direction: row !important; align-items: center; gap: 8px; font-size: 13px; }
+.plaza-check input { width: 18px; height: 18px; flex-shrink: 0; }
+
+@container plazapanel (max-width: 560px) {
+  .plaza-logs li { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .plaza-log-date { flex-direction: row; align-items: baseline; gap: 8px; }
+  .plaza-book-top .plaza-cover { width: 72px; height: 104px; }
+  .plaza-place-tabs button small { display: none; }
+  .plaza-comment-send { flex-direction: column; align-items: stretch; }
+}
+@media (max-width: 600px) {
+  .plaza-panel-backdrop { padding: 0; align-items: stretch; }
+  .plaza-panel { width: 100%; height: 100dvh; border-radius: 0; padding: 0 16px 20px; }
+  .plaza-panel-head { margin: 0 -16px 14px; padding: 14px 16px 12px; }
+  .plaza-stage { border-radius: 12px; }
+  .plaza-head-actions { width: 100%; }
+  .plaza-sign i { display: none; }
+}

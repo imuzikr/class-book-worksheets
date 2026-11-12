@@ -21,7 +21,7 @@ import ReadingHub from "@/components/reading/ReadingHub";
 import TeacherReadingView from "@/components/reading/TeacherReadingView";
 import ReadingLeaderboard from "@/components/reading/ReadingLeaderboard";
 import AdminSettingsPanel from "@/components/AdminSettingsPanel";
-import { readingEnabled, rankingEnabled, bookSearchEnabled, fruitBasketOn } from "@/lib/reading";
+import { readingEnabled, rankingEnabled, bookSearchEnabled, fruitBasketOn, plazaOn } from "@/lib/reading";
 import { characterChoiceEnabled } from "@/lib/readingCharacter";
 import { petEnabled } from "@/lib/readingPet";
 import { readingMapThemeOf } from "@/lib/readingMapCatalog";
@@ -1057,10 +1057,12 @@ function BooksPageInner() {
           ) : readingOpen && admin ? (
             <TeacherReadingView classId={classId} user={user} roster={roster}
               studentUid={searchParams.get("student")} onPickStudent={(uid) => patchBooksQuery({ student: uid }, { replace: true })} bookSearchOn={bookSearchEnabled(currentClass)}
+              plazaOn={plazaOn(currentClass)} characterOn={characterOn} initialTab={searchParams.get("tab") || "library"}
               activities={liveActivities} onOpenActivity={goToActivity}
               onDisabled={() => patchBooksQuery({ area: null }, { replace: true })} />
           ) : readingOpen ? (
             <ReadingHub key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin} bookSearchOn={bookSearchEnabled(currentClass)} petOn={petOn}
+              plazaOn={plazaOn(currentClass)} characterOn={characterOn}
               activities={liveActivities} onOpenActivity={goToActivity}
               initialBookId={searchParams.get("book")} initialTab={searchParams.get("tab") || "library"}
               onDisabled={() => patchBooksQuery({ area: null }, { replace: true })} />

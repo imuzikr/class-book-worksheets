@@ -580,7 +580,7 @@ service cloud.firestore {
       allow list: if isAdmin() || (isTeacher() && resource.data.createdBy == uid());
       // 새 반은 기본 꺼짐. 켜기는 운영 중인 반의 담당 교사/관리자만 합니다.
       // 관리자 설정 화면의 스위치(책나눔 성장 · 도서 검색 · 리더보드(rankingEnabled) · 독서 TOP 3 ·
-      // 학생 캐릭터 · 과일 바구니 · 학생 펫)도 같은 판정 — 참·거짓만, 운영 중인 반에서만 바꿉니다.
+      // 학생 캐릭터 · 과일 바구니 · 학생 펫 · 독서 광장)도 같은 판정 — 참·거짓만, 운영 중인 반에서만 바꿉니다.
       // 독서 맵(readingMapTheme)은 대륙 · 모험의 식별자 두 개만 받습니다.
       function readingSettingValid() {
         let changed = request.resource.data.diff(resource.data).affectedKeys();
@@ -591,8 +591,9 @@ service cloud.firestore {
                && (!changed.hasAny(['fruitBasketEnabled']) || request.resource.data.get('fruitBasketEnabled', null) is bool)
                && (!changed.hasAny(['petEnabled']) || request.resource.data.get('petEnabled', null) is bool)
                && (!changed.hasAny(['readingTopEnabled']) || request.resource.data.get('readingTopEnabled', null) is bool)
+               && (!changed.hasAny(['plazaEnabled']) || request.resource.data.get('plazaEnabled', null) is bool)
                && (!changed.hasAny(['readingMapTheme']) || request.resource.data.get('readingMapTheme', null) in ['continent', 'cloud-islands'])
-               && (!changed.hasAny(['readingEnabled', 'rankingEnabled', 'characterEnabled', 'bookSearchEnabled', 'fruitBasketEnabled', 'petEnabled', 'readingTopEnabled', 'readingMapTheme'])
+               && (!changed.hasAny(['readingEnabled', 'rankingEnabled', 'characterEnabled', 'bookSearchEnabled', 'fruitBasketEnabled', 'petEnabled', 'readingTopEnabled', 'plazaEnabled', 'readingMapTheme'])
                    || (resource.data.get('archived', false) != true
                        && request.resource.data.get('archived', false) != true));
       }
@@ -610,6 +611,39 @@ service cloud.firestore {
       // 랭킹 요약도 서버 API에서 현재 반 학생에게만 최소 필드를 제공합니다.
       match /readingMembers/{studentUid} {
         allow read, write: if false;
+      }
+
+      // ── 독서 광장 — 공유 사본(lib/readingPlaza.js) ────────────────
+      //  책나눔의 셋째 탭. 학생이 반 친구와 나누는 독서 발자국 · 꽂아 둔 '한 권의 책'과 그 댓글입니다.
+      //   · plazaShelves/{학생 uid}     학생마다 한 장 — 광장에 보이는 책 목록(제목 · 쪽수 · 최근 글 한 줄 · 댓글 수)
+      //   · plazaBooks/{학생uid_책id}   책마다 한 장 — 독서 발자국 · 한 권의 책
+      //   · plazaComments/{id}         댓글(책 한 권에 한 줄기)
+      //  셋 다 **서버(Next API · Admin SDK)만 씁니다.** 서재 정본(users/{uid}/reading/main — 아무도 못 읽음)을
+      //  저장할 때 서버가 사본을 맞추고(lib/server/readingService.js의 writePlaza), 댓글 · 교사의 내리기도
+      //  API(/api/reading/plaza)가 이름표를 프로필에서 붙여 씁니다. 그래서 여기서는 **읽기만** 엽니다.
+      //   · 학생: 같은 반이고(isClassMember — 사용 중지 · 보관된 반은 거부) **그 반이 광장을 켰을 때만**.
+      //     끄면 학생은 사본을 못 읽습니다(화면도 탭을 걷음).
+      //   · 담당 교사 · 관리자: 늘(꺼 둔 동안에도 이름 맞추기 · 탈퇴 정리가 읽어야 함).
+      //  탈퇴(지우기) · 이름 맞추기(이름표 고치기) · 반 완전 삭제는 아래 와일드카드 규칙이 그대로 받습니다
+      //  (기록이 uid · ownerUid · name · studentId 칸을 씀). 시험 tests/rules/plaza.test.mjs.
+      function plazaOpenHere() {
+        let c = get(/databases/$(database)/documents/classes/$(cId)).data;
+        return c.get('readingEnabled', false) == true && c.get('plazaEnabled', false) == true;
+      }
+      function plazaReader() {
+        return signedIn() && (isAdmin() || ownsClass(cId) || (isClassMember(cId) && plazaOpenHere()));
+      }
+      match /plazaShelves/{studentUid} {
+        allow read: if plazaReader();
+        allow create, update, delete: if false;
+      }
+      match /plazaBooks/{bookKey} {
+        allow read: if plazaReader();
+        allow create, update, delete: if false;
+      }
+      match /plazaComments/{commentId} {
+        allow read: if plazaReader();
+        allow create, update, delete: if false;
       }
 
       // 반 완전 삭제 · 학생 탈퇴 — 반 아래 모든 기록(앞으로 더할 하위 컬렉션까지).
