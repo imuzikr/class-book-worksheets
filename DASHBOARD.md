@@ -64,7 +64,7 @@
 - `lib/dashboardReports.js`: 교사용 전체 합산과 개인별 응답 범위 정리.
 - `lib/activityReport.js`: 11종 활동의 문항별 원문·시각 자료·공개 피드백을 허용 필드로 투영.
 - `lib/server/dashboardService.js`, `app/api/dashboard/route.js`: 인증·반 권한·조회·학기 저장.
-- `lib/data/dashboard.js`: 데모 자료 또는 인증 API 경계. 데모 서재는 내 서재가 편집하는 동일한 메모리 정본을 사용합니다.
+- `lib/data/dashboard.js`: 데모 자료 또는 인증 API 경계. 데모의 독서 자료는 책나눔의 책꽂이(한때 '내 서재')가 편집하는 동일한 메모리 정본을 사용합니다.
 - `components/dashboard/`: 교사·학생 화면, 필터, 표, 차트, 달력, 원기록 이동. `ActivityReport`와 `ActivityReportContent`는 교사 개인별 활동 보고서를 표시합니다.
 - `tests/unit/dashboard.test.mjs`, `tests/unit/activityReport.test.mjs`, `tests/server/dashboard.test.mjs`: 계산·활동 원문·개인정보·권한·비활성화·정정 검증. 명령은 `npm run test:unit`, `npm run test:reading-server`, `npm run lint`, `npm run build`입니다.
 

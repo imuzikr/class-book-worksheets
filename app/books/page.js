@@ -724,7 +724,7 @@ function BooksPageInner() {
         </aside>
       )}
       {!isFirebaseConfigured && <aside className="demo-classroom-notice" aria-label="체험 데이터 안내">
-        <div><strong>책봄 체험반 · 학생 15명</strong><span>11가지 독서 활동과 학생별 서재 1~2권이 준비되어 있어요. 상단에서 체험 학생을 골라 볼 수 있어요.</span>
+        <div><strong>책봄 체험반 · 학생 15명</strong><span>11가지 독서 활동과 학생별 책꽂이의 책 1~2권이 준비되어 있어요. 상단에서 체험 학생을 골라 볼 수 있어요.</span>
           <small>{sampleMode
             ? "모두 가상의 기록입니다. 이 체험용 샘플 반에서 한 일은 어디에도 저장되지 않고, 새로고침하면 처음으로 돌아가요. 상단의 '샘플 반 나가기'로 실제 반에 돌아갑니다."
             : "모두 가상의 기록입니다. 활동·독서 기록을 수정한 내용은 새로고침하면 샘플로 돌아가고, 반 설정은 유지됩니다."}</small></div>

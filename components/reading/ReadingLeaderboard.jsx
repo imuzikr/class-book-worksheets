@@ -287,7 +287,7 @@ function MyJourney({ mine, row, uid, today, pet = null }) {
       <div><dt>뱃지</dt><dd>{earned ? `${earned.length} / ${READING_BADGES.length}개` : "—"}</dd></div>
     </dl>
     {progress && <Bar percent={progress.percent} label="다음 레벨까지 진행률" />}
-    <div className="rlb-story"><h4>📖 나의 독서 여정</h4>{lines ? lines.map((text, index) => <p key={index}>{text}</p>) : <p role="status">내 서재에서 여정 이야기를 모으고 있어요.</p>}</div>
+    <div className="rlb-story"><h4>📖 나의 독서 여정</h4>{lines ? lines.map((text, index) => <p key={index}>{text}</p>) : <p role="status">책꽂이에서 여정 이야기를 모으고 있어요.</p>}</div>
     {earned?.length > 0 && <div className="rlb-badges-mini" aria-label="모은 뱃지">{earned.map((badge) => <span key={badge.id} title={badge.label}><ReadingBadge badge={badge} size={36} /></span>)}</div>}
   </section>;
 }
@@ -343,8 +343,8 @@ function StudentJourneyModal({ row, me, pet = null, onClose, onOpenLibrary = nul
       <div className="rlb-modal-head">
         <Face row={row} className="rlb-mine-face" pet={pet} petSize={36} />
         <div><h3 id="rlb-modal-title">{nameOf(row)}{me && <span className="reading-me-label">나</span>}</h3><p>{progress ? `Lv.${progress.level} ${journeyTitle(progress.level)} · 📍 ${progress.region.name}` : "누적 성장 정보 집계 중"}</p></div>
-        {/* 교사: 그 학생의 책나눔(읽기 전용 서재)으로 — 선생님 요청 */}
-        {onOpenLibrary && <button type="button" className="btn-ghost rlb-to-library" onClick={onOpenLibrary}>서재로 이동</button>}
+        {/* 교사: 그 학생의 책나눔(읽기 전용 책꽂이)으로 — 선생님 요청 */}
+        {onOpenLibrary && <button type="button" className="btn-ghost rlb-to-library" onClick={onOpenLibrary}>책꽂이로 이동</button>}
         <button type="button" className="btn-close" aria-label="닫기" onClick={onClose}>×</button>
       </div>
       <dl className="rlb-facts">

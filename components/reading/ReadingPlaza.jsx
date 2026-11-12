@@ -9,7 +9,8 @@
 // 걷는 길 · 여는 곳은 lib/readingPlazaMap.js, 목록의 셈은 lib/readingPlaza.js, 자료는 lib/data/plaza.js.
 // 이 화면(과 창 PlazaPanel)은 광장 탭을 열 때만 내려받습니다(ReadingHub의 dynamic import).
 //
-// 맵이 화면을 가득 채웁니다(선생님 요청) — 탭 바로 아래부터 화면 바닥까지가 무대(.plaza-stage = 보이는 창)이고,
+// 맵이 화면을 가득 채웁니다(선생님 요청) — **상단바 바로 아래부터 화면 바닥 · 좌우 끝까지**가 무대(.plaza-stage = 보이는 창)이고
+// (광장 탭에서는 책방 머리말 · 탭 줄 · 옆 패널을 가림 — plaza.css의 '광장 탭'), 나가는 길은 맵 위의 '나가기'입니다.
 // 그림(.plaza-world)은 그 창을 빈틈없이 덮도록 키웁니다(셈은 lib/readingPlazaMap.js의 plazaView · plazaCamera).
 // 그림과 화면의 비율이 달라 넘치는 쪽은 **시점이 캐릭터를 따라가며** 보여 줍니다(넓은 화면은 위아래로,
 // 폰처럼 좁은 화면은 좌우로). 제목 '책 광장'과 가판대 · 책꽂이 단추는 줄을 따로 차지하지 않고 맵 위 모서리에 얹습니다(.plaza-hud).
@@ -43,6 +44,7 @@ import {
   plazaCamera, plazaNearest, plazaPath, plazaSpotAt, plazaSpotNear, plazaStep, plazaView,
 } from "@/lib/readingPlazaMap";
 import { PET_STRIDE, PLAZA_WALK_SPEED, SPRITE_IDLE, plazaFacing, plazaPetFollow, plazaPetStart, plazaWalkFrame } from "@/lib/readingPlazaSprites";
+import { PLAZA_STAGE_MIN_H, plazaRoom, plazaScroller } from "@/lib/plazaStageRoom";
 import PlazaActor from "./PlazaActor";
 import PlazaPanel from "./PlazaPanel";
 import "./plaza.css";
@@ -51,8 +53,9 @@ import "./plaza.css";
 const SPEED = PLAZA_WALK_SPEED;
 // 시점이 캐릭터를 따라붙는 빠르기(초) — 작을수록 바짝 붙습니다. 걸음을 떼고 멈출 때 화면이 덜컥거리지 않게 조금 늦춥니다.
 const CAM_EASE = 0.14;
-// 무대의 바닥 높이(px) — 창이 아주 낮으면 이만큼은 지키고 화면이 구릅니다.
-const STAGE_MIN_H = 300;
+// 무대의 바닥 높이(px) — 창이 아주 낮으면 이만큼은 지키고 화면이 구릅니다. 재는 셈과 함께 lib/plazaStageRoom.js에
+// 있습니다(광장을 내려받는 동안의 자리 — ReadingHub의 PlazaLoading — 가 같은 셈으로 같은 높이에 섭니다).
+const STAGE_MIN_H = PLAZA_STAGE_MIN_H;
 // 방향키를 누르고 있지만 이만큼(초) 제자리면 막힌 것 — 친구들에게는 '섰다'고 한 번만 알립니다
 // (막힌 채 누르고 있는 동안 0.3초마다 같은 자리를 올리지 않게).
 const STUCK_S = 0.25;
@@ -73,8 +76,9 @@ const friendRow = (uid, who, reading) => ({
   uid, name: who.name, teacher: who.teacher, character: characterOf({ uid, character: who.character }), pet: friendPet(who.pet), reading: !!reading,
 });
 
-// initialBook — 서재에서 '광장에서 보기'로 넘어올 때 곧바로 열 책({ uid, bookId, place })
-export default function ReadingPlaza({ classId, user, isTeacher = false, characterOn = true, petOn = false, growthXp = null, initialBook = null }) {
+// initialBook — 책꽂이에서 '광장에서 보기'로 넘어올 때 곧바로 열 책({ uid, bookId, place })
+// onExit — 맵 위의 '나가기'(광장에서 나가 책나눔의 첫 탭 '책꽂이'로 — 광장 탭에서는 탭 줄을 가리므로 나가는 길은 이 단추)
+export default function ReadingPlaza({ classId, user, isTeacher = false, characterOn = true, petOn = false, growthXp = null, initialBook = null, onExit = null }) {
   const myUid = user?.uid;
   const [shelves, setShelves] = useState(null);
   const [error, setError] = useState("");
@@ -382,18 +386,14 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   useLayoutEffect(() => {
     const wrap = wrapRef.current;
     if (!wrap) return undefined;
-    let scroller = wrap.parentElement;
-    while (scroller && scroller !== document.body && !/(auto|scroll)/.test(getComputedStyle(scroller).overflowY)) scroller = scroller.parentElement;
-    if (scroller === document.body) scroller = null;
+    const scroller = plazaScroller(wrap);
     // 구르는 칸(없으면 본문 main)의 바로 아래 자식 가운데 무대를 품은 것 — 책나눔 틀(교사 화면은 명단까지 품은 틀)
     const frame = scroller ?? wrap.closest("main") ?? document.body;
     let top = wrap;
     while (top.parentElement && top.parentElement !== frame && top.parentElement !== document.body) top = top.parentElement;
     const measure = () => {
       const rect = wrap.getBoundingClientRect();
-      const room = scroller
-        ? scroller.clientHeight - (rect.top - scroller.getBoundingClientRect().top + scroller.scrollTop)
-        : window.innerHeight - (rect.top + window.scrollY);
+      const room = plazaRoom(wrap, scroller);
       const below = Math.max(0, top.getBoundingClientRect().bottom - rect.bottom) + (parseFloat(getComputedStyle(frame).paddingBottom) || 0);
       const next = { w: Math.ceil(rect.width), h: Math.max(STAGE_MIN_H, Math.floor(room - below)) };
       setSize((current) => (current && current.w === next.w && current.h === next.h ? current : next));
@@ -533,10 +533,13 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
             </div>
           )}
         </div>
-        {/* 맵 위에 얹는 것 — 제목(왼쪽 위) · 가판대/책꽂이 단추(오른쪽 위) · 걷는 법(아래, 첫걸음 전까지).
+        {/* 맵 위에 얹는 것 — 제목과 '나가기'(왼쪽 위) · 가판대/책꽂이 단추(오른쪽 위) · 걷는 법(아래, 첫걸음 전까지).
             무대 밖(형제)에 두어 여기를 눌러도 캐릭터가 걷지 않습니다. */}
         <div className="plaza-hud">
-          <h3 className="plaza-title">책 광장</h3>
+          <div className="plaza-hud-lead">
+            <h3 className="plaza-title">책 광장</h3>
+            {onExit && <button type="button" className="plaza-exit" onClick={onExit} aria-label="책 광장에서 나가기">나가기</button>}
+          </div>
           <div className="plaza-hud-actions">
             <button type="button" onClick={() => setPanel({ place: "stall" })}>가판대 <small>{PLACE_NAME.stall}</small> <b>{counts.stall}</b></button>
             <button type="button" onClick={() => setPanel({ place: "shelf" })}>책꽂이 <small>{PLACE_NAME.shelf}</small> <b>{counts.shelf}</b></button>

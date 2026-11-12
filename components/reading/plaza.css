@@ -1,26 +1,49 @@
 /* =============================================================
    책 광장 (components/reading/ReadingPlaza.jsx · PlazaPanel.jsx)
    -------------------------------------------------------------
-   · 무대(.plaza-stage)는 '보이는 창'입니다 — 탭 바로 아래부터 화면 바닥까지, 본문 칸의 폭을 다 씁니다
-     (높이는 화면이 재서 줌 — ReadingPlaza.jsx의 measure).
+   · 무대(.plaza-stage)는 '보이는 창'입니다 — **상단바 바로 아래부터 화면 바닥 · 좌우 끝까지**(선생님 요청).
+     광장 탭에서는 상단바만 남기고 그 아래의 것(머리말 · 탭 줄 · 옆 패널)을 모두 가립니다 — 아래 '광장 탭' 규칙.
+     높이는 화면이 재서 줍니다(ReadingPlaza.jsx의 measure).
    · 그림(.plaza-world, 원본 1672×941)은 그 창을 빈틈없이 덮게 키우고, 넘치는 쪽은 시점이 캐릭터를 따라가며
      보여 줍니다(transform — 셈은 lib/readingPlazaMap.js의 plazaView · plazaCamera). 캐릭터 · 이름표는 그림 위에 %로 놓습니다.
-   · 제목 · 가판대/책꽂이 단추 · 걷는 법은 맵 위에 얹습니다(.plaza-hud) — 줄을 따로 차지하지 않습니다(선생님 요청).
+   · 제목 · '나가기' · 가판대/책꽂이 단추 · 걷는 법은 맵 위에 얹습니다(.plaza-hud) — 줄을 따로 차지하지 않습니다(선생님 요청).
+     탭 줄이 없으므로 광장에서 나가는 길은 제목 옆의 '나가기'입니다(책나눔의 첫 탭 '책꽂이'로).
    · 캐릭터 · 펫의 자리는 '발'입니다(left/top = 발이 닿는 점, 그림은 그 위로). 그림은 걷는 그림(도트 시트)을
      캔버스에 그립니다(PlazaSprite.jsx) — 방향 · 걷는 그림을 고르는 셈은 lib/readingPlazaSprites.js.
    · 창(.plaza-panel)은 책나눔의 다른 창(.reading-modal)과 같은 종이 빛입니다.
    · 접는 기준은 창 폭(@media)이 아니라 무대 칸(.plaza-stage-wrap) · 창(.plaza-panel)의 폭(@container)입니다.
    ============================================================= */
-/* 광장 탭에서는 책나눔의 머리띠(소개 · 대표 뱃지 · 펫 카드)를 접어, 탭 바로 아래부터 맵이 화면을 채우게 합니다.
-   떼어 내지 않고 가리기만 합니다 — 펫 카드가 다시 마운트되며 알 받기 · 축하를 또 돌리지 않게. */
-.reading-hub--plaza .reading-intro { display: none; }
-.reading-hub--plaza .reading-tabs { padding-top: 0; margin-bottom: 12px; }
-.reading-hub.reading-hub--plaza { padding-bottom: 0; }
-/* 맵이 화면 바닥 가까이까지 내려오게 — 본문 칸의 아래 여백(60px)을 이 탭에서만 줄입니다. */
-.books-main:has(.reading-hub--plaza) { padding-bottom: 16px; }
-/* 교사의 책나눔 — 광장은 반 전체의 자리라 왼쪽 학생 명단을 접어 무대를 넓힙니다(다른 탭으로 가면 돌아옴). */
+/* ── 광장 탭 — 상단바만 남기고 그 아래를 맵이 가득 채웁니다(선생님 요청) ──────────────
+   이 탭에서만 가리는 것: 체험반 안내 띠 · 책방 머리말(한 줄 문구 · 제목 · 반 고르개 · 단추) · 책나눔의 머리띠와 탭 줄 ·
+   알림 줄 · [교사] 왼쪽 학생 명단과 오른쪽 '멋진 순간'. **떼어 내지 않고 가리기만 합니다** — 맵 위의 '나가기'로 나가면
+   그대로 돌아오고, 펫 카드 · 패널이 다시 마운트되며 알 받기 · 축하 · 구독을 또 돌리지 않습니다.
+   본문 칸의 여백도 걷어 무대가 좌우 끝 · 화면 바닥까지 닿습니다(둥근 모서리 · 그림자 없음).
+   한때 책방 머리말과 탭 줄을 남기고 그 아래에만 맵을 깔았습니다(여백 28px · 둥근 모서리) — 되돌리지 마세요. */
+.board-shell:has(.reading-hub--plaza) > .demo-classroom-notice,
+.board-shell:has(.reading-hub--plaza) > .sample-class-entry { display: none; }
+.books-body:has(.reading-hub--plaza) > .reward-panel { display: none; }
+.books-main:has(.reading-hub--plaza) { padding: 0; }
+.books-main:has(.reading-hub--plaza) > .books-head { display: none; }
+.reading-hub.reading-hub--plaza { padding: 0; }
+.reading-hub--plaza > .reading-intro,
+.reading-hub--plaza > .reading-tabs,
+.reading-hub--plaza > .reading-error,
+.reading-hub--plaza > .reading-notice { display: none; }
+/* 교사의 책나눔 — 광장은 반 전체의 자리라 왼쪽 학생 명단도 접습니다(나가면 돌아옴). */
 .reading-teacher:has(.reading-hub--plaza) { grid-template-columns: minmax(0, 1fr); }
 .reading-teacher:has(.reading-hub--plaza) .reading-teacher-rail { display: none; }
+/* 무대가 화면 끝에 닿으므로 모서리 · 그림자를 걷습니다. 자판으로 초점이 왔을 때의 테는 **무대 칸 위에 얹어** 그립니다 —
+   바깥 테(box-shadow)는 화면 밖이라 잘리고, 무대 안쪽에 두른 outline은 그림(.plaza-world — 제 층)에 덮여 안 보였습니다
+   (실측 — 계산된 스타일은 맞는데 화면의 가장자리 픽셀이 그림 색 그대로). 누름은 통과시키고, 흰 속선은 풀빛 · 물빛 그림
+   위에서 파란 테가 묻히지 않게 둡니다. 마우스로만 쓰는 동안에는 안 뜹니다(:focus-visible — 방향키를 쓰면 뜸).
+   :has()를 모르는 브라우저에서는 위의 '가리기'도 안 걸려 무대가 화면 끝에 닿지 않으므로, 아래 기본 규칙의 바깥 테를 그대로 씁니다. */
+.reading-hub--plaza .plaza-stage { border-radius: 0; box-shadow: none; }
+@supports selector(:has(*)) {
+  .reading-hub--plaza .plaza-stage:focus-visible { box-shadow: none; }
+  .reading-hub--plaza .plaza-stage-wrap:has(.plaza-stage:focus-visible)::after {
+    content: ""; position: absolute; inset: 0; z-index: 3; border: 3px solid #478fbd; box-shadow: inset 0 0 0 1px #ffffffe6; pointer-events: none;
+  }
+}
 .plaza { min-width: 0; }
 
 /* 무대 칸 — 맵 위에 얹는 것(.plaza-hud)의 기준이자, 그것들을 접는 기준(폭) */
@@ -45,6 +68,10 @@
   outline: none;
 }
 .plaza-stage:focus-visible { box-shadow: 0 0 0 3px #478fbd, 0 6px 26px #2a3f2f1f; }
+/* 광장을 내려받는 동안의 자리(ReadingHub의 PlazaLoading) — 무대와 같은 흙빛 바탕 · 같은 높이에 안내 한 줄이 가운데 서고,
+   '책 광장 · 나가기' 팻말은 진짜와 같은 자리입니다(.plaza-hud-lead). 누를 것이 없는 자리라 손 모양을 걷습니다. */
+.plaza-stage--loading { display: flex; align-items: center; justify-content: center; gap: 12px; color: #5a3a1b; font-size: 13.5px; font-weight: 600; cursor: progress; }
+.plaza-stage--loading .reading-loader { border-color: #d6bd9c; border-top-color: #8a5a2b; }
 /* 그림 — 크기(px)는 화면이 정해 주고, 자리는 시점이 transform으로 적습니다. 이름표 · 이름 글자는 그림 폭에 맞춰 커집니다(cqw). */
 .plaza-world { position: absolute; left: 0; top: 0; container: plazastage / inline-size; transform: translate3d(0, 0, 0); will-change: transform; }
 .plaza-bg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
@@ -52,15 +79,20 @@
 /* ── 맵 위에 얹는 것 ── 무대를 덮되 누름은 통과시키고(뒤의 마당이 눌림), 제목 · 단추만 누름을 받습니다. */
 .plaza-hud { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
 .plaza-hud > * { pointer-events: auto; }
-/* 제목 — 이름표와 같은 나무 팻말 */
-.plaza-title {
-  position: absolute; left: 14px; top: 14px;
-  display: flex; align-items: center; height: 40px; margin: 0; padding: 0 16px;
+/* 제목과 '나가기' — 이름표와 같은 나무 팻말 둘이 나란히, **같은 모양 · 같은 크기**입니다(선생님 요청 —
+   격자의 같은 폭 두 칸이라 글자 수가 달라도 폭이 같음). '나가기'는 광장에서 나가 책나눔의 첫 탭(책꽂이)으로 갑니다. */
+.plaza-hud-lead { position: absolute; left: 14px; top: 14px; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; }
+.plaza-title, .plaza-exit {
+  display: flex; align-items: center; justify-content: center; height: 40px; margin: 0; padding: 0 16px;
   border: 2px solid #8a5a2b; border-radius: 14px;
   background: #fff6e2f5; color: #5a3a1b;
-  font-size: 18px; font-weight: 800; letter-spacing: -.03em; white-space: nowrap;
+  font: inherit; font-size: 18px; font-weight: 800; letter-spacing: -.03em; line-height: 1; white-space: nowrap;
   box-shadow: 0 3px 0 #8a5a2b55, 0 8px 18px #3a26122e;
 }
+.plaza-exit { cursor: pointer; transition: background .15s, transform .15s, box-shadow .15s; }
+.plaza-exit:hover { background: #fff; transform: translateY(-1px); }
+.plaza-exit:active { transform: translateY(2px); box-shadow: 0 1px 0 #8a5a2b55, 0 4px 10px #3a26122e; }
+.plaza-exit:focus-visible { outline: 3px solid #478fbd; outline-offset: 2px; }
 /* 가판대 · 책꽂이 — 이어 놓인 두 단추는 같은 크기 */
 .plaza-hud-actions { position: absolute; right: 14px; top: 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .plaza-hud-actions button {
@@ -112,11 +144,17 @@
   .plaza-stage-wrap.has-live .plaza-sign--shelf { translate: 0 80px; }
 }
 @container plazawrap (max-width: 460px) {
-  .plaza-title { left: 10px; top: 10px; height: 36px; padding: 0 12px; font-size: 16px; border-radius: 12px; }
+  .plaza-hud-lead { left: 10px; top: 10px; gap: 6px; }
+  .plaza-title, .plaza-exit { height: 36px; padding: 0 12px; font-size: 16px; border-radius: 12px; }
   .plaza-hud-actions { right: 10px; top: 10px; gap: 6px; }
   .plaza-hud-actions button { height: 36px; padding: 0 10px; font-size: 12.5px; border-radius: 10px; }
   .plaza-hud-error { top: 54px; }
   .plaza-live { left: 10px; top: 52px; max-width: calc(100% - 20px); font-size: 12px; white-space: normal; }
+}
+/* 아주 좁은 폰 — 왼쪽 팻말 둘과 오른쪽 단추 둘이 한 줄에 서게 조금씩 줄입니다 */
+@container plazawrap (max-width: 400px) {
+  .plaza-title, .plaza-exit { padding: 0 9px; font-size: 14.5px; }
+  .plaza-hud-actions button { padding: 0 8px; }
 }
 
 /* 이름표 — 책꽂이 · 가판대 위에 떠 있는 나무 팻말 */
@@ -180,6 +218,7 @@
 .plaza-avatar-book { display: inline-block; margin-right: 4px; vertical-align: -1.5px; }
 @media (prefers-reduced-motion: reduce) {
   .plaza-pet.is-moving .plaza-pet-figure, .plaza-sign.is-near, .plaza-marker, .plaza-hint, .plaza-live--connecting { animation: none; }
+  .plaza-exit { transition: none; }
 }
 
 /* ── 창 ── */

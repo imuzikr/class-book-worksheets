@@ -61,7 +61,7 @@ export default function RoleSwitcher() {
       <select
         className="demo-student-select"
         aria-label="체험 학생"
-        title="학생을 선택하면 해당 학생의 활동과 내 서재를 볼 수 있어요"
+        title="학생을 선택하면 해당 학생의 활동과 책꽂이를 볼 수 있어요"
         value={role === "student" ? studentUid : ""}
         onChange={(event) => setError(setDemoStudentSelection(event.target.value) ? "" : "체험 학생을 전환하지 못했어요. 브라우저의 사이트 저장을 확인해 주세요.")}
       >

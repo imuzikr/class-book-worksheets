@@ -83,7 +83,7 @@ function BookList({ place, shelves, loading, friendUid, myUid, onNavigate }) {
         : empty ? (
           <div className="reading-empty plaza-empty">
             <h3>{place === "stall" ? "아직 가판대에 놓인 책이 없어요." : "아직 책꽂이에 꽂힌 책이 없어요."}</h3>
-            <p>{place === "stall" ? "독서 발자국을 남기면 읽고 있는 책이 이곳 가판대에 놓여요." : "책을 다 읽고 ‘한 권의 책’을 쓴 뒤 ‘책꽂이에 꽂기’를 누르면 이곳에 꽂혀요."}</p>
+            <p>{place === "stall" ? "독서 발자국을 남기면 읽고 있는 책이 이곳 가판대에 놓여요." : "책을 다 읽고 ‘한 권의 책’을 쓴 뒤 ‘광장 책꽂이에 꽂기’를 누르면 이곳에 꽂혀요."}</p>
           </div>
         ) : (
           <>
