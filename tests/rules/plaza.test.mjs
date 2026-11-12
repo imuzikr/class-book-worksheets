@@ -1,5 +1,5 @@
 // =============================================================
-// 독서 광장 — 공유 사본과 댓글
+// 책 광장 — 공유 사본과 댓글
 //   classes/{cId}/plazaShelves/{학생 uid} · plazaBooks/{학생uid_책id} · plazaComments/{id}
 // -------------------------------------------------------------
 // 셋 다 서버(Next API · Admin SDK)만 씁니다(lib/server/readingService.js). 규칙은 읽기만 엽니다.
@@ -22,7 +22,7 @@ const shelf = (db, cId, uid) => doc(db, "classes", cId, "plazaShelves", uid);
 const book = (db, cId, key) => doc(db, "classes", cId, "plazaBooks", key);
 const comment = (db, cId, id) => doc(db, "classes", cId, "plazaComments", id);
 
-describe("독서 광장 규칙", () => {
+describe("책 광장 규칙", () => {
   let env;
   before(async () => { env = await makeEnv("demo-rules-plaza"); });
   after(async () => { await env.cleanup(); });

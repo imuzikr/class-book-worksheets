@@ -1,6 +1,6 @@
 "use client";
 // =============================================================
-// 독서 광장의 창 — 가판대(지금 읽는 책) · 책꽂이(완독한 책)의 목록과, 책 한 권 보기 · 댓글
+// 책 광장의 창 — 가판대(지금 읽는 책) · 책꽂이(완독한 책)의 목록과, 책 한 권 보기 · 댓글
 // -------------------------------------------------------------
 // 창은 하나이고 안에서 오갑니다: 목록 ↔ 책 한 권(← 목록으로). 가판대 · 책꽂이는 머리의 두 단추로 바꿉니다.
 //   · 목록 — '이번 주'에 글이 있는 책이 앞, 그전 책이 뒤(lib/readingPlaza.js의 plazaItems). '친구별'로 한 친구만.
@@ -286,7 +286,7 @@ export default function PlazaPanel({ classId, user, isTeacher = false, shelves, 
       <section className="plaza-panel" ref={panelRef} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} onClick={(e) => e.stopPropagation()}>
         <header className="plaza-panel-head">
           {book ? <button type="button" className="btn-ghost plaza-back" onClick={() => onNavigate({ book: null })}>← 목록</button> : null}
-          <h2 id={titleId} className={book ? "reading-sr-only" : ""}>{book ? "책 한 권" : "독서 광장의 책"}</h2>
+          <h2 id={titleId} className={book ? "reading-sr-only" : ""}>{book ? "책 한 권" : "광장의 책"}</h2>
           {!book && (
             <div className="plaza-place-tabs" role="tablist" aria-label="가판대와 책꽂이">
               {PLACES.map(([key, name, desc]) => (

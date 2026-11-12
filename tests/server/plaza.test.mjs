@@ -1,4 +1,4 @@
-// 독서 광장 — 서버가 저장할 때 맞추는 공유 사본과 댓글 · 내리기(lib/server/readingService.js).
+// 책 광장 — 서버가 저장할 때 맞추는 공유 사본과 댓글 · 내리기(lib/server/readingService.js).
 // Auth · Firestore 에뮬레이터에서 진짜 트랜잭션으로 봅니다(tests/server/README.md).
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";

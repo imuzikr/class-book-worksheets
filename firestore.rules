@@ -580,7 +580,7 @@ service cloud.firestore {
       allow list: if isAdmin() || (isTeacher() && resource.data.createdBy == uid());
       // 새 반은 기본 꺼짐. 켜기는 운영 중인 반의 담당 교사/관리자만 합니다.
       // 관리자 설정 화면의 스위치(책나눔 성장 · 도서 검색 · 리더보드(rankingEnabled) · 독서 TOP 3 ·
-      // 학생 캐릭터 · 과일 바구니 · 학생 펫 · 독서 광장)도 같은 판정 — 참·거짓만, 운영 중인 반에서만 바꿉니다.
+      // 학생 캐릭터 · 과일 바구니 · 학생 펫 · 책 광장)도 같은 판정 — 참·거짓만, 운영 중인 반에서만 바꿉니다.
       // 독서 맵(readingMapTheme)은 대륙 · 모험의 식별자 두 개만 받습니다.
       function readingSettingValid() {
         let changed = request.resource.data.diff(resource.data).affectedKeys();
@@ -613,7 +613,7 @@ service cloud.firestore {
         allow read, write: if false;
       }
 
-      // ── 독서 광장 — 공유 사본(lib/readingPlaza.js) ────────────────
+      // ── 책 광장 — 공유 사본(lib/readingPlaza.js) ────────────────
       //  책나눔의 셋째 탭. 학생이 반 친구와 나누는 독서 발자국 · 꽂아 둔 '한 권의 책'과 그 댓글입니다.
       //   · plazaShelves/{학생 uid}     학생마다 한 장 — 광장에 보이는 책 목록(제목 · 쪽수 · 최근 글 한 줄 · 댓글 수)
       //   · plazaBooks/{학생uid_책id}   책마다 한 장 — 독서 발자국 · 한 권의 책

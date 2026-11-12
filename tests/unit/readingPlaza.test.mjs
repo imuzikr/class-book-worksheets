@@ -8,7 +8,7 @@ import {
 } from "../../lib/readingPlaza.js";
 import {
   PLAZA_H, PLAZA_SPAWN, PLAZA_SPOTS, PLAZA_W,
-  plazaClear, plazaNearest, plazaPath, plazaSpotAt, plazaSpotNear, plazaStep, plazaWalkable,
+  plazaCamera, plazaClear, plazaNearest, plazaPath, plazaSpotAt, plazaSpotNear, plazaStep, plazaView, plazaWalkable,
 } from "../../lib/readingPlazaMap.js";
 
 // 2026-11-12(목) 12:00 서울 — 그 주의 월요일은 11-09
@@ -21,7 +21,7 @@ const addLog = (state, id, bookId, a, b, extra = {}, date = "2026-11-12") => run
   { type: "addLog", bookId, date, startPage: a, endPage: b, notes: `발자국 ${id}` }, ctx(id, extra));
 const project = (state, classId = "classA", options) => plazaProjection(deriveReading(state, new Date(NOW)), classId, options);
 
-test("독서 광장 스위치 — 책나눔이 켜진 반에서 켰을 때만(기본 꺼짐)", () => {
+test("책 광장 스위치 — 책나눔이 켜진 반에서 켰을 때만(기본 꺼짐)", () => {
   assert.equal(plazaOn({ readingEnabled: true }), false);
   assert.equal(plazaOn({ readingEnabled: true, plazaEnabled: true }), true);
   assert.equal(plazaOn({ readingEnabled: false, plazaEnabled: true }), false);
@@ -212,6 +212,8 @@ test("광장 지도 — 처음 서는 자리와 여는 곳 앞은 걸을 수 있
   assert.equal(plazaWalkable(PLAZA_W + 5, PLAZA_H + 5), false);
   assert.equal(plazaSpotAt(836, 700), null);
   assert.equal(plazaSpotNear(PLAZA_SPAWN), null);
+  // 처음 서는 자리는 책꽂이와 분수 사이 — 맵이 화면을 가득 채워 위아래가 잘려도 책꽂이 · 가판대가 처음부터 보이게
+  assert.ok(PLAZA_SPAWN.y > 222 && PLAZA_SPAWN.y < 380);
   assert.deepEqual(PLAZA_SPOTS.map((s) => s.place), ["shelf", "stall", "stall", "stall"]);
 });
 
@@ -248,4 +250,70 @@ test("방향키 걸음 — 막히면 벽을 따라 미끄러진다", () => {
   const top = { x: 800, y: 200 };
   assert.deepEqual(plazaStep(top, 0, -10), top);
   assert.deepEqual(plazaStep(top, 10, -10), { x: 810, y: 200 });
+});
+
+test("방향키 걸음 — 분수에 막히면 둘레를 돌아 지나간다(처음 자리에서 아래로만 눌러도)", () => {
+  const stride = 330 / 60;   // 한 프레임의 걸음
+  const walk = (from, dx, dy, frames = 420) => {
+    let p = { ...from };
+    const memo = { turn: 0, key: "" };
+    for (let i = 0; i < frames; i += 1) {
+      p = plazaStep(p, dx * stride, dy * stride, memo);
+      assert.equal(plazaWalkable(p.x, p.y), true, "걷는 내내 바닥 위");
+    }
+    return p;
+  };
+  assert.ok(walk(PLAZA_SPAWN, 0, 1).y > 700, "처음 자리에서 ↓ — 분수를 돌아 마당 아래까지");
+  assert.ok(walk({ x: 836, y: 760 }, 0, -1).y < 300, "분수 아래에서 ↑");
+  // 분수는 받침과 기둥(타원 둘)이 겹친 모양 — 둘이 만나는 오목한 자리에 끼지 않는다
+  assert.ok(walk({ x: 500, y: 480 }, 1, 0).x > 1000, "분수의 왼쪽 어깨에서 →");
+  assert.ok(walk({ x: 1200, y: 470 }, -1, 0).x < 600, "분수의 오른쪽 어깨에서 ←");
+  assert.ok(walk({ x: 600, y: 300 }, Math.SQRT1_2, Math.SQRT1_2).y > 700, "대각선 ↘");
+  assert.ok(walk({ x: 1050, y: 700 }, -Math.SQRT1_2, -Math.SQRT1_2).y < 300, "대각선 ↖");
+  // 도는 쪽을 기억하지 않아도(memo 없이) 바닥 밖으로 나가지 않는다
+  let p = { ...PLAZA_SPAWN };
+  for (let i = 0; i < 240; i += 1) {
+    p = plazaStep(p, 0, stride);
+    assert.equal(plazaWalkable(p.x, p.y), true);
+  }
+  // 방향키가 바뀌면 도는 쪽을 새로 고른다
+  const memo = { turn: 0, key: "" };
+  let q = { ...PLAZA_SPAWN };
+  for (let i = 0; i < 20; i += 1) q = plazaStep(q, 0, stride, memo);
+  assert.notEqual(memo.turn, 0);
+  plazaStep(q, -stride, 0, memo);
+  assert.equal(memo.key, "-1,0");
+});
+
+test("무대 — 그림이 보이는 창을 빈틈없이 덮고, 시점은 캐릭터를 따라가되 그림 밖을 보이지 않는다", () => {
+  // 넓적한 창 — 폭에 맞추고 위아래가 넘친다
+  const wide = plazaView(1600, 500);
+  assert.equal(Math.round(wide.worldW), 1600);
+  assert.ok(wide.worldH > 500);
+  // 길쭉한 창(폰) — 높이에 맞추고 좌우가 넘친다
+  const tall = plazaView(400, 560);
+  assert.equal(Math.round(tall.worldH), 560);
+  assert.ok(tall.worldW > 400);
+  // 그림과 같은 비율이면 딱 맞아 시점이 움직일 일이 없다
+  const same = plazaView(PLAZA_W / 2, PLAZA_H / 2);
+  assert.equal(same.scale, 0.5);
+  assert.deepEqual(plazaCamera(same, { x: 300, y: 800 }), { x: 0, y: 0 });
+  for (const view of [wide, tall, plazaView(1300, 720), plazaView(900, 300)]) {
+    assert.ok(view.worldW >= view.w - 1e-6 && view.worldH >= view.h - 1e-6, "그림이 창보다 작지 않다");
+    for (const pos of [PLAZA_SPAWN, { x: 0, y: 0 }, { x: PLAZA_W, y: PLAZA_H }, { x: 250, y: 436 }, { x: 1414, y: 420 }, { x: 836, y: 900 }]) {
+      const cam = plazaCamera(view, pos);
+      assert.ok(cam.x >= 0 && cam.x <= view.worldW - view.w + 1e-6, "가로로 그림 밖을 보이지 않는다");
+      assert.ok(cam.y >= 0 && cam.y <= view.worldH - view.h + 1e-6, "세로로 그림 밖을 보이지 않는다");
+    }
+  }
+  // 처음 서는 자리 — 넓적한 창에서도 책꽂이(그림 맨 위)가 함께 보인다
+  assert.ok(plazaCamera(wide, PLAZA_SPAWN).y / wide.scale < 40);
+  // 아래로 내려가면 시점이 따라 내려가고, 맨 아래에서는 그림의 바닥에서 멈춘다
+  assert.ok(plazaCamera(wide, { x: 836, y: 700 }).y > plazaCamera(wide, PLAZA_SPAWN).y);
+  assert.equal(Math.round(plazaCamera(wide, { x: 836, y: 926 }).y), Math.round(wide.worldH - wide.h));
+  // 폰 — 좌우로는 캐릭터가 창 가운데에 온다
+  const camTall = plazaCamera(tall, PLAZA_SPAWN);
+  assert.ok(Math.abs(camTall.x + tall.w / 2 - PLAZA_SPAWN.x * tall.scale) < 1e-6);
+  // 크기를 아직 모르면 시점은 0
+  assert.deepEqual(plazaCamera(plazaView(0, 0), PLAZA_SPAWN), { x: 0, y: 0 });
 });

@@ -13,11 +13,11 @@ import PetCard from "./PetCard";
 import "./reading.css";
 import "./plaza.css";
 
-// 독서 광장의 무대 · 창 · 걷는 길은 광장 탭을 열 때만 내려받습니다 — 광장을 안 쓰는 반 · 서재만 보는 학생의
+// 책 광장의 무대 · 창 · 걷는 길은 광장 탭을 열 때만 내려받습니다 — 광장을 안 쓰는 반 · 서재만 보는 학생의
 // 책방 첫 화면이 무거워지지 않게(넣기 전후 First Load JS: 그대로 두면 +13KB).
 const ReadingPlaza = dynamic(() => import("./ReadingPlaza"), {
   ssr: false,
-  loading: () => <div className="reading-loading" role="status"><span className="reading-loader" />독서 광장을 펼치고 있어요.</div>,
+  loading: () => <div className="reading-loading" role="status"><span className="reading-loader" />책 광장을 펼치고 있어요.</div>,
 });
 
 const ReadingErrorContext = createContext("");
@@ -88,7 +88,7 @@ function Modal({ title, onClose, children, wide = false, busy = false }) {
 }
 
 // petOn — 관리자 설정의 '학생 펫'(lib/readingPet.js의 petEnabled). 학생 본인 화면에만 '나의 펫' 카드가 섭니다.
-// plazaOn — 관리자 설정의 '독서 광장'(lib/reading.js의 plazaOn). 켠 반은 셋째 탭이 '우리 반 랭킹' 대신 '독서 광장'입니다.
+// plazaOn — 관리자 설정의 '책 광장'(lib/reading.js의 plazaOn). 켠 반은 셋째 탭이 '우리 반 랭킹' 대신 '책 광장'입니다.
 // characterOn — 관리자 설정의 '학생 캐릭터'(끄면 광장에서도 기본 캐릭터).
 export default function ReadingHub({ classId, user, isTeacher = false, bookSearchOn = false, petOn = false, plazaOn = false, characterOn = true, onDisabled, activities = [], onOpenActivity, initialBookId = null, initialTab = "library", student = null }) {
   // student가 있으면 교사가 그 학생의 책나눔을 보는 읽기 전용 화면입니다(선생님 결정 — 감상·발자국까지 전부 보임).
@@ -100,7 +100,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
   const [busy, setBusy] = useState(false);
   // '우리 반 랭킹' 탭은 책나눔이 켜져 있으면 늘 섭니다 — 관리자 설정의 '리더보드'를 꺼도 그대로(선생님 요청:
   // 순위 셈은 책나눔과 함께 늘 돌고, 리더보드 스위치는 상단바 리더보드 화면 · 독서 TOP 3만 켜고 끔).
-  // 독서 광장을 켠 반은 그 자리에 '독서 광장'이 섭니다(선생님 요청 — 순위는 상단바 리더보드에서 봄). 끈 반은 지금처럼 '우리 반 랭킹'.
+  // 책 광장을 켠 반은 그 자리에 '책 광장'이 섭니다(선생님 요청 — 순위는 상단바 리더보드에서 봄). 끈 반은 지금처럼 '우리 반 랭킹'.
   const thirdTab = plazaOn ? "plaza" : "ranking";
   const [tab, setTab] = useState(() => (initialTab === "plaza" || initialTab === "ranking" ? thirdTab : ["library", "growth"].includes(initialTab) ? initialTab : "library"));
   // 선생님이 설정을 바꿔 셋째 탭이 달라지면(광장 ↔ 랭킹) 보던 탭도 따라갑니다.
@@ -200,7 +200,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
   const selected = dialog?.bookId ? books.find((b) => b.id === dialog.bookId) : null;
   const featured = (stats.badges || []).find((b) => b.id === (stats.featuredBadge?.id || stats.featuredBadge));
   const showPet = petOn && !readOnly && !isTeacher && !!user?.uid;
-  // 독서 광장 — 이 책이 지금 광장에 어떻게 올라가 있는지(책 상세 창)
+  // 책 광장 — 이 책이 지금 광장에 어떻게 올라가 있는지(책 상세 창)
   const plazaInfo = (bookId) => ({
     blocked: Array.isArray(myShelf?.blocked) && myShelf.blocked.includes(bookId),
     comments: Math.max(0, Number(myShelf?.counts?.[bookId]) || 0),
@@ -217,11 +217,11 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
       </div>}
     </div>
     <nav className="reading-tabs" aria-label="책나눔 메뉴">
-      {[["library", readOnly ? "서재" : "내 서재"], ["growth", "성장·뱃지"], [thirdTab, plazaOn ? "독서 광장" : "우리 반 랭킹"]].map(([key, label]) => <button type="button" key={key} className={tab === key ? "active" : ""} aria-current={tab === key ? "page" : undefined} onClick={() => { setTab(key); setDialog(null); setError(""); setPlazaJump(null); }}>{label}</button>)}
+      {[["library", readOnly ? "서재" : "내 서재"], ["growth", "성장·뱃지"], [thirdTab, plazaOn ? "책 광장" : "우리 반 랭킹"]].map(([key, label]) => <button type="button" key={key} className={tab === key ? "active" : ""} aria-current={tab === key ? "page" : undefined} onClick={() => { setTab(key); setDialog(null); setError(""); setPlazaJump(null); }}>{label}</button>)}
     </nav>
     {error && !dialog && !confirm && <div className="reading-error" role="alert">{error}<button type="button" onClick={() => setError("")} aria-label="오류 안내 닫기">×</button></div>}
     {notice && <div className="reading-notice" role="status">{notice}</div>}
-    {/* 독서 광장은 서재(정본)를 기다리지 않습니다 — 반의 공유 사본을 제 손으로 구독합니다. 펫의 단계만 서재에서 받습니다. */}
+    {/* 책 광장은 서재(정본)를 기다리지 않습니다 — 반의 공유 사본을 제 손으로 구독합니다. 펫의 단계만 서재에서 받습니다. */}
     {tab === "plaza" ? <ReadingPlaza key={plazaJump?.key ?? "plaza"} classId={classId} user={user} isTeacher={isTeacher} characterOn={characterOn} petOn={showPet} growthXp={raw ? petGrowthOfSummary(stats) : null} initialBook={plazaJump} />
     : loading ? <div className="reading-loading" role="status"><span className="reading-loader" />독서 기록을 불러오고 있어요.</div> : !raw ? <div className="reading-empty"><BookIcon size={40} /><h3>독서 정보를 불러오지 못했어요.</h3><button type="button" className="btn-primary" onClick={() => setRevision((r) => r + 1)}>다시 불러오기</button></div> : <>
       <div className="reading-summary">
@@ -339,7 +339,7 @@ function BookForm({ book, searchOn = false, pagesLocked, activities, busy, onSav
   </Modal>;
 }
 
-// plaza — 독서 광장을 켠 반의 학생: 이 발자국이 반 친구에게 보이는지 알려 줍니다("shown" · "hidden" · "blocked").
+// plaza — 책 광장을 켠 반의 학생: 이 발자국이 반 친구에게 보이는지 알려 줍니다("shown" · "hidden" · "blocked").
 function LogForm({ book, log, today, busy, plaza = null, onSave, onClose }) {
   const [form, setForm] = useState({ date: log?.date || today, startPage: log?.startPage || Math.min((book.currentPage || 0) + 1, book.totalPages), endPage: log?.endPage || "", notes: log?.notes || "" });
   const change = (key, v) => setForm((p) => ({ ...p, [key]: v }));
@@ -349,7 +349,7 @@ function LogForm({ book, log, today, busy, plaza = null, onSave, onClose }) {
       <label>읽은 날짜<input data-initial-focus required type="date" max={today} value={form.date} onChange={(e) => change("date", e.target.value)} /></label>
       <div className="reading-form-row"><label>시작 쪽<input required type="number" min={1} max={book.totalPages} step={1} value={form.startPage} onChange={(e) => change("startPage", e.target.value)} inputMode="numeric" /></label><label>마지막 쪽<input required type="number" min={Math.max(1, Number(form.startPage) || 1)} max={book.totalPages} step={1} value={form.endPage} onChange={(e) => change("endPage", e.target.value)} inputMode="numeric" /></label></div>
       <label>오늘의 짧은 감상<textarea required maxLength={2000} rows={4} value={form.notes} onChange={(e) => change("notes", e.target.value)} placeholder="마음에 남은 장면이나 새롭게 떠오른 생각을 적어 보세요." /><span className="reading-field-count">{form.notes.length} / 2,000</span></label>
-      {plaza === "shown" && <p className="plaza-note">이 발자국은 독서 광장 가판대에서 반 친구들이 함께 읽어요.</p>}
+      {plaza === "shown" && <p className="plaza-note">이 발자국은 책 광장 가판대에서 반 친구들이 함께 읽어요.</p>}
       {plaza === "hidden" && <p className="plaza-note plaza-note--off">이 책은 광장에 보이지 않게 해 두어, 이 발자국은 나와 선생님만 봐요.</p>}
       {plaza === "blocked" && <p className="plaza-note plaza-note--off">선생님이 이 책을 광장에서 내려, 이 발자국은 나와 선생님만 봐요.</p>}
       <p className="reading-help">1쪽당 1 EXP. 그날 5쪽 이상 읽으면 연속 독서일로 쳐서 하루 한 번 보너스(연속일 × 15, 7일째부터 105)를 받아요. 이미 기록한 페이지는 중복 적립하지 않아요.</p>
@@ -358,7 +358,7 @@ function LogForm({ book, log, today, busy, plaza = null, onSave, onClose }) {
   </Modal>;
 }
 
-// plaza — 독서 광장을 켠 반에서 완독한 책이면 '광장 책꽂이에 꽂기'를 함께 고릅니다(기본은 안 꽂음 — 학생이 고름).
+// plaza — 책 광장을 켠 반에서 완독한 책이면 '광장 책꽂이에 꽂기'를 함께 고릅니다(기본은 안 꽂음 — 학생이 고름).
 function ReviewForm({ book, review, busy, plaza = false, onSave, onClose }) {
   const [text, setText] = useState(review?.text || "");
   const [rating, setRating] = useState(review?.rating || 5);
@@ -375,12 +375,12 @@ function ReviewForm({ book, review, busy, plaza = false, onSave, onClose }) {
   </Modal>;
 }
 
-// 독서 광장 — 이 책을 반 친구들과 어떻게 나누는지(책 상세 창 · 광장을 켠 반의 학생 본인에게만).
+// 책 광장 — 이 책을 반 친구들과 어떻게 나누는지(책 상세 창 · 광장을 켠 반의 학생 본인에게만).
 //   · 발자국 보이기(기본 켜짐) — 끄면 이 책의 독서 발자국이 광장에 안 보입니다.
 //   · 책꽂이에 꽂기(완독한 책 · 기본 꺼짐) — '한 권의 책'을 쓴 뒤에 꽂습니다.
 // info — { blocked(선생님이 내림), comments(달린 댓글 수), entry(지금 광장에 올라가 있는 모습) }
 function PlazaOwn({ book, review, classId, info, busy, onHide, onShelve, onOpen }) {
-  if (info.blocked) return <div className="plaza-own"><div className="plaza-own-text"><strong>독서 광장</strong><span>선생님이 이 책을 광장에서 내렸어요. 이 책의 글은 나와 선생님만 봐요.</span></div></div>;
+  if (info.blocked) return <div className="plaza-own"><div className="plaza-own-text"><strong>책 광장</strong><span>선생님이 이 책을 광장에서 내렸어요. 이 책의 글은 나와 선생님만 봐요.</span></div></div>;
   const completed = book.status === "completed";
   const otherClass = !!review && review.classId !== classId;
   const text = completed
@@ -390,7 +390,7 @@ function PlazaOwn({ book, review, classId, info, busy, onHide, onShelve, onOpen 
     : (book.plazaHidden ? "이 책의 독서 발자국은 광장에 보이지 않아요. 나와 선생님만 봐요."
       : "이 책에 남기는 독서 발자국을 반 친구들이 광장 가판대에서 함께 읽어요(광장이 열린 뒤에 쓴 발자국부터).");
   return <div className="plaza-own">
-    <div className="plaza-own-text"><strong>독서 광장</strong><span>{text}</span></div>
+    <div className="plaza-own-text"><strong>책 광장</strong><span>{text}</span></div>
     <div className="plaza-own-actions">
       {completed && <button type="button" role="switch" aria-checked={review?.shelved === true} className="plaza-switch" disabled={busy || !review || otherClass} onClick={() => onShelve(review?.shelved !== true)}><i aria-hidden="true" />책꽂이에 꽂기</button>}
       {(!completed || review?.shelved === true) && <button type="button" role="switch" aria-checked={book.plazaHidden !== true} className="plaza-switch" disabled={busy} onClick={() => onHide(book.plazaHidden !== true)}><i aria-hidden="true" />발자국 보이기</button>}
