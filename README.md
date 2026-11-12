@@ -18,13 +18,15 @@
 
 1. **가져오기**: Fork → `npm install` → `npm run dev` (Node 22)
 2. **Firebase**: 새 프로젝트 + 웹 앱 등록. Authentication(Google), Firestore, (그림) Storage
-3. **내 값 넣기**: `cp .env.example .env.local` 후 `NEXT_PUBLIC_FIREBASE_*` 채우기. 같은 값을 Vercel에도. 책나눔·리더보드·대시보드를 쓰려면 아래 [Firebase 서버 인증 키 설정](#firebase-서버-인증-키-설정)도 완료하세요. `.firebaserc`는 `firebase use --add`
+3. **내 값 넣기**: `cp .env.example .env.local` 후 `NEXT_PUBLIC_FIREBASE_*` 채우기. 같은 값을 Vercel에도. `.firebaserc`는 `firebase use --add`
 4. **규칙 · 색인 배포**: `npx firebase-tools login` → `npm run deploy` (Storage 권한 질문에는 Y)
    - 이 명령이 **보안 규칙과 색인(`firestore.indexes.json`)을 함께** 올립니다.
    - 콘솔에서 손으로 할 때는 **색인도 꼭 따로 만드세요** — 아래 '터미널 없이 콘솔에서 하기'의 표 두 줄.
 5. **Vercel**: Fork Import → Deploy. 주소를 Firebase **승인된 도메인**에 추가
-6. **콘솔**: `config/teacherSignup`에 `code`(문자열, 4자 이상), 내 `users/{uid}.role`을 `admin`
-7. **확인**: 선생님으로 반 만들기 → 다른 계정으로 참여
+6. **책나눔 서버 열쇠**: Firebase 서비스 계정 키의 세 값을 Vercel에 `FIREBASE_ADMIN_*`로(Production) → Redeploy.
+   책나눔 · 리더보드 · 독서 TOP 3 · 펫 · 분석 리포트에 필요합니다 — 아래 [책나눔 서버 열쇠](#책나눔-서버-열쇠).
+7. **콘솔**: `config/teacherSignup`에 `code`(문자열, 4자 이상), 내 `users/{uid}.role`을 `admin`
+8. **확인**: 선생님으로 반 만들기 → 다른 계정으로 참여 → 실제 반에서 책나눔 · 리더보드가 열리는지
 
 > **⚠️ 색인을 빠뜨리지 마세요.** Firestore는 필요한 색인이 없는 조회를 **아예 거부**합니다(느려지는 것이
 > 아니라 결과가 안 옵니다). 색인이 빠지면 앱은 멀쩡해 보이는데 **학생 알림 벨의 일부 알림만 조용히 안 옵니다.**
@@ -65,7 +67,9 @@
 기본값은 꺼짐이며 기존 독서 활동은 계속 사용할 수 있습니다.
 사용법·달성 기준·실서비스 서버 설정은 [책나눔 성장 기능](READING_GROWTH.md)을 참고하세요.
 
-### Firebase 서버 인증 키 설정
+### 책나눔 서버 열쇠
+
+#### Firebase 서버 인증 키 설정
 
 Firebase **웹 키**(`NEXT_PUBLIC_FIREBASE_*` 또는 `lib/firebase-defaults.mjs`의 기본값)는
 브라우저 로그인과 Firebase 연결에 사용합니다. 실제 반의 서재·경험치·뱃지·독서 랭킹·펫은
@@ -80,12 +84,13 @@ Vercel의 서버 API가 처리하므로 **별도의 서비스 계정 인증**이
 3. Vercel의 해당 **프로젝트 → Settings → Environment Variables → Project → Add Environment Variable**에서
    아래 세 변수를 각각 추가합니다. 운영 사이트에는 **Production**을 선택하고,
    Preview 배포에서도 실제 Firebase를 사용할 경우 해당 환경에도 등록합니다.
+   **Sensitive**를 켜면 저장한 비밀 값을 화면에서 다시 표시하지 않도록 설정할 수 있습니다.
 
-   | Vercel 환경변수 이름 | JSON에서 복사할 값 |
-   |---|---|
-   | `FIREBASE_ADMIN_PROJECT_ID` | `project_id` |
-   | `FIREBASE_ADMIN_CLIENT_EMAIL` | `client_email` |
-   | `FIREBASE_ADMIN_PRIVATE_KEY` | `private_key` |
+   | Vercel 환경변수 이름 | JSON에서 복사할 값 | 값의 모양 |
+   |---|---|---|
+   | `FIREBASE_ADMIN_PROJECT_ID` | `project_id` | `내-프로젝트-id` |
+   | `FIREBASE_ADMIN_CLIENT_EMAIL` | `client_email` | `firebase-adminsdk-…@내-프로젝트-id.iam.gserviceaccount.com` |
+   | `FIREBASE_ADMIN_PRIVATE_KEY` | `private_key` | `-----BEGIN PRIVATE KEY-----\n…\n-----END PRIVATE KEY-----\n` |
 
 4. `private_key`는 값 바깥의 JSON 따옴표를 제외하고 **`-----BEGIN PRIVATE KEY-----`부터
    `-----END PRIVATE KEY-----`까지** 복사합니다. 실제 줄바꿈 또는 문자 그대로의 `\n`을 지원합니다.
@@ -97,9 +102,10 @@ Vercel의 서버 API가 처리하므로 **별도의 서비스 계정 인증**이
 `Shared`는 여러 프로젝트가 함께 쓰는 변수를 연결하는 탭입니다. 위처럼 `Project`에 직접 등록하면 됩니다.
 로컬에서 실제 Firebase로 시험하려면 같은 세 변수를 `.env.local`에도 넣고 서버를 다시 시작합니다.
 서버 인증 키에는 **`NEXT_PUBLIC_`을 붙이지 말고**, 서비스 계정 JSON과 비밀 키는 GitHub에 올리지 마세요.
+내려받은 JSON 파일은 같은 비밀 키를 포함하므로 안전한 곳에 보관하거나 등록 후 삭제하세요.
 변수 이름 안내는 [`.env.example`](.env.example)과 [`env.reading.example`](env.reading.example)을 참고하세요.
 
-### 서버 인증 키가 빠졌을 때
+#### 서버 인증 키가 빠졌을 때
 
 > **책나눔 서버 인증 설정이 필요합니다. 담당 교사에게 문의해 주세요.**
 >
@@ -114,6 +120,22 @@ Vercel의 서버 API가 처리하므로 **별도의 서비스 계정 인증**이
 이 오류는 Firebase 데이터를 조회하기 전 인증 설정 단계에서 발생하므로 **학생 데이터가 없거나 무료 한도를 초과했다는 뜻이 아닙니다.**
 로그인·기존 책방 활동은 정상이어도 성장 기능·대시보드의 서버 API는 실패할 수 있습니다.
 **샘플 반**은 가상 데이터를 브라우저에서 사용하므로 키가 없어도 보일 수 있습니다. 정상 작동 확인은 실제 반에서 하세요.
+
+**화면 문구와 응답 상태별 확인 방법**
+
+개발자 도구(F12)의 Network에서 `/api/reading…` 또는 `/api/dashboard` 요청의 응답 상태와 `code`를 함께 확인합니다.
+
+| 화면 문구 | 상태 · 코드 | 뜻 또는 가능한 원인 | 할 일 |
+|---|---|---|---|
+| 책나눔 서버 인증 설정이 필요합니다. 담당 교사에게 문의해 주세요. | `503 / reading/server-not-configured` | 현재 배포에 인증 설정이 없음 | 위 세 변수의 적용 범위를 확인하고 Redeploy |
+| 책나눔 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요. | `500 / reading/internal` | 비공개 키 형식 오류, Firebase 접근 오류 등 여러 서버 오류 가능 | Vercel **Logs**의 `[reading] request failed` 코드부터 확인하고 해당 원인을 수정 |
+| 로그인을 다시 확인해 주세요. | `401 / reading/unauthenticated` | 로그인 토큰 검증 실패 | 다시 로그인하고, 여러 사용자에게 반복되면 웹 설정과 서버 인증의 Firebase 프로젝트 일치 여부도 확인 |
+
+500이나 401만으로 비공개 키 누락·프로젝트 불일치를 단정할 수는 없습니다. 응답 코드와 서버 로그를 함께 확인하세요.
+환경변수를 바꾸거나 지워도 이미 만들어진 배포는 배포 당시 받은 설정을 사용합니다.
+새 배포 뒤 갑자기 막혔다면 마지막 정상 배포와 현재 배포의 시점·환경을 비교하고,
+Vercel의 **Activity**에서 환경변수 변경 기록도 확인하세요.
+Production에만 키를 등록했다면 Preview 배포에서는 503이 발생할 수 있으므로 해당 주소와 적용 환경을 확인합니다.
 
 ### 도서 검색 — 카카오 REST API (선택)
 
