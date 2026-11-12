@@ -9,7 +9,12 @@
 #   npm run deploy                 # 규칙 시험 → Firestore 규칙·색인 + Storage 규칙
 #   npm run deploy -- --rules-only # Firestore 규칙만
 #   npm run deploy -- --indexes-only
+#   npm run deploy -- --database-only # Realtime Database 규칙만(책 광장의 '함께 있는 친구들' — 아래)
 #   npm run deploy -- --skip-tests # 규칙 시험을 건너뜀 (권장하지 않음)
+#
+# Realtime Database 규칙(database.rules.json)은 **저절로 올리지 않습니다** — 책 광장의 '함께 있는 친구들'을
+# 쓰는 곳만 올리는 선택 기능이고, 데이터베이스를 아직 안 만든 프로젝트에서는 배포가 실패하기 때문입니다.
+# 콘솔에서 Realtime Database를 만든 뒤 --database-only로 따로 올리세요(READING_GROWTH.md '함께 있는 친구들').
 #
 # 최초 1회 준비:
 #   npx firebase-tools login       # 브라우저로 Google 계정 로그인
@@ -30,17 +35,18 @@ for arg in "$@"; do
   case "$arg" in
     --rules-only) TARGET="firestore:rules" ;;
     --indexes-only) TARGET="firestore:indexes" ;;
+    --database-only) TARGET="database" ;;
     --skip-tests) SKIP_TESTS=1 ;;
     *)
       echo "알 수 없는 옵션: $arg" >&2
-      echo "사용법: npm run deploy -- [--rules-only|--indexes-only] [--skip-tests]" >&2
+      echo "사용법: npm run deploy -- [--rules-only|--indexes-only|--database-only] [--skip-tests]" >&2
       exit 1
       ;;
   esac
 done
 
 if [[ "$TARGET" != "firestore:indexes" && "$SKIP_TESTS" -ne 1 ]]; then
-  echo "▶ 배포 전 Firestore 규칙 시험을 먼저 돌립니다 (건너뛰려면 --skip-tests)"
+  echo "▶ 배포 전 규칙 시험을 먼저 돌립니다 (건너뛰려면 --skip-tests)"
   if [ ! -d tests/rules/node_modules ]; then
     echo "  tests/rules/node_modules가 없어 먼저 설치합니다..."
     npm --prefix tests/rules install

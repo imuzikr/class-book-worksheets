@@ -1,0 +1,27 @@
+{
+  "rules": {
+    "plaza": {
+      "$classId": {
+        ".read": "auth != null && data.child('who').child(auth.uid).child('exp').val() > now",
+        "who": {
+          ".indexOn": ["exp"]
+        },
+        "pos": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid && newData.exists() && root.child('plaza').child($classId).child('who').child(auth.uid).child('exp').val() > now && (!data.exists() || data.child('t').val() <= now - 100 || (newData.child('g').val() === 1 && data.child('g').val() !== 1))",
+            ".validate": "newData.hasChildren(['x', 'y', 'm', 'f', 't'])",
+            "x": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1672" },
+            "y": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 941" },
+            "w": { ".validate": "newData.isString() && newData.val().length <= 160 && newData.val().matches(/^[0-9,]+$/)" },
+            "m": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 2" },
+            "f": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 3" },
+            "a": { ".validate": "newData.val() === 1" },
+            "g": { ".validate": "newData.val() === 1" },
+            "t": { ".validate": "newData.val() === now" },
+            "$other": { ".validate": false }
+          }
+        }
+      }
+    }
+  }
+}

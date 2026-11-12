@@ -20,47 +20,58 @@
 // 따라오고(아래쪽으로 걸을 때는 몸에 가리지 않게 옆으로 비켜서), 멈추면 곁자리로 옵니다.
 // 펫은 단계가 오를수록 크게 그립니다(선생님 결정). 알은 공통 알 그림 그대로.
 //
-// 지금은 **내 캐릭터만** 보입니다 — 접속한 친구들의 캐릭터가 함께 움직이는 것(실시간)은 다음 단계입니다
-// (Realtime Database가 필요 — READING_GROWTH.md '책 광장').
+// **함께 있는 친구들**(선생님 요청) — 광장 탭을 연 반 친구와 선생님의 캐릭터가 서로의 화면에서 함께 걷습니다.
+// 자료는 Realtime Database(lib/readingPlazaLive.js 머리말 — 입장권은 서버가, 자리는 본인이), 잇고 놓는 일은
+// lib/data/plazaLive.js가 합니다. 걸음마다 올리지 않습니다 — 누른 곳으로 걸을 때는 길을 한 번, 방향키로 걸을 때는
+// 0.3초에 한 번, 멈출 때 한 번(아래 tell). 친구의 캐릭터는 받은 소식대로 같은 빠르기로 걷습니다(plazaRemoteStep).
+// 주소(NEXT_PUBLIC_FIREBASE_DATABASE_URL)를 넣지 않은 배포에서는 지금까지처럼 내 캐릭터만 보입니다.
+//
 // 캐릭터 · 펫의 움직임, 바라보는 쪽, 걷는 그림, 시점은 React 상태가 아니라 ref와 requestAnimationFrame으로
-// DOM(과 캔버스)에 곧바로 적습니다(프레임마다 다시 그리지 않게). 어디 앞인지 · 갈 곳 표시 · 첫걸음을 뗐는지만 상태입니다.
+// DOM(과 캔버스)에 곧바로 적습니다(프레임마다 다시 그리지 않게 — 캐릭터 한 명의 DOM은 PlazaActor.jsx).
+// 어디 앞인지 · 갈 곳 표시 · 첫걸음을 뗐는지 · 누가 함께 있는지(이름표)만 상태입니다.
 // =============================================================
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { subscribeMyReadingCharacter, subscribeMyReadingPet } from "@/lib/data/reading";
 import { subscribePlazaShelves } from "@/lib/data/plaza";
-import { characterImage, characterOf } from "@/lib/readingCharacterCatalog";
+import { joinPlazaLive, plazaLiveConfigured } from "@/lib/data/plazaLive";
+import { characterOf } from "@/lib/readingCharacterCatalog";
 import { petProgress } from "@/lib/readingPet";
 import { plazaItems } from "@/lib/readingPlaza";
+import { PLAZA_LIVE_KEY_MS, plazaRemoteEnter, plazaRemoteHear, plazaRemoteStep, plazaSpawnFor } from "@/lib/readingPlazaLive";
 import {
   PLAZA_H, PLAZA_SPAWN, PLAZA_SPOTS, PLAZA_W,
   plazaCamera, plazaNearest, plazaPath, plazaSpotAt, plazaSpotNear, plazaStep, plazaView,
 } from "@/lib/readingPlazaMap";
-import {
-  PET_STRIDE, PLAZA_EGG_SIZE, SPRITE_IDLE,
-  plazaCharacterSheet, plazaCharacterSize, plazaFacing, plazaPetHeel, plazaPetPeek, plazaPetSheet, plazaPetSize, plazaPetStep,
-  plazaTrailBehind, plazaTrailPush, plazaWalkFrame,
-} from "@/lib/readingPlazaSprites";
-import PetFigure from "./PetFigure";
+import { PET_STRIDE, PLAZA_WALK_SPEED, SPRITE_IDLE, plazaFacing, plazaPetFollow, plazaPetStart, plazaWalkFrame } from "@/lib/readingPlazaSprites";
+import PlazaActor from "./PlazaActor";
 import PlazaPanel from "./PlazaPanel";
-import PlazaSprite from "./PlazaSprite";
 import "./plaza.css";
 
-// 걷는 빠르기(그림 원본 px/초) — 마당을 가로지르는 데 5초쯤. 걷는 그림을 넣으며 330에서 낮췄습니다 —
-// 캐릭터 키(88px)에 견줘 빠르면 발이 미끄러지듯 보여서, 그림 한 장을 넘기는 거리(WALK_STRIDE 32px)와 함께
-// 초당 8장쯤이 되게 맞췄습니다(실측 8.0장 — tests/unit/readingPlaza.test.mjs가 이 둘의 짝을 봄).
-const SPEED = 260;
+// 걷는 빠르기(그림 원본 px/초) — 내 캐릭터와 친구들의 캐릭터가 같은 값으로 걷습니다(lib/readingPlazaSprites.js).
+const SPEED = PLAZA_WALK_SPEED;
 // 시점이 캐릭터를 따라붙는 빠르기(초) — 작을수록 바짝 붙습니다. 걸음을 떼고 멈출 때 화면이 덜컥거리지 않게 조금 늦춥니다.
 const CAM_EASE = 0.14;
 // 무대의 바닥 높이(px) — 창이 아주 낮으면 이만큼은 지키고 화면이 구릅니다.
 const STAGE_MIN_H = 300;
-// 펫이 이보다 멀리 떨어지면(어딘가에 걸림) 캐릭터 뒤로 곧바로 데려옵니다
-const PET_LOST = 320;
+// 방향키를 누르고 있지만 이만큼(초) 제자리면 막힌 것 — 친구들에게는 '섰다'고 한 번만 알립니다
+// (막힌 채 누르고 있는 동안 0.3초마다 같은 자리를 올리지 않게).
+const STUCK_S = 0.25;
 const KEY_DIRS = {
   ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down",
   a: "left", d: "right", w: "up", s: "down", A: "left", D: "right", W: "up", S: "down",
 };
 const PLACE_NAME = { stall: "지금 읽는 책", shelf: "완독한 책" };
 const pct = (value, whole) => `${(value / whole * 100).toFixed(3)}%`;
+// 함께 보기를 잇지 못했을 때 선생님께만 보이는 한 줄(학생에게는 광장이 지금까지처럼 보일 뿐)
+const LIVE_NOTES = {
+  server: "친구들의 캐릭터를 함께 보지 못하고 있어요 — Realtime Database를 만들었는지, 주소(환경변수)가 맞는지 확인해 주세요.",
+  denied: "친구들의 캐릭터를 함께 보지 못하고 있어요 — Realtime Database 규칙이 게시되었는지 확인해 주세요.",
+};
+// 입장권의 펫({ species, stage } · 알이면 species가 없음)을 PlazaActor가 받는 모양으로
+const friendPet = (pet) => (pet ? { species: pet.species, stage: pet.stage, hatched: !!pet.species, ready: false } : null);
+const friendRow = (uid, who, reading) => ({
+  uid, name: who.name, teacher: who.teacher, character: characterOf({ uid, character: who.character }), pet: friendPet(who.pet), reading: !!reading,
+});
 
 // initialBook — 서재에서 '광장에서 보기'로 넘어올 때 곧바로 열 책({ uid, bookId, place })
 export default function ReadingPlaza({ classId, user, isTeacher = false, characterOn = true, petOn = false, growthXp = null, initialBook = null }) {
@@ -76,18 +87,18 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   const [marker, setMarker] = useState(null);
   // 걷는 법 안내(맵 아래쪽에 얹은 한 줄) — 첫걸음을 떼면 사라집니다
   const [walked, setWalked] = useState(false);
-  // 걷는 그림(시트)을 못 받았을 때 — 캐릭터는 예전 그림, 펫은 단계 그림으로 섭니다
-  const [spriteMissing, setSpriteMissing] = useState(false);
-  const [petSpriteMissing, setPetSpriteMissing] = useState(false);
+  // 함께 있는 친구들 — 이름표 · 캐릭터 · 펫(그릴 것만. 자리와 걸음은 cast에) · 연결 상태
+  const [friends, setFriends] = useState([]);
+  const [live, setLive] = useState({ status: "off", why: "" });
 
   const stageRef = useRef(null);
   const wrapRef = useRef(null);
   const worldRef = useRef(null);
-  const avatarRef = useRef(null);
-  const petRef = useRef(null);
-  const charSprite = useRef(null);
-  const petSprite = useRef(null);
-  const pos = useRef({ ...PLAZA_SPAWN });
+  // 내 캐릭터(와 펫)의 DOM — PlazaActor가 내어 준 손잡이(place · show · placePet · showPet)
+  const meRef = useRef(null);
+  // 처음 서는 자리 — 함께 보는 광장에서는 사람마다 조금씩 다른 자리(모두 한 점에 겹치지 않게), 아니면 늘 같은 자리
+  const pos = useRef(null);
+  if (pos.current === null) pos.current = myUid && plazaLiveConfigured() ? plazaSpawnFor(myUid) : { ...PLAZA_SPAWN };
   // 그림을 얼마나 키웠나(plazaView) · 시점(그림의 어느 자리가 창의 왼쪽 위인가, 화면 px)
   const view = useRef(plazaView(0, 0));
   const cam = useRef({ x: 0, y: 0 });
@@ -102,14 +113,17 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   // 바라보는 쪽(down · right · up · left)과 걸은 거리 — 걷는 그림은 거리로 넘깁니다(lib/readingPlazaSprites.js)
   const facingRef = useRef("down");
   const stride = useRef(0);
-  // 펫 — 자리 · 바라보는 쪽 · 걸은 거리 · 캐릭터가 지나온 길 · 멈췄을 때 설 곁자리
-  const petPos = useRef(plazaPetHeel(PLAZA_SPAWN, null));
-  const petFacing = useRef("down");
-  const petStride = useRef(0);
-  const petMoving = useRef(false);
-  const trail = useRef([]);
-  const heel = useRef(null);
-  const hasPet = useRef(false);
+  // 내 펫의 걸음(자리 · 바라보는 쪽 · 걸은 거리 · 지나온 길 — lib/readingPlazaSprites.js의 plazaPetStart). 펫이 없으면 null
+  const myPet = useRef(null);
+  // 함께 있는 친구들 — uid → { actor(받은 소식대로 걷는 캐릭터), pet(펫의 걸음 · 없으면 null), handle(PlazaActor), dirty, reading }
+  const cast = useRef(new Map());
+  const castRefs = useRef(new Map());
+  const session = useRef(null);
+  // 지금 걸음(0 섬 · 1 길을 따라 · 2 방향키) · 방향키를 누른 채 제자리인 시간(초) · 친구들에게 마지막으로 알린 걸음과 그때
+  const walkMode = useRef(0);
+  const stuck = useRef(0);
+  const told = useRef(0);
+  const toldAt = useRef(0);
   const nearRef = useRef(null);
   const calm = useRef(false);
   const panelOpen = useRef(false);
@@ -145,21 +159,19 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     return { stall: stall.week.length + stall.earlier.length, shelf: shelf.week.length + shelf.earlier.length, stallWeek: stall.week.length, shelfWeek: shelf.week.length };
   }, [shelves]);
 
-  // 캐릭터 · 펫의 자리를 DOM에 적습니다(자리 = 발이 닿는 점). 아래쪽에 선 것이 앞에 그려집니다.
-  const place = useCallback(() => {
-    const el = avatarRef.current;
-    if (!el) return;
-    el.style.left = pct(pos.current.x, PLAZA_W);
-    el.style.top = pct(pos.current.y, PLAZA_H);
-    el.style.zIndex = String(10 + Math.round(pos.current.y));
+  // 지금 내 걸음 — 친구들에게 알릴 모양(lib/readingPlazaLive.js의 plazaLivePos가 받음). 길을 따라 걷는 중이면
+  // '지금 자리에서 남은 길'을 줍니다(연결이 끊겼다 이어져 다시 알릴 때도 처음부터 다시 걷지 않게).
+  const liveState = useCallback(() => {
+    const mode = walkMode.current;
+    return { x: pos.current.x, y: pos.current.y, path: mode === 1 ? path.current.slice() : [], mode, facing: facingRef.current, reading: panelOpen.current };
   }, []);
-  const placePet = useCallback(() => {
-    const el = petRef.current;
-    if (!el) return;
-    el.style.left = pct(petPos.current.x, PLAZA_W);
-    el.style.top = pct(petPos.current.y, PLAZA_H);
-    el.style.zIndex = String(10 + Math.round(petPos.current.y));
-  }, []);
+  // 친구들에게 알립니다 — 걸음마다가 아니라 걸음이 바뀔 때만(아래 tick · walkTo · 창을 여닫을 때)
+  const tell = useCallback((time = performance.now()) => {
+    const state = liveState();
+    told.current = state.mode;
+    toldAt.current = time;
+    session.current?.publish(state);
+  }, [liveState]);
   // 시점을 DOM에 적습니다 — 그림을 통째로 밉니다(transform이라 다시 칠하지 않음)
   const look = useCallback(() => {
     const el = worldRef.current;
@@ -170,9 +182,10 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     pendingSpot.current = null;
     path.current = [];
     keys.current = { left: false, right: false, up: false, down: false };
+    walkMode.current = 0;
     // 여는 곳을 바라봅니다 — 책꽂이 앞에서는 뒷모습, 가판대 앞에서는 옆모습
     facingRef.current = plazaFacing(null, (spot.rect[0] + spot.rect[2]) / 2 - pos.current.x, (spot.rect[1] + spot.rect[3]) / 2 - pos.current.y);
-    charSprite.current?.show(facingRef.current, SPRITE_IDLE);
+    meRef.current?.show(facingRef.current, SPRITE_IDLE);
     setPanel({ place: spot.place });
   }, []);
 
@@ -208,7 +221,8 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     const my = pos.current.y - from.y;
     const moved = Math.hypot(mx, my);
     if (moved > 0.01) walking = true;
-    place();
+    const me = meRef.current;
+    if (moved > 0.01 || dt === 0) me?.place(pos.current.x, pos.current.y);
     // 바라보는 쪽 — 움직인 쪽으로. 방향키를 눌렀는데 막혀서 못 움직였으면 누른 쪽을 봅니다.
     if (moved > 0.01) facingRef.current = plazaFacing(facingRef.current, mx, my);
     else if (dx || dy) facingRef.current = plazaFacing(facingRef.current, dx, dy);
@@ -221,57 +235,55 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
       if (active) {
         setWalked(true);
         stride.current = 0;
-        heel.current = null;
-        // 다시 걷기 시작 — 펫이 선 자리에서 캐릭터 자리까지를 '지나온 길'의 첫머리로 둡니다(펫이 뒷걸음질하지 않게)
-        if (hasPet.current) {
-          trail.current = [];
-          plazaTrailPush(trail.current, petPos.current);
-          plazaTrailPush(trail.current, from);
-        }
       } else setMarker(null);
     }
     // 걷는 그림 — 걸은 거리로 넘깁니다. 멈추면 그쪽을 본 채 선 그림.
     stride.current = walking ? stride.current + moved : 0;
-    charSprite.current?.show(facingRef.current, walking && !calm.current ? plazaWalkFrame(stride.current) : SPRITE_IDLE);
+    me?.show(facingRef.current, walking && !calm.current ? plazaWalkFrame(stride.current) : SPRITE_IDLE);
     if (!path.current.length && pendingSpot.current && !dx && !dy) {
       const spot = pendingSpot.current;
       pendingSpot.current = null;
       if (plazaSpotNear(pos.current)?.id === spot.id) openSpot(spot);
     }
 
-    // 펫 — 걷는 동안은 캐릭터가 지나온 길을 조금 뒤에서, 멈추면 곁자리로 옵니다.
+    // 친구들에게 알리기 — 방향키로 걷는 동안은 0.3초에 한 번 지금 자리를, 멈추면 한 번(누른 곳으로 걷기는 walkTo가 알림).
+    // 방향키를 누른 채 막혀 있으면 선 것으로 봅니다(누른 쪽을 본 채 — 받는 쪽도 그렇게 그림).
+    if (dx || dy) stuck.current = moved > 0.01 ? 0 : stuck.current + dt;
+    else stuck.current = 0;
+    const mode = dx || dy ? (stuck.current > STUCK_S ? 0 : 2) : path.current.length ? 1 : 0;
+    walkMode.current = mode;
+    if (mode === 2 ? told.current !== 2 || time - toldAt.current >= PLAZA_LIVE_KEY_MS : mode === 0 && told.current !== 0) tell(time);
+
+    // 펫 — 걷는 동안은 캐릭터가 지나온 길을 조금 뒤에서, 멈추면 곁자리로 옵니다(lib/readingPlazaSprites.js의 plazaPetFollow).
     let petBusy = false;
-    if (hasPet.current) {
-      if (moved > 0.01) plazaTrailPush(trail.current, pos.current);
-      const was = petPos.current;
-      // 아래쪽(앞)으로 걸을 때는 캐릭터 몸에 가리지 않게 옆으로 비켜 따라옵니다(plazaPetPeek)
-      const target = active
-        ? plazaPetPeek(plazaTrailBehind(trail.current) ?? was, pos.current, was)
-        : heel.current ?? (heel.current = plazaPetHeel(pos.current, was));
-      let next = plazaPetStep(was, target, dt);
-      if (Math.hypot(pos.current.x - next.x, pos.current.y - next.y) > PET_LOST) next = { x: target.x, y: target.y };
-      const px = next.x - was.x;
-      const py = next.y - was.y;
-      const petWalking = Math.hypot(px, py) > 0.01;
-      if (petWalking) {
-        petPos.current = next;
-        petFacing.current = plazaFacing(petFacing.current, px, py);
-        petStride.current += Math.hypot(px, py);
-      } else {
-        petStride.current = 0;
-        // 곁에 와서 서면 캐릭터와 같은 쪽을 봅니다
-        if (!active) petFacing.current = facingRef.current;
+    const pet = myPet.current;
+    if (pet) {
+      const step = plazaPetFollow(pet, { x: pos.current.x, y: pos.current.y, facing: facingRef.current }, dt, { active, moved, from });
+      petBusy = step.busy;
+      if (step.walking || dt === 0) me?.placePet(pet.x, pet.y);
+      // 알(과 걷는 그림이 없는 펫)은 걷는 동안 통통 뜁니다 — PlazaActor가 CSS로
+      me?.showPet(pet.facing, step.walking && !calm.current ? plazaWalkFrame(pet.stride, PET_STRIDE) : SPRITE_IDLE, step.walking);
+    }
+
+    // 함께 있는 친구들 — 받은 소식대로 걷습니다. 펫은 내 펫과 같은 셈으로 그 뒤를 따릅니다.
+    let castBusy = false;
+    for (const friend of cast.current.values()) {
+      const actor = friend.actor;
+      const was = { x: actor.x, y: actor.y };
+      const step = plazaRemoteStep(actor, dt, time);
+      const handle = friend.handle;
+      const fresh = friend.dirty && !!handle;
+      if (handle && (fresh || step.moved > 0.01)) handle.place(actor.x, actor.y);
+      handle?.show(actor.facing, step.walking && !calm.current ? plazaWalkFrame(actor.stride) : SPRITE_IDLE);
+      // 이번에 걸었으면 한 프레임 더 — 다 와서 선 자세로 바꿔 그린 뒤에 쉽니다
+      if (step.busy || step.moved > 0.01) castBusy = true;
+      if (friend.pet) {
+        const hop = plazaPetFollow(friend.pet, actor, dt, { active: step.walking, moved: step.moved, from: was });
+        if (handle && (fresh || hop.walking)) handle.placePet(friend.pet.x, friend.pet.y);
+        handle?.showPet(friend.pet.facing, hop.walking && !calm.current ? plazaWalkFrame(friend.pet.stride, PET_STRIDE) : SPRITE_IDLE, hop.walking);
+        if (hop.busy) castBusy = true;
       }
-      // 이번에 걸었으면 한 프레임 더 — 다 와서 선 자세(정지 그림 · 캐릭터와 같은 쪽)로 바꿔 그린 뒤에 쉽니다.
-      // 막혀서 못 가는 중이면(걸음이 0) 기다리지 않습니다.
-      petBusy = petWalking || (dt === 0 && Math.hypot(target.x - petPos.current.x, target.y - petPos.current.y) > 0.01);
-      placePet();
-      petSprite.current?.show(petFacing.current, petWalking && !calm.current ? plazaWalkFrame(petStride.current, PET_STRIDE) : SPRITE_IDLE);
-      // 알(과 걷는 그림이 없는 펫)은 걷는 동안 통통 뜁니다 — CSS
-      if (petWalking !== petMoving.current) {
-        petMoving.current = petWalking;
-        petRef.current?.classList.toggle("is-moving", petWalking);
-      }
+      if (fresh) friend.dirty = false;
     }
 
     // 시점 — 따라붙는 중이면 한 프레임 더. 다 왔으면 정수 px에 맞춰 멈춥니다(이름표 글자가 흐려지지 않게).
@@ -279,23 +291,89 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     const ease = calm.current ? 1 : 1 - Math.exp(-dt / CAM_EASE);
     cam.current = { x: cam.current.x + (goal.x - cam.current.x) * ease, y: cam.current.y + (goal.y - cam.current.y) * ease };
     const trailing = Math.abs(goal.x - cam.current.x) > 0.5 || Math.abs(goal.y - cam.current.y) > 0.5;
-    if (active || trailing || petBusy) raf.current = requestAnimationFrame(tick);
+    if (active || trailing || petBusy || castBusy) raf.current = requestAnimationFrame(tick);
     else {
       cam.current = { x: Math.round(goal.x), y: Math.round(goal.y) };
       raf.current = 0;
       lastTick.current = 0;
     }
     look();
-  }, [look, openSpot, place, placePet]);
+  }, [look, openSpot, tell]);
 
   const wake = useCallback(() => {
     if (!raf.current) { lastTick.current = 0; raf.current = requestAnimationFrame(tick); }
   }, [tick]);
 
+  useEffect(() => () => { if (raf.current) cancelAnimationFrame(raf.current); raf.current = 0; }, []);
+
+  // ── 함께 있는 친구들 ──
+  // 광장 탭을 연 동안만 잇습니다(나가면 놓음). 소식은 네 가지 — 들어옴 · 이름표가 바뀜(펫이 자람) · 걸음 · 나감.
+  // 자리와 걸음은 cast(ref)에 두고 걸음 루프가 그리며, 상태(friends)는 누가 있는지 · 이름표만 듭니다.
   useEffect(() => {
-    place();
-    return () => { if (raf.current) cancelAnimationFrame(raf.current); raf.current = 0; };
-  }, [place]);
+    if (!classId || !myUid) return undefined;
+    const members = cast.current;
+    const attaches = castRefs.current;
+    const joined = joinPlazaLive(classId, { uid: myUid, teacher: isTeacher }, {
+      current: liveState,
+      onJoin(uid, who, state, ageMs) {
+        const actor = plazaRemoteEnter(state, ageMs, performance.now());
+        members.set(uid, { actor, pet: who.pet ? plazaPetStart(actor, actor.facing) : null, handle: members.get(uid)?.handle ?? null, dirty: true, reading: state.reading });
+        setFriends((list) => [...list.filter((f) => f.uid !== uid), friendRow(uid, who, state.reading)]);
+        wake();
+      },
+      onWho(uid, who) {
+        const friend = members.get(uid);
+        if (!friend) return;
+        if (!who.pet) friend.pet = null;
+        else if (!friend.pet) friend.pet = plazaPetStart(friend.actor, friend.actor.facing);
+        friend.dirty = true;
+        setFriends((list) => list.map((f) => (f.uid === uid ? friendRow(uid, who, f.reading) : f)));
+        wake();
+      },
+      onMove(uid, state) {
+        const friend = members.get(uid);
+        if (!friend) return;
+        plazaRemoteHear(friend.actor, state, performance.now());
+        if (friend.reading !== state.reading) {
+          friend.reading = state.reading;
+          setFriends((list) => list.map((f) => (f.uid === uid ? { ...f, reading: state.reading } : f)));
+        }
+        wake();
+      },
+      onLeave(uid) {
+        members.delete(uid);
+        attaches.delete(uid);
+        setFriends((list) => list.filter((f) => f.uid !== uid));
+      },
+      onStatus(status, why) { setLive({ status, why: why || "" }); },
+    });
+    session.current = joined;
+    return () => {
+      session.current = null;
+      joined.close();
+      members.clear();
+      attaches.clear();
+      setFriends([]);
+      setLive({ status: "off", why: "" });
+    };
+  }, [classId, myUid, isTeacher, liveState, wake]);
+  // 친구 캐릭터의 DOM이 서면(PlazaActor의 손잡이) 지금 자리에 놓습니다 — 사람마다 늘 같은 함수(다시 그릴 때마다 뗐다 붙이지 않게)
+  const castRef = useCallback((uid) => {
+    let attach = castRefs.current.get(uid);
+    if (!attach) {
+      attach = (handle) => {
+        const friend = cast.current.get(uid);
+        if (!friend) return;
+        friend.handle = handle;
+        if (handle) { friend.dirty = true; wake(); }
+      };
+      castRefs.current.set(uid, attach);
+    }
+    return attach;
+  }, [wake]);
+  // 창(가판대 · 책꽂이)을 여닫으면 '글을 읽는 중'이 바뀝니다 — 친구들에게 알립니다
+  const reading = !!panel;
+  useEffect(() => { tell(); }, [reading, tell]);
 
   // 무대의 크기 — 탭 바로 아래부터 화면 바닥까지를 맵이 채웁니다(선생님 요청).
   // 책방 본문은 제 안에서 구르는 칸(.books-main)이라 CSS만으로는 '남은 높이'를 모릅니다. 그 칸의 높이에서 무대 위쪽까지의
@@ -348,8 +426,11 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     path.current = route;
     pendingSpot.current = spot;
     setMarker(spot ? null : { x: goal.x, y: goal.y, key: Date.now() });
+    // 어디에서 어느 길로 걷는지를 한 번 알립니다(걸음마다 올리지 않음 — 친구 화면이 같은 빠르기로 그림)
+    walkMode.current = 1;
+    tell();
     wake();
-  }, [wake]);
+  }, [tell, wake]);
 
   // 책꽂이 · 가판대로 — 이미 그 앞이면 곧바로 열고, 아니면 걸어가서 엽니다.
   // 이름표(단추)를 눌러도 초점은 무대에 둡니다 — 이어서 방향키로 걸을 수 있게.
@@ -403,33 +484,20 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   }
 
   const pet = petOn && !isTeacher ? petProgress(petState?.mirror ?? null, growthXp ?? 0) : null;
-  const petOnStage = !!pet;
-  hasPet.current = petOnStage;
   // 펫이 (늦게) 나타나면 지금 캐릭터 곁에 세웁니다 — 펫 자료가 늦게 와 그사이 걸어 나갔을 수 있습니다.
-  // 그리기 전에 맞춥니다(useLayoutEffect) — 처음 자리에 한 번 보였다가 옮겨 가지 않게.
-  useLayoutEffect(() => {
-    if (!petOnStage) return;
-    petPos.current = plazaPetHeel(pos.current, null);
-    petFacing.current = facingRef.current;
-    petMoving.current = false;
-    heel.current = null;
-    trail.current = [];
-    placePet();
-  }, [petOnStage, placePet]);
+  // 그리면서 맞춥니다(한 번) — 처음 자리에 한 번 보였다가 옮겨 가지 않게.
+  if (!pet) myPet.current = null;
+  else if (!myPet.current) myPet.current = plazaPetStart(pos.current, facingRef.current);
 
   const world = size ? plazaView(size.w, size.h) : null;
   const who = useMemo(() => characterOf({ uid: myUid || "", character: characterOn ? character : null }), [myUid, characterOn, character]);
-  const sheet = plazaCharacterSheet(who);
-  const body = world ? plazaCharacterSize(world.scale) : null;
-  // 깨어난 펫은 걷는 그림(단계가 오를수록 크게), 알은 종을 드러내지 않는 공통 알
-  const petSheet = pet?.hatched && !petSpriteMissing ? plazaPetSheet(pet.species) : null;
-  const petBody = world && pet ? plazaPetSize(world.scale, pet.stage) : null;
-  const petFigure = world && pet ? Math.round(pet.hatched ? petBody.body * 1.3 : Math.max(24, PLAZA_EGG_SIZE * world.scale)) : 0;
   const myName = isTeacher ? "선생님" : user?.realName || user?.displayName || "나";
+  // 함께 있는 사람(나 포함) — 이어졌을 때만 셉니다
+  const liveNote = live.status === "off" && isTeacher ? LIVE_NOTES[live.why] : "";
 
   return (
     <section className="plaza" aria-label="책 광장">
-      <div className="plaza-stage-wrap" ref={wrapRef}>
+      <div className={`plaza-stage-wrap${live.status !== "off" || liveNote ? " has-live" : ""}`} ref={wrapRef}>
         <div className="plaza-stage" ref={stageRef} tabIndex={0} role="application"
           aria-label="책 광장 마당. 누른 곳으로 걸어가고 방향키로도 걷습니다. 책꽂이나 가판대 앞에서 Enter로 엽니다."
           style={size ? { height: size.h } : undefined}
@@ -450,26 +518,18 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
                 </button>
               ))}
               {marker && <span key={marker.key} className="plaza-marker" style={{ left: pct(marker.x, PLAZA_W), top: pct(marker.y, PLAZA_H) }} aria-hidden="true" />}
-              {/* 캐릭터 · 펫 — 닻(크기 0)이 발이 닿는 점에 서고, 그림 · 이름표 · 그림자가 그 점을 기준으로 놓입니다.
-                  자리는 걷는 동안 DOM에 곧바로 적습니다(place · placePet) — 다시 그릴 때도 지금 자리를 그대로 적어 튀지 않게 */}
-              {pet && (
-                <div ref={petRef} className="plaza-pet" aria-hidden="true"
-                  style={{ left: pct(petPos.current.x, PLAZA_W), top: pct(petPos.current.y, PLAZA_H), zIndex: 10 + Math.round(petPos.current.y) }}>
-                  <span className="plaza-avatar-shadow" style={{ width: petBody.body * 0.62, height: petBody.body * 0.2 }} />
-                  {petSheet
-                    ? <PlazaSprite ref={petSprite} src={petSheet} size={petBody.cell} style={{ left: -petBody.footX, top: -petBody.footY }} onMissing={() => setPetSpriteMissing(true)} />
-                    : <span className="plaza-pet-figure" style={{ left: -petFigure / 2, top: -petFigure * 0.93 }}><PetFigure species={pet.species} stage={pet.stage} ready={pet.ready} size={petFigure} /></span>}
-                </div>
-              )}
-              <div ref={avatarRef} className="plaza-avatar is-me" aria-hidden="true"
-                style={{ left: pct(pos.current.x, PLAZA_W), top: pct(pos.current.y, PLAZA_H), zIndex: 10 + Math.round(pos.current.y) }}>
-                <span className="plaza-avatar-shadow" style={{ width: body.body * 0.5, height: body.body * 0.15 }} />
-                {sheet && !spriteMissing
-                  ? <PlazaSprite ref={charSprite} src={sheet} size={body.cell} style={{ left: -body.footX, top: -body.footY }} onMissing={() => setSpriteMissing(true)} />
-                  : <img className="plaza-avatar-img" src={characterImage(who)} alt="" draggable={false}
-                      style={{ width: body.body * 1.3, height: body.body * 1.3, left: -body.body * 0.65, top: -body.body * 1.24 }} />}
-                <span className="plaza-avatar-name" style={{ bottom: Math.round(body.body) + 5 }}>{myName}</span>
-              </div>
+              {/* 캐릭터 · 펫(PlazaActor) — 닻(크기 0)이 발이 닿는 점에 서고, 그림 · 이름표 · 그림자가 그 점을 기준으로 놓입니다.
+                  자리는 걷는 동안 DOM에 곧바로 적습니다 — 다시 그릴 때도 지금 자리(at · petAt)를 그대로 적어 튀지 않게.
+                  함께 있는 친구들이 먼저, 내 캐릭터가 나중(같은 높이에 겹치면 내가 앞) */}
+              {friends.map((friend) => {
+                const member = cast.current.get(friend.uid);
+                if (!member) return null;
+                return (
+                  <PlazaActor key={friend.uid} ref={castRef(friend.uid)} character={friend.character} pet={member.pet ? friend.pet : null}
+                    name={friend.name} teacher={friend.teacher} reading={friend.reading} scale={world.scale} at={member.actor} petAt={member.pet} />
+                );
+              })}
+              <PlazaActor ref={meRef} me character={who} pet={pet} name={myName} reading={reading} scale={world.scale} at={pos.current} petAt={myPet.current} />
             </div>
           )}
         </div>
@@ -481,6 +541,11 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
             <button type="button" onClick={() => setPanel({ place: "stall" })}>가판대 <small>{PLACE_NAME.stall}</small> <b>{counts.stall}</b></button>
             <button type="button" onClick={() => setPanel({ place: "shelf" })}>책꽂이 <small>{PLACE_NAME.shelf}</small> <b>{counts.shelf}</b></button>
           </div>
+          {/* 함께 있는 사람 — 이어졌으면 '지금 n명'(나 포함), 쉬는 화면이면 그 사실. 잇지 못했을 때의 까닭은 선생님께만 */}
+          {live.status === "live" && <p className="plaza-live" role="status" title="지금 책 광장에 함께 있는 사람(나 포함)"><i aria-hidden="true" /><span>지금 <b>{friends.length + 1}</b>명</span></p>}
+          {live.status === "connecting" && <p className="plaza-live plaza-live--connecting" role="status"><i aria-hidden="true" />친구들을 찾는 중…</p>}
+          {live.status === "resting" && <p className="plaza-live plaza-live--resting" role="status"><i aria-hidden="true" />쉬는 중 — 움직이면 친구들이 다시 보여요</p>}
+          {liveNote && <p className="plaza-live plaza-live--note" role="status">{liveNote}</p>}
           {error && <div className="plaza-hud-error" role="alert">{error}</div>}
           {!walked && <p className="plaza-hint" aria-hidden="true">마당을 누르면 그곳으로 걸어가요<span> · 방향키(W · A · S · D)로도 걷고, 책꽂이와 가판대는 눌러서 열어요</span></p>}
         </div>

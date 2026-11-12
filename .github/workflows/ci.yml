@@ -7,7 +7,7 @@
 #
 # 세 갈래는 서로 기다리지 않고 나란히 돕니다.
 #   · app   — 단위 시험(npm run test:unit) + 프로덕션 빌드
-#   · rules — Firestore 보안 규칙 시험(에뮬레이터 — Java가 필요)
+#   · rules — Firestore · Storage · Realtime Database 보안 규칙 시험 + 서버 API 시험(에뮬레이터 — Java가 필요)
 #   · lint  — ESLint. 경고는 통과, 오류(훅을 조건문 안에서 부르는 등)만 실패
 # =============================================================
 name: CI
@@ -54,10 +54,12 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ~/.cache/firebase/emulators
-          key: firebase-emulators-${{ hashFiles('tests/rules/package-lock.json') }}
+          # v2 — Realtime Database 에뮬레이터가 더해져 새로 담습니다
+          key: firebase-emulators-v2-${{ hashFiles('tests/rules/package-lock.json') }}
       - run: npm ci --prefix tests/rules
       - run: npm run test:rules
-      # Reading API uses the root Admin SDK and real Auth/Firestore transactions.
+      # Reading API uses the root Admin SDK and real Auth/Firestore transactions
+      # (+ Realtime Database for the plaza's live presence).
       - run: npm ci
       - run: npm run test:reading-server
 

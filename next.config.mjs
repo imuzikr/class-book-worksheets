@@ -17,6 +17,8 @@ const FIREBASE_FRAME = FIREBASE_PROJECT_ID.startsWith("YOUR_") ? "" : ` ${FIREBA
 //    실제 로그인으로 확인하기 전에는 걷지 않습니다.
 //  · connect: Firebase(Firestore/Auth/Storage/Installations = *.googleapis.com)
 //    (서버 함수 · App Check는 쓰지 않음)
+//    wss://*.firebaseio.com · wss://*.firebasedatabase.app — 책 광장의 '함께 있는 친구들'(Realtime Database,
+//    웹소켓만 씀 — lib/data/plazaLive.js). 앞의 것은 미국 리전, 뒤의 것은 그 밖의 리전(싱가포르 · 벨기에)의 주소입니다.
 //  · img: Storage 등 https 이미지 + data/blob(미리보기·그리기)
 //  · worker: 앱이 따로 띄우는 Web Worker가 없습니다(파이썬 실행 Worker · jsDelivr
 //    CDN · blob 스크립트 허용은 실행기와 함께 걷었습니다).
@@ -27,7 +29,7 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self' https://*.googleapis.com https://*.gstatic.com https://apis.google.com https://www.google.com wss://*.firebaseio.com data: blob:",
+  "connect-src 'self' https://*.googleapis.com https://*.gstatic.com https://apis.google.com https://www.google.com wss://*.firebaseio.com wss://*.firebasedatabase.app data: blob:",
   "worker-src 'self'",
   `frame-src 'self'${FIREBASE_FRAME} https://apis.google.com https://accounts.google.com https://www.google.com`,
   "object-src 'none'",

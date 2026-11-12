@@ -31,6 +31,16 @@ export async function makeEnv(projectId) {
   });
 }
 
+// Realtime Database 규칙(database.rules.json — 책 광장의 실시간)을 올린 시험 환경.
+const DATABASE_RULES_PATH = resolve(here, "../../database.rules.json");
+export async function makeDatabaseEnv(projectId) {
+  const [host, port] = (process.env.FIREBASE_DATABASE_EMULATOR_HOST || "127.0.0.1:9000").split(":");
+  return initializeTestEnvironment({
+    projectId,
+    database: { rules: readFileSync(DATABASE_RULES_PATH, "utf8"), host, port: Number(port) },
+  });
+}
+
 // ── 로그인 컨텍스트 ──
 // 이 앱의 규칙은 role을 커스텀 클레임에서 읽습니다(users 문서가 아님).
 // 가입은 구글 계정만 받으므로(users 생성 규칙) 로그인 방식도 구글로 둡니다.

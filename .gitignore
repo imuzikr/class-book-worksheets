@@ -14,3 +14,4 @@ ui-debug.log
 
 # firebase deploy(scripts/deploy.sh) 로컬 캐시
 .firebase/
+database-debug.log

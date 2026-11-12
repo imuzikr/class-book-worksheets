@@ -14,7 +14,7 @@
     "css:unused": "node scripts/css-unused-scan.mjs",
     "deploy": "bash scripts/deploy.sh",
     "books:rescue": "node scripts/admin/rescue-activity.mjs",
-    "test:reading-server": "FIREBASE_ADMIN_PROJECT_ID=demo-reading-api tests/rules/node_modules/.bin/firebase emulators:exec --config tests/server/firebase.json --only auth,firestore --project demo-reading-api 'node --import ./tests/unit/register.mjs --test --test-concurrency=1 tests/server/*.test.mjs'"
+    "test:reading-server": "FIREBASE_ADMIN_PROJECT_ID=demo-reading-api tests/rules/node_modules/.bin/firebase emulators:exec --config tests/server/firebase.json --only auth,firestore,database --project demo-reading-api 'node --import ./tests/unit/register.mjs --test --test-concurrency=1 tests/server/*.test.mjs'"
   },
   "dependencies": {
     "firebase": "^11.9.0",

@@ -28,7 +28,7 @@ export async function POST(request) {
     if (raw.length > 1000) throw new ReadingHttpError("입력 내용이 너무 큽니다.", 413, "reading/payload-too-large");
     let body;
     try { body = JSON.parse(raw); } catch { throw new ReadingHttpError("요청 형식이 올바르지 않습니다."); }
-    return NextResponse.json(await resetReadingRankings(principal, body?.classId), { headers });
+    return NextResponse.json(await resetReadingRankings(principal, body?.classId, body?.uid ?? null), { headers });
   } catch (error) {
     const failure = readingErrorResponse(error);
     return NextResponse.json(failure.body, { status: failure.status, headers });

@@ -11,8 +11,8 @@ import {
   plazaCamera, plazaClear, plazaNearest, plazaPath, plazaSpotAt, plazaSpotNear, plazaStep, plazaView, plazaWalkable,
 } from "../../lib/readingPlazaMap.js";
 import {
-  FACING_STICK, PET_GAP, PET_PEEK, PET_PEEK_BACK, PLAZA_PET_SHEET_KEYS, SPRITE_BODY, SPRITE_CELL, SPRITE_FOOT, WALK_SEQUENCE, WALK_STRIDE,
-  plazaCharacterSheet, plazaCharacterSize, plazaFacing, plazaPetHeel, plazaPetPeek, plazaPetScale, plazaPetSheet, plazaPetSize, plazaPetStep,
+  FACING_STICK, PET_GAP, PET_PEEK, PET_PEEK_BACK, PLAZA_PET_SHEET_KEYS, PLAZA_WALK_SPEED, SPRITE_BODY, SPRITE_CELL, SPRITE_FOOT, WALK_SEQUENCE, WALK_STRIDE,
+  plazaCharacterSheet, plazaCharacterSize, plazaFacing, plazaPetFollow, plazaPetHeel, plazaPetPeek, plazaPetScale, plazaPetSheet, plazaPetSize, plazaPetStart, plazaPetStep,
   plazaSpriteCell, plazaTrailBehind, plazaTrailPush, plazaWalkFrame,
 } from "../../lib/readingPlazaSprites.js";
 import { existsSync } from "node:fs";
@@ -389,8 +389,8 @@ test("걷는 그림 — 칸: 왼쪽은 오른쪽 줄을 뒤집고, 걸은 거리
   assert.deepEqual(seen, [1, 0, 2, 0, 1, 0, 2, 0]);
   assert.equal(plazaWalkFrame(0), 1);            // 걸음을 떼는 순간 걷기 A부터
   assert.equal(plazaWalkFrame(-5), 1);
-  // 걷는 빠르기(초당 260px)에서 초당 8장쯤
-  assert.ok(260 / WALK_STRIDE > 6.5 && 260 / WALK_STRIDE < 10);
+  // 걷는 빠르기에서 초당 8장쯤(선생님이 주신 묶음의 안내는 초당 7장)
+  assert.ok(PLAZA_WALK_SPEED / WALK_STRIDE > 6.5 && PLAZA_WALK_SPEED / WALK_STRIDE < 10);
 });
 
 test("걷는 그림 — 크기: 발 기준점은 칸의 (48, 88), 펫은 단계가 오를수록 크다", () => {
@@ -506,4 +506,52 @@ test("책 광장 펫 — 아래쪽(앞)으로 걸을 때는 캐릭터 몸에 가
   const edge = { x: 250, y: 436 };
   const tight = plazaPetPeek({ x: 250, y: 400 }, edge, { x: 240, y: 400 });
   assert.equal(plazaWalkable(tight.x, tight.y) || (tight.x === 250 && tight.y === 400), true);
+});
+
+test("펫 한 마리의 걸음 — 주인이 걸으면 지나온 길을 따라오고, 멈추면 곁에 와서 같은 쪽을 본다", () => {
+  // 무대가 캐릭터마다(내 캐릭터 · 함께 있는 친구들) 펫 상태를 하나씩 들고 프레임마다 부르는 셈
+  const owner = { x: 700, y: 330, facing: "down" };
+  const pet = plazaPetStart(owner, "down");
+  assert.equal(plazaWalkable(pet.x, pet.y), true);
+  assert.ok(Math.hypot(pet.x - owner.x, pet.y - owner.y) < 70, "처음에는 곁에");
+  // 주인이 오른쪽으로 2초 걷는다
+  const pace = PLAZA_WALK_SPEED / 60;
+  let walked = 0;
+  for (let i = 0; i < 120; i += 1) {
+    const from = { x: owner.x, y: owner.y };
+    owner.x += pace;
+    owner.facing = "right";
+    const step = plazaPetFollow(pet, owner, 1 / 60, { active: true, moved: pace, from });
+    if (step.walking) walked += 1;
+    assert.equal(step.busy, step.walking);
+    assert.equal(plazaWalkable(pet.x, pet.y), true);
+  }
+  assert.ok(walked > 100, "걷는 내내 따라 걷는다");
+  assert.ok(pet.x < owner.x - 30 && pet.x > owner.x - 140, `조금 뒤에서 따라온다(${Math.round(owner.x - pet.x)}px 뒤)`);
+  assert.equal(pet.facing, "right");
+  assert.ok(pet.stride > 100, "걸은 거리로 걷는 그림을 넘긴다");
+  // 멈추면 곁자리로 와서 서고, 주인과 같은 쪽을 본다. 다 온 뒤에는 더 그릴 것이 없다(걸음 루프가 쉼).
+  owner.facing = "up";
+  let last = null;
+  for (let i = 0; i < 240; i += 1) last = plazaPetFollow(pet, owner, 1 / 60, { active: false, moved: 0, from: owner });
+  assert.deepEqual(last, { walking: false, busy: false });
+  assert.ok(Math.hypot(pet.x - owner.x, pet.y - owner.y) < 70);
+  assert.equal(pet.facing, "up");
+  assert.equal(pet.stride, 0);
+  // 다시 걷기 시작하면 펫이 선 자리부터 따라온다(뒷걸음질하지 않음 — 지나온 길의 첫머리가 펫의 자리)
+  const stood = { x: pet.x, y: pet.y };
+  const from = { x: owner.x, y: owner.y };
+  owner.x += pace;
+  plazaPetFollow(pet, owner, 1 / 60, { active: true, moved: pace, from });
+  assert.deepEqual({ x: pet.trail[0].x, y: pet.trail[0].y }, stood);
+  // 서 있던 주인이 멀리 옮겨지면(오래 끊겼다 이어진 친구) 옛 곁자리에 남지 않고 곧바로 곁으로 온다
+  for (let i = 0; i < 240; i += 1) plazaPetFollow(pet, owner, 1 / 60, { active: false, moved: 0, from: owner });
+  owner.x = 420;
+  owner.y = 760;
+  plazaPetFollow(pet, owner, 1 / 60, { active: false, moved: 0, from: owner });
+  assert.ok(Math.hypot(pet.x - owner.x, pet.y - owner.y) < 70, "멀어진 펫은 걸어오지 않고 곧바로 곁에");
+  // 처음 한 프레임(dt 0)에 갈 곳이 남아 있으면 더 그릴 것이 있다고 알린다
+  const far = plazaPetStart({ x: 700, y: 330 }, "down");
+  const wait = plazaPetFollow(far, { x: 760, y: 330, facing: "right" }, 0, { active: false, moved: 0 });
+  assert.deepEqual(wait, { walking: false, busy: true });
 });
