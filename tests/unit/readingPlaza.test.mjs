@@ -7,9 +7,18 @@ import {
   plazaProjection, plazaStable, plazaThisWeek, plazaWeekStart,
 } from "../../lib/readingPlaza.js";
 import {
-  PLAZA_H, PLAZA_SPAWN, PLAZA_SPOTS, PLAZA_W,
+  PLAZA_BODY, PLAZA_H, PLAZA_SPAWN, PLAZA_SPOTS, PLAZA_W,
   plazaCamera, plazaClear, plazaNearest, plazaPath, plazaSpotAt, plazaSpotNear, plazaStep, plazaView, plazaWalkable,
 } from "../../lib/readingPlazaMap.js";
+import {
+  FACING_STICK, PET_GAP, PET_PEEK, PET_PEEK_BACK, PLAZA_PET_SHEET_KEYS, SPRITE_BODY, SPRITE_CELL, SPRITE_FOOT, WALK_SEQUENCE, WALK_STRIDE,
+  plazaCharacterSheet, plazaCharacterSize, plazaFacing, plazaPetHeel, plazaPetPeek, plazaPetScale, plazaPetSheet, plazaPetSize, plazaPetStep,
+  plazaSpriteCell, plazaTrailBehind, plazaTrailPush, plazaWalkFrame,
+} from "../../lib/readingPlazaSprites.js";
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { PET_SPECIES_KEYS } from "../../lib/readingPet.js";
+import { CHARACTER_STYLE_OPTIONS, characterOf } from "../../lib/readingCharacterCatalog.js";
 
 // 2026-11-12(목) 12:00 서울 — 그 주의 월요일은 11-09
 const NOW = "2026-11-12T03:00:00.000Z";
@@ -316,4 +325,185 @@ test("무대 — 그림이 보이는 창을 빈틈없이 덮고, 시점은 캐�
   assert.ok(Math.abs(camTall.x + tall.w / 2 - PLAZA_SPAWN.x * tall.scale) < 1e-6);
   // 크기를 아직 모르면 시점은 0
   assert.deepEqual(plazaCamera(plazaView(0, 0), PLAZA_SPAWN), { x: 0, y: 0 });
+});
+
+// ── 걷는 그림 · 펫 따라오기 (lib/readingPlazaSprites.js) ──
+const PUBLIC = fileURLToPath(new URL("../../public", import.meta.url));
+
+test("걷는 그림 — 캐릭터 30종 · 펫 10종의 시트가 모두 있다", () => {
+  for (const [style] of CHARACTER_STYLE_OPTIONS) {
+    for (let number = 1; number <= 10; number += 1) {
+      const sheet = plazaCharacterSheet({ style, number });
+      assert.equal(sheet, `/reading-plaza/sprites/${style}-${String(number).padStart(2, "0")}.webp`);
+      assert.equal(existsSync(PUBLIC + sheet), true, sheet);
+    }
+  }
+  // 캐릭터를 아직 안 고른 학생(기본 캐릭터)도 시트가 있다
+  assert.equal(existsSync(PUBLIC + plazaCharacterSheet(characterOf({ uid: "아무개" }))), true);
+  assert.deepEqual([...PLAZA_PET_SHEET_KEYS].sort(), [...PET_SPECIES_KEYS].sort());
+  for (const species of PET_SPECIES_KEYS) assert.equal(existsSync(PUBLIC + plazaPetSheet(species)), true, species);
+  // 알(종 없음) · 모르는 값은 시트가 없다 — 알은 공통 알 그림을, 모르는 캐릭터는 예전 그림을 씀
+  assert.equal(plazaPetSheet(null), null);
+  assert.equal(plazaPetSheet("dragon"), null);
+  assert.equal(plazaCharacterSheet({ style: "advanced", number: 1 }), null);
+  assert.equal(plazaCharacterSheet({ style: "zodiac", number: 11 }), null);
+  assert.equal(plazaCharacterSheet(null), null);
+});
+
+test("걷는 그림 — 방향: 좌우로 더 가면 옆모습, 45도 근처에서는 직전 방향을 지킨다", () => {
+  assert.equal(plazaFacing(null, 0, 0), "down");            // 처음에는 앞모습
+  assert.equal(plazaFacing("up", 0, 0), "up");              // 멈추면 보던 쪽 그대로
+  assert.equal(plazaFacing(null, 5, 1), "right");
+  assert.equal(plazaFacing(null, -5, 1), "left");
+  assert.equal(plazaFacing(null, 1, 5), "down");
+  assert.equal(plazaFacing(null, 1, -5), "up");
+  // 45도보다 조금 가로 · 조금 세로 — 직전 방향 쪽으로 기울어 판정한다
+  assert.ok(FACING_STICK > 1);
+  assert.equal(plazaFacing("down", 5.5, 5), "down");
+  assert.equal(plazaFacing("right", 5, 5.5), "right");
+  assert.equal(plazaFacing("left", -5, 5.5), "left");
+  // 확실히 넘어가면 바뀐다
+  assert.equal(plazaFacing("down", 8, 5), "right");
+  assert.equal(plazaFacing("right", 5, 8), "down");
+  assert.equal(plazaFacing("right", -5, 1), "left");
+  // 비스듬히 걷는 내내(작은 흔들림이 있어도) 그림이 번갈아 바뀌지 않는다
+  let facing = "down";
+  let flips = 0;
+  for (let i = 0; i < 200; i += 1) {
+    const next = plazaFacing(facing, 5 + Math.sin(i) * 0.6, 5 + Math.cos(i * 1.7) * 0.6);
+    if (next !== facing) flips += 1;
+    facing = next;
+  }
+  assert.equal(flips, 0);
+});
+
+test("걷는 그림 — 칸: 왼쪽은 오른쪽 줄을 뒤집고, 걸은 거리로 걷기 A → 정지 → 걷기 B → 정지", () => {
+  assert.deepEqual(plazaSpriteCell("down", 0), { row: 0, col: 0, mirror: false });
+  assert.deepEqual(plazaSpriteCell("right", 1), { row: 1, col: 1, mirror: false });
+  assert.deepEqual(plazaSpriteCell("left", 2), { row: 1, col: 2, mirror: true });
+  assert.deepEqual(plazaSpriteCell("up", 0), { row: 2, col: 0, mirror: false });
+  assert.deepEqual(plazaSpriteCell("모름", 9), { row: 0, col: 0, mirror: false });
+  assert.deepEqual(WALK_SEQUENCE, [1, 0, 2, 0]);
+  const seen = [];
+  for (let d = 0; d < WALK_STRIDE * 8; d += WALK_STRIDE) seen.push(plazaWalkFrame(d + 1));
+  assert.deepEqual(seen, [1, 0, 2, 0, 1, 0, 2, 0]);
+  assert.equal(plazaWalkFrame(0), 1);            // 걸음을 떼는 순간 걷기 A부터
+  assert.equal(plazaWalkFrame(-5), 1);
+  // 걷는 빠르기(초당 260px)에서 초당 8장쯤
+  assert.ok(260 / WALK_STRIDE > 6.5 && 260 / WALK_STRIDE < 10);
+});
+
+test("걷는 그림 — 크기: 발 기준점은 칸의 (48, 88), 펫은 단계가 오를수록 크다", () => {
+  assert.equal(SPRITE_CELL, 96);
+  assert.deepEqual(SPRITE_FOOT, { x: 48, y: 88 });
+  const c = plazaCharacterSize(1);
+  assert.equal(c.body, PLAZA_BODY);
+  assert.ok(Math.abs(c.cell - 96 * PLAZA_BODY / SPRITE_BODY) < 1e-9);
+  assert.ok(Math.abs(c.footX - c.cell / 2) < 1e-9);
+  assert.ok(Math.abs(c.footY - c.cell * 88 / 96) < 1e-9);
+  // 화면이 작아도 캐릭터는 40px, 펫은 18px 아래로 줄지 않는다
+  assert.equal(plazaCharacterSize(0.2).body, 40);
+  assert.equal(plazaPetSize(0.2, 2).body, 18);
+  // 2단계가 가장 작고 10단계가 제 크기 — 단계마다 커진다
+  assert.equal(plazaPetScale(10), 1);
+  assert.ok(plazaPetScale(2) > 0.5 && plazaPetScale(2) < 0.75);
+  for (let stage = 3; stage <= 10; stage += 1) assert.ok(plazaPetScale(stage) > plazaPetScale(stage - 1), `단계 ${stage}`);
+  assert.equal(plazaPetScale(1), plazaPetScale(2));
+  assert.equal(plazaPetScale(99), 1);
+  // 다 자란 펫도 캐릭터보다 작다
+  assert.ok(plazaPetSize(1, 10).body < plazaCharacterSize(1).body * 0.7);
+  assert.ok(plazaPetSize(1, 2).body < plazaPetSize(1, 10).body);
+});
+
+test("펫 따라오기 — 걷는 동안은 지나온 길을 조금 뒤에서, 멈추면 곁자리로", () => {
+  // 지나온 길 — 오른쪽으로 100, 다시 아래로 100 걸었다
+  const trail = [];
+  for (let x = 0; x <= 100; x += 5) plazaTrailPush(trail, { x: 600 + x, y: 300 });
+  for (let y = 5; y <= 100; y += 5) plazaTrailPush(trail, { x: 700, y: 300 + y });
+  const behind = plazaTrailBehind(trail, PET_GAP);
+  // 모퉁이를 가로지르지 않고 길 위에 있다(x = 700인 세로 구간)
+  assert.ok(Math.abs(behind.x - 700) < 1e-9);
+  assert.ok(Math.abs(behind.y - (400 - PET_GAP)) < 1e-9);
+  // 길이 아직 짧으면 가장 오래된 자리
+  const short = [];
+  plazaTrailPush(short, { x: 10, y: 10 });
+  plazaTrailPush(short, { x: 20, y: 10 });
+  assert.deepEqual(plazaTrailBehind(short, PET_GAP), { x: 10, y: 10 });
+  assert.equal(plazaTrailBehind([], PET_GAP), null);
+  // 제자리 걸음은 길에 안 쌓이고, 오래된 길은 잊는다
+  const before = trail.length;
+  plazaTrailPush(trail, { x: 700, y: 400 });
+  assert.equal(trail.length, before);
+  for (let y = 105; y <= 900; y += 5) plazaTrailPush(trail, { x: 700, y: 300 + y });
+  assert.ok(trail.at(-1).s - trail[1].s <= 150);
+
+  // 멈춘 캐릭터 곁 — 펫이 있던 쪽 옆자리, 걸을 수 있는 자리
+  const me = { x: 836, y: 330 };
+  const left = plazaPetHeel(me, { x: 700, y: 330 });
+  const right = plazaPetHeel(me, { x: 900, y: 330 });
+  assert.ok(left.x < me.x && right.x > me.x);
+  for (const spot of [left, right]) assert.equal(plazaWalkable(spot.x, spot.y), true);
+  // 가장자리(왼쪽 가판대 앞)에서는 걸을 수 있는 쪽으로
+  const edge = plazaPetHeel({ x: 250, y: 436 }, { x: 240, y: 436 });
+  assert.equal(plazaWalkable(edge.x, edge.y), true);
+
+  // 한 걸음 — 다가가되 지나치지 않고, 다 오면 그 자리. 바닥 밖으로는 안 나간다
+  let pet = { x: 786, y: 338 };
+  const target = { x: 836, y: 600 };            // 분수 건너편(곧장 가면 분수에 막힘)
+  for (let i = 0; i < 600; i += 1) {
+    const next = plazaPetStep(pet, target, 1 / 60);
+    assert.equal(plazaWalkable(next.x, next.y), true);
+    assert.ok(Math.hypot(next.x - pet.x, next.y - pet.y) <= 430 / 60 + 1e-6, "한 걸음이 가장 빠른 걸음을 넘지 않는다");
+    pet = next;
+  }
+  let near = { x: 500, y: 700 };
+  for (let i = 0; i < 240; i += 1) near = plazaPetStep(near, { x: 560, y: 700 }, 1 / 60);
+  assert.ok(Math.hypot(near.x - 560, near.y - 700) < 0.02, "다 오면 그 자리에 선다");
+  assert.deepEqual(plazaPetStep({ x: 500, y: 700 }, { x: 500, y: 700 }, 1 / 60), { x: 500, y: 700 });
+});
+
+test("책 광장 펫 — 아래쪽(앞)으로 걸을 때는 캐릭터 몸에 가리지 않게 옆으로 비켜 따라온다", () => {
+  const me = { x: 600, y: 700 };
+  // 곧장 아래로 걷는 중 — 따라갈 자리가 바로 위(뒤)면 몸에 가린다 → 펫이 있는 쪽 옆으로
+  const behind = { x: 600, y: 700 - PET_GAP };
+  const leftSide = plazaPetPeek(behind, me, { x: 590, y: 650 });
+  const rightSide = plazaPetPeek(behind, me, { x: 612, y: 650 });
+  // …그리고 너무 뒤에 있지 않게 당겨 온다(머리 위 이름표와 겹치지 않게)
+  assert.deepEqual(leftSide, { x: 600 - PET_PEEK, y: 700 - PET_PEEK_BACK });
+  assert.deepEqual(rightSide, { x: 600 + PET_PEEK, y: 700 - PET_PEEK_BACK });
+  assert.ok(PET_PEEK_BACK < PET_GAP);
+  // 펫이 딱 뒤에 있으면 길이 굽은 쪽, 그것도 없으면 오른쪽
+  assert.equal(plazaPetPeek({ x: 598, y: 640 }, me, { x: 600, y: 650 }).x, 600 - PET_PEEK);
+  assert.equal(plazaPetPeek(behind, me, { x: 600, y: 650 }).x, 600 + PET_PEEK);
+  assert.equal(plazaPetPeek(behind, me, null).x, 600 + PET_PEEK);
+  // 이미 옆으로 충분히 떨어져 있으면 그대로(같은 객체)
+  const aside = { x: 600 + PET_PEEK + 5, y: 650 };
+  assert.equal(plazaPetPeek(aside, me, { x: 650, y: 650 }), aside);
+  // 옆 · 아래(앞)에서 따라올 때는 그대로 — 옆으로 걸을 때 · 위로 걸을 때
+  const level = { x: 600 - PET_GAP, y: 700 };
+  const below = { x: 600, y: 700 + PET_GAP };
+  assert.equal(plazaPetPeek(level, me, level), level);
+  assert.equal(plazaPetPeek(below, me, below), below);
+  // 조금만 뒤(위)면 조금만 비켜 선다 — 방향을 틀 때 펫이 갑자기 튀지 않게(뒤로 갈수록 고르게 늘어남)
+  let last = 0;
+  for (let rise = 0; rise <= 60; rise += 3) {
+    const spot = plazaPetPeek({ x: 600, y: 700 - rise }, me, { x: 610, y: 690 });
+    const shift = spot.x - 600;
+    assert.ok(shift >= last - 1e-9 && shift <= PET_PEEK + 1e-9, `rise ${rise}`);
+    assert.ok(shift - last <= PET_PEEK / 10 + 1e-9, "한 번에 조금씩만 늘어난다");
+    last = shift;
+  }
+  assert.equal(last, PET_PEEK);
+  // 비스듬히 뒤에서 따라올 때 — 옆으로 벗어난 만큼 덜 당겨 오고, 다 벗어나면 그대로(자리가 고르게 이어진다)
+  let lastY = 700 - PET_PEEK_BACK;
+  for (let dx = 0; dx <= PET_PEEK; dx += 4) {
+    const spot = plazaPetPeek({ x: 600 + dx, y: 700 - PET_GAP }, me, { x: 630, y: 650 });
+    assert.ok(spot.y <= lastY + 1e-9 && spot.y >= 700 - PET_GAP - 1e-9, `dx ${dx}`);
+    lastY = spot.y;
+  }
+  assert.equal(lastY, 700 - PET_GAP);
+  // 비켜 설 자리가 바닥 밖이면(왼쪽 가장자리) 그대로 둔다 — 바닥 밖으로 끌려 나가지 않게
+  const edge = { x: 250, y: 436 };
+  const tight = plazaPetPeek({ x: 250, y: 400 }, edge, { x: 240, y: 400 });
+  assert.equal(plazaWalkable(tight.x, tight.y) || (tight.x === 250 && tight.y === 400), true);
 });

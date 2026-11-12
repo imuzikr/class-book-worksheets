@@ -15,10 +15,15 @@
 // 폰처럼 좁은 화면은 좌우로). 제목 '책 광장'과 가판대 · 책꽂이 단추는 줄을 따로 차지하지 않고 맵 위 모서리에 얹습니다(.plaza-hud).
 // 한때 제목 줄 · 안내 줄이 따로 있고 그림 전체가 한 화면에 들어오게 줄여, 넓은 화면에서 맵이 가운데에 작게 섰습니다 — 되돌리지 마세요.
 //
+// 캐릭터와 펫은 **걷는 그림**(도트 · 방향마다 정지 · 걷기 A · 걷기 B)으로 그립니다 — PlazaSprite.jsx(캔버스),
+// 방향 · 그림 차례 · 펫이 따라올 자리의 셈은 lib/readingPlazaSprites.js. 걷는 동안 펫은 지나온 길을 조금 뒤에서
+// 따라오고(아래쪽으로 걸을 때는 몸에 가리지 않게 옆으로 비켜서), 멈추면 곁자리로 옵니다.
+// 펫은 단계가 오를수록 크게 그립니다(선생님 결정). 알은 공통 알 그림 그대로.
+//
 // 지금은 **내 캐릭터만** 보입니다 — 접속한 친구들의 캐릭터가 함께 움직이는 것(실시간)은 다음 단계입니다
 // (Realtime Database가 필요 — READING_GROWTH.md '책 광장').
-// 캐릭터의 움직임 · 시점은 React 상태가 아니라 ref와 requestAnimationFrame으로 DOM에 곧바로 적습니다
-// (프레임마다 다시 그리지 않게). 걷는지 · 어느 쪽을 보는지 · 어디 앞인지만 상태입니다.
+// 캐릭터 · 펫의 움직임, 바라보는 쪽, 걷는 그림, 시점은 React 상태가 아니라 ref와 requestAnimationFrame으로
+// DOM(과 캔버스)에 곧바로 적습니다(프레임마다 다시 그리지 않게). 어디 앞인지 · 갈 곳 표시 · 첫걸음을 뗐는지만 상태입니다.
 // =============================================================
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { subscribeMyReadingCharacter, subscribeMyReadingPet } from "@/lib/data/reading";
@@ -27,19 +32,29 @@ import { characterImage, characterOf } from "@/lib/readingCharacterCatalog";
 import { petProgress } from "@/lib/readingPet";
 import { plazaItems } from "@/lib/readingPlaza";
 import {
-  PLAZA_AVATAR, PLAZA_H, PLAZA_SPAWN, PLAZA_SPOTS, PLAZA_W,
+  PLAZA_H, PLAZA_SPAWN, PLAZA_SPOTS, PLAZA_W,
   plazaCamera, plazaNearest, plazaPath, plazaSpotAt, plazaSpotNear, plazaStep, plazaView,
 } from "@/lib/readingPlazaMap";
+import {
+  PET_STRIDE, PLAZA_EGG_SIZE, SPRITE_IDLE,
+  plazaCharacterSheet, plazaCharacterSize, plazaFacing, plazaPetHeel, plazaPetPeek, plazaPetSheet, plazaPetSize, plazaPetStep,
+  plazaTrailBehind, plazaTrailPush, plazaWalkFrame,
+} from "@/lib/readingPlazaSprites";
 import PetFigure from "./PetFigure";
 import PlazaPanel from "./PlazaPanel";
+import PlazaSprite from "./PlazaSprite";
 import "./plaza.css";
 
-// 걷는 빠르기(그림 원본 px/초) — 마당을 가로지르는 데 5초쯤
-const SPEED = 330;
+// 걷는 빠르기(그림 원본 px/초) — 마당을 가로지르는 데 5초쯤. 걷는 그림을 넣으며 330에서 낮췄습니다 —
+// 캐릭터 키(88px)에 견줘 빠르면 발이 미끄러지듯 보여서, 그림 한 장을 넘기는 거리(WALK_STRIDE 32px)와 함께
+// 초당 8장쯤이 되게 맞췄습니다(실측 8.0장 — tests/unit/readingPlaza.test.mjs가 이 둘의 짝을 봄).
+const SPEED = 260;
 // 시점이 캐릭터를 따라붙는 빠르기(초) — 작을수록 바짝 붙습니다. 걸음을 떼고 멈출 때 화면이 덜컥거리지 않게 조금 늦춥니다.
 const CAM_EASE = 0.14;
 // 무대의 바닥 높이(px) — 창이 아주 낮으면 이만큼은 지키고 화면이 구릅니다.
 const STAGE_MIN_H = 300;
+// 펫이 이보다 멀리 떨어지면(어딘가에 걸림) 캐릭터 뒤로 곧바로 데려옵니다
+const PET_LOST = 320;
 const KEY_DIRS = {
   ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down",
   a: "left", d: "right", w: "up", s: "down", A: "left", D: "right", W: "up", S: "down",
@@ -57,17 +72,21 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   const [petState, setPetState] = useState(null);
   // 무대(보이는 창)의 크기 { w, h } — 폭은 본문 칸의 폭, 높이는 무대 위쪽부터 화면(구르는 칸) 바닥까지 남은 만큼(아래 measure)
   const [size, setSize] = useState(null);
-  const [moving, setMoving] = useState(false);
-  const [facing, setFacing] = useState(1);
   const [nearId, setNearId] = useState(null);
   const [marker, setMarker] = useState(null);
   // 걷는 법 안내(맵 아래쪽에 얹은 한 줄) — 첫걸음을 떼면 사라집니다
   const [walked, setWalked] = useState(false);
+  // 걷는 그림(시트)을 못 받았을 때 — 캐릭터는 예전 그림, 펫은 단계 그림으로 섭니다
+  const [spriteMissing, setSpriteMissing] = useState(false);
+  const [petSpriteMissing, setPetSpriteMissing] = useState(false);
 
   const stageRef = useRef(null);
   const wrapRef = useRef(null);
   const worldRef = useRef(null);
   const avatarRef = useRef(null);
+  const petRef = useRef(null);
+  const charSprite = useRef(null);
+  const petSprite = useRef(null);
   const pos = useRef({ ...PLAZA_SPAWN });
   // 그림을 얼마나 키웠나(plazaView) · 시점(그림의 어느 자리가 창의 왼쪽 위인가, 화면 px)
   const view = useRef(plazaView(0, 0));
@@ -80,7 +99,17 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   const raf = useRef(0);
   const lastTick = useRef(0);
   const movingRef = useRef(false);
-  const facingRef = useRef(1);
+  // 바라보는 쪽(down · right · up · left)과 걸은 거리 — 걷는 그림은 거리로 넘깁니다(lib/readingPlazaSprites.js)
+  const facingRef = useRef("down");
+  const stride = useRef(0);
+  // 펫 — 자리 · 바라보는 쪽 · 걸은 거리 · 캐릭터가 지나온 길 · 멈췄을 때 설 곁자리
+  const petPos = useRef(plazaPetHeel(PLAZA_SPAWN, null));
+  const petFacing = useRef("down");
+  const petStride = useRef(0);
+  const petMoving = useRef(false);
+  const trail = useRef([]);
+  const heel = useRef(null);
+  const hasPet = useRef(false);
   const nearRef = useRef(null);
   const calm = useRef(false);
   const panelOpen = useRef(false);
@@ -99,7 +128,8 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     if (!myUid || !petOn || isTeacher) { setPetState(null); return undefined; }
     return subscribeMyReadingPet(myUid, setPetState);
   }, [myUid, petOn, isTeacher]);
-  // 움직임을 줄여 달라고 한 기기에서는 시점이 미끄러지지 않고 캐릭터에 바로 붙습니다
+  // 움직임을 줄여 달라고 한 기기에서는 시점이 미끄러지지 않고 캐릭터에 바로 붙고, 걷는 그림도 번갈아 바꾸지 않습니다
+  // (바라보는 쪽의 정지 그림으로 옮겨 감).
   useEffect(() => {
     const query = typeof window !== "undefined" && window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
     if (!query) return undefined;
@@ -115,12 +145,20 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     return { stall: stall.week.length + stall.earlier.length, shelf: shelf.week.length + shelf.earlier.length, stallWeek: stall.week.length, shelfWeek: shelf.week.length };
   }, [shelves]);
 
+  // 캐릭터 · 펫의 자리를 DOM에 적습니다(자리 = 발이 닿는 점). 아래쪽에 선 것이 앞에 그려집니다.
   const place = useCallback(() => {
     const el = avatarRef.current;
     if (!el) return;
     el.style.left = pct(pos.current.x, PLAZA_W);
     el.style.top = pct(pos.current.y, PLAZA_H);
     el.style.zIndex = String(10 + Math.round(pos.current.y));
+  }, []);
+  const placePet = useCallback(() => {
+    const el = petRef.current;
+    if (!el) return;
+    el.style.left = pct(petPos.current.x, PLAZA_W);
+    el.style.top = pct(petPos.current.y, PLAZA_H);
+    el.style.zIndex = String(10 + Math.round(petPos.current.y));
   }, []);
   // 시점을 DOM에 적습니다 — 그림을 통째로 밉니다(transform이라 다시 칠하지 않음)
   const look = useCallback(() => {
@@ -132,69 +170,123 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     pendingSpot.current = null;
     path.current = [];
     keys.current = { left: false, right: false, up: false, down: false };
+    // 여는 곳을 바라봅니다 — 책꽂이 앞에서는 뒷모습, 가판대 앞에서는 옆모습
+    facingRef.current = plazaFacing(null, (spot.rect[0] + spot.rect[2]) / 2 - pos.current.x, (spot.rect[1] + spot.rect[3]) / 2 - pos.current.y);
+    charSprite.current?.show(facingRef.current, SPRITE_IDLE);
     setPanel({ place: spot.place });
   }, []);
 
-  // 한 프레임 — 방향키가 눌려 있으면 그쪽으로, 아니면 정해 둔 길을 따라 걷습니다. 시점은 캐릭터를 조금 늦게 따라붙습니다.
-  // 멈추고 시점도 다 따라붙으면 되풀이를 쉽니다.
+  // 한 프레임 — 방향키가 눌려 있으면 그쪽으로, 아니면 정해 둔 길을 따라 걷습니다. 걸은 쪽 · 걸은 거리로 걷는 그림을
+  // 고르고, 펫은 지나온 길을 따라오며, 시점은 캐릭터를 조금 늦게 따라붙습니다.
+  // 멈추고 펫이 곁에 서고 시점도 다 따라붙으면 되풀이를 쉽니다.
   const tick = useCallback((time) => {
     const dt = Math.min(0.05, Math.max(0, (time - (lastTick.current || time)) / 1000));
     lastTick.current = time;
     const k = keys.current;
     const dx = (k.right ? 1 : 0) - (k.left ? 1 : 0);
     const dy = (k.down ? 1 : 0) - (k.up ? 1 : 0);
+    const from = pos.current;
     let walking = false;
-    let turn = 0;
     if (dx || dy) {
       path.current = [];
       pendingSpot.current = null;
       const len = Math.hypot(dx, dy);
-      const next = plazaStep(pos.current, dx / len * SPEED * dt, dy / len * SPEED * dt, round.current);
-      walking = next.x !== pos.current.x || next.y !== pos.current.y;
-      pos.current = next;
-      turn = dx;
+      pos.current = plazaStep(from, dx / len * SPEED * dt, dy / len * SPEED * dt, round.current);
     } else if (path.current.length) {
       const target = path.current[0];
-      const distance = Math.hypot(target.x - pos.current.x, target.y - pos.current.y);
+      const distance = Math.hypot(target.x - from.x, target.y - from.y);
       const step = SPEED * dt;
-      if (Math.abs(target.x - pos.current.x) > 2) turn = target.x - pos.current.x;
       if (distance <= step) {
         pos.current = { x: target.x, y: target.y };
         path.current.shift();
       } else {
-        pos.current = { x: pos.current.x + (target.x - pos.current.x) / distance * step, y: pos.current.y + (target.y - pos.current.y) / distance * step };
+        pos.current = { x: from.x + (target.x - from.x) / distance * step, y: from.y + (target.y - from.y) / distance * step };
       }
       walking = true;
     }
+    const mx = pos.current.x - from.x;
+    const my = pos.current.y - from.y;
+    const moved = Math.hypot(mx, my);
+    if (moved > 0.01) walking = true;
     place();
-    if (turn && Math.sign(turn) !== facingRef.current) { facingRef.current = Math.sign(turn); setFacing(facingRef.current); }
+    // 바라보는 쪽 — 움직인 쪽으로. 방향키를 눌렀는데 막혀서 못 움직였으면 누른 쪽을 봅니다.
+    if (moved > 0.01) facingRef.current = plazaFacing(facingRef.current, mx, my);
+    else if (dx || dy) facingRef.current = plazaFacing(facingRef.current, dx, dy);
+
     const near = plazaSpotNear(pos.current)?.id ?? null;
     if (near !== nearRef.current) { nearRef.current = near; setNearId(near); }
     const active = walking || dx !== 0 || dy !== 0 || path.current.length > 0;
     if (active !== movingRef.current) {
       movingRef.current = active;
-      setMoving(active);
-      if (active) setWalked(true);
-      else setMarker(null);
+      if (active) {
+        setWalked(true);
+        stride.current = 0;
+        heel.current = null;
+        // 다시 걷기 시작 — 펫이 선 자리에서 캐릭터 자리까지를 '지나온 길'의 첫머리로 둡니다(펫이 뒷걸음질하지 않게)
+        if (hasPet.current) {
+          trail.current = [];
+          plazaTrailPush(trail.current, petPos.current);
+          plazaTrailPush(trail.current, from);
+        }
+      } else setMarker(null);
     }
+    // 걷는 그림 — 걸은 거리로 넘깁니다. 멈추면 그쪽을 본 채 선 그림.
+    stride.current = walking ? stride.current + moved : 0;
+    charSprite.current?.show(facingRef.current, walking && !calm.current ? plazaWalkFrame(stride.current) : SPRITE_IDLE);
     if (!path.current.length && pendingSpot.current && !dx && !dy) {
       const spot = pendingSpot.current;
       pendingSpot.current = null;
       if (plazaSpotNear(pos.current)?.id === spot.id) openSpot(spot);
     }
+
+    // 펫 — 걷는 동안은 캐릭터가 지나온 길을 조금 뒤에서, 멈추면 곁자리로 옵니다.
+    let petBusy = false;
+    if (hasPet.current) {
+      if (moved > 0.01) plazaTrailPush(trail.current, pos.current);
+      const was = petPos.current;
+      // 아래쪽(앞)으로 걸을 때는 캐릭터 몸에 가리지 않게 옆으로 비켜 따라옵니다(plazaPetPeek)
+      const target = active
+        ? plazaPetPeek(plazaTrailBehind(trail.current) ?? was, pos.current, was)
+        : heel.current ?? (heel.current = plazaPetHeel(pos.current, was));
+      let next = plazaPetStep(was, target, dt);
+      if (Math.hypot(pos.current.x - next.x, pos.current.y - next.y) > PET_LOST) next = { x: target.x, y: target.y };
+      const px = next.x - was.x;
+      const py = next.y - was.y;
+      const petWalking = Math.hypot(px, py) > 0.01;
+      if (petWalking) {
+        petPos.current = next;
+        petFacing.current = plazaFacing(petFacing.current, px, py);
+        petStride.current += Math.hypot(px, py);
+      } else {
+        petStride.current = 0;
+        // 곁에 와서 서면 캐릭터와 같은 쪽을 봅니다
+        if (!active) petFacing.current = facingRef.current;
+      }
+      // 이번에 걸었으면 한 프레임 더 — 다 와서 선 자세(정지 그림 · 캐릭터와 같은 쪽)로 바꿔 그린 뒤에 쉽니다.
+      // 막혀서 못 가는 중이면(걸음이 0) 기다리지 않습니다.
+      petBusy = petWalking || (dt === 0 && Math.hypot(target.x - petPos.current.x, target.y - petPos.current.y) > 0.01);
+      placePet();
+      petSprite.current?.show(petFacing.current, petWalking && !calm.current ? plazaWalkFrame(petStride.current, PET_STRIDE) : SPRITE_IDLE);
+      // 알(과 걷는 그림이 없는 펫)은 걷는 동안 통통 뜁니다 — CSS
+      if (petWalking !== petMoving.current) {
+        petMoving.current = petWalking;
+        petRef.current?.classList.toggle("is-moving", petWalking);
+      }
+    }
+
     // 시점 — 따라붙는 중이면 한 프레임 더. 다 왔으면 정수 px에 맞춰 멈춥니다(이름표 글자가 흐려지지 않게).
     const goal = plazaCamera(view.current, pos.current);
     const ease = calm.current ? 1 : 1 - Math.exp(-dt / CAM_EASE);
     cam.current = { x: cam.current.x + (goal.x - cam.current.x) * ease, y: cam.current.y + (goal.y - cam.current.y) * ease };
     const trailing = Math.abs(goal.x - cam.current.x) > 0.5 || Math.abs(goal.y - cam.current.y) > 0.5;
-    if (active || trailing) raf.current = requestAnimationFrame(tick);
+    if (active || trailing || petBusy) raf.current = requestAnimationFrame(tick);
     else {
       cam.current = { x: Math.round(goal.x), y: Math.round(goal.y) };
       raf.current = 0;
       lastTick.current = 0;
     }
     look();
-  }, [look, openSpot, place]);
+  }, [look, openSpot, place, placePet]);
 
   const wake = useCallback(() => {
     if (!raf.current) { lastTick.current = 0; raf.current = requestAnimationFrame(tick); }
@@ -311,11 +403,29 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   }
 
   const pet = petOn && !isTeacher ? petProgress(petState?.mirror ?? null, growthXp ?? 0) : null;
+  const petOnStage = !!pet;
+  hasPet.current = petOnStage;
+  // 펫이 (늦게) 나타나면 지금 캐릭터 곁에 세웁니다 — 펫 자료가 늦게 와 그사이 걸어 나갔을 수 있습니다.
+  // 그리기 전에 맞춥니다(useLayoutEffect) — 처음 자리에 한 번 보였다가 옮겨 가지 않게.
+  useLayoutEffect(() => {
+    if (!petOnStage) return;
+    petPos.current = plazaPetHeel(pos.current, null);
+    petFacing.current = facingRef.current;
+    petMoving.current = false;
+    heel.current = null;
+    trail.current = [];
+    placePet();
+  }, [petOnStage, placePet]);
+
   const world = size ? plazaView(size.w, size.h) : null;
-  const avatarSize = world ? Math.max(44, Math.round(world.worldW * PLAZA_AVATAR)) : 0;
-  const petSize = world ? Math.max(22, Math.round(world.worldW * 0.036)) : 0;
+  const who = useMemo(() => characterOf({ uid: myUid || "", character: characterOn ? character : null }), [myUid, characterOn, character]);
+  const sheet = plazaCharacterSheet(who);
+  const body = world ? plazaCharacterSize(world.scale) : null;
+  // 깨어난 펫은 걷는 그림(단계가 오를수록 크게), 알은 종을 드러내지 않는 공통 알
+  const petSheet = pet?.hatched && !petSpriteMissing ? plazaPetSheet(pet.species) : null;
+  const petBody = world && pet ? plazaPetSize(world.scale, pet.stage) : null;
+  const petFigure = world && pet ? Math.round(pet.hatched ? petBody.body * 1.3 : Math.max(24, PLAZA_EGG_SIZE * world.scale)) : 0;
   const myName = isTeacher ? "선생님" : user?.realName || user?.displayName || "나";
-  const src = characterImage(characterOf({ uid: myUid || "", character: characterOn ? character : null }));
 
   return (
     <section className="plaza" aria-label="책 광장">
@@ -340,13 +450,25 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
                 </button>
               ))}
               {marker && <span key={marker.key} className="plaza-marker" style={{ left: pct(marker.x, PLAZA_W), top: pct(marker.y, PLAZA_H) }} aria-hidden="true" />}
-              {/* 자리는 걷는 동안 DOM에 곧바로 적습니다(place) — 다시 그릴 때도 지금 자리를 그대로 적어 튀지 않게 */}
-              <div ref={avatarRef} className={`plaza-avatar is-me${moving ? " is-moving" : ""}`} aria-hidden="true"
-                style={{ width: avatarSize, height: avatarSize, left: pct(pos.current.x, PLAZA_W), top: pct(pos.current.y, PLAZA_H), zIndex: 10 + Math.round(pos.current.y) }}>
-                <span className="plaza-avatar-shadow" />
-                {pet && <span className="plaza-avatar-pet" style={{ [facing > 0 ? "right" : "left"]: "78%" }}><PetFigure species={pet.species} stage={pet.stage} ready={pet.ready} size={petSize} /></span>}
-                <img className="plaza-avatar-img" src={src} alt="" draggable={false} style={{ transform: facing < 0 ? "scaleX(-1)" : undefined }} />
-                <span className="plaza-avatar-name">{myName}</span>
+              {/* 캐릭터 · 펫 — 닻(크기 0)이 발이 닿는 점에 서고, 그림 · 이름표 · 그림자가 그 점을 기준으로 놓입니다.
+                  자리는 걷는 동안 DOM에 곧바로 적습니다(place · placePet) — 다시 그릴 때도 지금 자리를 그대로 적어 튀지 않게 */}
+              {pet && (
+                <div ref={petRef} className="plaza-pet" aria-hidden="true"
+                  style={{ left: pct(petPos.current.x, PLAZA_W), top: pct(petPos.current.y, PLAZA_H), zIndex: 10 + Math.round(petPos.current.y) }}>
+                  <span className="plaza-avatar-shadow" style={{ width: petBody.body * 0.62, height: petBody.body * 0.2 }} />
+                  {petSheet
+                    ? <PlazaSprite ref={petSprite} src={petSheet} size={petBody.cell} style={{ left: -petBody.footX, top: -petBody.footY }} onMissing={() => setPetSpriteMissing(true)} />
+                    : <span className="plaza-pet-figure" style={{ left: -petFigure / 2, top: -petFigure * 0.93 }}><PetFigure species={pet.species} stage={pet.stage} ready={pet.ready} size={petFigure} /></span>}
+                </div>
+              )}
+              <div ref={avatarRef} className="plaza-avatar is-me" aria-hidden="true"
+                style={{ left: pct(pos.current.x, PLAZA_W), top: pct(pos.current.y, PLAZA_H), zIndex: 10 + Math.round(pos.current.y) }}>
+                <span className="plaza-avatar-shadow" style={{ width: body.body * 0.5, height: body.body * 0.15 }} />
+                {sheet && !spriteMissing
+                  ? <PlazaSprite ref={charSprite} src={sheet} size={body.cell} style={{ left: -body.footX, top: -body.footY }} onMissing={() => setSpriteMissing(true)} />
+                  : <img className="plaza-avatar-img" src={characterImage(who)} alt="" draggable={false}
+                      style={{ width: body.body * 1.3, height: body.body * 1.3, left: -body.body * 0.65, top: -body.body * 1.24 }} />}
+                <span className="plaza-avatar-name" style={{ bottom: Math.round(body.body) + 5 }}>{myName}</span>
               </div>
             </div>
           )}

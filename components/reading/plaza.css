@@ -6,7 +6,8 @@
    · 그림(.plaza-world, 원본 1672×941)은 그 창을 빈틈없이 덮게 키우고, 넘치는 쪽은 시점이 캐릭터를 따라가며
      보여 줍니다(transform — 셈은 lib/readingPlazaMap.js의 plazaView · plazaCamera). 캐릭터 · 이름표는 그림 위에 %로 놓습니다.
    · 제목 · 가판대/책꽂이 단추 · 걷는 법은 맵 위에 얹습니다(.plaza-hud) — 줄을 따로 차지하지 않습니다(선생님 요청).
-   · 캐릭터의 자리는 '발'입니다(left/top = 발, 그림은 그 위로).
+   · 캐릭터 · 펫의 자리는 '발'입니다(left/top = 발이 닿는 점, 그림은 그 위로). 그림은 걷는 그림(도트 시트)을
+     캔버스에 그립니다(PlazaSprite.jsx) — 방향 · 걷는 그림을 고르는 셈은 lib/readingPlazaSprites.js.
    · 창(.plaza-panel)은 책나눔의 다른 창(.reading-modal)과 같은 종이 빛입니다.
    · 접는 기준은 창 폭(@media)이 아니라 무대 칸(.plaza-stage-wrap) · 창(.plaza-panel)의 폭(@container)입니다.
    ============================================================= */
@@ -132,23 +133,28 @@
 .plaza-marker { position: absolute; z-index: 5; width: 3.2%; aspect-ratio: 2 / 1; transform: translate(-50%, -50%); border: 2px solid #ffffffd9; border-radius: 50%; box-shadow: 0 0 0 1px #5a3a1b40; pointer-events: none; animation: plaza-marker .9s ease-out infinite; }
 @keyframes plaza-marker { from { opacity: .95; transform: translate(-50%, -50%) scale(.45); } to { opacity: 0; transform: translate(-50%, -50%) scale(1.25); } }
 
-/* 캐릭터 */
-.plaza-avatar { position: absolute; transform: translate(-50%, -95%); pointer-events: none; }
-.plaza-avatar-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 2px 2px #0000002b); }
-.plaza-avatar-shadow { position: absolute; left: 18%; right: 18%; bottom: 0; height: 13%; border-radius: 50%; background: #3a261233; filter: blur(2px); }
-.plaza-avatar-pet { position: absolute; bottom: 2%; display: block; }
-.plaza-avatar-pet .pet-figure { display: block; }
+/* 캐릭터 · 펫 — 닻(크기 0)이 **발이 닿는 점**에 서고, 그림 · 그림자 · 이름표가 그 점을 기준으로 놓입니다.
+   걷는 그림이 바뀌어도(정지 · 걷기 A · 걷기 B · 방향) 발의 자리가 튀지 않게. 그림의 크기와 자리(left/top)는
+   컴포넌트가 px로 줍니다(lib/readingPlazaSprites.js의 plazaSpriteSize — 맵을 키운 배율을 따라감). */
+.plaza-avatar, .plaza-pet { position: absolute; width: 0; height: 0; pointer-events: none; }
+/* 걷는 그림(캔버스) — 도트 그림을 또렷하게 키워 그리는 것은 PlazaSprite가 합니다 */
+.plaza-sprite { position: absolute; display: block; filter: drop-shadow(0 2px 2px #0000002b); }
+/* 걷는 그림을 못 받았을 때의 예전 그림 */
+.plaza-avatar-img { position: absolute; display: block; object-fit: contain; filter: drop-shadow(0 2px 2px #0000002b); }
+.plaza-avatar-shadow { position: absolute; left: 0; top: 0; transform: translate(-50%, -50%); border-radius: 50%; background: #3a261238; filter: blur(2px); }
+/* 알(과 걷는 그림이 없는 펫) — 단계 그림 그대로. 걷는 동안 통통 뜁니다 */
+.plaza-pet-figure { position: absolute; display: block; }
+.plaza-pet-figure .pet-figure { display: block; }
+.plaza-pet.is-moving .plaza-pet-figure { animation: plaza-bob .36s ease-in-out infinite; }
+@keyframes plaza-bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -6%; } }
 .plaza-avatar-name {
-  position: absolute; left: 50%; bottom: 100%; transform: translate(-50%, 2px);
-  max-width: 220%; padding: 2px 9px; border-radius: 999px;
-  background: #20364ad9; color: #fff; font-size: clamp(10px, 1.3cqw, 13px); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  position: absolute; left: 0; transform: translateX(-50%);
+  max-width: 200px; padding: 2px 9px; border-radius: 999px;
+  background: #20364ad9; color: #fff; font-size: clamp(10px, 1.3cqw, 13px); font-weight: 700; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .plaza-avatar.is-me .plaza-avatar-name { background: #c2622fe6; }
-.plaza-avatar.is-moving .plaza-avatar-img { animation: plaza-bob .36s ease-in-out infinite; }
-.plaza-avatar.is-moving .plaza-avatar-pet { animation: plaza-bob .36s ease-in-out infinite .12s; }
-@keyframes plaza-bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -5%; } }
 @media (prefers-reduced-motion: reduce) {
-  .plaza-avatar.is-moving .plaza-avatar-img, .plaza-avatar.is-moving .plaza-avatar-pet, .plaza-sign.is-near, .plaza-marker, .plaza-hint { animation: none; }
+  .plaza-pet.is-moving .plaza-pet-figure, .plaza-sign.is-near, .plaza-marker, .plaza-hint { animation: none; }
 }
 
 /* ── 창 ── */
