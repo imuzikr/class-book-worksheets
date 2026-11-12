@@ -279,7 +279,7 @@ API 키는 나중에 등록해도 됩니다. 등록 전에는 검색 준비 중 
 - `FIREBASE_ADMIN_CLIENT_EMAIL`
 - `FIREBASE_ADMIN_PRIVATE_KEY` (개행 또는 리터럴 `\\n` 처리 지원)
 
-또는 호스트가 제공하는 `GOOGLE_APPLICATION_CREDENTIALS` 방식의 Application Default Credentials를 사용할 수 있습니다. 클라이언트 Firebase 설정과 Admin 프로젝트가 반드시 같아야 합니다. 관리자 키는 `NEXT_PUBLIC_` 변수나 저장소에 넣지 않습니다. `env.reading.example`은 값이 없는 이름 안내입니다.
+또는 호스트가 제공하는 `GOOGLE_APPLICATION_CREDENTIALS` 방식의 Application Default Credentials를 사용할 수 있습니다. 클라이언트 Firebase 설정과 Admin 프로젝트가 반드시 같아야 합니다. 관리자 키는 `NEXT_PUBLIC_` 변수나 저장소에 넣지 않습니다. `env.reading.example`은 값이 없는 이름 안내입니다. Vercel에 넣는 순서와, 열쇠가 빠졌을 때 화면에 뜨는 문구(503 · 500 · 401)별 할 일은 README의 [책나눔 서버 열쇠](README.md#책나눔-서버-열쇠)에 있습니다.
 
 실제 연결 시 기존 `lib/firebase.js`, `next.config.mjs`, `.firebaserc`의 Firebase 프로젝트 설정도 완료하고 **변경된 firestore.rules를 배포**해야 합니다. 보상 설정을 켜도 서버 인증이 미설정이면 저장 API가 설정 오류를 안내합니다. 실제 인증·규칙 배포는 로컬 데모 검증과 별도입니다.
 

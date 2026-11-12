@@ -23,8 +23,10 @@
    - 이 명령이 **보안 규칙과 색인(`firestore.indexes.json`)을 함께** 올립니다.
    - 콘솔에서 손으로 할 때는 **색인도 꼭 따로 만드세요** — 아래 '터미널 없이 콘솔에서 하기'의 표 두 줄.
 5. **Vercel**: Fork Import → Deploy. 주소를 Firebase **승인된 도메인**에 추가
-6. **콘솔**: `config/teacherSignup`에 `code`(문자열, 4자 이상), 내 `users/{uid}.role`을 `admin`
-7. **확인**: 선생님으로 반 만들기 → 다른 계정으로 참여
+6. **책나눔 서버 열쇠**: Firebase 서비스 계정 키의 세 값을 Vercel에 `FIREBASE_ADMIN_*`로(Production) → Redeploy.
+   빠지면 책방은 되는데 **책나눔 · 리더보드 · 독서 TOP 3 · 분석 리포트만** 멈춥니다 — 아래 [책나눔 서버 열쇠](#책나눔-서버-열쇠)
+7. **콘솔**: `config/teacherSignup`에 `code`(문자열, 4자 이상), 내 `users/{uid}.role`을 `admin`
+8. **확인**: 선생님으로 반 만들기 → 다른 계정으로 참여 → 책나눔 · 리더보드가 열리는지
 
 > **⚠️ 색인을 빠뜨리지 마세요.** Firestore는 필요한 색인이 없는 조회를 **아예 거부**합니다(느려지는 것이
 > 아니라 결과가 안 옵니다). 색인이 빠지면 앱은 멀쩡해 보이는데 **학생 알림 벨의 일부 알림만 조용히 안 옵니다.**
@@ -65,6 +67,56 @@
 기본값은 꺼짐이며 기존 독서 활동은 계속 사용할 수 있습니다.
 사용법·달성 기준·실서비스 서버 설정은 [책나눔 성장 기능](READING_GROWTH.md)을 참고하세요.
 
+### 책나눔 서버 열쇠
+
+**책나눔을 쓰려면 꼭 필요합니다.** 책나눔 · 리더보드 · 독서 TOP 3 · 펫 · 분석 리포트는 브라우저가
+Firestore에 바로 쓰지 않고 **Vercel 서버**(`/api/reading` · `/api/dashboard`)를 거칩니다. 경험치와 순위를
+학생이 고칠 수 없게 서버가 대신 계산하기 때문입니다. 그 서버가 Firebase에 들어가는 **관리자 열쇠**
+(서비스 계정 비공개 키)의 세 값을 Vercel에 넣어 둡니다. 책방 · 출석 · 메신저는 열쇠 없이도 돕니다.
+
+**넣는 법**
+
+1. **열쇠 파일 받기**: [Firebase 콘솔](https://console.firebase.google.com) → 앱이 쓰는 프로젝트
+   (Vercel에 넣은 `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, 비워 두었다면 `lib/firebase-defaults.mjs`의 프로젝트)
+   → ⚙ **프로젝트 설정** → **서비스 계정** → **새 비공개 키 생성** → **키 생성**. JSON 파일 하나가 내려받아집니다.
+2. **Vercel에 세 개 넣기**: 프로젝트 → **Settings → Environment Variables → Add Environment Variable**.
+   값은 JSON에서 따옴표 안쪽만 옮기고, 환경은 **Production**에 체크합니다.
+   **Sensitive**를 켜 두면 나중에 값이 다시 보이지 않아 더 안전합니다.
+
+   | Key | Value (JSON에서) | 값의 모양 |
+   |---|---|---|
+   | `FIREBASE_ADMIN_PROJECT_ID` | `project_id` | `내-프로젝트-id` |
+   | `FIREBASE_ADMIN_CLIENT_EMAIL` | `client_email` | `firebase-adminsdk-…@내-프로젝트-id.iam.gserviceaccount.com` |
+   | `FIREBASE_ADMIN_PRIVATE_KEY` | `private_key` 전체 | `-----BEGIN PRIVATE KEY-----\n…\n-----END PRIVATE KEY-----\n` |
+
+   - 비공개 키는 `-----BEGIN`부터 `-----END PRIVATE KEY-----\n`까지 끊김 없이 넣습니다. JSON에 보이는 그대로
+     `\n`이 섞인 한 줄로 넣어도, 여러 줄로 붙여 넣어도 됩니다.
+   - 이름 앞에 `NEXT_PUBLIC_`을 붙이지 마세요. 붙이면 학생 브라우저로 새어 나갑니다. GitHub에도 올리지 마세요.
+3. **다시 배포**: **Deployments** → 맨 위 배포의 ⋯ → **Redeploy**. 환경변수는 다음 배포부터 들어갑니다.
+4. **확인**: 실제 반에서 책나눔 · 리더보드를 새로고침합니다. 체험용 샘플 반은 서버를 거치지 않아 열쇠가
+   없어도 보이므로 확인용이 아닙니다.
+
+내려받은 JSON 파일은 넣은 뒤 지우거나 안전한 곳에 두세요. 그 파일만 있으면 누구나 모든 학생 자료를 읽고 고칠 수 있습니다.
+
+**열쇠가 빠졌을 때 — 화면 문구로 찾기**
+
+책나눔 · 리더보드에 아래 문구가 뜨면 열쇠 문제입니다. 개발자 도구(F12)의 Console · Network 탭에서
+`/api/reading…` 요청의 상태 번호도 함께 보면 확실합니다.
+
+| 화면 문구 | 상태 | 뜻 | 할 일 |
+|---|---|---|---|
+| 책나눔 서버 인증 설정이 필요합니다. 담당 교사에게 문의해 주세요. | 503 | 그 배포에 세 열쇠 가운데 하나 이상이 없음 | 세 개를 Production에 넣고 Redeploy |
+| 책나눔 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요. | 500 | 열쇠는 있지만 비공개 키가 잘렸거나, 다른 프로젝트의 키 | 앱이 쓰는 프로젝트에서 키를 새로 받아 세 개 모두 다시 넣고 Redeploy |
+| 로그인을 다시 확인해 주세요. (모든 사람에게) | 401 | `FIREBASE_ADMIN_PROJECT_ID`가 앱의 Firebase 프로젝트와 다름 | 넣는 법 1번의 프로젝트 id로 고치고 Redeploy |
+
+- **책방은 되는데 책나눔 · 리더보드 · 상단바 독서 TOP 3만 막히면** 거의 늘 첫 줄입니다.
+- 열쇠를 지웠거나 바꿔도, 이미 만들어진 배포는 그때 받은 열쇠로 계속 돕니다. 그래서 문제는 **다음 배포**(main에
+  push한 때)부터 나타납니다. 갑자기 막혔다면 Vercel의 Activity에서 환경변수 변경 기록을 보세요.
+- **미리보기(Preview) 주소**에서만 첫 줄이 뜨는 것은 정상입니다. 열쇠를 Production에만 넣었기 때문이니,
+  실제 서비스 주소에서 확인하세요. 미리보기에도 열쇠를 넣으면 합치기 전 코드가 실제 학생 자료를 관리자
+  권한으로 다루게 되므로 권하지 않습니다.
+- 500이 계속되면 Vercel의 **Logs**에서 `[reading] request failed` 줄에 적힌 코드를 확인하세요.
+
 ### 도서 검색 — 카카오 REST API (선택)
 
 내 서재에 책을 담을 때 **카카오(다음) 책 검색 API**로 제목·지은이·출판사·ISBN·표지를 채울 수 있습니다.
@@ -102,6 +154,7 @@ Node.js 22 이상을 권장합니다(`.nvmrc` · CI와 같음).
 - `.firebaserc`의 프로젝트 id는 Firebase CLI용이라 환경변수를 못 씁니다.
   `firebase use --add`로 자기 프로젝트를 고르세요.
 - 서버 키(`FIREBASE_ADMIN_*`, `KAKAO_REST_API_KEY`)는 Vercel에만 넣고 GitHub에는 올리지 마세요.
+  `FIREBASE_ADMIN_*`는 책나눔에 필수입니다 — 넣는 법과 빠졌을 때의 증상은 [책나눔 서버 열쇠](#책나눔-서버-열쇠).
 
 ## 동작 모드
 
@@ -111,7 +164,8 @@ Node.js 22 이상을 권장합니다(`.nvmrc` · CI와 같음).
 
 - **실서비스 모드** (Firebase 설정됨): Firebase Authentication으로
   실제 로그인/회원가입하고, 데이터는 Firestore에 저장됩니다. 권한은
-  Firestore · Storage 보안 규칙이 서버에서 강제합니다(서버 함수는 없습니다).
+  Firestore · Storage 보안 규칙이 서버에서 강제합니다(Firebase 서버 함수는 없습니다 — 책나눔 · 리더보드 ·
+  분석 리포트만 Vercel 서버가 관리자 열쇠로 처리합니다, [책나눔 서버 열쇠](#책나눔-서버-열쇠)).
 - **데모 모드** (apiKey가 `YOUR_...`로 시작): 테스트 유저로 자동 입장합니다.
   **책봄 체험반(학생 15명)**에는 11가지 독서 활동과 학생별 서재 1~2권이 준비됩니다.
   상단 역할 전환과 **체험 학생** 선택으로 교사·각 학생 화면을 확인할 수 있습니다.
@@ -139,6 +193,8 @@ Node.js 22 이상을 권장합니다(`.nvmrc` · CI와 같음).
 ## 배포 — 서버 함수 · App Check 없음
 
 - **프론트엔드**: Vercel — `main`에 push하면 자동 배포됩니다.
+- **Vercel 서버**: 책나눔 · 리더보드 · 분석 리포트는 Vercel의 Next.js 서버(`app/api`)가 처리합니다(무료 —
+  Firebase 서버 함수가 아님). Vercel에 Firebase 관리자 열쇠 세 개가 있어야 합니다 → [책나눔 서버 열쇠](#책나눔-서버-열쇠).
 - **Firebase**: 보안 규칙 · 색인 · Storage 규칙만 올립니다(무료 Spark 요금제로 충분 —
   다만 2024년 10월 이후 새로 만든 프로젝트는 Storage를 쓰려면 Blaze가 필요할 수
   있습니다. 그림 첨부를 안 쓰면 Storage 없이도 돕니다).
