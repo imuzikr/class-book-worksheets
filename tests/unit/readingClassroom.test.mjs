@@ -9,8 +9,8 @@ import { fileURLToPath } from "node:url";
 import { classroomOn, classroomRollToday, featureValue, plazaOn, teacherFeatureSettings, TEACHER_FEATURES } from "../../lib/reading.js";
 import { dateKeyOf } from "../../lib/dates.js";
 import {
-  CLASSROOM_SEAT_COUNT, classroomAct, classroomAtBoard, classroomAttendance, classroomBoardAt, classroomBoardMark, classroomBoardStand,
-  classroomDesks, classroomNearSeat, classroomRollCall, classroomSeatAround, classroomSeatAt, classroomSeatLabel, classroomSeatOf,
+  CLASSROOM_MOVE_LATE_MS, CLASSROOM_SEAT_COUNT, classroomAct, classroomAtBoard, classroomAttendance, classroomBoardAt, classroomBoardMark, classroomBoardStand,
+  classroomDesks, classroomMoveCall, classroomMoveSpot, classroomNearSeat, classroomRollCall, classroomSeatAround, classroomSeatAt, classroomSeatLabel, classroomSeatOf,
   classroomSeatSide, classroomUnseated, plazaArrowKey, plazaLetterKey,
 } from "../../lib/readingClassroom.js";
 import {
@@ -423,6 +423,107 @@ test("선생님 화면 — 오늘 출석한 수는 지금 명단에 있는 학�
   assert.deepEqual(classroomAttendance(roster, new Set(["a", "c", "반에서 빠진 학생"])), { present: 2, total: 3 });
   assert.deepEqual(classroomAttendance(roster, null), { present: 0, total: 3 });
   assert.deepEqual(classroomAttendance([], new Set(["a"])), { present: 0, total: 0 });
+});
+
+// ── 모두 이동(선생님의 '모두 교실로 · 모두 광장으로' — 선생님 요청) ──
+test("모두 이동 — 보는 동안 새 신호가 오면 기기 시계와 상관없이 그 방으로 옮긴다", () => {
+  const T = 1794500000000;
+  const DAY = 24 * 60 * 60 * 1000;
+  // 보는 동안(prev가 있음) — 지금까지 본 어느 신호보다 크면 새 신호다
+  assert.equal(classroomMoveCall({ prev: 0, to: "classroom", at: T, now: T }), "classroom", "그 반의 첫 신호");
+  assert.equal(classroomMoveCall({ prev: T, to: "plaza", at: T + 1, now: T }), "plaza", "곧바로 되돌리기");
+  // **기기 시계를 보지 않는다** — 선생님이나 학생의 시계가 며칠 틀려 있어도 단추가 들어야 한다(이 기기가 따른 기록도 보지 않음)
+  for (const now of [0, T - 9 * DAY, T + 9 * DAY, undefined, NaN]) {
+    assert.equal(classroomMoveCall({ prev: T, to: "classroom", at: T + 5, now, seen: T + 5 }), "classroom", String(now));
+  }
+  // 새 신호가 아닌 것 — 같은 값을 다른 까닭으로 다시 봄 · 값이 잠깐 비었다 돌아옴(부르는 쪽이 본 것 가운데 가장 큰 값을 넘김)
+  assert.equal(classroomMoveCall({ prev: T, to: "classroom", at: T, now: T }), null);
+  assert.equal(classroomMoveCall({ prev: T, to: "classroom", at: T - 1, now: T }), null);
+  assert.equal(classroomMoveCall({ prev: T, to: "classroom", at: 0, now: T }), null);
+  // 방 이름 · 보낸 때의 모양이 틀리면 아무 데도 옮기지 않는다
+  for (const to of [null, undefined, "", "교실", "Classroom", "door", 1, true]) assert.equal(classroomMoveCall({ prev: 0, to, at: T, now: T }), null, String(to));
+  for (const at of [null, undefined, 0, -5, "", "abc", NaN]) assert.equal(classroomMoveCall({ prev: 0, to: "plaza", at, now: T }), null, String(at));
+  assert.equal(classroomMoveCall({ prev: 0, to: "plaza", at: String(T), now: T }), "plaza", "수로 읽히는 글자는 받는다");
+  assert.equal(classroomMoveCall(), null);
+});
+
+test("모두 이동 — 화면을 열었을 때 이미 있던 신호는 한 시간 안의 것이고 이 기기가 아직 따르지 않았을 때만 따른다", () => {
+  const T = 1794500000000;
+  const MIN = 60 * 1000;
+  assert.equal(CLASSROOM_MOVE_LATE_MS, 60 * MIN);
+  // 늦게 들어온 학생 — 그 수업 중의 신호면 반이 모인 방에서 시작한다
+  assert.equal(classroomMoveCall({ prev: undefined, to: "classroom", at: T, now: T + 5 * MIN }), "classroom");
+  assert.equal(classroomMoveCall({ prev: undefined, to: "plaza", at: T, now: T + 60 * MIN }), "plaza", "꼭 한 시간");
+  assert.equal(classroomMoveCall({ prev: undefined, to: "classroom", at: T, now: T - 2 * MIN }), "classroom", "기기 시계가 조금 늦어도");
+  // 한 시간이 넘은 신호는 지난 수업의 것 — 마지막에 있던 방이 이긴다
+  assert.equal(classroomMoveCall({ prev: undefined, to: "classroom", at: T, now: T + 60 * MIN + 1 }), null);
+  assert.equal(classroomMoveCall({ prev: undefined, to: "classroom", at: T, now: T + 24 * 60 * MIN }), null);
+  assert.equal(classroomMoveCall({ prev: undefined, to: "classroom", at: T, now: T - 61 * MIN }), null, "시계가 한 시간 넘게 틀린 기기");
+  assert.equal(classroomMoveCall({ prev: undefined, to: "classroom", at: T }), null, "지금을 모르면 따르지 않는다");
+  // 이 기기가 이미 따른 신호 — 따른 뒤 포털로 돌아간 학생을 화면을 열 때마다 다시 옮기지 않는다
+  assert.equal(classroomMoveCall({ prev: undefined, to: "classroom", at: T, seen: T, now: T + MIN }), null);
+  assert.equal(classroomMoveCall({ prev: undefined, to: "classroom", at: T, seen: T + 1, now: T + MIN }), null);
+  // 그 뒤에 온 새 신호는 따른다
+  assert.equal(classroomMoveCall({ prev: undefined, to: "plaza", at: T + 10, seen: T, now: T + MIN }), "plaza");
+  assert.equal(classroomMoveCall({ prev: undefined, to: "plaza", at: T + 10, seen: "모양이 틀린 값", now: T + MIN }), "plaza");
+});
+
+test("모두 이동 — 설 자리: 선생님은 칠판 앞, 학생은 제 러그의 귀(곧바로 앉을 수 있게), 나머지는 흩어 선다", () => {
+  const room = CLASSROOM_ROOM;
+  // 선생님 → 교실: 칠판 앞 가운데(곧바로 A로 출석을 시작)
+  const board = classroomMoveSpot({ to: "classroom", teacher: true, uid: "t" });
+  assert.equal(plazaWalkable(board.x, board.y, room), true);
+  assert.equal(classroomAtBoard(board), true);
+  assert.deepEqual(classroomAct({ teacher: true, point: board }), { kind: "board" });
+  assert.ok(Math.abs(board.x - PLAZA_W / 2) < 1, "가운데");
+  assert.equal(board.facing, "down");
+  // 자리가 있는 학생 → 교실: 제 책상의 러그 위(물음표가 떠 A · S로 곧바로 앉음) · 책상 쪽을 본다 · 포털 위가 아니다
+  const spots = new Set();
+  for (let seat = 0; seat < CLASSROOM_SEAT_COUNT; seat += 1) {
+    const at = classroomMoveSpot({ to: "classroom", seat, uid: `s${seat}` });
+    assert.equal(plazaWalkable(at.x, at.y, room), true, `자리 ${seat} — 바닥`);
+    assert.equal(classroomNearSeat(at, seat), true, `자리 ${seat} — 제 러그 위`);
+    assert.deepEqual(classroomAct({ point: at, seat }), { kind: "sit", seat }, `자리 ${seat} — A를 누르면 앉기`);
+    assert.equal(classroomSeatAround(at), seat, "남의 러그가 아니다");
+    assert.equal(plazaPortalAt(at, room, 22), null, `자리 ${seat} — 포털 위가 아니다`);
+    const desk = CLASSROOM_SEATS[seat];
+    assert.equal(at.facing, at.x < desk.sit.x ? "right" : "left", "책상 쪽을 본다");
+    // 선생님의 자리는 학생의 자리와 겹치지 않는다
+    assert.ok(Math.hypot(at.x - board.x, at.y - board.y) > 40);
+    spots.add(`${at.x},${at.y}`);
+  }
+  assert.equal(spots.size, CLASSROOM_SEAT_COUNT, "자리마다 다른 곳");
+  // 자리가 없는 학생 → 교실 뒤쪽에 흩어 선다(책상 옆이 아닌 곳)
+  for (const seat of [null, undefined]) {
+    const at = classroomMoveSpot({ to: "classroom", seat, uid: "자리 없는 학생" });
+    assert.deepEqual({ x: at.x, y: at.y }, plazaSpawnFor("자리 없는 학생", room));
+    assert.equal(plazaWalkable(at.x, at.y, room), true);
+    assert.equal(classroomSeatAround(at), null);
+    assert.equal(at.facing, "down");
+  }
+  // 모양이 틀린 자리 번호 — 자리가 없는 학생으로 본다(엉뚱한 곳에 세우지 않음)
+  for (const seat of [-1, 30, 2.5, "3"]) {
+    const at = classroomMoveSpot({ to: "classroom", seat, uid: "u" });
+    assert.deepEqual({ x: at.x, y: at.y }, plazaSpawnFor("u", room), String(seat));
+  }
+  // 광장으로 — 선생님도 학생도 흩어 선다(교실을 켠 반의 광장 — 문 · 포털이 있는 방). 포털 위가 아니다
+  const plaza = plazaRoomOf("plaza", true);
+  assert.equal(plaza, PLAZA_DOOR_ROOM);
+  const out = new Set();
+  for (let i = 0; i < 30; i += 1) {
+    for (const teacher of [false, true]) {
+      const at = classroomMoveSpot({ to: "plaza", teacher, seat: i, uid: `학생-${i}` });
+      assert.deepEqual({ x: at.x, y: at.y }, plazaSpawnFor(`학생-${i}`, plaza));
+      assert.equal(plazaWalkable(at.x, at.y, plaza), true);
+      assert.equal(plazaPortalAt(at, plaza, 22), null);
+      assert.equal(at.facing, "down");
+      out.add(`${at.x},${at.y}`);
+    }
+  }
+  assert.ok(out.size > 22, "한 점에 겹쳐 서지 않는다");
+  // 모르는 방 이름은 광장으로 본다
+  assert.deepEqual(classroomMoveSpot({ to: "어디", uid: "u" }), classroomMoveSpot({ to: "plaza", uid: "u" }));
+  assert.equal(typeof classroomMoveSpot().x, "number");
 });
 
 test("함께 보기 — 자리에 어느 방 · 어느 책상인지 싣는다(광장에 있을 때는 싣지 않음)", () => {

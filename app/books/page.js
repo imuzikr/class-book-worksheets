@@ -53,6 +53,7 @@ import {
   startClassAttendance,
   stopClassAttendance,
   callClassroomRoll,
+  moveClassroomAll,
   setStudyAttendanceByTeacher,
   markStudyAttendance,
   subscribeMyStudyAttendance,
@@ -547,6 +548,18 @@ function BooksPageInner() {
       setAttending(false);
     }
   }
+  // [교사] 맵 위의 '모두 교실로 · 모두 광장으로'(선생님 요청) — 반 문서에 '어느 방으로 · 보낸 때'를 적습니다. 책 광장 탭을
+  // 열어 둔 학생 화면과 선생님 자신의 화면이 그 값이 바뀌는 것을 보고 그 방으로 옮겨 갑니다(셈 lib/readingClassroom.js의
+  // classroomMoveCall · 무대 ReadingPlaza). 출석 확인과 같은 길이라 규칙을 새로 열지 않습니다(반 문서는 담당 교사가 고침).
+  // 앞 신호의 '보낸 때'를 함께 넘겨, 이 기기의 시계가 늦어도 새 신호가 늘 더 큰 값이 되게 합니다.
+  async function handleClassroomMoveAll(to) {
+    if (!classId || !admin) return;
+    try {
+      await moveClassroomAll(classId, to, currentClass?.classroomMoveAt);
+    } catch {
+      setToast("모두 옮기지 못했어요. 잠시 뒤 다시 해 주세요.");
+    }
+  }
   // 무대에 넘기는 묶음 — 교실을 끈 반은 on: false(광장만).
   const classroomProps = {
     on: classroomOn(currentClass),
@@ -554,12 +567,15 @@ function BooksPageInner() {
     attended: attendedToday,
     presentUids: todayPresentUids,
     rollCall: currentClass?.classroomCallAt ?? null,
+    moveTo: currentClass?.classroomMoveTo ?? null,
+    moveAt: currentClass?.classroomMoveAt ?? null,
     roster: admin ? roster : null,
     seatLayout: admin ? seatLayout : null,
     onAttend: handleClassroomAttend,
     onRollCall: handleClassroomRollCall,
     onStop: handleStopAttendance,
     onSeatSetup: admin ? openSeatSetupAlone : null,
+    onMoveAll: admin ? handleClassroomMoveAll : null,
   };
 
   // 과일 주기 — 이름표를 함께 넘겨 자리표·이력에 누구인지 남게 합니다.

@@ -14,6 +14,7 @@
 //  · 반 설정 plazaEnabled는 담당 교사가 참 · 거짓으로만, 운영 중인 반에서만 바꾼다
 // =============================================================
 import { describe, it, before, after, beforeEach } from "node:test";
+import assert from "node:assert/strict";
 import { assertSucceeds, assertFails } from "@firebase/rules-unit-testing";
 import { collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, updateDoc, where } from "firebase/firestore";
 import { makeEnv, asStudent, asTeacher, asAdmin, seed } from "./helpers.mjs";
@@ -187,5 +188,21 @@ describe("책 광장 규칙", () => {
     await assertFails(updateDoc(doc(teacher, "classes", "cOld"), { classroomCallAt: 1794500002000 }));
     // 반 학생은 그 값을 읽는다(반 문서 한 건 — 앉아 있는 학생의 화면이 바뀌는 것을 본다)
     await assertSucceeds(getDoc(doc(asStudent(env, "s1").firestore(), "classes", "cOn")));
+  });
+  // 모두 이동 — 선생님의 '모두 교실로 · 모두 광장으로'(lib/data/classes.js의 moveClassroomAll).
+  // 규칙을 새로 열지 않았습니다 — 반 문서는 담당 교사(와 관리자)만 고치므로 지금 규칙이 그대로 받습니다.
+  // (값의 모양은 규칙이 보지 않고 화면이 걸러 읽습니다 — lib/readingClassroom.js의 classroomMoveCall.)
+  it("모두 이동 — 담당 교사만 '어느 방으로 · 보낸 때'를 적고, 반 학생은 그 값을 읽는다", async () => {
+    const teacher = asTeacher(env, "teacherA").firestore();
+    // 앱과 같은 한 번의 쓰기(두 칸) — 다시 누르면 방과 '보낸 때'가 함께 바뀐다
+    await assertSucceeds(updateDoc(doc(teacher, "classes", "cOn"), { classroomMoveTo: "classroom", classroomMoveAt: 1794500000000 }));
+    await assertSucceeds(updateDoc(doc(teacher, "classes", "cOn"), { classroomMoveTo: "plaza", classroomMoveAt: 1794500004321 }));
+    // 학생 · 다른 반 교사는 못 적는다(학생이 스스로 반 전체를 옮길 수 없음)
+    await assertFails(updateDoc(doc(asStudent(env, "s1").firestore(), "classes", "cOn"), { classroomMoveTo: "classroom", classroomMoveAt: 1794500009000 }));
+    await assertFails(updateDoc(doc(asTeacher(env, "teacherB").firestore(), "classes", "cOn"), { classroomMoveTo: "classroom", classroomMoveAt: 1794500009000 }));
+    // 반 학생은 그 값을 읽는다(반 문서 한 건 — 광장 탭을 연 화면이 바뀌는 것을 보고 스스로 옮긴다)
+    const seen = await assertSucceeds(getDoc(doc(asStudent(env, "s1").firestore(), "classes", "cOn")));
+    assert.equal(seen.data().classroomMoveTo, "plaza");
+    assert.equal(seen.data().classroomMoveAt, 1794500004321);
   });
 });

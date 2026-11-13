@@ -59,6 +59,7 @@ import { petProgress } from "@/lib/readingPet";
 import { plazaItems } from "@/lib/readingPlaza";
 import {
   classroomAct, classroomAtBoard, classroomAttendance, classroomBoardAt, classroomBoardMark, classroomBoardStand, classroomDesks,
+  classroomMoveCall, classroomMoveSpot,
   classroomNearSeat, classroomRollCall, classroomSeatAt, classroomSeatLabel, classroomSeatOf, classroomSeatSide, classroomUnseated, plazaArrowKey, plazaLetterKey,
 } from "@/lib/readingClassroom";
 import { PLAZA_LIVE_KEY_MS, plazaRemoteEnter, plazaRemoteHear, plazaRemoteStep, plazaSpawnFor } from "@/lib/readingPlazaLive";
@@ -89,6 +90,16 @@ const PORTAL_REARM = 22;
 const NOTE_MS = 4600;
 const PLACE_NAME = { stall: "지금 읽는 책", shelf: "완독한 책" };
 const ROOM_NAME = { plaza: "책 광장", classroom: "교실" };
+// 모두 이동(선생님의 '모두 교실로 · 모두 광장으로') — 선생님 단추의 글자 · 옮겨진 학생에게 뜨는 한 줄
+const GATHER_LABEL = { classroom: "모두 교실로", plaza: "모두 광장으로" };
+const GATHER_NOTE = { classroom: "선생님이 모두를 교실로 불렀어요.", plaza: "선생님이 모두를 책 광장으로 불렀어요." };
+// 누른 선생님에게 뜨는 한 줄 — 누가 함께 옮겨 오는지(책 광장 탭을 열어 둔 학생)를 말합니다
+const GATHER_DONE = {
+  classroom: "모두 교실로 불렀어요. 책 광장을 열어 둔 학생이 함께 옮겨 와요.",
+  plaza: "모두 책 광장으로 불렀어요. 교실에 있던 학생이 함께 옮겨 와요.",
+};
+// 선생님이 '모두 이동'을 누른 뒤 다시 누를 수 있을 때까지(ms) — 두 번 눌려 반 전체가 갔다가 곧바로 되돌아오지 않게
+const GATHER_GAP_MS = 1500;
 const NO_KEYS = () => ({ left: false, right: false, up: false, down: false });
 const pct = (value, whole) => `${(value / whole * 100).toFixed(3)}%`;
 // 함께 보기를 잇지 못했을 때 선생님께만 보이는 한 줄(학생에게는 광장이 지금까지처럼 보일 뿐)
@@ -97,9 +108,11 @@ const LIVE_NOTES = {
   denied: "친구들의 캐릭터를 함께 보지 못하고 있어요 — Realtime Database 규칙이 게시되었는지 확인해 주세요.",
 };
 const SIT_HELP = "앉아 있어요. 일어서려면 A를 누르거나 내 자리를 누른 뒤 ‘다시 서기(S)’를 골라요.";
-// 마지막에 있던 방(이 기기 — 다음에 책 광장 탭을 열면 그 방에서 시작) · 앉아 있던 자리(이 탭 — 새로고침해도 앉은 채로)
+// 마지막에 있던 방(이 기기 — 다음에 책 광장 탭을 열면 그 방에서 시작) · 앉아 있던 자리(이 탭 — 새로고침해도 앉은 채로) ·
+// 이 기기가 마지막으로 따른 '모두 이동' 신호의 보낸 때(같은 신호를 화면을 열 때마다 다시 따르지 않게)
 const roomKey = (classId, uid) => `bookbom.plaza.room:${classId}:${uid}`;
 const seatKey = (classId, uid) => `bookbom.plaza.seat:${classId}:${uid}`;
+const moveKey = (classId, uid) => `bookbom.plaza.move:${classId}:${uid}`;
 function recall(store, key) {
   try { return window[store].getItem(key); } catch { return null; }
 }
@@ -121,7 +134,9 @@ const friendRow = (uid, who, friend) => ({
 // classroom — 교실(관리자 설정의 '교실'을 켠 반 · 책방 페이지가 넘김):
 //   { on, openToday(오늘 출석이 열려 있나), attended([학생] 오늘 출석했나), presentUids([선생님] 오늘 출석한 uid들),
 //     rollCall(반 문서의 classroomCallAt — 선생님이 출석을 확인한 때), roster([선생님] 명단), seatLayout([선생님] 자리표),
-//     onAttend([학생] 출석 남기기) · onRollCall([선생님] 출석시작) · onStop([선생님] 출석종료) · onSeatSetup([선생님] 자리 배정하기 열기) }
+//     moveTo · moveAt(반 문서의 classroomMoveTo · classroomMoveAt — 선생님의 '모두 이동' 신호: 어느 방으로 · 보낸 때),
+//     onAttend([학생] 출석 남기기) · onRollCall([선생님] 출석시작) · onStop([선생님] 출석종료) · onSeatSetup([선생님] 자리 배정하기 열기) ·
+//     onMoveAll([선생님] 모두 이동 — 방 id를 받아 신호를 적음) }
 export default function ReadingPlaza({ classId, user, isTeacher = false, characterOn = true, petOn = false, growthXp = null, initialBook = null, onExit = null, classroom = null }) {
   const myUid = user?.uid;
   const classroomOn = !!classroom?.on;
@@ -213,6 +228,15 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   const noteTimer = useRef(0);
   const seatRestored = useRef(false);
   const seenCall = useRef(undefined);
+  // 모두 이동(선생님의 '모두 교실로 · 모두 광장으로') — 지금까지 본 신호의 '보낸 때' 가운데 가장 큰 값(화면을 열고 처음이면
+  // undefined) · 옮겨 온 까닭을 알리는 한 줄을 붙들어 둘 때까지(그사이 물음표가 떠도 걷지 않음) ·
+  // 쓰던 댓글이 있어 창을 닫지 않고 옮겼을 때, 창을 닫으면 띄울 한 줄 · [선생님] 단추를 다시 들을 때(그 전에 누른 것은 흘림)
+  const seenMove = useRef(undefined);
+  const noteHold = useRef(0);
+  const lateNote = useRef("");
+  const movingAll = useRef(0);
+  // [학생] 자리표를 아직 못 받은 채 교실로 옮겨져 뒤쪽에 서 있는 자리({ x, y }) — 자리표가 오면 제 러그로 옮겨 세웁니다(아래)
+  const seatOwed = useRef(null);
 
   // 자리표 — 선생님은 책방 페이지가 이미 받아 둔 것을, 학생은 여기서 한 장 구독합니다(반 학생에게 읽기가 열려 있음)
   useEffect(() => {
@@ -227,6 +251,8 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   desksRef.current = desks;
   const mySeatRef = useRef(mySeat);
   mySeatRef.current = mySeat;
+  const layoutRef = useRef(layout);
+  layoutRef.current = layout;
   const openToday = !!classroom?.openToday;
   const attended = !isTeacher && !!classroom?.attended;
   const openTodayRef = useRef(openToday);
@@ -323,25 +349,31 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   const wakeRef = useRef(() => {});
   const wake = useCallback(() => wakeRef.current(), []);
 
-  // ── 방을 옮깁니다(포털) ──
-  // 건너온 포털의 한가운데에 서고, 그 포털을 벗어날 때까지는 다시 들어서지 않습니다. 친구들에게는 새 방 · 새 자리를 알립니다.
-  const enterRoom = useCallback((nextId) => {
+  // ── 방을 옮깁니다(포털 · 선생님의 '모두 이동') ──
+  // 포털로 건너왔으면 건너온 포털의 한가운데에 서고, 그 포털을 벗어날 때까지는 다시 들어서지 않습니다.
+  // 선생님이 모두를 옮겼으면(forced — { at: 설 자리 { x, y, facing }, note: 알릴 한 줄, settle: 같은 방에서 자리만 고쳐 섬 })
+  // 포털이 아니라 사람마다 다른 자리에 섭니다(lib/readingClassroom.js의 classroomMoveSpot — 한 점에 모두 겹치지 않게).
+  // 친구들에게는 새 방 · 새 자리를 알립니다.
+  const enterRoom = useCallback((nextId, forced = null) => {
     const from = hereRef.current;
     const next = plazaRoomOf(nextId, classroomOnRef.current);
     const id = next.id;
+    const spot = forced?.at && plazaWalkable(forced.at.x, forced.at.y, next) ? forced.at : null;
     halt();
     hereRef.current = id;
     roomRef.current = next;
-    pos.current = plazaArrival(next, from);
-    portalArmed.current = false;
+    pos.current = spot ? { x: spot.x, y: spot.y } : plazaArrival(next, from);
+    // 서 있는 포털(있으면) — 포털로 건너왔으면 그 포털, 옮겨진 자리가 마침 포털 위면 그 포털
+    const gate = spot ? plazaPortalAt(pos.current, next, PORTAL_REARM) : next.portals.find((g) => g.to === from) ?? null;
+    portalArmed.current = spot ? !gate : false;
     sitFrom.current = null;
     sittingRef.current = null;
     stride.current = 0;
     round.current = { turn: 0, key: "" };
-    facingRef.current = "down";
+    facingRef.current = spot?.facing ?? "down";
     hintRef.current = null;
     nearRef.current = null;
-    if (myPet.current) myPet.current = plazaPetStart(pos.current, "down", next);
+    if (myPet.current) myPet.current = plazaPetStart(pos.current, facingRef.current, next);
     // 새 방에 있는 친구들은 마지막 소식에서 그동안 걸었을 만큼 가 있는 자리에 세웁니다
     const now = performance.now();
     for (const friend of cast.current.values()) {
@@ -354,7 +386,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     cam.current = { x: Math.round(goal.x), y: Math.round(goal.y) };
     look();
     meRef.current?.place(pos.current.x, pos.current.y);
-    meRef.current?.show("down", SPRITE_IDLE);
+    meRef.current?.show(facingRef.current, SPRITE_IDLE);
     if (myPet.current) meRef.current?.placePet(myPet.current.x, myPet.current.y);
     setRoomId(id);
     setSitting(null);
@@ -363,9 +395,14 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     setNearId(null);
     setMarker(null);
     setWalked(false);
-    setOnGate(next.portals.find((g) => g.to === from)?.id ?? null);
-    say("");
-    setWarp((n) => n + 1);
+    setOnGate(gate?.id ?? null);
+    // 같은 방 안에서 자리만 고쳐 설 때(settle — 늦게 온 자리표로 제 러그에 옮겨 섬)는 반짝임 · 떠 있는 한 줄을 그대로 둡니다
+    if (!forced?.settle) {
+      // 선생님이 옮겼으면 그 까닭을 한 줄로 — 옮겨 선 자리가 내 러그라 곧바로 물음표가 떠도 이 한 줄은 잠시 붙들어 둡니다
+      noteHold.current = forced?.note ? now + NOTE_MS : 0;
+      say(forced?.note ?? "");
+      setWarp((n) => n + 1);
+    }
     if (myUid) {
       remember("localStorage", roomKey(classId, myUid), id);
       remember("sessionStorage", seatKey(classId, myUid), null);
@@ -493,8 +530,9 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     if (ask !== hintRef.current) {
       hintRef.current = ask;
       setHint(ask);
-      // 물을 것이 생겼으면(러그에 올라섬 · 칠판 앞에 섬) '어디로 가라'던 한 줄은 걷습니다
-      if (ask) say("");
+      // 물을 것이 생겼으면(러그에 올라섬 · 칠판 앞에 섬) '어디로 가라'던 한 줄은 걷습니다.
+      // 선생님이 방금 옮겨 놓아 뜬 한 줄('선생님이 모두를 교실로 불렀어요')은 잠시 그대로 둡니다 — 옮겨 선 자리가 내 러그입니다.
+      if (ask && time >= noteHold.current) say("");
     }
     if (ask === "board") {
       const mark = classroomBoardMark(pos.current);
@@ -738,8 +776,65 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
       seatRestored.current = true;
       if (here === "classroom" && mySeat !== null && myUid && recall("sessionStorage", seatKey(classId, myUid)) === `${todayDateKey()}:${mySeat}`) sitDown(true);
     }
+    // 선생님이 모두를 교실로 불렀는데 자리표를 아직 못 받아 교실 뒤쪽에 세워 둔 학생(화면을 막 연 학생 — 아래 '모두 이동')
+    // — 자리표가 왔으니 제 러그로 옮겨 세웁니다. 그사이 걸음을 뗐으면 그대로 둡니다(걷는 학생을 다시 끌어오지 않음).
+    const owed = seatOwed.current;
+    seatOwed.current = null;
+    if (owed && here === "classroom" && mySeat !== null && sittingRef.current === null && !path.current.length
+      && pos.current.x === owed.x && pos.current.y === owed.y) {
+      enterRoom("classroom", { at: classroomMoveSpot({ to: "classroom", seat: mySeat, uid: myUid }), settle: true });
+    }
     wake();
-  }, [isTeacher, classroomOn, layout, mySeat, here, classId, myUid, sitDown, standUp, wake]);
+  }, [isTeacher, classroomOn, layout, mySeat, here, classId, myUid, sitDown, standUp, wake, enterRoom]);
+  // 선생님의 '모두 이동'(모두 교실로 · 모두 광장으로) — 반 문서의 신호(어느 방으로 · 보낸 때)를 보고 그 방으로 옮깁니다.
+  // 학생 화면도, 단추를 누른 선생님 자신의 화면도 같은 길입니다(lib/readingClassroom.js의 classroomMoveCall).
+  //   · 보는 동안 새 신호가 오면 곧바로(기기 시계를 보지 않음). 이미 그 방이면 그대로(앉아 있던 학생도 앉은 채).
+  //   · 화면을 열었을 때 이미 있던 신호는 한 시간 안의 것이고 이 기기가 아직 따르지 않았을 때만(늦게 들어온 학생).
+  //     책꽂이에서 '광장에서 보기'로 넘어온 화면(initialBook)은 그 책을 보러 온 것이라 처음에는 옮기지 않습니다.
+  //   · 가판대 · 책꽂이 창을 열어 둔 학생 — 쓰던 댓글이 없으면 창을 닫고, 있으면 창은 둔 채 방만 옮깁니다(글이 날아가지 않게.
+  //     창을 닫으면 옮겨 온 방이 보이고 그때 한 줄이 뜹니다).
+  // 그리기 전에 맞춥니다(useLayoutEffect) — 화면을 열 때 옛 방이 한 번 보였다가 바뀌지 않게.
+  const moveTo = classroom?.moveTo ?? null;
+  const moveAt = Number(classroom?.moveAt) || 0;
+  useLayoutEffect(() => {
+    // 지금까지 본 '보낸 때' 가운데 가장 큰 값을 기억합니다 — 값이 잠깐 비었다 돌아와도 새 신호로 보지 않게
+    const prev = seenMove.current;
+    seenMove.current = Math.max(prev ?? 0, moveAt);
+    if (!classroomOn || !myUid) return;
+    if (prev === undefined && initialBook) return;
+    const seen = prev === undefined ? Number(recall("localStorage", moveKey(classId, myUid))) || 0 : 0;
+    const target = classroomMoveCall({ prev, to: moveTo, at: moveAt, seen, now: Date.now() });
+    if (!target) return;
+    remember("localStorage", moveKey(classId, myUid), String(moveAt));
+    if (target === hereRef.current) return;
+    // 알리는 한 줄 — 학생에게는 옮겨 온 까닭을, 선생님에게는(방금 눌렀을 때만) 누가 함께 옮겨 오는지를
+    const note = !isTeacher ? GATHER_NOTE[target] : prev !== undefined ? GATHER_DONE[target] : "";
+    // 쓰던 댓글이 있는 창은 닫지 않습니다(창 안의 글 칸에 글이 들어 있는가 — 창은 이 화면에 하나뿐)
+    const drafting = panelOpen.current && typeof document !== "undefined"
+      && [...document.querySelectorAll(".plaza-panel textarea")].some((el) => el.value.trim());
+    if (panelOpen.current && !drafting) setPanel(null);
+    lateNote.current = drafting ? note : "";
+    enterRoom(target, {
+      at: classroomMoveSpot({ to: target, teacher: isTeacher, seat: mySeatRef.current, uid: myUid }),
+      note: drafting ? "" : note,
+    });
+    // 자리표를 아직 못 받았으면(화면을 막 연 학생) 지금은 교실 뒤쪽에 섰습니다 — 자리표가 오면 제 러그로 옮겨 세웁니다(위)
+    seatOwed.current = !isTeacher && target === "classroom" && layoutRef.current === undefined ? { ...pos.current } : null;
+  }, [moveTo, moveAt, classroomOn, classId, myUid, isTeacher, initialBook, enterRoom]);
+  // [선생님] 맵 위의 '모두 교실로 · 모두 광장으로' — 신호를 적습니다(선생님 자신도 그 신호를 따라 옮겨 감 — 위).
+  //   · 누른 뒤 잠깐(GATHER_GAP_MS)은 다시 눌러도 듣지 않습니다. 단추는 누르는 순간 저쪽 방의 것으로 바뀌므로,
+  //     두 번 눌리면(더블클릭 · Enter를 누른 채) 반 전체가 갔다가 곧바로 되돌아옵니다. 저장이 끝나기를 기다리는
+  //     잠금이 아니라 시간으로 막습니다 — 연결이 끊긴 동안에는 저장이 끝나지 않아 단추가 죽은 채 남습니다.
+  //   · 누르고 나면 초점을 무대로 돌려 곧바로 방향키 · A로 움직일 수 있게 합니다(단추에 초점이 남으면 Enter · Space가
+  //     다시 단추를 누릅니다).
+  const moveAll = useCallback(() => {
+    const send = classroomRef.current?.onMoveAll;
+    const now = performance.now();
+    if (!send || now < movingAll.current) return;
+    movingAll.current = now + GATHER_GAP_MS;
+    stageRef.current?.focus({ preventScroll: true });
+    Promise.resolve(send(hereRef.current === "classroom" ? "plaza" : "classroom")).catch(() => {});
+  }, []);
   // [학생] 선생님의 출석 확인 — 반 문서의 '확인한 때'가 바뀌는 것을 본 순간 제자리에 앉아 있으면 출석을 남깁니다.
   // 화면을 열고 처음 본 값은 기준일 뿐입니다(그 뒤에 들어온 학생은 그때 접속하지 않은 학생 — lib/readingClassroom.js).
   const rollCall = classroom?.rollCall ?? null;
@@ -953,6 +1048,9 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   // 나와 같은 방에 있는 친구들 · 의자에 앉아 있는 자리들(그 책상의 이름표는 몸에 가려 걷습니다)
   const mates = friends.filter((f) => f.room === here);
   const inClass = here === "classroom";
+  // [선생님] 모두 이동 단추가 서는가 · 옮길 저쪽 방
+  const canGather = isTeacher && classroomOn && !!classroom?.onMoveAll;
+  const other = inClass ? "plaza" : "classroom";
   const roster = isTeacher ? classroom?.roster ?? null : null;
   const names = useMemo(() => new Map((roster ?? []).map((s) => [s.uid, s])), [roster]);
   const seated = useMemo(() => {
@@ -970,7 +1068,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
 
   return (
     <section className="plaza" aria-label={ROOM_NAME[here]}>
-      <div className={`plaza-stage-wrap${live.status !== "off" || liveNote ? " has-live" : ""}`} ref={wrapRef}>
+      <div className={`plaza-stage-wrap${live.status !== "off" || liveNote ? " has-live" : ""}${canGather ? " has-gather" : ""}`} ref={wrapRef}>
         <div className={`plaza-stage plaza-stage--${here}`} ref={stageRef} tabIndex={0} role="application" aria-label={stageLabel}
           style={size ? { height: size.h } : undefined}
           onClick={onStageClick} onKeyDown={onKeyDown} onKeyUp={onKeyUp} onBlur={stopKeys} onScroll={keepStill}>
@@ -1035,7 +1133,13 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
             무대 밖(형제)에 두어 여기를 눌러도 캐릭터가 걷지 않습니다. */}
         <div className="plaza-hud">
           <div className="plaza-hud-lead">
-            <h3 className="plaza-title">{ROOM_NAME[here]}</h3>
+            {/* 선생님(교실을 켠 반) — 방 이름 팻말 자리에 '모두 교실로 · 모두 광장으로'(선생님 요청). 지금 책 광장 탭을 열어 둔
+                학생과 선생님 자신을 저쪽 방으로 옮깁니다. 학생과 교실을 끈 반은 지금처럼 방 이름입니다. */}
+            {canGather
+              ? <button type="button" className="plaza-title plaza-gather" onClick={moveAll}
+                  title={`지금 책 광장 탭을 열어 둔 학생과 선생님을 모두 ${ROOM_NAME[other]}${other === "classroom" ? "로" : "으로"} 옮깁니다`}
+                  aria-label={`${GATHER_LABEL[other]} — 지금은 ${ROOM_NAME[here]}. 책 광장 탭을 열어 둔 학생과 선생님을 모두 옮깁니다`}>{GATHER_LABEL[other]}</button>
+              : <h3 className="plaza-title">{ROOM_NAME[here]}</h3>}
             {onExit && <button type="button" className="plaza-exit" onClick={onExit} aria-label={`${ROOM_NAME[here]}에서 나가기`}>나가기</button>}
           </div>
           {!inClass ? (
@@ -1087,7 +1191,16 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
         <PlazaPanel classId={classId} user={user} isTeacher={isTeacher} shelves={shelves ?? []} loading={shelves === null}
           place={panel.place} friendUid={panel.friendUid ?? null} book={panel.book ?? null}
           onNavigate={(next) => setPanel((current) => ({ ...current, ...next }))}
-          onClose={() => { setPanel(null); stageRef.current?.focus({ preventScroll: true }); }} />
+          onClose={() => {
+            setPanel(null);
+            stageRef.current?.focus({ preventScroll: true });
+            // 창을 열어 둔 사이(쓰던 댓글이 있어 닫지 않음) 선생님이 방을 옮겨 놓았으면 이제 알립니다
+            if (lateNote.current) {
+              noteHold.current = performance.now() + NOTE_MS;
+              say(lateNote.current);
+              lateNote.current = "";
+            }
+          }} />
       )}
     </section>
   );

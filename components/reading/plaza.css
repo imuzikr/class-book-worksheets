@@ -83,10 +83,12 @@
   font: inherit; font-size: 18px; font-weight: 800; letter-spacing: -.03em; line-height: 1; white-space: nowrap;
   box-shadow: 0 3px 0 #8a5a2b55, 0 8px 18px #3a26122e;
 }
-.plaza-exit { cursor: pointer; transition: background .15s, transform .15s, box-shadow .15s; }
-.plaza-exit:hover { background: #fff; transform: translateY(-1px); }
-.plaza-exit:active { transform: translateY(2px); box-shadow: 0 1px 0 #8a5a2b55, 0 4px 10px #3a26122e; }
-.plaza-exit:focus-visible { outline: 3px solid #478fbd; outline-offset: 2px; }
+/* 누르는 팻말 — '나가기'와, 선생님의 '모두 교실로 · 모두 광장으로'(.plaza-gather — 방 이름 팻말 자리에 서는 단추, 선생님 요청).
+   둘은 같은 모양 · 같은 크기입니다(격자의 같은 폭 두 칸 — 글자가 긴 쪽에 맞춰 둘이 함께 넓어짐). */
+.plaza-exit, .plaza-gather { cursor: pointer; transition: background .15s, transform .15s, box-shadow .15s; }
+.plaza-exit:hover, .plaza-gather:hover { background: #fff; transform: translateY(-1px); }
+.plaza-exit:active, .plaza-gather:active { transform: translateY(2px); box-shadow: 0 1px 0 #8a5a2b55, 0 4px 10px #3a26122e; }
+.plaza-exit:focus-visible, .plaza-gather:focus-visible { outline: 3px solid #478fbd; outline-offset: 2px; }
 /* 가판대 · 책꽂이 — 이어 놓인 두 단추는 같은 크기 */
 .plaza-hud-actions { position: absolute; right: 14px; top: 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .plaza-hud-actions button {
@@ -149,6 +151,19 @@
 @container plazawrap (max-width: 400px) {
   .plaza-title, .plaza-exit { padding: 0 9px; font-size: 14.5px; }
   .plaza-hud-actions button { padding: 0 8px; }
+}
+/* 선생님의 '모두 교실로'가 서면(.has-gather) 왼쪽 팻말 둘이 글자만큼 넓어져, 좁은 칸(폰)에서는 오른쪽의 가판대 · 책꽂이
+   단추와 겹칩니다(실측 420px — '나가기'와 16px · 360px — 40px). 그때는 단추를 한 줄 아래로 내립니다 — 교실의 알림
+   (.plaza-hud-room)이 좁은 화면에서 서는 줄과 같은 자리입니다. 그 줄에 '지금 n명' 알약(왼쪽)이 함께 서고, 글이 긴 알약
+   (쉬는 중 · 잇지 못한 까닭)은 한 줄 더 내려갑니다. 책꽂이 이름표도 그 줄만큼 비켜 내립니다. */
+@container plazawrap (max-width: 520px) {
+  .plaza-stage-wrap.has-gather .plaza-hud-actions { top: 62px; }
+  .plaza-stage-wrap.has-gather .plaza-live--resting, .plaza-stage-wrap.has-gather .plaza-live--note { top: 110px; }
+  .plaza-stage-wrap.has-gather .plaza-sign--shelf { translate: 0 80px; }
+}
+@container plazawrap (max-width: 460px) {
+  .plaza-stage-wrap.has-gather .plaza-hud-actions { top: 52px; }
+  .plaza-stage-wrap.has-gather .plaza-live--resting, .plaza-stage-wrap.has-gather .plaza-live--note { top: 94px; }
 }
 
 /* 이름표 — 책꽂이 · 가판대 위에 떠 있는 나무 팻말 */
@@ -214,7 +229,7 @@
    한때 여기서 함께 껐더니 캐릭터와 알이 발을 안 움직이고 미끄러져 다녔습니다(선생님 신고 — 되돌리지 마세요). */
 @media (prefers-reduced-motion: reduce) {
   .plaza-sign.is-near, .plaza-marker, .plaza-hint, .plaza-live--connecting { animation: none; }
-  .plaza-exit { transition: none; }
+  .plaza-exit, .plaza-gather { transition: none; }
 }
 
 /* ── 교실 · 포털(선생님 요청 — 책 광장의 둘째 방) ─────────────────────────────
