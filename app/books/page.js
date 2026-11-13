@@ -22,6 +22,8 @@ import TeacherReadingView from "@/components/reading/TeacherReadingView";
 import ReadingLeaderboard from "@/components/reading/ReadingLeaderboard";
 import AdminSettingsPanel from "@/components/AdminSettingsPanel";
 import { readingEnabled, rankingEnabled, bookSearchEnabled, fruitBasketOn, plazaOn, plazaNeedsSync, classroomOn, classroomRollToday } from "@/lib/reading";
+import { abandonClassroomMove, feedClassroomMove, useClassroomMove, watchClassroomMove } from "@/lib/classroomMoveStore";
+import { classroomMoveShown } from "@/lib/classroomMove";
 import { characterChoiceEnabled } from "@/lib/readingCharacter";
 import { petEnabled } from "@/lib/readingPet";
 import { readingMapThemeOf } from "@/lib/readingMapCatalog";
@@ -345,6 +347,17 @@ function BooksPageInner() {
 
   const classId = admin ? teacherClassId : studentClassId;
   const currentClass = (admin ? myClassesAll : classes).find((c) => c.id === classId) ?? null;
+  // 선생님의 '모두 이동' — 반 문서의 신호를 한 곳(lib/classroomMoveStore.js)에 먹이고, 거기서 '세는 중 → 내놓음'을 봅니다.
+  // 상단바도 같은 문서를 먹입니다(같은 신호는 한 번만 셈). 무대 · 책나눔 틀에는 **다 센 뒤의 신호**만 넘깁니다.
+  useEffect(() => watchClassroomMove(classId), [classId]);
+  useEffect(() => { feedClassroomMove(classId, currentClass); }, [classId, currentClass]);
+  const classMove = useClassroomMove(classId);
+  // 무대가 따를 신호 — 다 센 뒤에 내놓인 것(반 문서를 막 받아 아직 먹이기 전이면 그 문서의 값을 '이미 있던 신호'로 —
+  // lib/classroomMove.js의 classroomMoveShown)
+  const moveShown = classroomMoveShown(classMove, currentClass);
+  // 다 세고 모두를 데려오는 신호의 '보낸 때' — 책나눔의 다른 탭(책꽂이 · 성장 · 선생님의 학생 명단)에 있던 화면이
+  // 이 값이 바뀌는 것을 보고 책 광장 탭으로 넘어갑니다(ReadingHub · TeacherReadingView).
+  const plazaCall = moveShown?.pull ? moveShown.at : 0;
   const growthEnabled = readingEnabled(currentClass);
   const readingOpen = growthEnabled && !openActivityId && searchParams.get("area") === "reading";
   // 리더보드 — 책나눔의 경험치 · 뱃지를 '독서 여정'으로(상단바 '리더보드')
@@ -582,15 +595,19 @@ function BooksPageInner() {
       setAttending(false);
     }
   }
-  // [교사] 맵 위의 '모두 교실로 · 모두 광장으로'(선생님 요청) — 반 문서에 '어느 방으로 · 보낸 때'를 적습니다. 책 광장 탭을
-  // 열어 둔 학생 화면과 선생님 자신의 화면이 그 값이 바뀌는 것을 보고 그 방으로 옮겨 갑니다(셈 lib/readingClassroom.js의
-  // classroomMoveCall · 무대 ReadingPlaza). 출석 확인과 같은 길이라 규칙을 새로 열지 않습니다(반 문서는 담당 교사가 고침).
-  // 앞 신호의 '보낸 때'를 함께 넘겨, 이 기기의 시계가 늦어도 새 신호가 늘 더 큰 값이 되게 합니다.
+  // [교사] 맵 위의 '모두 교실로 · 모두 광장으로'(선생님 요청) — 반 문서에 '어느 방으로 · 보낸 때 · 셀 시간(10초)'을
+  // 적습니다. 반의 모든 화면(학생 · 선생님 자신)이 그 값이 바뀌는 것을 보고 **알림과 10초 카운트다운을 띄운 뒤** 그 방으로
+  // 옮겨 갑니다 — 다른 화면에 있던 학생도 책 광장 탭으로 데려옵니다(셈 lib/classroomMove.js · 상태
+  // lib/classroomMoveStore.js · 띠 ClassMoveBanner · 무대 ReadingPlaza). 출석 확인과 같은 길이라 규칙을 새로 열지
+  // 않습니다(반 문서는 담당 교사가 고침). 지금까지 본 '보낸 때'를 함께 넘겨, 이 기기의 시계가 늦어도 새 신호가 늘 더
+  // 큰 값이 되게 합니다. 세는 중에는 다시 보내지 않습니다(거두는 길은 알림 띠의 '취소').
   async function handleClassroomMoveAll(to) {
-    if (!classId || !admin) return;
+    if (!classId || !admin || classMove.pending) return;
     try {
-      await moveClassroomAll(classId, to, currentClass?.classroomMoveAt);
+      await moveClassroomAll(classId, to, Math.max(Number(currentClass?.classroomMoveAt) || 0, classMove.seen ?? 0));
     } catch {
+      // 적지 못했습니다 — 이 화면이 먼저 세기 시작한 것을 걷습니다(아무에게도 닿지 않은 신호로 선생님만 옮겨 가지 않게)
+      abandonClassroomMove(classId);
       setToast("모두 옮기지 못했어요. 잠시 뒤 다시 해 주세요.");
     }
   }
@@ -601,8 +618,13 @@ function BooksPageInner() {
     attended: attendedToday,
     presentUids: todayPresentUids,
     rollCall: currentClass?.classroomCallAt ?? null,
-    moveTo: currentClass?.classroomMoveTo ?? null,
-    moveAt: currentClass?.classroomMoveAt ?? null,
+    // 모두 이동 — 무대에는 **다 센 뒤에 내놓인 신호**만 넘깁니다(세는 동안은 아무도 안 옮김).
+    //   moveTick  이 화면이 지켜보는 동안 온 신호면 그것을 내놓은 때(무대가 막 섰어도 시계를 보지 않고 따름), 아니면 0
+    //   moveWaiting  세는 중인가([선생님] 맵 위의 단추를 잠시 쉬게 함)
+    moveTo: moveShown?.to ?? null,
+    moveAt: moveShown?.at ?? null,
+    moveTick: moveShown?.live ? moveShown.tick : 0,
+    moveWaiting: !!classMove.pending,
     roster: admin ? roster : null,
     seatLayout: admin ? seatLayout : null,
     onAttend: handleClassroomAttend,
@@ -1170,11 +1192,13 @@ function BooksPageInner() {
             <TeacherReadingView classId={classId} user={user} roster={roster}
               studentUid={searchParams.get("student")} onPickStudent={(uid) => patchBooksQuery({ student: uid }, { replace: true })} bookSearchOn={bookSearchEnabled(currentClass)}
               plazaOn={plazaOn(currentClass)} characterOn={characterOn} initialTab={searchParams.get("tab") || "library"} classroom={classroomProps}
+              plazaCall={plazaCall}
               activities={liveActivities} onOpenActivity={goToActivity}
               onDisabled={() => patchBooksQuery({ area: null }, { replace: true })} />
           ) : readingOpen ? (
             <ReadingHub key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin} bookSearchOn={bookSearchEnabled(currentClass)} petOn={petOn}
               plazaOn={plazaOn(currentClass)} characterOn={characterOn} classroom={classroomProps}
+              plazaCall={plazaCall}
               activities={liveActivities} onOpenActivity={goToActivity}
               initialBookId={searchParams.get("book")} initialTab={searchParams.get("tab") || "library"}
               onDisabled={() => patchBooksQuery({ area: null }, { replace: true })} />

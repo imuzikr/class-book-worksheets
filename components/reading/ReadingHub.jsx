@@ -134,7 +134,9 @@ function Modal({ title, onClose, children, wide = false, busy = false }) {
 // characterOn — 관리자 설정의 '학생 캐릭터'(끄면 광장에서도 기본 캐릭터).
 // classroom — 교실(관리자 설정의 '교실' — 책 광장의 둘째 방)에 넘길 묶음. 책방 페이지가 만들어 그대로 무대에 건넵니다
 //   (출석 · 자리표는 페이지가 이미 받아 둔 것 — ReadingPlaza.jsx 머리의 설명).
-export default function ReadingHub({ classId, user, isTeacher = false, bookSearchOn = false, petOn = false, plazaOn = false, characterOn = true, onDisabled, activities = [], onOpenActivity, initialBookId = null, initialTab = "library", student = null, classroom = null }) {
+// plazaCall — 선생님의 '모두 이동'이 10초를 다 세고 모두를 데려오는 신호의 '보낸 때'(책방 페이지가 넘김 · 없으면 0).
+//   이 값이 **이 화면이 떠 있는 동안 바뀌면** 책 광장 탭으로 넘어갑니다(아래).
+export default function ReadingHub({ classId, user, isTeacher = false, bookSearchOn = false, petOn = false, plazaOn = false, characterOn = true, onDisabled, activities = [], onOpenActivity, initialBookId = null, initialTab = "library", student = null, classroom = null, plazaCall = 0 }) {
   // student가 있으면 교사가 그 학생의 책나눔을 보는 읽기 전용 화면입니다(선생님 결정 — 감상·발자국까지 전부 보임).
   const readOnly = !!student?.uid;
   const viewUid = readOnly ? student.uid : user?.uid;
@@ -169,6 +171,26 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
   const [filter, setFilter] = useState("all");
   const [dialog, setDialog] = useState(null);
   const [confirm, setConfirm] = useState(null);
+  // 선생님의 '모두 이동'(모두 교실로 · 모두 광장으로 — 선생님 요청) — 알림과 10초 카운트다운이 끝나면, 책꽂이 · 성장 탭에
+  // 있던 학생도 책 광장 탭으로 넘어갑니다(그 방으로 옮기는 것은 무대가 맡음 — ReadingPlaza).
+  //   · **처음 받은 값은 기준일 뿐**입니다 — 떠 있는 동안 값이 바뀔 때만 넘어갑니다(한참 전의 신호로 책나눔을 열 때마다
+  //     광장으로 끌려가지 않게. 다른 화면에서 막 데려온 학생은 주소의 ?tab=plaza로 처음부터 광장 탭입니다).
+  //   · **쓰던 입력 창(책 등록 · 독서 발자국 · 한 권의 책)은 닫지 않습니다** — 창은 그대로 뜬 채 뒤의 화면만 광장이
+  //     됩니다(저장하거나 닫으면 광장이 보임 · 쓰던 글이 날아가지 않게). 읽기만 하는 책 상세 창은 닫습니다.
+  //   · 이미 광장 탭이면 아무것도 건드리지 않습니다('광장에서 보기'로 연 책 창이 다시 서지 않게).
+  //   · 선생님이 학생의 책나눔을 읽는 화면(readOnly)은 넘어가지 않습니다 — 선생님의 광장은 따로 섭니다(TeacherReadingView).
+  const tabNow = useRef(tab);
+  tabNow.current = tab;
+  const seenCall = useRef(plazaCall);
+  useEffect(() => {
+    if (plazaCall === seenCall.current) return;
+    seenCall.current = plazaCall;
+    if (!plazaCall || !plazaOn || readOnly || tabNow.current === "plaza") return;
+    setPlazaJump(null);
+    setError("");
+    setDialog((current) => (current?.type === "detail" ? null : current));
+    setTab("plaza");
+  }, [plazaCall, plazaOn, readOnly]);
   const [notice, setNotice] = useState("");
   const [revision, setRevision] = useState(0);
   const [day, setDay] = useState(() => kstToday());

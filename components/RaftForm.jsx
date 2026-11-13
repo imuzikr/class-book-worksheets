@@ -12,6 +12,7 @@
 // 저장은 자동입니다(입력을 멈추면 조용히 저장).
 // =============================================================
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSaveOnLeave } from "@/lib/useSaveOnLeave";
 import {
   subscribeMyParatextEntry,
   saveParatextEntry,
@@ -80,6 +81,8 @@ function RaftFormBody({ activity, user, onBack }) {
   // 내 기록에 적힌 모둠(모둠 RAFT) — null이면 아직 기록이 없음
   const [savedGroup, setSavedGroup] = useState(null);
   const timerRef = useRef(null);
+  // 자동 저장 타이머가 걸려 있나(아직 못 보낸 글이 있나) — 화면을 떠날 때 곧바로 보낼지를 가립니다
+  const unsentRef = useRef(false);
 
   const locked = !!activity.locked;
   const bookUrl = safeBookUrl(activity.bookUrl);
@@ -164,7 +167,9 @@ function RaftFormBody({ activity, user, onBack }) {
   useEffect(() => {
     if (!dirtyRef.current || locked) return;
     clearTimeout(timerRef.current);
+    unsentRef.current = true;
     timerRef.current = setTimeout(async () => {
+      unsentRef.current = false;
       // 이번 저장에 실리는 칸 — 저장하는 사이에 고친 칸은 다음 차례로 갑니다
       const keys = [...pendingKeysRef.current];
       pendingKeysRef.current.clear();
@@ -186,6 +191,12 @@ function RaftFormBody({ activity, user, onBack }) {
     }, SAVE_DELAY);
     return () => clearTimeout(timerRef.current);
   }, [answers, activity.id, user, locked, myGroupId]);
+  // 화면을 떠날 때(← 활동 목록 · 선생님의 '모두 이동') 아직 못 보낸 글을 곧바로 저장합니다(lib/useSaveOnLeave.js)
+  useSaveOnLeave(() => {
+    if (!unsentRef.current || locked) return;
+    unsentRef.current = false;
+    saveParatextEntry(activity.id, user, answers, myGroupId ? { groupId: myGroupId } : {}).catch(() => {});
+  });
 
   function edit(key, value) {
     dirtyRef.current = true;

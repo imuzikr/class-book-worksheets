@@ -36,6 +36,8 @@ import PresentationOverlay from "./PresentationOverlay";
 import RewardCelebration from "./RewardCelebration";
 import FloatingHub from "./FloatingHub";
 import ClassTopReaders from "./ClassTopReaders";
+import ClassMoveBanner from "./reading/ClassMoveBanner";
+import { feedClassroomMove, watchClassroomMove } from "@/lib/classroomMoveStore";
 import { useRewardCelebration } from "@/lib/useRewardCelebration";
 import { useClassMembers } from "@/lib/useClassRoster";
 import { IconLogo, IconBook, IconTrophy, IconSettings } from "./StatusIcons";
@@ -167,13 +169,18 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
     setTopCharacters(false);
     setPetOn(false);
     if (!quizClassId) return;
-    return subscribeClass(quizClassId, (c) => {
+    // 선생님의 '모두 이동' 신호 — 어느 화면에서든 알림 띠가 뜨게 여기서 먹입니다(lib/classroomMoveStore.js).
+    // 보는 동안임을 알려 둡니다(한참 안 보다 다시 본 첫 값은 '이미 있던 신호'로 다룸). 아직 못 받은 문서(null)는 먹이지 않습니다.
+    const unwatch = watchClassroomMove(quizClassId);
+    const off = subscribeClass(quizClassId, (c) => {
+      feedClassroomMove(quizClassId, c);
       setFruitOn(fruitBasketOn(c));
       setTopOn(!!c && !c.archived && readingTopOn(c));
       setTopCharacters(!!c && characterChoiceEnabled(c));
       if (!admin) setCharacterOn(!!c && readingEnabled(c) && characterChoiceEnabled(c));
       if (!admin) setPetOn(!!c && petEnabled(c));
     });
+    return () => { off(); unwatch(); };
   }, [admin, quizClassId]);
 
   // 알 받기 — 가입한 학생(또는 이 기능이 생긴 뒤 처음 온 학생)에게 알을 한 번 줍니다. 종은 서버가
@@ -469,6 +476,10 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
 
     {/* 과일을 받은 순간 — 학생 화면 어디서든(위 훅 참고) */}
     <RewardCelebration amount={cheerAmount} onDone={clearCheer} />
+
+    {/* 선생님의 '모두 교실로 · 모두 광장으로' — 화면 위쪽에 알림과 10초 카운트다운(선생님 요청). 다 세면 다른 화면에
+        있던 사람도 책 광장 탭으로 데려갑니다. 상단바가 모든 화면에 떠 있어 여기 하나면 어디서나 뜹니다. */}
+    {user && quizClassId && <ClassMoveBanner classId={quizClassId} isTeacher={admin} />}
 
     {/* 독서 펫의 알을 처음 받은 순간 — 막지 않는 한 줄 알림(수업 중이어도 화면을 가리지 않게) */}
     {petToast && <Toast message={petToast} duration={4200} onDone={clearPetToast} />}

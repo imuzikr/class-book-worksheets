@@ -205,4 +205,26 @@ describe("책 광장 규칙", () => {
     assert.equal(seen.data().classroomMoveTo, "plaza");
     assert.equal(seen.data().classroomMoveAt, 1794500004321);
   });
+  // 모두 이동의 10초 알림(선생님 요청) — 신호에 '셀 시간(classroomMoveWait)'이 붙고, 취소는 방이 아닌 값(null)을 새 신호로
+  // 적습니다(lib/data/classes.js의 moveClassroomAll · cancelClassroomMove — 한 번의 쓰기, 세 칸). 규칙은 그대로입니다.
+  it("모두 이동의 10초 알림 — 담당 교사만 세 칸(어느 방으로 · 보낸 때 · 셀 시간)을 적고 취소하며, 반 학생은 읽는다", async () => {
+    const teacher = asTeacher(env, "teacherA").firestore();
+    // 앱과 같은 한 번의 쓰기
+    await assertSucceeds(updateDoc(doc(teacher, "classes", "cOn"), { classroomMoveTo: "classroom", classroomMoveAt: 1794500010000, classroomMoveWait: 10 }));
+    // 취소 — 방 자리에 null · 셀 시간 0
+    await assertSucceeds(updateDoc(doc(teacher, "classes", "cOn"), { classroomMoveTo: null, classroomMoveAt: 1794500013000, classroomMoveWait: 0 }));
+    // 다시 누름
+    await assertSucceeds(updateDoc(doc(teacher, "classes", "cOn"), { classroomMoveTo: "plaza", classroomMoveAt: 1794500015000, classroomMoveWait: 10 }));
+    // 학생 · 다른 반 교사는 못 적는다(학생이 스스로 반 전체에 알림을 띄우거나, 선생님이 누른 것을 거둘 수 없음)
+    const student = asStudent(env, "s1").firestore();
+    await assertFails(updateDoc(doc(student, "classes", "cOn"), { classroomMoveTo: "classroom", classroomMoveAt: 1794500019000, classroomMoveWait: 10 }));
+    await assertFails(updateDoc(doc(student, "classes", "cOn"), { classroomMoveTo: null, classroomMoveAt: 1794500019000, classroomMoveWait: 0 }));
+    await assertFails(updateDoc(doc(student, "classes", "cOn"), { classroomMoveWait: 0 }));
+    await assertFails(updateDoc(doc(asTeacher(env, "teacherB").firestore(), "classes", "cOn"), { classroomMoveTo: "classroom", classroomMoveAt: 1794500019000, classroomMoveWait: 10 }));
+    // 반 학생은 세 칸을 읽는다(어느 화면에 있든 상단바가 반 문서 한 건을 보고 알림을 띄운다)
+    const seen = await assertSucceeds(getDoc(doc(student, "classes", "cOn")));
+    assert.equal(seen.data().classroomMoveTo, "plaza");
+    assert.equal(seen.data().classroomMoveAt, 1794500015000);
+    assert.equal(seen.data().classroomMoveWait, 10);
+  });
 });

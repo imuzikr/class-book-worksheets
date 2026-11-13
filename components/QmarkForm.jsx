@@ -24,6 +24,7 @@
 // entries/{uid}.answers라 규칙을 안 건드립니다. 셈 · 옛 모양 읽기는 lib/qmark.js.
 // =============================================================
 import { useEffect, useRef, useState } from "react";
+import { useSaveOnLeave } from "@/lib/useSaveOnLeave";
 import { subscribeMyParatextEntry, saveParatextEntry, saveParatextTopic } from "@/lib/store";
 import TopicAskModal from "./TopicAskModal";
 import {
@@ -56,6 +57,8 @@ export default function QmarkForm({ activity, user, onBack }) {
   // 내가 고친 뒤로는 서버 값이 와도 덮어쓰지 않습니다(입력 중 글자가 튀지 않게)
   const dirtyRef = useRef(false);
   const timerRef = useRef(null);
+  // 자동 저장 타이머가 걸려 있나(아직 못 보낸 글이 있나) — 화면을 떠날 때 곧바로 보낼지를 가립니다
+  const unsentRef = useRef(false);
   // 펼친 물음표 쌍(하나만, 없으면 null) — 나머지는 한 줄로 접힙니다.
   // 처음에는 아직 다 안 쓴 첫 쌍을 폅니다(해시태그 카드와 같은 약속).
   const [openAsk, setOpenAsk] = useState(null);
@@ -95,7 +98,9 @@ export default function QmarkForm({ activity, user, onBack }) {
     if (!dirtyRef.current || locked) return;
     clearTimeout(timerRef.current);
     setStatus("saving");
+    unsentRef.current = true;
     timerRef.current = setTimeout(async () => {
+      unsentRef.current = false;
       try {
         await saveParatextEntry(activity.id, user, normalizeQmarkAnswers(answers));
         setStatus("saved");
@@ -105,6 +110,12 @@ export default function QmarkForm({ activity, user, onBack }) {
     }, SAVE_DELAY);
     return () => clearTimeout(timerRef.current);
   }, [answers, activity.id, user, locked]);
+  // 화면을 떠날 때(← 활동 목록 · 선생님의 '모두 이동') 아직 못 보낸 글을 곧바로 저장합니다(lib/useSaveOnLeave.js)
+  useSaveOnLeave(() => {
+    if (!unsentRef.current || locked) return;
+    unsentRef.current = false;
+    saveParatextEntry(activity.id, user, normalizeQmarkAnswers(answers)).catch(() => {});
+  });
 
   function editAsk(index, field, value) {
     dirtyRef.current = true;

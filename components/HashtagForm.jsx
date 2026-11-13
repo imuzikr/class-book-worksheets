@@ -28,6 +28,7 @@
 // 저장은 자동입니다(입력을 멈추면 조용히). '제출'은 없습니다.
 // =============================================================
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSaveOnLeave } from "@/lib/useSaveOnLeave";
 import {
   subscribeMyHashtagPost,
   subscribeHashtagPosts,
@@ -105,6 +106,8 @@ export default function HashtagForm({ activity, user, onBack }) {
   const dirtyRef = useRef(false);
   const existsRef = useRef(false);
   const timerRef = useRef(null);
+  // 자동 저장 타이머가 걸려 있나(아직 못 보낸 글이 있나) — 화면을 떠날 때 곧바로 보낼지를 가립니다
+  const unsentRef = useRef(false);
   const fileRef = useRef(null);
   const commentsRef = useRef(null);
   // 해시태그 카드 — 지금 펼친 칸 번호. null이면 '아직 다 안 쓴 첫 카드'를,
@@ -158,7 +161,9 @@ export default function HashtagForm({ activity, user, onBack }) {
     if (!dirtyRef.current || locked) return;
     clearTimeout(timerRef.current);
     setStatus("saving");
+    unsentRef.current = true;
     timerRef.current = setTimeout(async () => {
+      unsentRef.current = false;
       try {
         await saveHashtagPost(activity.id, user, post, { first: !existsRef.current });
         existsRef.current = true;
@@ -170,6 +175,12 @@ export default function HashtagForm({ activity, user, onBack }) {
     }, SAVE_DELAY);
     return () => clearTimeout(timerRef.current);
   }, [post, activity.id, user, locked]);
+  // 화면을 떠날 때(← 활동 목록 · 선생님의 '모두 이동') 아직 못 보낸 글을 곧바로 저장합니다(lib/useSaveOnLeave.js)
+  useSaveOnLeave(() => {
+    if (!unsentRef.current || locked) return;
+    unsentRef.current = false;
+    saveHashtagPost(activity.id, user, post, { first: !existsRef.current }).catch(() => {});
+  });
 
   function edit(fn) {
     if (locked) return;

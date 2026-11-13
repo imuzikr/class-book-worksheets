@@ -12,15 +12,24 @@
 // (주소에 ?tab=plaza를 붙여도 안 열림), 학생이 있는 반에서도 '○○의 독서 여정' 안에 섞여 입구로 보이지 않았습니다.
 // 그 탭은 그대로 두었습니다(같은 광장으로 감) — 입구를 다시 그 탭 하나로 줄이지 마세요.
 // =============================================================
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReadingHub, { TeacherPlaza } from "./ReadingHub";
 
 // 고른 학생은 주소(?student=)가 듭니다 — 리더보드의 '책꽂이로 이동'이 그 학생을 짚어 열고,
 // 새로고침해도 그 학생입니다. 명단을 누르면 주소만 바꿉니다(replace).
-export default function TeacherReadingView({ classId, user, roster = [], studentUid = null, onPickStudent, plazaOn = false, initialTab = "library", ...hubProps }) {
+// plazaCall — 선생님의 '모두 이동'이 10초를 다 세고 모두를 데려오는 신호의 '보낸 때'(책방 페이지가 넘김 · 없으면 0).
+//   누른 선생님이 세는 동안 광장에서 나와 명단을 보고 있었으면, 다 셌을 때 선생님도 광장으로 돌아갑니다('모두'에는
+//   선생님도 듭니다). 떠 있는 동안 값이 바뀔 때만입니다(처음 받은 값은 기준일 뿐).
+export default function TeacherReadingView({ classId, user, roster = [], studentUid = null, onPickStudent, plazaOn = false, initialTab = "library", plazaCall = 0, ...hubProps }) {
   const student = roster.find((s) => s.uid === studentUid) || roster[0] || null;
   // 책 광장에 들어가 있는가 — 주소의 ?tab=plaza로 열었으면 처음부터(학생 화면과 같은 주소). 나가면 명단으로 돌아옵니다.
   const [plazaOpen, setPlazaOpen] = useState(initialTab === "plaza");
+  const seenCall = useRef(plazaCall);
+  useEffect(() => {
+    if (plazaCall === seenCall.current) return;
+    seenCall.current = plazaCall;
+    if (plazaCall && plazaOn) setPlazaOpen(true);
+  }, [plazaCall, plazaOn]);
   if (plazaOn && plazaOpen) {
     return (
       <div className="reading-teacher">

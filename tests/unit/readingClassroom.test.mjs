@@ -468,6 +468,25 @@ test("모두 이동 — 화면을 열었을 때 이미 있던 신호는 한 시�
   assert.equal(classroomMoveCall({ prev: undefined, to: "plaza", at: T + 10, seen: "모양이 틀린 값", now: T + MIN }), "plaza");
 });
 
+test("모두 이동 — 이 화면이 지켜보는 동안 온 신호(live)는 무대가 막 섰어도 기기 시계를 보지 않고 따른다", () => {
+  const T = 1794500000000;
+  const DAY = 24 * 60 * 60 * 1000;
+  // 10초를 다 세고 다른 화면에서 데려온 학생 — 무대가 그때 처음 서지만(prev 없음) 방금 온 신호다.
+  // 선생님이나 학생의 시계가 며칠 틀려 있어도 반이 모인 방에서 시작해야 한다
+  for (const now of [0, T - 9 * DAY, T + 9 * DAY, undefined, NaN]) {
+    assert.equal(classroomMoveCall({ prev: undefined, to: "classroom", at: T, now, live: true }), "classroom", String(now));
+  }
+  // 그래도 이 기기가 이미 따른 신호는 다시 따르지 않는다 — 옮겨 온 뒤 포털로 돌아간 학생이 광장 탭을 다시 열 때
+  assert.equal(classroomMoveCall({ prev: undefined, to: "classroom", at: T, seen: T, now: T, live: true }), null);
+  assert.equal(classroomMoveCall({ prev: undefined, to: "classroom", at: T, seen: T + 1, now: T, live: true }), null);
+  // 방 이름 · 보낸 때의 모양이 틀리면 live여도 옮기지 않는다
+  assert.equal(classroomMoveCall({ prev: undefined, to: null, at: T, live: true }), null);
+  assert.equal(classroomMoveCall({ prev: undefined, to: "classroom", at: 0, live: true }), null);
+  // 보는 동안(prev가 있음)에는 live가 아무것도 바꾸지 않는다
+  assert.equal(classroomMoveCall({ prev: T, to: "classroom", at: T, live: true }), null);
+  assert.equal(classroomMoveCall({ prev: T, to: "classroom", at: T + 1, live: true }), "classroom");
+});
+
 test("모두 이동 — 설 자리: 선생님은 칠판 앞, 학생은 제 러그의 귀(곧바로 앉을 수 있게), 나머지는 흩어 선다", () => {
   const room = CLASSROOM_ROOM;
   // 선생님 → 교실: 칠판 앞 가운데(곧바로 A로 출석을 시작)

@@ -89,6 +89,11 @@
 .plaza-exit:hover, .plaza-gather:hover { background: #fff; transform: translateY(-1px); }
 .plaza-exit:active, .plaza-gather:active { transform: translateY(2px); box-shadow: 0 1px 0 #8a5a2b55, 0 4px 10px #3a26122e; }
 .plaza-exit:focus-visible, .plaza-gather:focus-visible { outline: 3px solid #478fbd; outline-offset: 2px; }
+/* 세는 중(선생님이 누른 뒤 10초 — 화면 위 알림 띠가 세는 동안) — 단추가 쉽니다. 글자 · 크기는 그대로 두고 흐리게만
+   (옆의 '나가기'와 폭이 함께 정해지므로 글자를 바꾸면 둘이 함께 흔들립니다). 거두는 길은 알림 띠의 '취소'. */
+.plaza-gather.is-waiting { opacity: .58; cursor: default; }
+.plaza-gather.is-waiting:hover { background: #fff6e2f5; transform: none; }
+.plaza-gather.is-waiting:active { transform: none; box-shadow: 0 3px 0 #8a5a2b55, 0 8px 18px #3a26122e; }
 /* 가판대 · 책꽂이 — 이어 놓인 두 단추는 같은 크기 */
 .plaza-hud-actions { position: absolute; right: 14px; top: 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .plaza-hud-actions button {

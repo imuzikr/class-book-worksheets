@@ -16,6 +16,7 @@
 // 글이 날아가는 일이 없도록 한 선택입니다.
 // =============================================================
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSaveOnLeave } from "@/lib/useSaveOnLeave";
 import { subscribeMyParatextEntry, saveParatextEntry, saveParatextTopic } from "@/lib/store";
 import TopicAskModal from "./TopicAskModal";
 import { backdropClose } from "@/lib/modal";
@@ -56,6 +57,8 @@ export default function ParatextForm({ activity, user, onBack }) {
   // 내가 고친 뒤로는 서버 값이 와도 덮어쓰지 않습니다(입력 중 글자가 튀는 것 방지)
   const dirtyRef = useRef(false);
   const timerRef = useRef(null);
+  // 자동 저장 타이머가 걸려 있나(아직 못 보낸 글이 있나) — 화면을 떠날 때 곧바로 보낼지를 가립니다
+  const unsentRef = useRef(false);
 
   const locked = !!activity.locked;
   const bookUrl = safeBookUrl(activity.bookUrl);
@@ -107,7 +110,9 @@ export default function ParatextForm({ activity, user, onBack }) {
     if (!dirtyRef.current || locked) return;
     clearTimeout(timerRef.current);
     setStatus("saving");
+    unsentRef.current = true;
     timerRef.current = setTimeout(async () => {
+      unsentRef.current = false;
       try {
         await saveParatextEntry(activity.id, user, answers);
         setStatus("saved");
@@ -117,6 +122,12 @@ export default function ParatextForm({ activity, user, onBack }) {
     }, SAVE_DELAY);
     return () => clearTimeout(timerRef.current);
   }, [answers, activity.id, user, locked]);
+  // 화면을 떠날 때(← 활동 목록 · 선생님의 '모두 이동') 아직 못 보낸 글을 곧바로 저장합니다(lib/useSaveOnLeave.js)
+  useSaveOnLeave(() => {
+    if (!unsentRef.current || locked) return;
+    unsentRef.current = false;
+    saveParatextEntry(activity.id, user, answers).catch(() => {});
+  });
 
   function edit(key, value) {
     dirtyRef.current = true;

@@ -58,7 +58,7 @@ import { characterOf } from "@/lib/readingCharacterCatalog";
 import { petProgress } from "@/lib/readingPet";
 import { plazaItems } from "@/lib/readingPlaza";
 import {
-  classroomAct, classroomAtBoard, classroomAttendance, classroomBoardAt, classroomBoardMark, classroomBoardStand, classroomDesks,
+  CLASSROOM_MOVE_LATE_MS, classroomAct, classroomAtBoard, classroomAttendance, classroomBoardAt, classroomBoardMark, classroomBoardStand, classroomDesks,
   classroomMoveCall, classroomMoveSpot,
   classroomNearSeat, classroomRollCall, classroomSeatAt, classroomSeatLabel, classroomSeatOf, classroomSeatSide, classroomUnseated, plazaArrowKey, plazaLetterKey,
 } from "@/lib/readingClassroom";
@@ -93,12 +93,13 @@ const ROOM_NAME = { plaza: "책 광장", classroom: "교실" };
 // 모두 이동(선생님의 '모두 교실로 · 모두 광장으로') — 선생님 단추의 글자 · 옮겨진 학생에게 뜨는 한 줄
 const GATHER_LABEL = { classroom: "모두 교실로", plaza: "모두 광장으로" };
 const GATHER_NOTE = { classroom: "선생님이 모두를 교실로 불렀어요.", plaza: "선생님이 모두를 책 광장으로 불렀어요." };
-// 누른 선생님에게 뜨는 한 줄 — 누가 함께 옮겨 오는지(책 광장 탭을 열어 둔 학생)를 말합니다
+// 누른 선생님에게 뜨는 한 줄 — 10초를 다 세고 옮겨 온 뒤(다른 화면에 있던 학생도 책 광장 탭으로 데려옵니다)
 const GATHER_DONE = {
-  classroom: "모두 교실로 불렀어요. 책 광장을 열어 둔 학생이 함께 옮겨 와요.",
-  plaza: "모두 책 광장으로 불렀어요. 교실에 있던 학생이 함께 옮겨 와요.",
+  classroom: "모두 교실로 불렀어요. 학생들이 함께 옮겨 와요.",
+  plaza: "모두 책 광장으로 불렀어요. 학생들이 함께 옮겨 와요.",
 };
-// 선생님이 '모두 이동'을 누른 뒤 다시 누를 수 있을 때까지(ms) — 두 번 눌려 반 전체가 갔다가 곧바로 되돌아오지 않게
+// 선생님이 '모두 이동'을 누른 뒤 다시 누를 수 있을 때까지(ms) — 두 번 눌려 신호가 두 번 나가지 않게(누른 값이 이 화면에
+// 닿아 '세는 중'이 되기 전의 짧은 틈. 세는 동안에는 단추가 쉽니다 — 거두는 길은 화면 위 알림 띠의 '취소')
 const GATHER_GAP_MS = 1500;
 const NO_KEYS = () => ({ left: false, right: false, up: false, down: false });
 const pct = (value, whole) => `${(value / whole * 100).toFixed(3)}%`;
@@ -134,7 +135,9 @@ const friendRow = (uid, who, friend) => ({
 // classroom — 교실(관리자 설정의 '교실'을 켠 반 · 책방 페이지가 넘김):
 //   { on, openToday(오늘 출석이 열려 있나), attended([학생] 오늘 출석했나), presentUids([선생님] 오늘 출석한 uid들),
 //     rollCall(반 문서의 classroomCallAt — 선생님이 출석을 확인한 때), roster([선생님] 명단), seatLayout([선생님] 자리표),
-//     moveTo · moveAt(반 문서의 classroomMoveTo · classroomMoveAt — 선생님의 '모두 이동' 신호: 어느 방으로 · 보낸 때),
+//     moveTo · moveAt(선생님의 '모두 이동' 신호: 어느 방으로 · 보낸 때 — **알림과 10초 카운트다운을 다 센 뒤에 내놓인 것**만
+//       옵니다. 세는 것은 lib/classroomMoveStore.js · 띠는 ClassMoveBanner) · moveTick(이 화면이 지켜보는 동안 온 신호면
+//       그것을 내놓은 때 · 아니면 0) · moveWaiting(세는 중인가 — [선생님] 단추를 쉬게 함),
 //     onAttend([학생] 출석 남기기) · onRollCall([선생님] 출석시작) · onStop([선생님] 출석종료) · onSeatSetup([선생님] 자리 배정하기 열기) ·
 //     onMoveAll([선생님] 모두 이동 — 방 id를 받아 신호를 적음) }
 export default function ReadingPlaza({ classId, user, isTeacher = false, characterOn = true, petOn = false, growthXp = null, initialBook = null, onExit = null, classroom = null }) {
@@ -786,16 +789,21 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     }
     wake();
   }, [isTeacher, classroomOn, layout, mySeat, here, classId, myUid, sitDown, standUp, wake, enterRoom]);
-  // 선생님의 '모두 이동'(모두 교실로 · 모두 광장으로) — 반 문서의 신호(어느 방으로 · 보낸 때)를 보고 그 방으로 옮깁니다.
+  // 선생님의 '모두 이동'(모두 교실로 · 모두 광장으로) — 신호(어느 방으로 · 보낸 때)를 보고 그 방으로 옮깁니다.
   // 학생 화면도, 단추를 누른 선생님 자신의 화면도 같은 길입니다(lib/readingClassroom.js의 classroomMoveCall).
+  // **여기 오는 신호는 알림과 10초 카운트다운을 다 센 뒤의 것**입니다(책방 페이지가 lib/classroomMoveStore.js에서 내놓인
+  // 것만 넘김 — 세는 동안에는 아무도 옮기지 않습니다).
   //   · 보는 동안 새 신호가 오면 곧바로(기기 시계를 보지 않음). 이미 그 방이면 그대로(앉아 있던 학생도 앉은 채).
-  //   · 화면을 열었을 때 이미 있던 신호는 한 시간 안의 것이고 이 기기가 아직 따르지 않았을 때만(늦게 들어온 학생).
+  //   · 무대가 설 때 이미 있던 신호는 이 기기가 아직 따르지 않았을 때만 —
+  //       이 화면이 지켜보는 동안 온 신호(moveTick — 다른 화면에서 막 데려와 무대가 지금 선 학생)는 시계를 보지 않고,
+  //       화면을 열었을 때 이미 있던 신호는 한 시간 안의 것만(늦게 들어온 학생).
   //     책꽂이에서 '광장에서 보기'로 넘어온 화면(initialBook)은 그 책을 보러 온 것이라 처음에는 옮기지 않습니다.
   //   · 가판대 · 책꽂이 창을 열어 둔 학생 — 쓰던 댓글이 없으면 창을 닫고, 있으면 창은 둔 채 방만 옮깁니다(글이 날아가지 않게.
   //     창을 닫으면 옮겨 온 방이 보이고 그때 한 줄이 뜹니다).
   // 그리기 전에 맞춥니다(useLayoutEffect) — 화면을 열 때 옛 방이 한 번 보였다가 바뀌지 않게.
   const moveTo = classroom?.moveTo ?? null;
   const moveAt = Number(classroom?.moveAt) || 0;
+  const moveTick = Number(classroom?.moveTick) || 0;
   useLayoutEffect(() => {
     // 지금까지 본 '보낸 때' 가운데 가장 큰 값을 기억합니다 — 값이 잠깐 비었다 돌아와도 새 신호로 보지 않게
     const prev = seenMove.current;
@@ -803,12 +811,15 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     if (!classroomOn || !myUid) return;
     if (prev === undefined && initialBook) return;
     const seen = prev === undefined ? Number(recall("localStorage", moveKey(classId, myUid))) || 0 : 0;
-    const target = classroomMoveCall({ prev, to: moveTo, at: moveAt, seen, now: Date.now() });
+    // 이 화면이 지켜보는 동안 온 신호인가 — 내놓은 지 한 시간 안일 때만(이 기기 안에서의 차이라 시계가 틀려도 됨)
+    const sinceTick = Date.now() - moveTick;
+    const live = moveTick > 0 && sinceTick <= CLASSROOM_MOVE_LATE_MS && sinceTick > -CLASSROOM_MOVE_LATE_MS;
+    const target = classroomMoveCall({ prev, to: moveTo, at: moveAt, seen, now: Date.now(), live });
     if (!target) return;
     remember("localStorage", moveKey(classId, myUid), String(moveAt));
     if (target === hereRef.current) return;
     // 알리는 한 줄 — 학생에게는 옮겨 온 까닭을, 선생님에게는(방금 눌렀을 때만) 누가 함께 옮겨 오는지를
-    const note = !isTeacher ? GATHER_NOTE[target] : prev !== undefined ? GATHER_DONE[target] : "";
+    const note = !isTeacher ? GATHER_NOTE[target] : prev !== undefined || live ? GATHER_DONE[target] : "";
     // 쓰던 댓글이 있는 창은 닫지 않습니다(창 안의 글 칸에 글이 들어 있는가 — 창은 이 화면에 하나뿐)
     const drafting = panelOpen.current && typeof document !== "undefined"
       && [...document.querySelectorAll(".plaza-panel textarea")].some((el) => el.value.trim());
@@ -820,17 +831,19 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     });
     // 자리표를 아직 못 받았으면(화면을 막 연 학생) 지금은 교실 뒤쪽에 섰습니다 — 자리표가 오면 제 러그로 옮겨 세웁니다(위)
     seatOwed.current = !isTeacher && target === "classroom" && layoutRef.current === undefined ? { ...pos.current } : null;
-  }, [moveTo, moveAt, classroomOn, classId, myUid, isTeacher, initialBook, enterRoom]);
-  // [선생님] 맵 위의 '모두 교실로 · 모두 광장으로' — 신호를 적습니다(선생님 자신도 그 신호를 따라 옮겨 감 — 위).
-  //   · 누른 뒤 잠깐(GATHER_GAP_MS)은 다시 눌러도 듣지 않습니다. 단추는 누르는 순간 저쪽 방의 것으로 바뀌므로,
-  //     두 번 눌리면(더블클릭 · Enter를 누른 채) 반 전체가 갔다가 곧바로 되돌아옵니다. 저장이 끝나기를 기다리는
-  //     잠금이 아니라 시간으로 막습니다 — 연결이 끊긴 동안에는 저장이 끝나지 않아 단추가 죽은 채 남습니다.
+  }, [moveTo, moveAt, moveTick, classroomOn, classId, myUid, isTeacher, initialBook, enterRoom]);
+  // [선생님] 맵 위의 '모두 교실로 · 모두 광장으로' — 신호를 적습니다. 반의 모든 화면에 알림과 10초 카운트다운이 뜨고,
+  // 다 세면 모두(선생님 자신도) 그 신호를 따라 옮겨 갑니다 — 위.
+  //   · **세는 동안에는 듣지 않습니다**(moveWaiting — 단추가 쉼). 거두려면 화면 위 알림 띠의 '취소'.
+  //   · 누른 뒤 잠깐(GATHER_GAP_MS)도 다시 눌러도 듣지 않습니다 — 누른 값이 이 화면에 닿아 '세는 중'이 되기 전의 틈에
+  //     두 번 눌리면(더블클릭 · Enter를 누른 채) 신호가 두 번 나갑니다. 저장이 끝나기를 기다리는 잠금이 아니라 시간으로
+  //     막습니다 — 연결이 끊긴 동안에는 저장이 끝나지 않아 단추가 죽은 채 남습니다.
   //   · 누르고 나면 초점을 무대로 돌려 곧바로 방향키 · A로 움직일 수 있게 합니다(단추에 초점이 남으면 Enter · Space가
   //     다시 단추를 누릅니다).
   const moveAll = useCallback(() => {
     const send = classroomRef.current?.onMoveAll;
     const now = performance.now();
-    if (!send || now < movingAll.current) return;
+    if (!send || classroomRef.current?.moveWaiting || now < movingAll.current) return;
     movingAll.current = now + GATHER_GAP_MS;
     stageRef.current?.focus({ preventScroll: true });
     Promise.resolve(send(hereRef.current === "classroom" ? "plaza" : "classroom")).catch(() => {});
@@ -1048,9 +1061,10 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   // 나와 같은 방에 있는 친구들 · 의자에 앉아 있는 자리들(그 책상의 이름표는 몸에 가려 걷습니다)
   const mates = friends.filter((f) => f.room === here);
   const inClass = here === "classroom";
-  // [선생님] 모두 이동 단추가 서는가 · 옮길 저쪽 방
+  // [선생님] 모두 이동 단추가 서는가 · 옮길 저쪽 방 · 지금 세는 중인가(그동안 단추가 쉼)
   const canGather = isTeacher && classroomOn && !!classroom?.onMoveAll;
   const other = inClass ? "plaza" : "classroom";
+  const gathering = canGather && !!classroom?.moveWaiting;
   const roster = isTeacher ? classroom?.roster ?? null : null;
   const names = useMemo(() => new Map((roster ?? []).map((s) => [s.uid, s])), [roster]);
   const seated = useMemo(() => {
@@ -1133,12 +1147,14 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
             무대 밖(형제)에 두어 여기를 눌러도 캐릭터가 걷지 않습니다. */}
         <div className="plaza-hud">
           <div className="plaza-hud-lead">
-            {/* 선생님(교실을 켠 반) — 방 이름 팻말 자리에 '모두 교실로 · 모두 광장으로'(선생님 요청). 지금 책 광장 탭을 열어 둔
-                학생과 선생님 자신을 저쪽 방으로 옮깁니다. 학생과 교실을 끈 반은 지금처럼 방 이름입니다. */}
+            {/* 선생님(교실을 켠 반) — 방 이름 팻말 자리에 '모두 교실로 · 모두 광장으로'(선생님 요청). 누르면 반의 모든 화면에
+                알림과 10초 카운트다운이 뜨고, 다 세면 학생 모두(다른 화면에 있던 학생도)와 선생님 자신을 저쪽 방으로
+                옮깁니다. 세는 동안에는 단추가 쉽니다(aria-disabled — 초점은 그대로 둠 · 거두는 길은 알림 띠의 '취소').
+                학생과 교실을 끈 반은 지금처럼 방 이름입니다. */}
             {canGather
-              ? <button type="button" className="plaza-title plaza-gather" onClick={moveAll}
-                  title={`지금 책 광장 탭을 열어 둔 학생과 선생님을 모두 ${ROOM_NAME[other]}${other === "classroom" ? "로" : "으로"} 옮깁니다`}
-                  aria-label={`${GATHER_LABEL[other]} — 지금은 ${ROOM_NAME[here]}. 책 광장 탭을 열어 둔 학생과 선생님을 모두 옮깁니다`}>{GATHER_LABEL[other]}</button>
+              ? <button type="button" className={`plaza-title plaza-gather${gathering ? " is-waiting" : ""}`} onClick={moveAll} aria-disabled={gathering || undefined}
+                  title={gathering ? "곧 모두 옮겨요 — 거두려면 화면 위 알림의 ‘취소’를 눌러 주세요" : `10초 뒤 학생 모두와 선생님을 ${ROOM_NAME[other]}${other === "classroom" ? "로" : "으로"} 옮깁니다 — 학생 화면에 알림이 떠요`}
+                  aria-label={`${GATHER_LABEL[other]} — 지금은 ${ROOM_NAME[here]}. ${gathering ? "곧 모두 옮깁니다" : "10초 뒤 학생 모두와 선생님을 옮깁니다"}`}>{GATHER_LABEL[other]}</button>
               : <h3 className="plaza-title">{ROOM_NAME[here]}</h3>}
             {onExit && <button type="button" className="plaza-exit" onClick={onExit} aria-label={`${ROOM_NAME[here]}에서 나가기`}>나가기</button>}
           </div>
