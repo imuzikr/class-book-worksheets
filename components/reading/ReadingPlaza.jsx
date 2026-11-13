@@ -66,7 +66,7 @@ import {
   CLASSROOM_SEATS, PLAZA_H, PLAZA_NEAR, PLAZA_W, PORTAL_ART,
   plazaArrival, plazaCamera, plazaNearest, plazaPath, plazaPortalAt, plazaPortalClicked, plazaRoomOf, plazaSpotAt, plazaSpotNear, plazaStep, plazaView, plazaWalkable,
 } from "@/lib/readingPlazaMap";
-import { PET_STRIDE, PLAZA_WALK_SPEED, SPRITE_IDLE, plazaFacing, plazaPetFollow, plazaPetStart, plazaWalkFrame } from "@/lib/readingPlazaSprites";
+import { PET_STRIDE, PLAZA_WALK_SPEED, SPRITE_IDLE, plazaFacing, plazaPetFollow, plazaPetStart, plazaShownFrame } from "@/lib/readingPlazaSprites";
 import { PLAZA_STAGE_MIN_H, plazaRoom as stageRoom, plazaScroller } from "@/lib/plazaStageRoom";
 import PlazaActor from "./PlazaActor";
 import PlazaClassroom, { PlazaFurniture } from "./PlazaClassroom";
@@ -249,8 +249,9 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     if (!myUid || !petOn || isTeacher) { setPetState(null); return undefined; }
     return subscribeMyReadingPet(myUid, setPetState);
   }, [myUid, petOn, isTeacher]);
-  // 움직임을 줄여 달라고 한 기기에서는 시점이 미끄러지지 않고 캐릭터에 바로 붙고, 걷는 그림도 번갈아 바꾸지 않습니다
-  // (바라보는 쪽의 정지 그림으로 옮겨 감).
+  // 움직임을 줄여 달라고 한 기기에서는 시점이 미끄러지지 않고 캐릭터에 바로 붙습니다.
+  // **걷는 그림은 이 설정과 상관없이 넘깁니다**(선생님 신고 — 한때 여기서 걷는 그림도 껐더니, 그 설정이 켜진 기기에서
+  // 캐릭터가 발을 안 움직이고 미끄러져 다녔습니다. lib/readingPlazaSprites.js의 plazaShownFrame). calm을 걷는 그림에 다시 걸지 마세요.
   useEffect(() => {
     const query = typeof window !== "undefined" && window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
     if (!query) return undefined;
@@ -512,7 +513,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     }
     // 걷는 그림 — 걸은 거리로 넘깁니다. 멈추면 그쪽을 본 채 선 그림.
     stride.current = walking ? stride.current + moved : 0;
-    me?.show(facingRef.current, walking && !calm.current ? plazaWalkFrame(stride.current) : SPRITE_IDLE);
+    me?.show(facingRef.current, plazaShownFrame(walking, stride.current));
     if (!path.current.length && !dx && !dy && !seated) {
       if (pendingSpot.current) {
         const spot = pendingSpot.current;
@@ -545,7 +546,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
       petBusy = step.busy;
       if (step.walking || dt === 0) me?.placePet(pet.x, pet.y);
       // 알(과 걷는 그림이 없는 펫)은 걷는 동안 통통 뜁니다 — PlazaActor가 CSS로
-      me?.showPet(pet.facing, step.walking && !calm.current ? plazaWalkFrame(pet.stride, PET_STRIDE) : SPRITE_IDLE, step.walking);
+      me?.showPet(pet.facing, plazaShownFrame(step.walking, pet.stride, PET_STRIDE), step.walking);
     }
 
     // 함께 있는 친구들(나와 같은 방에 있는 사람만) — 받은 소식대로 걷습니다. 펫은 내 펫과 같은 셈으로 그 뒤를 따릅니다.
@@ -560,13 +561,13 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
       // 앉아 있는 친구는 걷지 않습니다(의자에 앉아 칠판 쪽을 봄)
       const step = sat ? { moved: 0, walking: false, busy: false } : plazaRemoteStep(actor, dt, time);
       if (handle && (fresh || step.moved > 0.01)) handle.place(actor.x, actor.y);
-      handle?.show(sat ? "up" : actor.facing, step.walking && !calm.current ? plazaWalkFrame(actor.stride) : SPRITE_IDLE);
+      handle?.show(sat ? "up" : actor.facing, plazaShownFrame(step.walking, actor.stride));
       // 이번에 걸었으면 한 프레임 더 — 다 와서 선 자세로 바꿔 그린 뒤에 쉽니다
       if (step.busy || step.moved > 0.01) castBusy = true;
       if (friend.pet) {
         const hop = plazaPetFollow(friend.pet, actor, dt, { active: step.walking, moved: step.moved, from: was, room: place, stay: sat ? classroomSeatSide(friend.seat, friend.pet).pet : null });
         if (handle && (fresh || hop.walking)) handle.placePet(friend.pet.x, friend.pet.y);
-        handle?.showPet(friend.pet.facing, hop.walking && !calm.current ? plazaWalkFrame(friend.pet.stride, PET_STRIDE) : SPRITE_IDLE, hop.walking);
+        handle?.showPet(friend.pet.facing, plazaShownFrame(hop.walking, friend.pet.stride, PET_STRIDE), hop.walking);
         if (hop.busy) castBusy = true;
       }
       if (fresh) friend.dirty = false;

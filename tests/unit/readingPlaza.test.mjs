@@ -13,9 +13,9 @@ import {
 import {
   FACING_STICK, PET_GAP, PET_PEEK, PET_PEEK_BACK, PLAZA_PET_SHEET_KEYS, PLAZA_WALK_SPEED, SPRITE_BODY, SPRITE_CELL, SPRITE_FOOT, WALK_SEQUENCE, WALK_STRIDE,
   plazaCharacterSheet, plazaCharacterSize, plazaFacing, plazaPetFollow, plazaPetHeel, plazaPetPeek, plazaPetScale, plazaPetSheet, plazaPetSize, plazaPetStart, plazaPetStep,
-  plazaSpriteCell, plazaTrailBehind, plazaTrailPush, plazaWalkFrame,
+  plazaShownFrame, plazaSpriteCell, plazaTrailBehind, plazaTrailPush, plazaWalkFrame,
 } from "../../lib/readingPlazaSprites.js";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { PET_SPECIES_KEYS } from "../../lib/readingPet.js";
 import { CHARACTER_STYLE_OPTIONS, characterOf } from "../../lib/readingCharacterCatalog.js";
@@ -391,6 +391,36 @@ test("걷는 그림 — 칸: 왼쪽은 오른쪽 줄을 뒤집고, 걸은 거리
   assert.equal(plazaWalkFrame(-5), 1);
   // 걷는 빠르기에서 초당 8장쯤(선생님이 주신 묶음의 안내는 초당 7장)
   assert.ok(PLAZA_WALK_SPEED / WALK_STRIDE > 6.5 && PLAZA_WALK_SPEED / WALK_STRIDE < 10);
+});
+
+test("걷는 그림 — 걷는 동안에는 늘 넘긴다(기기의 '애니메이션 줄이기' 설정을 보지 않음)", () => {
+  // 걷는 중이면 걸은 거리로 고른 걷는 그림, 멈추면 정지 그림
+  const walked = [];
+  for (let d = 0; d < WALK_STRIDE * 4; d += WALK_STRIDE) walked.push(plazaShownFrame(true, d + 1));
+  assert.deepEqual(walked, [1, 0, 2, 0]);
+  assert.equal(plazaShownFrame(false, WALK_STRIDE * 2 + 1), 0);
+  // 펫은 제 걸음 거리로
+  assert.equal(plazaShownFrame(true, 23, 22), 0);
+  assert.equal(plazaShownFrame(true, 45, 22), 2);
+  // 받는 것은 '걷는 중인가 · 걸은 거리 · 한 장의 거리' 셋뿐 — 기기 설정을 받을 자리가 없다
+  assert.equal(plazaShownFrame.length, 2);
+  // 무대(components/reading/ReadingPlaza.jsx)가 걷는 그림을 고르는 네 자리(내 캐릭터 · 내 펫 · 친구 · 친구의 펫)는
+  // 모두 이 셈을 쓰고, 기기의 '움직임 줄이기'(calm)를 끼워 넣지 않는다. 한때 끼워 넣어, 그 설정이 켜진 기기에서
+  // 캐릭터가 발을 안 움직이고 미끄러져 다녔다(선생님 신고).
+  const stage = readFileSync(fileURLToPath(new URL("../../components/reading/ReadingPlaza.jsx", import.meta.url)), "utf8");
+  const picks = stage.split("\n").filter((line) => /\.(show|showPet)\(/.test(line) && !/SPRITE_IDLE\)/.test(line));
+  assert.equal(picks.length, 4, "걷는 그림을 고르는 자리는 넷");
+  for (const line of picks) {
+    assert.match(line, /plazaShownFrame\(/, line.trim());
+    assert.doesNotMatch(line, /calm/, line.trim());
+  }
+  assert.doesNotMatch(stage, /plazaWalkFrame\(/, "무대는 plazaWalkFrame을 곧바로 부르지 않는다(plazaShownFrame을 거침)");
+  // CSS — 움직임을 줄여 달라고 한 기기에서도 알이 통통 뛰는 것(걷는 모습)은 끄지 않는다
+  const css = readFileSync(fileURLToPath(new URL("../../components/reading/plaza.css", import.meta.url)), "utf8");
+  const calmBlocks = css.match(/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\n\}/g) ?? [];
+  assert.ok(calmBlocks.length >= 2);
+  for (const block of calmBlocks) assert.doesNotMatch(block, /plaza-pet\.is-moving|plaza-pet-figure|plaza-sprite/, "걷는 모습은 끄지 않는다");
+  assert.match(css, /\.plaza-pet\.is-moving \.plaza-pet-figure \{ animation: plaza-bob/);
 });
 
 test("걷는 그림 — 크기: 발 기준점은 칸의 (48, 88), 펫은 단계가 오를수록 크다", () => {
