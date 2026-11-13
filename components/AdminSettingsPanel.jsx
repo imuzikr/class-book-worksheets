@@ -16,7 +16,9 @@
 //   · 과일 바구니(fruitBasketEnabled — 값이 없으면 켜짐, 끄면 떠 있는 동그라미에서도 가림)
 //   · 학생 펫(petEnabled — 값이 없으면 켜짐, 책나눔이 켜져 있어야 씀 · lib/readingPet.js)
 //   · 책 광장(plazaEnabled — 기본 꺼짐, 책나눔이 켜져 있어야 씀 · lib/readingPlaza.js). 켜면 책나눔의 셋째 탭이
-//     '우리 반 랭킹' 대신 '책 광장'이 되고, 켠 뒤에 쓴 독서 발자국 · 꽂은 한 권의 책이 반 친구에게 보입니다.
+//     '우리 반 랭킹' 대신 '책 광장'이 되고, **그 반에서 쓴 독서 발자국 · 한 권의 책이 모두 반 친구에게 보입니다**
+//     (켜기 전에 쓴 글도 · 학생이 고르는 것이 없음 — 선생님 결정). 끄면 본인과 선생님만 봅니다. 켜는 순간 무엇이
+//     공개되는지를 이 스위치의 설명이 말해 주어야 합니다(선생님이 학생에게 미리 알릴 수 있게).
 //   · 교실(classroomEnabled — 기본 꺼짐, 책 광장이 켜져 있어야 씀 · lib/readingClassroom.js). 켜면 책 광장에 교실로 가는
 //     문과 포털이 생기고, 학생이 자리표의 제 책상에 앉아 있으면 선생님이 칠판에서 출석을 확인합니다(선생님 요청).
 //   · 독서 맵(readingMapTheme — 모험 · 대륙)
@@ -26,6 +28,8 @@ import { Fragment, useId, useMemo, useState } from "react";
 import { setTeacherFeature, setTeacherReadingMapTheme } from "@/lib/store";
 import { teacherFeatureSettings } from "@/lib/reading";
 import { READING_MAP_THEMES, readingMapThemeSettings } from "@/lib/readingMapCatalog";
+import ConfirmModal from "./ConfirmModal";
+import { IconGroup } from "./StatusIcons";
 
 const byName = (a, b) => String(a.name || "").localeCompare(String(b.name || ""), "ko", { numeric: true });
 
@@ -61,8 +65,12 @@ const FEATURES = [
     hint: "학생마다 알을 하나씩 받아 독서 경험치로 키워요. 책나눔 · 리더보드 · 내 프로필에 보여요. 선생님은 펫이 없어요.",
     on: "학생 펫을 켰어요. 학생마다 알을 하나씩 받아요.", off: "학생 펫을 껐어요. 키우던 펫은 보관되고, 다시 켜면 그대로 이어져요." },
   { key: "plazaEnabled", label: "책 광장", needs: ["readingEnabled"], needsText: "책나눔 성장 기능을 먼저 켜 주세요",
-    hint: "책나눔의 셋째 탭이 ‘우리 반 랭킹’ 대신 ‘책 광장’이 돼요. 켠 뒤에 쓰는 독서 발자국과 학생이 광장 책꽂이에 꽂은 ‘한 권의 책’을 반 친구들이 읽고 댓글을 남겨요. 순위는 상단바 리더보드에서 봐요.",
-    on: "책 광장을 켰어요. 지금부터 쓰는 독서 발자국이 광장에 보여요.", off: "책 광장을 껐어요. 광장의 글과 댓글은 보관되고, 책나눔에는 ‘우리 반 랭킹’ 탭이 다시 서요." },
+    hint: "책나눔의 셋째 탭이 ‘우리 반 랭킹’ 대신 ‘책 광장’이 돼요. 켜면 학생들이 이 반에서 쓴 독서 발자국과 ‘한 권의 책’이 모두 반 친구들에게 보이고(켜기 전에 쓴 글도 · 학생이 따로 고르지 않아요) 서로 댓글을 남겨요. 끄면 자기 글은 본인과 선생님만 봐요. 순위는 상단바 리더보드에서 봐요.",
+    on: "책 광장을 켰어요. 학생들이 쓴 독서 발자국과 ‘한 권의 책’이 모두 반 친구들에게 보여요.", off: "책 광장을 껐어요. 이제 자기 글은 본인과 선생님만 봐요. 광장의 글과 댓글은 보관되고, 책나눔에는 ‘우리 반 랭킹’ 탭이 다시 서요.",
+    // 켜는 순간 학생들이 지금까지 써 둔 글이 반 친구에게 보이므로(되돌려도 이미 본 것은 못 물림), **켤 때만** 한 번 되묻습니다.
+    // 끌 때는 곧바로 끕니다(보이는 범위를 좁히는 쪽).
+    ask: { title: "책 광장을 켤까요?", confirmLabel: "켜기",
+      description: "켜면 학생들이 이 반에서 지금까지 쓴 독서 발자국과 ‘한 권의 책’이 모두 반 친구들에게 보여요. 학생이 따로 고르지 않아요. 켜기 전에 학생들에게 먼저 알려 주세요." } },
   { key: "classroomEnabled", label: "교실", needs: ["readingEnabled", "plazaEnabled"], needsText: "책 광장을 먼저 켜 주세요",
     hint: "책 광장에 교실로 가는 문과 포털이 생겨요. 학생이 ‘자리 배정하기’의 제 책상 옆에서 A → 앉기(S)로 앉고, 선생님이 칠판 앞에서 A → 출석시작(S)을 누르면 그 순간 앉아 있던 학생만 출석으로 확인돼요.",
     on: "교실을 켰어요. 책 광장 왼쪽 아래의 포털로 교실에 들어가요.", off: "교실을 껐어요. 책 광장의 문과 포털이 사라지고, 출석 기록은 그대로예요." },
@@ -86,11 +94,15 @@ export default function AdminSettingsPanel({ classes = [], onToast }) {
   const mapId = useId();
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
+  // 켤 때 한 번 되묻는 스위치(책 광장 — FEATURES의 ask)의 되묻는 창
+  const [asking, setAsking] = useState(null);
 
-  async function toggle(f) {
+  async function toggle(f, confirmed = false) {
     if (busy) return;
     // 반마다 달랐으면(mixed) 켜짐이 아닌 것으로 보이므로 누르면 모두 켭니다.
     const enabled = !settings[f.key].on;
+    // 되묻는 창을 띄울 때는 떠 있던 알림 줄을 걷습니다 — 좁은 화면에서 창의 단추를 가립니다(실측 420px)
+    if (enabled && f.ask && !confirmed) { onToast?.(""); setAsking(f); return; }
     setBusy(f.key);
     setError("");
     try {
@@ -194,6 +206,16 @@ export default function AdminSettingsPanel({ classes = [], onToast }) {
         </div>
       )}
       <p className="adm-settings-foot">보관된 반은 바꿀 수 없어 빼고 적용해요. 새로 만드는 반도 지금 설정을 따라요.</p>
+      {asking && (
+        <ConfirmModal
+          icon={<IconGroup size={30} />}
+          title={asking.ask.title}
+          description={`${asking.ask.description}${rows.length > 1 ? ` 선생님의 반 ${rows.length}개 모두에 적용돼요.` : ""}`}
+          confirmLabel={asking.ask.confirmLabel}
+          onConfirm={() => { const f = asking; setAsking(null); toggle(f, true); }}
+          onClose={() => setAsking(null)}
+        />
+      )}
     </section>
   );
 }

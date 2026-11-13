@@ -21,7 +21,7 @@ import ReadingHub from "@/components/reading/ReadingHub";
 import TeacherReadingView from "@/components/reading/TeacherReadingView";
 import ReadingLeaderboard from "@/components/reading/ReadingLeaderboard";
 import AdminSettingsPanel from "@/components/AdminSettingsPanel";
-import { readingEnabled, rankingEnabled, bookSearchEnabled, fruitBasketOn, plazaOn, classroomOn, classroomRollToday } from "@/lib/reading";
+import { readingEnabled, rankingEnabled, bookSearchEnabled, fruitBasketOn, plazaOn, plazaNeedsSync, classroomOn, classroomRollToday } from "@/lib/reading";
 import { characterChoiceEnabled } from "@/lib/readingCharacter";
 import { petEnabled } from "@/lib/readingPet";
 import { readingMapThemeOf } from "@/lib/readingMapCatalog";
@@ -160,6 +160,11 @@ function activityDateLabel(activity) {
 }
 
 const SAMPLE_CLASS_PICK = `__sample__${SAMPLE_CLASS_ID}`;
+
+// 책 광장의 사본을 반 전체에 한 번 맞춰 달라는 부탁(아래 plazaStale) — 한 반에 이 화면에서 세 번까지, 40초 간격.
+// 40초는 서버의 '맞추는 중' 표시(30초)가 풀린 뒤입니다(lib/server/readingService.js의 plazaSyncClass).
+const PLAZA_SYNC_TRIES = 3;
+const PLAZA_SYNC_RETRY_MS = 40000;
 
 export default function BooksPage() {
   // useSearchParams()는 정적 프리렌더 시 Suspense 경계가 필요합니다 —
@@ -353,6 +358,35 @@ function BooksPageInner() {
   const settingsOpen = admin && !openActivityId && searchParams.get("area") === "settings";
 
   useEffect(() => subscribeBookActivities(classId, setActivities), [classId]);
+
+  // 책 광장의 '모두 공개'(선생님 결정 — 광장을 켠 반에서는 그 반에서 쓴 독서 발자국 · 한 권의 책이 모두 반 친구에게 보임).
+  // 공유 사본은 학생이 저장할 때마다 맞춰지므로, **광장을 켜기 전에 쓴 글**은 그대로 두면 그 학생이 다시 저장할 때까지
+  // 광장에 없습니다. 그래서 광장을 켠 반인데 그 반의 사본이 아직 통째로 맞춰지지 않았으면(반 문서의 plazaSynced —
+  // lib/reading.js의 plazaNeedsSync) 서버에 한 번 맞춰 달라고 부탁합니다. 그 반의 학생 · 선생님 누구의 화면이든
+  // 책방을 열면 부탁하고, 여럿이 함께 부탁해도 서버는 한 번만 맞춥니다(끝나면 반 문서의 표시가 바뀌어 더 부탁하지 않음).
+  // 다른 화면이 맞추는 중이라는 답(synced: false)이나 오류를 받으면 40초 뒤에 한 번 더 부탁합니다 — 맞추던 서버가
+  // 도중에 끊겼을 때 이어 가게(반마다 이 화면에서 세 번까지 · 그 뒤로는 다음에 책방을 열 때).
+  // 광장의 자료 함수는 광장을 켠 반에서만 내려받습니다(무대와 같은 까닭). 체험반은 사본을 그 자리에서 셈해 맞출 것이 없습니다.
+  const plazaSyncTries = useRef(new Map());
+  const plazaStale = isFirebaseConfigured && plazaNeedsSync(currentClass);
+  useEffect(() => {
+    if (!plazaStale || !classId || !myUid) return undefined;
+    const tries = plazaSyncTries.current;
+    let alive = true;
+    let timer = null;
+    const ask = () => {
+      const count = tries.get(classId) || 0;
+      if (!alive || count >= PLAZA_SYNC_TRIES) return;
+      tries.set(classId, count + 1);
+      const again = () => { if (alive) timer = setTimeout(ask, PLAZA_SYNC_RETRY_MS); };
+      import("@/lib/data/plaza")
+        .then((plaza) => plaza.syncPlazaClass(classId))
+        .then((result) => { if (result?.synced !== true) again(); })
+        .catch(again);
+    };
+    ask();
+    return () => { alive = false; clearTimeout(timer); };
+  }, [plazaStale, classId, myUid]);
 
   useEffect(() => {
     if (!admin || !classId) {

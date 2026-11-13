@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { applyReadingAction, deriveReading, featureValue, initialReadingState, plazaOn, teacherFeatureSettings } from "../../lib/reading.js";
+import { applyReadingAction, deriveReading, featureValue, initialReadingState, plazaNeedsSync, plazaOn, teacherFeatureSettings } from "../../lib/reading.js";
 import {
-  PLAZA_BOOK_CAP, PLAZA_COMMENT_MAX, PLAZA_LOG_CAP,
+  PLAZA_BOOK_CAP, PLAZA_COMMENT_MAX, PLAZA_LOG_CAP, PLAZA_SHARE_RULE,
   plazaCommentText, plazaFriends, plazaHasContent, plazaItems, plazaNameLabel,
   plazaProjection, plazaStable, plazaThisWeek, plazaWeekStart,
 } from "../../lib/readingPlaza.js";
@@ -40,101 +40,141 @@ test("책 광장 스위치 — 책나눔이 켜진 반에서 켰을 때만(기�
   assert.equal(teacherFeatureSettings([{ id: "a", plazaEnabled: true }]).plazaEnabled.on, true);
 });
 
-test("발자국 도장 — 광장을 켠 반에서 쓴(고친) 발자국만 공유된다", () => {
+// ── 무엇이 반 친구에게 보이나 — 선생님 결정: "학생이 선택할 수 있는 옵션을 제거하고 모두 공개" ──
+test("모두 공개 — 그 반에서 쓴 독서 발자국은 언제 썼든 모두 사본에 실린다(학생이 고르는 것이 없음)", () => {
   let s = addBook(initialReadingState(), "book1", 40);
-  s = addLog(s, "log00001", "book1", 1, 10);                    // 광장을 켜기 전
-  s = addLog(s, "log00002", "book1", 11, 20, { plaza: true });  // 켠 뒤
-  assert.equal(s.logs[0].plaza, undefined);
-  assert.equal(s.logs[1].plaza, true);
+  s = addLog(s, "log00001", "book1", 1, 10);
+  s = addLog(s, "log00002", "book1", 11, 20);
+  // 발자국에 공개 도장을 찍지 않는다(옛 화면이 넘기던 표시는 읽지 않음)
+  assert.equal("plaza" in s.logs[0], false);
+  assert.equal("plaza" in run(s, { type: "addLog", bookId: "book1", date: "2026-11-12", startPage: 21, endPage: 22, notes: "도장 없이" }, ctx("log00009", { plaza: true })).logs[2], false);
   let p = project(s);
   assert.equal(p.entries.length, 1);
   assert.equal(p.entries[0].place, "stall");
-  assert.equal(p.entries[0].logs, 1);
-  assert.deepEqual(p.books.book1.logs.map((l) => l.id), ["log00002"]);
-  assert.equal(p.books.book1.review, null);
-  // 옛 발자국을 광장이 켜진 동안 고치면 그때부터 보인다(고치는 창에 안내가 뜸)
-  s = run(s, { type: "updateLog", logId: "log00001", notes: "고친 글" }, ctx("x0000001", { plaza: true }));
-  assert.equal(s.logs.find((l) => l.id === "log00001").plaza, true);
-  // 광장이 꺼진 동안 고쳐도 이미 찍힌 도장은 그대로
-  s = run(s, { type: "updateLog", logId: "log00002", notes: "또 고침" }, ctx("x0000002"));
-  assert.equal(s.logs.find((l) => l.id === "log00002").plaza, true);
-  p = project(s);
   assert.equal(p.entries[0].logs, 2);
-  // 사본에는 책 제목 · 쪽수 · 발자국만 — 서재의 다른 칸(반 id · 도장)은 싣지 않는다
-  assert.deepEqual(Object.keys(p.books.book1.logs[0]).sort(), ["createdAt", "date", "endPage", "id", "notes", "startPage"]);
-});
-
-test("책마다 '광장에 보이기'를 끄면 그 책의 발자국은 안 나간다", () => {
-  let s = addBook(initialReadingState(), "book1", 40);
-  s = addLog(s, "log00001", "book1", 1, 10, { plaza: true });
-  assert.equal(project(s).entries.length, 1);
-  s = run(s, { type: "setBookPlaza", bookId: "book1", hidden: true }, ctx("x0000001"));
-  assert.equal(s.books[0].plazaHidden, true);
-  assert.equal(project(s).entries.length, 0);
-  s = run(s, { type: "setBookPlaza", bookId: "book1", hidden: false }, ctx("x0000002"));
-  assert.equal("plazaHidden" in s.books[0], false);
-  assert.equal(project(s).entries.length, 1);
-  assert.throws(() => run(s, { type: "setBookPlaza", bookId: "book1" }, ctx("x0000003")), /광장에 보일지/);
-});
-
-test("완독한 책은 '책꽂이에 꽂기'를 눌러야 책꽂이에 선다", () => {
-  let s = addBook(initialReadingState(), "book1", 20);
-  s = addLog(s, "log00001", "book1", 1, 20, { plaza: true });
-  // 완독했지만 아직 안 꽂음 — 가판대에서 내려오고 책꽂이에도 없다
-  assert.equal(project(s).entries.length, 0);
-  s = run(s, { type: "saveReview", bookId: "book1", text: "끝까지 읽었다", rating: 4 }, ctx("rev00001"));
-  assert.equal(project(s).entries.length, 0);
-  s = run(s, { type: "shelveReview", bookId: "book1", shelved: true }, at("2026-11-12T04:00:00.000Z", "x0000001"));
-  assert.equal(s.reviews[0].shelved, true);
-  assert.equal(s.reviews[0].shelvedAt, "2026-11-12T04:00:00.000Z");
-  let p = project(s);
-  assert.equal(p.entries[0].place, "shelf");
-  assert.equal(p.entries[0].rating, 4);
-  assert.equal(p.entries[0].excerpt, "끝까지 읽었다");
-  assert.equal(p.books.book1.review.text, "끝까지 읽었다");
-  assert.equal(p.books.book1.logs.length, 1);
-  assert.equal(p.entries[0].last, "2026-11-12T04:00:00.000Z");
-  // 고쳐 써도 꽂은 것 · 꽂은 때는 그대로
-  s = run(s, { type: "saveReview", bookId: "book1", text: "고쳐 쓴 글", rating: 5 }, at("2026-11-12T05:00:00.000Z", "x0000002"));
-  assert.equal(s.reviews[0].shelved, true);
-  assert.equal(s.reviews[0].shelvedAt, "2026-11-12T04:00:00.000Z");
-  // 발자국을 숨겨도 꽂은 한 권의 책은 그대로(발자국만 빠짐)
-  s = run(s, { type: "setBookPlaza", bookId: "book1", hidden: true }, ctx("x0000003"));
+  assert.deepEqual(p.books.book1.logs.map((l) => l.id).sort(), ["log00001", "log00002"]);
+  assert.equal(p.books.book1.review, null);
+  // 고치면 고친 글이 그대로 따라간다
+  s = run(s, { type: "updateLog", logId: "log00001", notes: "고친 글" }, ctx("x0000001"));
   p = project(s);
-  assert.equal(p.entries[0].place, "shelf");
-  assert.equal(p.books.book1.logs.length, 0);
-  // 빼면 내려온다
-  s = run(s, { type: "shelveReview", bookId: "book1", shelved: false }, ctx("x0000004"));
-  assert.equal("shelved" in s.reviews[0], false);
-  assert.equal("shelvedAt" in s.reviews[0], false);
+  assert.equal(p.books.book1.logs.find((l) => l.id === "log00001").notes, "고친 글");
+  // 지우면 빠진다 — 다 지우면 책도 내려간다
+  s = run(s, { type: "deleteLog", logId: "log00001" }, ctx("x0000002"));
+  assert.deepEqual(project(s).books.book1.logs.map((l) => l.id), ["log00002"]);
+  s = run(s, { type: "deleteLog", logId: "log00002" }, ctx("x0000003"));
   assert.equal(project(s).entries.length, 0);
-  // 한 권의 책 창에서 저장하며 함께 꽂기
-  s = run(s, { type: "saveReview", bookId: "book1", text: "다시", rating: 5, shelved: true }, ctx("x0000005"));
-  assert.equal(project(s).entries[0].place, "shelf");
-  assert.throws(() => run(s, { type: "saveReview", bookId: "book1", text: "다시", rating: 5, shelved: "yes" }, ctx("x0000006")), /책꽂이/);
-  assert.throws(() => run(addBook(initialReadingState(), "book9"), { type: "shelveReview", bookId: "book9", shelved: true }, ctx("x0000007")), /먼저 써/);
+  // 글이 하나도 없는 책(등록만 한 책)은 싣지 않는다
+  assert.equal(project(addBook(initialReadingState(), "book7", 40)).entries.length, 0);
+  // 기준을 바꾸면 번호를 올린다 — 1은 학생이 고른 글만 싣던 때(그 번호의 사본은 서버가 통째로 다시 씀)
+  assert.ok(Number.isInteger(PLAZA_SHARE_RULE) && PLAZA_SHARE_RULE >= 2);
+});
+
+test("반 전체를 한 번 맞출 일이 있는가 — 광장을 켠 반인데 지금 기준으로 맞춘 표시가 없을 때만", () => {
+  const on = { readingEnabled: true, plazaEnabled: true };
+  assert.equal(plazaNeedsSync(on), true, "켠 반 · 아직 맞춘 적 없음");
+  assert.equal(plazaNeedsSync({ ...on, plazaSynced: 1 }), true, "옛 기준으로 맞춘 반은 다시");
+  assert.equal(plazaNeedsSync({ ...on, plazaSynced: PLAZA_SHARE_RULE }), false, "지금 기준으로 맞춘 반");
+  // 광장을 끈 반 · 책나눔을 끈 반 · 반을 아직 모를 때는 부탁하지 않는다
+  assert.equal(plazaNeedsSync({ readingEnabled: true, plazaEnabled: false }), false);
+  assert.equal(plazaNeedsSync({ readingEnabled: true, plazaEnabled: false, plazaSynced: 1 }), false);
+  assert.equal(plazaNeedsSync({ readingEnabled: false, plazaEnabled: true }), false);
+  assert.equal(plazaNeedsSync(null), false);
+  assert.equal(plazaNeedsSync(undefined), false);
+});
+
+test("모두 공개 — 옛 표시(도장 없음 · '발자국 보이기' 끔 · 안 꽂음)가 남은 서재도 모두 실린다", () => {
+  // 학생이 고르던 때에 저장된 서재 — 도장 없는 발자국, 숨긴 책, 꽂지 않은 한 권의 책
+  let s = addBook(initialReadingState(), "book1", 20);
+  s = addLog(s, "log00001", "book1", 1, 20);
+  s = run(s, { type: "saveReview", bookId: "book1", text: "끝까지 읽었다", rating: 4 }, ctx("rev00001"));
+  s = addBook(s, "book2", 40);
+  s = addLog(s, "log00002", "book2", 1, 5);
+  s = { ...s, books: s.books.map((b) => (b.id === "book2" ? { ...b, plazaHidden: true } : b)) };
+  const p = project(s);
+  assert.deepEqual(p.entries.map((e) => [e.id, e.place]).sort(), [["book1", "shelf"], ["book2", "stall"]]);
+  assert.equal(p.books.book1.review.text, "끝까지 읽었다");
+  assert.equal(p.books.book2.logs.length, 1);
+  // 사본에는 책 제목 · 쪽수 · 글만 — 서재의 다른 칸(반 id · 옛 표시)은 싣지 않는다
+  assert.deepEqual(Object.keys(p.books.book1.logs[0]).sort(), ["createdAt", "date", "endPage", "id", "notes", "startPage"]);
+  assert.deepEqual(Object.keys(p.books.book1.review).sort(), ["createdAt", "rating", "text", "updatedAt"]);
+  assert.equal(JSON.stringify(p).includes("plazaHidden"), false);
+});
+
+test("완독한 책은 책꽂이에 — 한 권의 책을 쓰기 전에도, 쓴 뒤에도(꽂는 단추가 없음)", () => {
+  let s = addBook(initialReadingState(), "book1", 20);
+  s = addLog(s, "log00001", "book1", 1, 10);
+  assert.equal(project(s).entries[0].place, "stall");
+  s = run(s, { type: "addLog", bookId: "book1", date: "2026-11-12", startPage: 11, endPage: 20, notes: "발자국 log00002" }, at("2026-11-12T03:30:00.000Z", "log00002"));
+  // 완독 — 한 권의 책을 아직 안 썼어도 책꽂이로 옮겨 가고, 발자국이 그대로 보인다
+  let p = project(s);
+  assert.deepEqual([p.entries[0].place, p.entries[0].rating, p.books.book1.review, p.books.book1.logs.length], ["shelf", null, null, 2]);
+  assert.equal(p.entries[0].excerpt, "발자국 log00002");
+  // 한 권의 책을 쓰면 곧바로 보인다
+  s = run(s, { type: "saveReview", bookId: "book1", text: "끝까지 읽었다", rating: 4 }, at("2026-11-12T04:00:00.000Z", "rev00001"));
+  assert.equal("shelved" in s.reviews[0], false);
+  p = project(s);
+  assert.deepEqual([p.entries[0].place, p.entries[0].rating, p.entries[0].excerpt], ["shelf", 4, "끝까지 읽었다"]);
+  assert.equal(p.books.book1.review.text, "끝까지 읽었다");
+  assert.equal(p.books.book1.logs.length, 2);
+  assert.equal(p.entries[0].last, "2026-11-12T04:00:00.000Z");
+  // 한 권의 책을 지워도 책은 책꽂이에 남는다(발자국이 있으므로)
+  s = run(s, { type: "deleteReview", bookId: "book1" }, ctx("x0000001"));
+  assert.deepEqual([project(s).entries[0].place, project(s).books.book1.review], ["shelf", null]);
+});
+
+test("걷은 요청 — 옛 화면이 보내는 '빼기 · 숨기기'는 까닭을 알려 거절하고, '꽂기 · 보이기'는 아무 일 없이 받는다", () => {
+  let s = addBook(initialReadingState(), "book1", 20);
+  s = addLog(s, "log00001", "book1", 1, 20);
+  s = run(s, { type: "saveReview", bookId: "book1", text: "끝까지 읽었다", rating: 4 }, ctx("rev00001"));
+  const before = JSON.stringify(s);
+  assert.throws(() => run(s, { type: "shelveReview", bookId: "book1", shelved: false }, ctx("x0000001")), /모두 함께 읽어요/);
+  assert.throws(() => run(s, { type: "setBookPlaza", bookId: "book1", hidden: true }, ctx("x0000002")), /모두 함께 읽어요/);
+  assert.equal(JSON.stringify(run(s, { type: "shelveReview", bookId: "book1", shelved: true }, ctx("x0000003"))), before);
+  assert.equal(JSON.stringify(run(s, { type: "setBookPlaza", bookId: "book1", hidden: false }, ctx("x0000004"))), before);
+  // 옛 화면이 한 권의 책에 함께 보내던 shelved는 읽지 않는다(어떤 값이든 저장은 되고 표시는 남지 않음)
+  for (const shelved of [true, false, "yes"]) {
+    const saved = run(s, { type: "saveReview", bookId: "book1", text: "고쳐 쓴 글", rating: 5, shelved }, ctx(`x000001${String(shelved).length}`));
+    assert.equal(saved.reviews[0].text, "고쳐 쓴 글");
+    assert.equal("shelved" in saved.reviews[0], false);
+    assert.equal(project(saved).entries[0].place, "shelf");
+  }
+  // 옛 표시가 남은 한 권의 책을 고쳐 쓰면 표시도 함께 걷힌다
+  const old = { ...s, reviews: s.reviews.map((r) => ({ ...r, shelved: true, shelvedAt: NOW })) };
+  const again = run(old, { type: "saveReview", bookId: "book1", text: "다시", rating: 3 }, ctx("x0000009"));
+  assert.deepEqual(["shelved" in again.reviews[0], "shelvedAt" in again.reviews[0]], [false, false]);
 });
 
 test("보관한 책 · 선생님이 내린 책 · 다른 반에서 쓴 글은 사본에 없다", () => {
   let s = addBook(initialReadingState(), "book1", 40);
   s = addBook(s, "book2", 40);
-  s = addLog(s, "log00001", "book1", 1, 10, { plaza: true });
-  s = run(s, { type: "addLog", bookId: "book2", date: "2026-11-12", startPage: 1, endPage: 5, notes: "다른 반" }, { uid: "stu", classId: "classB", now: NOW, id: "log00002", plaza: true });
+  s = addLog(s, "log00001", "book1", 1, 10);
+  s = run(s, { type: "addLog", bookId: "book2", date: "2026-11-12", startPage: 1, endPage: 5, notes: "다른 반" }, { uid: "stu", classId: "classB", now: NOW, id: "log00002" });
   assert.deepEqual(project(s).entries.map((e) => e.id), ["book1"]);
   assert.deepEqual(project(s, "classB").entries.map((e) => e.id), ["book2"]);
   assert.equal(project(s, "classA", { blocked: ["book1"] }).entries.length, 0);
+  // 다른 반에서 쓴 한 권의 책도 이 반의 사본에는 없다
+  let r = addBook(initialReadingState(), "book3", 10);
+  r = addLog(r, "log00003", "book3", 1, 10);
+  r = run(r, { type: "saveReview", bookId: "book3", text: "이 반의 글", rating: 5 }, ctx("rev00003"));
+  assert.equal(project(r, "classB").entries.length, 0);
+  assert.equal(project(r).books.book3.review.text, "이 반의 글");
+  // 보관함으로 옮긴 책은 내려가고, 돌려놓으면 다시 올라온다
   s = run(s, { type: "archiveBook", bookId: "book1", archived: true }, ctx("x0000001"));
   assert.equal(project(s).entries.length, 0);
+  assert.equal(project(run(s, { type: "archiveBook", bookId: "book1", archived: false }, ctx("x0000002"))).entries.length, 1);
+  // 이 반에서 쓴 글이 있는가(서버가 사본을 살펴볼지 정함) — 보관 · 옛 표시와 상관없이
   assert.equal(plazaHasContent(s, "classA"), true);
+  assert.equal(plazaHasContent(s, "classB"), true);
   assert.equal(plazaHasContent(s, "classC"), false);
   assert.equal(plazaHasContent(initialReadingState(), "classA"), false);
+  assert.equal(plazaHasContent(r, "classA"), true);
 });
 
 test("사본은 최근 발자국부터 정해진 수만 싣고, 목록은 최근에 쓴 책부터", () => {
   let s = addBook(initialReadingState(), "book1", 200);
   for (let i = 0; i < PLAZA_LOG_CAP + 5; i += 1) {
     s = run(s, { type: "addLog", bookId: "book1", date: "2026-11-10", startPage: i + 1, endPage: i + 1, notes: `n${i}` },
-      at(new Date(Date.parse("2026-11-10T00:00:00Z") + i * 60000).toISOString(), `log${String(i).padStart(5, "0")}`, { plaza: true }));
+      at(new Date(Date.parse("2026-11-10T00:00:00Z") + i * 60000).toISOString(), `log${String(i).padStart(5, "0")}`));
   }
   const p = project(s);
   assert.equal(p.entries[0].logs, PLAZA_LOG_CAP + 5);
@@ -147,7 +187,7 @@ test("사본은 최근 발자국부터 정해진 수만 싣고, 목록은 최근
     const id = `bk${String(i).padStart(6, "0")}`;
     many = run(many, { type: "addBook", title: `책 ${i}`, author: "지은이", totalPages: 50 }, ctx(id));
     many = run(many, { type: "addLog", bookId: id, date: "2026-11-10", startPage: 1, endPage: 5, notes: "읽음" },
-      at(new Date(Date.parse("2026-11-10T00:00:00Z") + i * 60000).toISOString(), `lg${String(i).padStart(6, "0")}`, { plaza: true }));
+      at(new Date(Date.parse("2026-11-10T00:00:00Z") + i * 60000).toISOString(), `lg${String(i).padStart(6, "0")}`));
   }
   const q = project(many);
   assert.equal(q.entries.length, PLAZA_BOOK_CAP);

@@ -465,7 +465,8 @@
 .plaza-panel .reading-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .plaza-comment-form { position: relative; }
 
-/* 서재 쪽 — 책 상세의 '책 광장' 칸과 발자국 · 한 권의 책 창의 안내 */
+/* 서재 쪽 — 책 상세의 '책 광장' 칸과 발자국 · 한 권의 책 창의 안내.
+   학생이 고르는 스위치('광장 책꽂이에 꽂기' · '발자국 보이기')와 그 CSS는 걷었습니다(선생님 결정 — 광장을 켠 반에서는 모두 공개). */
 .plaza-note { margin: 0; padding: 9px 12px; border-radius: 9px; background: #eef5ec; color: #3d6654; font-size: 12px; line-height: 1.6; }
 .plaza-note--off { background: #f4f3ee; color: #7a8578; }
 .plaza-own { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 16px 0 20px; padding: 12px 14px; border: 1px solid #dce8dc; border-radius: 12px; background: #f6faf3; }
@@ -473,16 +474,6 @@
 .plaza-own-text strong { display: block; font-size: 13px; color: #2c4c3f; }
 .plaza-own-text span { display: block; margin-top: 3px; color: #6f8276; font-size: 11.5px; line-height: 1.55; }
 .plaza-own-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.plaza-switch { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px 0 6px; border: 1px solid #cfdccf; border-radius: 999px; background: #fff; color: #5f7366; font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; white-space: nowrap; }
-.plaza-switch i { position: relative; width: 34px; height: 20px; border-radius: 999px; background: #cfd6cc; transition: background .15s; }
-.plaza-switch i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px #0003; transition: left .15s; }
-.plaza-switch[aria-checked="true"] { border-color: #4c846c; color: #254f44; }
-.plaza-switch[aria-checked="true"] i { background: #4c846c; }
-.plaza-switch[aria-checked="true"] i::after { left: 16px; }
-.plaza-switch:disabled { opacity: .55; cursor: not-allowed; }
-.plaza-check { display: flex !important; flex-direction: row !important; align-items: center; gap: 8px; font-size: 13px; }
-.plaza-check input { width: 18px; height: 18px; flex-shrink: 0; }
-
 @container plazapanel (max-width: 560px) {
   .plaza-logs li { grid-template-columns: minmax(0, 1fr); gap: 6px; }
   .plaza-log-date { flex-direction: row; align-items: baseline; gap: 8px; }

@@ -4,7 +4,9 @@
 // -------------------------------------------------------------
 // 창은 하나이고 안에서 오갑니다: 목록 ↔ 책 한 권(← 목록으로). 가판대 · 책꽂이는 머리의 두 단추로 바꿉니다.
 //   · 목록 — '이번 주'에 글이 있는 책이 앞, 그전 책이 뒤(lib/readingPlaza.js의 plazaItems). '친구별'로 한 친구만.
-//   · 책 한 권 — 한 권의 책(꽂은 책) · 독서 발자국(최근 날짜가 위) · '○○의 다른 책' · 댓글.
+//   · 책 한 권 — 한 권의 책 · 독서 발자국(최근 날짜가 위) · '○○의 다른 책' · 댓글.
+//   · 광장을 켠 반에서는 그 반에서 쓴 글이 모두 보입니다(학생이 고르는 것이 없음 — lib/readingPlaza.js). 완독한 책은
+//     '한 권의 책'을 아직 안 썼어도 책꽂이에 서고(별점 자리에 '완독'), 쓰면 그 글이 맨 위에 섭니다.
 // 목록은 광장이 이미 구독해 둔 것(shelves)을 받아 쓰고, 책 한 권 · 댓글은 그 책을 연 동안만 구독합니다.
 // 댓글: 실명(학번 이름 · 선생님은 '선생님') · 고치기 없음 · 지우기는 쓴 사람과 선생님만(책 주인은 못 지움).
 // Enter는 줄바꿈, Ctrl/⌘+Enter가 보내기(앱의 다른 채팅 칸과 같음).
@@ -47,9 +49,10 @@ function BookCard({ item, mine, onOpen }) {
           <span className="plaza-card-who">{plazaNameLabel(item)}{mine && <em>나</em>}</span>
           <strong className="plaza-card-title">{item.title}</strong>
           <span className="plaza-card-author">{item.author}</span>
-          {item.place === "shelf"
-            ? <Stars rating={item.rating} />
-            : <span className="plaza-card-progress"><span className="reading-progress"><i style={{ width: `${percent(item)}%` }} /></span>{number(item.read)} / {number(item.total)}쪽</span>}
+          {item.place !== "shelf"
+            ? <span className="plaza-card-progress"><span className="reading-progress"><i style={{ width: `${percent(item)}%` }} /></span>{number(item.read)} / {number(item.total)}쪽</span>
+            // 완독한 책 — 한 권의 책을 썼으면 별점, 아직이면 '완독'(별 0개로 보이지 않게)
+            : item.rating ? <Stars rating={item.rating} /> : <span className="plaza-card-progress">완독 · {number(item.total)}쪽</span>}
           {item.excerpt && <span className="plaza-card-excerpt">{item.excerpt}</span>}
           <span className="plaza-card-meta">
             {item.logs > 0 && <span>발자국 {number(item.logs)}</span>}
@@ -77,13 +80,13 @@ function BookList({ place, shelves, loading, friendUid, myUid, onNavigate }) {
             {friends.map((f) => <option key={f.uid} value={f.uid}>{plazaNameLabel(f)} · {f[place]}권</option>)}
           </select>
         </label>
-        <p>{place === "stall" ? "친구들이 읽는 중인 책이에요. 책을 누르면 그 책에 남긴 독서 발자국을 읽을 수 있어요." : "다 읽고 책꽂이에 꽂아 둔 책이에요. 책을 누르면 ‘한 권의 책’을 읽을 수 있어요."}</p>
+        <p>{place === "stall" ? "친구들이 읽는 중인 책이에요. 책을 누르면 그 책에 남긴 독서 발자국을 읽을 수 있어요." : "친구들이 끝까지 읽은 책이에요. 책을 누르면 ‘한 권의 책’과 독서 발자국을 읽을 수 있어요."}</p>
       </div>
       {loading ? <div className="reading-loading" role="status"><span className="reading-loader" />광장의 책을 모으고 있어요.</div>
         : empty ? (
           <div className="reading-empty plaza-empty">
-            <h3>{place === "stall" ? "아직 가판대에 놓인 책이 없어요." : "아직 책꽂이에 꽂힌 책이 없어요."}</h3>
-            <p>{place === "stall" ? "독서 발자국을 남기면 읽고 있는 책이 이곳 가판대에 놓여요." : "책을 다 읽고 ‘한 권의 책’을 쓴 뒤 ‘광장 책꽂이에 꽂기’를 누르면 이곳에 꽂혀요."}</p>
+            <h3>{place === "stall" ? "아직 가판대에 놓인 책이 없어요." : "아직 책꽂이에 놓인 책이 없어요."}</h3>
+            <p>{place === "stall" ? "독서 발자국을 남기면 읽고 있는 책이 이곳 가판대에 놓여요." : "책을 끝까지 읽으면 그 책이 이곳 책꽂이로 옮겨 와요."}</p>
           </div>
         ) : (
           <>
@@ -249,13 +252,13 @@ function BookView({ classId, shelves, target, myUid, isTeacher, onNavigate }) {
                 </li>
               ))}
             </ol>
-          ) : <p className="reading-muted">아직 광장에 보이는 발자국이 없어요.</p>}
+          ) : <p className="reading-muted">아직 남긴 발자국이 없어요.</p>}
           {(book.logCount ?? 0) > logs.length && <p className="reading-help">최근 발자국 {logs.length}개만 보여요.</p>}
         </section>
       )}
       {others.length > 0 && (
         <section className="plaza-others" aria-label="다른 책">
-          <h4>{mine ? "내가 광장에 둔 다른 책" : `${book.name || "이 친구"}의 다른 책`}</h4>
+          <h4>{mine ? "광장에 있는 나의 다른 책" : `${book.name || "이 친구"}의 다른 책`}</h4>
           <ul>
             {others.map((b) => (
               <li key={b.id}>
