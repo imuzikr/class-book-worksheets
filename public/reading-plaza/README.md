@@ -7,15 +7,20 @@
 
 ## 교실 · 문 달린 광장 · 포털 (관리자 설정의 '교실'을 켠 반)
 
-책 광장의 둘째 방 '교실'을 위한 그림 세 장입니다(선생님이 주신 묶음의 PNG 세 장 — `classroom-map.png` · `reading-plaza-map.png` · `portal.png`). 약속은 `READING_GROWTH.md`의 '교실' 절에 있습니다.
+책 광장의 둘째 방 '교실'을 위한 그림입니다. 선생님이 주신 **분리 자료**(`bookbom-separated-classroom-rug-assets.zip` — 배경 · 책상과 의자 · 러그 · 포털이 따로)를 `scripts/prepare-classroom-art.py`로 다듬었습니다. 약속은 `READING_GROWTH.md`의 '교실' 절에 있습니다.
 
-- `classroom.webp`: 교실의 배경(1672 × 941, 약 126KiB). 칠판 · 책상 30개(6칸 × 5줄 — 두 칸씩 짝지은 세 묶음) · 오른쪽 아래의 문과 포털이 **그림에 그려져** 있습니다.
-- `plaza-door.webp`: **왼쪽 아래에 교실로 가는 문과 포털이 그려진** 책 광장의 배경(1672 × 941, 약 277KiB). 교실을 켠 반에서만 씁니다 — 끈 반은 문이 없는 `plaza.webp` 그대로입니다. 문이 선 자리만 다르고 나머지 물건의 자리는 `plaza.webp`와 같습니다.
-- `portal-swirl.webp`: 포털 안쪽의 소용돌이만 오려 **동그랗게 편** 그림(256 × 256, 가장자리가 투명하게 풀림 · 약 15KiB). 화면이 이것을 돌리면서 다시 납작하게 눌러, 배경에 그려진 포털 위에 얹습니다 — 비스듬히 본 타원을 그대로 돌리면 접시가 흔들리는 것처럼 보입니다.
-- 만드는 법: `python3 -I scripts/prepare-classroom-art.py <풀어 둔 PNG 폴더> <내보낼 폴더>`(Pillow만 씀). 배경 두 장은 같은 크기의 WebP(quality 84)로만 바꾸고, 소용돌이는 오려 내 가장자리를 풉니다.
+- `classroom.webp`: 교실의 배경(1672 × 941, 약 91KiB). 칠판 · 교탁 · 책장 · 오른쪽 아래의 문이 그려져 있고, **학생 책상 · 의자 · 러그 · 포털은 없는 빈 바닥**입니다.
+- `plaza-door.webp`: 왼쪽 아래에 교실로 가는 **문**이 그려진 책 광장의 배경(1672 × 941, 약 272KiB · **포털은 없음**). 교실을 켠 반에서만 씁니다 — 끈 반은 문이 없는 `plaza.webp` 그대로입니다. 문이 선 자리만 다르고 나머지 물건의 자리는 `plaza.webp`와 같습니다.
+- `rug.webp`: 동그란 러그 한 장(640 × 280 · 투명 바탕, 약 39KiB). 화면에는 190 × 84(그림 원본 px)로 놓고, 그 안에서 실제로 보이는 타원은 가로 84 · 세로 37 반지름입니다. **러그가 곧 그 자리의 범위**입니다(그 위에 서면 책상 위에 물음표가 뜸 — 선생님 요청).
+- `desk-chair.webp`: 책상과 의자 한 세트(360 × 312 · 투명 바탕, 약 23KiB). 화면에는 90 × 78로, 상자의 위쪽이 러그 가운데보다 59 위에 오게 놓습니다.
+- `chair-front.webp`: 위 그림에서 **의자만** 남긴 것(같은 크기 · 같은 자리, 약 11KiB). 앉은 캐릭터 위에 한 번 더 그려 허리 아래를 등받이로 가립니다 — 겹치는 차례가 **바닥 → 러그 → 책상·의자 → 캐릭터 → 의자**. 묶음에 의자만의 그림이 따로 없어 스크립트가 만듭니다(책상 다리는 의자의 상자 밖이라 상자로 가르고, 등받이 윗부분은 책상 밑 그늘과 겹쳐 색으로 가름).
+- `portal.webp`: 포털 한 장(640 × 280 · 투명 바탕, 약 51KiB). 두 방이 같은 그림을 쓰고, 화면에는 230 × 100으로 놓습니다(못의 가운데가 광장 (382, 823) · 교실 (1475, 855), 그림의 가운데는 그보다 3 아래).
+- `portal-swirl.webp`: 포털 안쪽에서 도는 빛(384 × 384 · 투명 바탕, 약 34KiB). 화면이 이것을 돌리면서 납작하게 눌러 포털 위에 얹습니다 — 비스듬히 본 타원을 그대로 돌리면 접시가 흔들리는 것처럼 보입니다.
+- 만드는 법: `python3 -I scripts/prepare-classroom-art.py <풀어 둔 묶음 폴더> <내보낼 폴더>`(Pillow만 씀 · 묶음의 `maps/` · `objects/` 폴더를 읽음). 배경 두 장은 같은 크기의 WebP(quality 84)로만 바꿉니다.
 - **세 배경은 크기가 같아야 합니다**(1672 × 941) — 화면 확대 · 시점의 셈을 방마다 따로 두지 않습니다(스크립트가 크기를 확인함).
-- **그림을 바꾸면 좌표를 함께 다시 재세요** — `lib/readingPlazaMap.js`의 책상(`DESK_X` · `DESK_Y` — 책상 윗면의 가운데) · 책상 줄의 못 가는 띠(`DESK_HALF` · `DESK_TOP` · `DESK_BOTTOM`) · 칠판(`CLASSROOM_BOARD`) · 포털(`PLAZA_PORTAL` · `CLASSROOM_PORTAL`) · 두 방의 바닥 테두리 · 문 달린 광장의 왼쪽 아래 모서리(`PLAZA_DOOR_CORNER`)와 둘째 가판대 앞에 서는 자리. 책상 30개의 차례는 **자리표의 30자리**(줄 × 6 + 칸 · 칠판이 위)와 같아야 합니다. `tests/unit/readingClassroom.test.mjs`가 책상 · 복도 · 칠판 앞 · 포털까지 길이 이어지는지 봅니다.
-- 앉은 캐릭터의 허리 아래를 가리는 의자는 따로 그림을 두지 않고 **`classroom.webp`에서 그 자리를 오려** 캐릭터 위에 한 번 더 그립니다(`components/reading/PlazaActor.jsx`의 `.plaza-chair`). 의자의 자리(책상 가운데에서 아래로 14~60px)가 달라지면 `CLASSROOM_SEATS`의 `chair` · `sit`도 함께 고칩니다.
+- **책상 · 의자 · 러그 · 포털을 배경에 다시 그려 넣지 마세요.** 화면이 자리 좌표(`lib/readingPlazaMap.js`의 `CLASSROOM_SEATS` · 포털의 `art`)대로 따로 그립니다 — 배경에도 있으면 두 벌이 겹쳐 보입니다.
+- **그림 · 배치를 바꾸면 좌표를 함께 다시 재세요** — `lib/readingPlazaMap.js`의 러그의 가운데(`DESK_X` 여섯 · `RUG_Y` 다섯 — 묶음의 `layout.json`) · 그림을 놓는 상자(`CLASSROOM_RUG` · `CLASSROOM_DESK` · `PORTAL_ART`) · 책상 줄의 못 가는 띠(`DESK_HALF` · `DESK_TOP` · `DESK_BOTTOM`) · 칠판(`CLASSROOM_BOARD`) · 포털(`PLAZA_PORTAL` · `CLASSROOM_PORTAL`) · 두 방의 바닥 테두리 · 문 달린 광장의 왼쪽 아래 모서리(`PLAZA_DOOR_CORNER`)와 둘째 가판대 앞에 서는 자리. 책상 30개의 차례는 **자리표의 30자리**(줄 × 6 + 칸 · 칠판이 위)와 같아야 합니다. 책상 그림의 비율(90:78)을 바꾸면 스크립트의 `DESK_W` · `DESK_H`와 `CLASSROOM_DESK`를 함께 고칩니다. `tests/unit/readingClassroom.test.mjs`가 그림 파일 · 러그 · 복도 · 칠판 앞 · 포털까지 길이 이어지는지 봅니다.
+- 의자의 자리(책상 상자의 위에서 35~76px)가 달라지면 `CLASSROOM_SEATS`의 `chair` · `sit`과 `CLASSROOM_SIT_HIDE`(앉은 캐릭터를 가리는 선)도 함께 고칩니다.
 
 ## 걷는 그림 — `sprites/` (캐릭터 30 · 펫 10)
 

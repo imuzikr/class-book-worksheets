@@ -9,11 +9,11 @@ import { classroomOn, featureValue, plazaOn, teacherFeatureSettings, TEACHER_FEA
 import {
   CLASSROOM_SEAT_COUNT, classroomAct, classroomAtBoard, classroomAttendance, classroomBoardAt, classroomBoardMark, classroomBoardStand,
   classroomDesks, classroomNearSeat, classroomRollCall, classroomSeatAround, classroomSeatAt, classroomSeatLabel, classroomSeatOf,
-  classroomUnseated, plazaArrowKey, plazaLetterKey,
+  classroomSeatSide, classroomUnseated, plazaArrowKey, plazaLetterKey,
 } from "../../lib/readingClassroom.js";
 import {
-  CLASSROOM_BOARD, CLASSROOM_COLS, CLASSROOM_PORTAL, CLASSROOM_ROOM, CLASSROOM_ROWS, CLASSROOM_SEATS, CLASSROOM_SEAT_NEAR,
-  PLAZA_DOOR_ROOM, PLAZA_H, PLAZA_NEAR, PLAZA_PORTAL, PLAZA_ROOM, PLAZA_SPOTS, PLAZA_W,
+  CLASSROOM_BOARD, CLASSROOM_COLS, CLASSROOM_DESK, CLASSROOM_PORTAL, CLASSROOM_ROOM, CLASSROOM_ROWS, CLASSROOM_RUG, CLASSROOM_RUG_REACH, CLASSROOM_SEATS,
+  CLASSROOM_SIT_HIDE, PLAZA_DOOR_ROOM, PLAZA_H, PLAZA_NEAR, PLAZA_PORTAL, PLAZA_ROOM, PLAZA_SPOTS, PLAZA_W, PORTAL_ART,
   plazaArrival, plazaClear, plazaNearest, plazaPath, plazaPortalAt, plazaPortalClicked, plazaRoomOf, plazaSpotAt, plazaSpotNear, plazaStep, plazaWalkable,
 } from "../../lib/readingPlazaMap.js";
 import { PLAZA_LIVE_IDLE_MS, PLAZA_LIVE_SEATED_IDLE_MS, plazaLivePos, plazaRemoteEnter, plazaRemoteHear, plazaSpawnFor, readPlazaLivePos } from "../../lib/readingPlazaLive.js";
@@ -42,10 +42,13 @@ test("스위치 — 교실은 책 광장이 켜진 반에서 교사가 켰을 �
   assert.equal(teacherFeatureSettings([{ id: "a", classroomEnabled: true }]).classroomEnabled.on, true);
 });
 
-test("그림 — 교실 · 문 달린 광장 · 도는 소용돌이가 들어 있다", () => {
+test("그림 — 방의 배경 셋과, 따로 놓는 러그 · 책상과 의자 · 의자 앞부분 · 포털 · 도는 빛이 들어 있다", () => {
   for (const room of [PLAZA_ROOM, PLAZA_DOOR_ROOM, CLASSROOM_ROOM]) assert.equal(existsSync(PUBLIC + room.art), true, room.art);
-  assert.equal(existsSync(`${PUBLIC}/reading-plaza/portal-swirl.webp`), true);
   assert.deepEqual([PLAZA_ROOM.art, PLAZA_DOOR_ROOM.art, CLASSROOM_ROOM.art], ["/reading-plaza/plaza.webp", "/reading-plaza/plaza-door.webp", "/reading-plaza/classroom.webp"]);
+  for (const src of [CLASSROOM_RUG.src, CLASSROOM_DESK.src, CLASSROOM_DESK.chair, PORTAL_ART.src, PORTAL_ART.swirl]) {
+    assert.match(src, /^\/reading-plaza\/[a-z-]+\.webp$/);
+    assert.equal(existsSync(PUBLIC + src), true, src);
+  }
 });
 
 test("방 고르기 — 교실을 끈 반은 문 없는 광장 하나뿐", () => {
@@ -100,6 +103,17 @@ test("포털 — 안쪽에 들어서면 다른 방으로, 건너온 포털의 �
   assert.deepEqual([gate.to, door.to], ["classroom", "plaza"]);
   assert.deepEqual({ x: gate.x, y: gate.y }, PLAZA_PORTAL);
   assert.deepEqual({ x: door.x, y: door.y }, CLASSROOM_PORTAL);
+  // 포털은 배경에 그려져 있지 않다 — 그림을 놓을 상자(선생님이 주신 배치 자료의 자리 · 크기)가 따로 있고,
+  // 들어서는 타원 · 도는 빛은 그 그림 안에 든다
+  assert.deepEqual(gate.art, { x: 382, y: 826, w: 230, h: 100 });
+  assert.deepEqual(door.art, { x: 1475, y: 858, w: 230, h: 100 });
+  for (const g of [gate, door]) {
+    assert.ok(g.rx < g.swirl.rx && g.swirl.rx < g.art.w / 2 && g.ry < g.swirl.ry && g.swirl.ry < g.art.h / 2, g.id);
+    assert.ok(g.ring.rx <= g.art.w / 2 && g.ring.ry <= g.art.h / 2, g.id);
+    assert.ok(g.sign.y < g.art.y - g.art.h / 2, `${g.id} 이름표는 포털 그림 위`);
+    // 이름표는 포털의 가운데 줄 · 그림 윗변에 붙여서(멀리 띄우면 무엇의 이름표인지 모름 — 건너온 직후에는 무대가 잠깐 걷음)
+    assert.ok(g.sign.x === g.x && g.art.y - g.art.h / 2 - g.sign.y <= 8, `${g.id} 이름표는 포털 그림에 붙어 있다`);
+  }
   assert.equal(plazaPortalAt(PLAZA_PORTAL, PLAZA_DOOR_ROOM)?.to, "classroom");
   assert.equal(plazaPortalAt({ x: gate.x + gate.rx - 2, y: gate.y }, PLAZA_DOOR_ROOM)?.to, "classroom");
   assert.equal(plazaPortalAt({ x: gate.x + gate.rx + 3, y: gate.y }, PLAZA_DOOR_ROOM), null);
@@ -138,45 +152,93 @@ test("교실 — 책상 30개가 자리표의 30자리와 같은 차례(6칸 × 
   // 왼쪽 → 오른쪽, 위(칠판) → 아래
   for (let i = 1; i < 6; i += 1) assert.ok(CLASSROOM_SEATS[i].desk.x > CLASSROOM_SEATS[i - 1].desk.x);
   for (let r = 1; r < 5; r += 1) assert.ok(CLASSROOM_SEATS[r * 6].desk.y > CLASSROOM_SEATS[(r - 1) * 6].desk.y);
-  // 그림에서 잰 값 — 첫 책상 · 끝 책상
-  assert.deepEqual(CLASSROOM_SEATS[0].desk, { x: 353, y: 294 });
-  assert.deepEqual(CLASSROOM_SEATS[29].desk, { x: 1320, y: 658 });
+  // 선생님이 주신 배치 자료의 값 — 첫 자리 · 끝 자리의 러그 가운데와 책상·의자 그림의 상자
+  assert.deepEqual(CLASSROOM_SEATS[0].rug, { x: 355, y: 339 });
+  assert.deepEqual(CLASSROOM_SEATS[29].rug, { x: 1332, y: 704 });
+  assert.deepEqual(CLASSROOM_SEATS[0].box, [310, 280, 400, 358]);
+  assert.deepEqual(CLASSROOM_SEATS[29].box, [1287, 645, 1377, 723]);
+  // 책상이 한 줄씩 — 가로 간격이 고르다(두 칸씩 짝지은 묶음이 아님)
+  const gaps = [1, 2, 3, 4, 5].map((i) => CLASSROOM_SEATS[i].rug.x - CLASSROOM_SEATS[i - 1].rug.x);
+  assert.ok(Math.max(...gaps) - Math.min(...gaps) <= 12, `가로 간격 ${gaps}`);
 });
 
-test("교실 — 책상 줄은 못 가고, 자리마다 설 복도 · 펫이 기다릴 자리가 바닥이며 길이 이어진다", () => {
+test("러그 — 책상마다 한 장, 책상보다 넓어 양옆 복도로 나오고 옆 · 앞뒤 자리의 러그와 겹치지 않는다", () => {
+  assert.ok(CLASSROOM_RUG.rx * 2 < CLASSROOM_RUG.w && CLASSROOM_RUG.ry * 2 < CLASSROOM_RUG.h, "보이는 타원은 그림 상자보다 작다(투명한 가장자리)");
+  assert.ok(CLASSROOM_RUG.rx > CLASSROOM_DESK.w / 2 + 30, "책상 양옆으로 넉넉히 나온다");
+  assert.ok(CLASSROOM_RUG_REACH > 0 && CLASSROOM_RUG_REACH <= 8);
+  for (const seat of CLASSROOM_SEATS) {
+    // 책상·의자의 상자 — 러그 가운데가 상자 안(앞다리 쯤)에 온다
+    assert.deepEqual([seat.box[2] - seat.box[0], seat.box[3] - seat.box[1]], [CLASSROOM_DESK.w, CLASSROOM_DESK.h]);
+    assert.equal(seat.box[1], seat.rug.y - CLASSROOM_DESK.lift);
+    assert.ok(seat.rug.y > seat.box[1] && seat.rug.y < seat.box[3] && seat.rug.x === (seat.box[0] + seat.box[2]) / 2);
+    // 옆 자리 · 뒷자리와는 여유를 두어도 떨어져 있다
+    const right = seat.col < CLASSROOM_COLS - 1 ? CLASSROOM_SEATS[seat.index + 1] : null;
+    const behind = seat.row < CLASSROOM_ROWS - 1 ? CLASSROOM_SEATS[seat.index + CLASSROOM_COLS] : null;
+    if (right) assert.ok(right.rug.x - seat.rug.x > (CLASSROOM_RUG.rx + CLASSROOM_RUG_REACH) * 2 + 6, `자리 ${seat.index} 옆`);
+    if (behind) assert.ok(behind.rug.y - seat.rug.y > (CLASSROOM_RUG.ry + CLASSROOM_RUG_REACH) * 2 + 4, `자리 ${seat.index} 뒤`);
+  }
+  // 어느 점도 두 러그에 함께 걸치지 않는다(교실을 8px마다 훑음)
+  for (let x = 200; x < 1500; x += 8) {
+    for (let y = 250; y < 780; y += 8) {
+      const on = CLASSROOM_SEATS.filter((seat) => classroomNearSeat({ x, y }, seat.index));
+      assert.ok(on.length <= 1, `${x},${y}가 러그 ${on.map((s) => s.index)}에 함께`);
+    }
+  }
+});
+
+test("교실 — 책상 줄은 못 가고, 자리마다 양옆의 러그 귀(서는 자리 · 펫 자리)가 바닥이며 길이 이어진다", () => {
   const room = CLASSROOM_ROOM;
   assert.equal(plazaWalkable(room.spawn.x, room.spawn.y, room), true);
   for (const seat of CLASSROOM_SEATS) {
     const tag = `자리 ${seat.index}`;
-    // 책상 윗면 · 의자(앉는 점) · 책상과 의자 사이 · 뒷줄과의 사이는 걷는 바닥이 아니다
+    // 책상 윗면 · 의자(앉는 점) · 책상·의자 그림의 네 귀는 걷는 바닥이 아니다
     assert.equal(plazaWalkable(seat.desk.x, seat.desk.y, room), false, tag);
     assert.equal(plazaWalkable(seat.sit.x, seat.sit.y, room), false, tag);
-    // (맨 뒷줄의 뒤는 교실 뒤쪽 바닥)
-    assert.equal(plazaWalkable(seat.desk.x, seat.desk.y + 66, room), seat.row === CLASSROOM_ROWS - 1, `${tag} 뒤`);
-    // 서는 자리 · 펫 자리는 복도(넓은 쪽 — 짝의 바깥)
-    assert.equal(plazaWalkable(seat.stand.x, seat.stand.y, room), true, tag);
-    assert.equal(plazaWalkable(seat.pet.x, seat.pet.y, room), true, tag);
-    assert.equal(Math.sign(seat.stand.x - seat.desk.x), seat.side, tag);
-    assert.equal(seat.side, seat.col % 2 === 0 ? -1 : 1, tag);
-    // 서는 자리는 '내 책상 옆'이다(물음표가 뜸) — 다른 줄의 서는 자리는 아니다
-    assert.equal(classroomNearSeat(seat.stand, seat.index), true, tag);
-    // 의자의 상자는 앉는 점을 품는다(앉은 사람의 허리 아래를 가림)
+    for (const [x, y] of [[seat.box[0] + 4, seat.box[1] + 4], [seat.box[2] - 4, seat.box[1] + 4], [seat.box[0] + 4, seat.box[3] - 2], [seat.box[2] - 4, seat.box[3] - 2]]) {
+      assert.equal(plazaWalkable(x, y, room), false, `${tag} 그림 ${x},${y}`);
+    }
+    // 의자 바로 뒤 — 뒷줄의 책상이 이어져 못 가고, 맨 뒷줄만 교실 뒤쪽 바닥(거기도 러그 위)
+    const back = { x: seat.rug.x, y: seat.box[3] + 8 };
+    assert.equal(plazaWalkable(back.x, back.y, room), seat.row === CLASSROOM_ROWS - 1, `${tag} 뒤`);
+    if (seat.row === CLASSROOM_ROWS - 1) assert.equal(classroomNearSeat(back, seat.index), true, `${tag} 뒤도 러그 위`);
+    // 양옆의 서는 자리 · 펫 자리는 복도 바닥이고 러그 위다(물음표가 뜸)
+    assert.deepEqual(seat.sides.map((side) => side.side), [-1, 1]);
+    for (const side of seat.sides) {
+      assert.equal(Math.sign(side.stand.x - seat.rug.x), side.side, tag);
+      assert.equal(plazaWalkable(side.stand.x, side.stand.y, room), true, `${tag} 서는 자리`);
+      assert.equal(plazaWalkable(side.pet.x, side.pet.y, room), true, `${tag} 펫 자리`);
+      assert.equal(classroomNearSeat(side.stand, seat.index), true, tag);
+      assert.equal(classroomNearSeat(side.pet, seat.index), true, tag);
+      assert.equal(classroomSeatAround(side.stand), seat.index, tag);
+      assert.equal(reach(room.spawn, side.stand, room), true, tag);
+      assert.equal(reach(CLASSROOM_PORTAL, side.stand, room), true, `포털 → ${tag}`);
+    }
+    assert.equal(seat.stand, seat.sides[1].stand, "기본은 오른쪽");
+    assert.equal(seat.pet, seat.sides[1].pet);
+    // 의자의 상자는 앉는 점을 품고, 책상·의자 그림 안에 있다
     assert.ok(seat.chair[0] < seat.sit.x && seat.sit.x < seat.chair[2] && seat.chair[1] < seat.sit.y && seat.sit.y <= seat.chair[3], tag);
-    assert.equal(reach(room.spawn, seat.stand, room), true, tag);
-    assert.equal(reach(CLASSROOM_PORTAL, seat.stand, room), true, `포털 → ${tag}`);
+    assert.ok(seat.chair[0] >= seat.box[0] && seat.chair[2] <= seat.box[2] && seat.chair[1] > seat.box[1] && seat.chair[3] <= seat.box[3], tag);
+    // 앉으면 가리는 선(발에서 CLASSROOM_SIT_HIDE 위)이 의자 등받이의 윗선과 맞는다
+    assert.ok(Math.abs(seat.sit.y - CLASSROOM_SIT_HIDE - seat.chair[1]) <= 2, tag);
+    // 물음표는 책상 윗면에(말풍선의 아래 끝이 윗면의 앞쪽 가장자리 — 의자 등받이 바로 위)
+    assert.ok(seat.mark.x === seat.rug.x && seat.mark.y > seat.desk.y && seat.mark.y <= seat.chair[1], tag);
   }
-  // 짝 사이의 좁은 복도 · 줄 사이의 넓은 복도 · 칠판 앞 · 교실 뒤쪽은 다닌다
-  for (const [x, y] of [[431, 400], [634, 400], [1036, 500], [836, 252], [836, 800], [260, 500], [1450, 500]]) assert.equal(plazaWalkable(x, y, room), true, `${x},${y}`);
+  // 책상 줄 사이의 복도(한가운데 · 러그의 귀) · 칠판 앞 · 교실 뒤쪽 · 양쪽 벽 옆은 다닌다
+  for (const [x, y] of [[452, 400], [649, 400], [1044, 500], [836, 252], [836, 800], [260, 500], [1450, 500], [410, 339], [300, 339]]) assert.equal(plazaWalkable(x, y, room), true, `${x},${y}`);
   // 교탁 · 책장 · 벽 · 창가의 책장 · 열린 문은 못 간다
   for (const [x, y] of [[300, 220], [1300, 200], [836, 150], [60, 500], [1640, 760], [1660, 400]]) assert.equal(plazaWalkable(x, y, room), false, `${x},${y}`);
   assert.equal(reach(room.spawn, CLASSROOM_PORTAL, room), true);
   // 책상을 눌러도 그 옆 바닥까지 걸어간다
   const near = plazaNearest(CLASSROOM_SEATS[14].desk.x, CLASSROOM_SEATS[14].desk.y, room);
   assert.equal(plazaWalkable(near.x, near.y, room), true);
-  // 방향키로 책상 줄에 막히면 멈춘다(뚫고 지나가지 않음)
-  let at = { ...CLASSROOM_SEATS[0].stand };
+  // 방향키로 책상 줄에 막히면 멈춘다(뚫고 지나가지 않음) — 왼쪽 귀에서 오른쪽으로 · 오른쪽 귀에서 왼쪽으로
+  const first = CLASSROOM_SEATS[0];
+  let at = { ...first.sides[0].stand };
   for (let i = 0; i < 60; i += 1) at = plazaStep(at, 6, 0, null, room);
-  assert.ok(at.x < CLASSROOM_SEATS[0].desk.x - 40, `책상 왼쪽에서 멈춤 ${at.x}`);
+  assert.ok(at.x < first.box[0] && classroomNearSeat(at, 0), `책상 왼쪽에서 멈춤 ${at.x} — 러그 위`);
+  at = { ...first.sides[1].stand };
+  for (let i = 0; i < 60; i += 1) at = plazaStep(at, -6, 0, null, room);
+  assert.ok(at.x > first.box[2] && classroomNearSeat(at, 0), `책상 오른쪽에서 멈춤 ${at.x} — 러그 위`);
 });
 
 test("교실 — 칠판 앞(선생님이 출석을 시작하는 자리)", () => {
@@ -226,26 +288,46 @@ test("자리표 — 저장된 자리만, 같은 학생이 두 번 있으면 앞�
   assert.equal(classroomSeatLabel(30), "");
 });
 
-test("책상 옆인가 — 복도 쪽 어디든, 옆줄 · 옆 짝의 책상과는 가린다", () => {
+test("러그 위인가 — 내 자리의 러그에 올라서야 하고, 복도 한가운데 · 옆 자리 · 앞뒤 줄과는 가린다", () => {
   const mine = CLASSROOM_SEATS[8];   // 2번째 줄 3번째
-  assert.equal(classroomNearSeat(mine.stand, 8), true);
-  assert.equal(classroomNearSeat({ x: mine.desk.x + 60, y: mine.desk.y + 20 }, 8), true, "짝 사이의 좁은 복도");
+  const [left, right] = mine.sides;
+  assert.equal(classroomNearSeat(left.stand, 8), true);
+  assert.equal(classroomNearSeat(right.stand, 8), true);
+  // 러그의 가장자리 — 살짝 밟아도 올라선 것(여유), 그보다 밖은 아님
+  assert.equal(classroomNearSeat({ x: mine.rug.x + CLASSROOM_RUG.rx + CLASSROOM_RUG_REACH - 1, y: mine.rug.y }, 8), true);
+  assert.equal(classroomNearSeat({ x: mine.rug.x + CLASSROOM_RUG.rx + CLASSROOM_RUG_REACH + 3, y: mine.rug.y }, 8), false);
+  assert.equal(classroomNearSeat({ x: mine.rug.x + 60, y: mine.rug.y + 30 }, 8), true, "귀의 아래쪽");
+  assert.equal(classroomNearSeat({ x: mine.rug.x + 60, y: mine.rug.y + 37 }, 8), false, "러그 밖(뒷줄과의 사이)");
+  // 복도 한가운데(옆 자리와의 사이)는 어느 러그도 아니다
+  const aisle = { x: (mine.rug.x + CLASSROOM_SEATS[9].rug.x) / 2, y: mine.rug.y };
+  assert.equal(plazaWalkable(aisle.x, aisle.y, CLASSROOM_ROOM), true);
+  assert.equal(classroomNearSeat(aisle, 8), false);
+  assert.equal(classroomNearSeat(aisle, 9), false);
+  assert.equal(classroomSeatAround(aisle), null);
+  // 옆 자리 · 뒷줄 · 앞줄의 러그는 내 자리가 아니다
+  assert.equal(classroomNearSeat(CLASSROOM_SEATS[9].sides[0].stand, 8), false, "옆 자리의 왼쪽 귀(같은 복도)");
   assert.equal(classroomNearSeat(CLASSROOM_SEATS[14].stand, 8), false, "뒷줄의 서는 자리");
   assert.equal(classroomNearSeat(CLASSROOM_SEATS[2].stand, 8), false, "앞줄의 서는 자리");
   assert.equal(classroomNearSeat(CLASSROOM_ROOM.spawn, 8), false);
   assert.equal(classroomNearSeat(mine.stand, null), false);
   assert.equal(classroomNearSeat(null, 8), false);
-  // 위아래로는 그 줄만 — 줄 사이(91px)의 절반을 조금 넘는 만큼
-  assert.ok(CLASSROOM_SEAT_NEAR.y < 73 && CLASSROOM_SEAT_NEAR.y > 45 && CLASSROOM_SEAT_NEAR.x >= 90);
-  // 칠판 앞 복도에서 첫 줄 책상 바로 앞에 서도(책상 줄에 붙어) 그 책상 옆이다
-  assert.equal(classroomNearSeat({ x: CLASSROOM_SEATS[2].desk.x, y: 262 }, 2), true);
-  assert.equal(classroomSeatAround(mine.stand), 8);
+  // 칠판 앞 복도는 첫 줄의 러그가 아니다(러그는 책상 아래쪽에 깔려 있음)
+  assert.equal(classroomNearSeat({ x: CLASSROOM_SEATS[2].rug.x, y: 262 }, 2), false);
+  assert.equal(classroomSeatAround(right.stand), 8);
+  assert.equal(classroomSeatAround(left.stand), 8);
   assert.equal(classroomSeatAround(CLASSROOM_ROOM.spawn), null);
-  // 누르기 — 책상 윗면 · 의자를 누르면 그 자리, 복도는 아님
+  assert.equal(classroomSeatAround(null), null);
+  // 누르기 — 책상 윗면 · 의자를 누르면 그 자리, 러그의 귀(걷는 바닥)는 아님
   assert.equal(classroomSeatAt(mine.desk.x, mine.desk.y), 8);
   assert.equal(classroomSeatAt(mine.sit.x, mine.sit.y), 8);
-  assert.equal(classroomSeatAt(mine.stand.x, mine.stand.y), null);
-  assert.equal(classroomSeatAt(mine.desk.x, mine.desk.y + 80), 14, "뒷줄 책상");
+  assert.equal(classroomSeatAt(right.stand.x, right.stand.y), null);
+  assert.equal(classroomSeatAt(mine.desk.x, mine.box[3] + 20), 14, "뒷줄 책상");
+  // 다가갈 쪽 — 지금 선 곳에서 가까운 귀(모르면 오른쪽)
+  assert.equal(classroomSeatSide(8, { x: mine.rug.x - 120, y: 600 }), left);
+  assert.equal(classroomSeatSide(8, { x: mine.rug.x + 120, y: 300 }), right);
+  assert.equal(classroomSeatSide(8, null), right);
+  assert.equal(classroomSeatSide(8, { x: NaN, y: 1 }), right);
+  assert.equal(classroomSeatSide(99), null);
 });
 
 test("A를 누르면 — 학생: 내 책상 옆이면 앉기 · 앉아 있으면 다시 서기 / 선생님: 칠판 앞이면 출석", () => {
@@ -253,7 +335,7 @@ test("A를 누르면 — 학생: 내 책상 옆이면 앉기 · 앉아 있으면
   assert.deepEqual(classroomAct({ point: mine.stand, seat: 8, sitting: null }), { kind: "sit", seat: 8 });
   assert.deepEqual(classroomAct({ point: mine.sit, seat: 8, sitting: 8 }), { kind: "stand", seat: 8 });
   // 남의 책상 옆 — 내 자리가 어디인지 알려 준다
-  assert.deepEqual(classroomAct({ point: CLASSROOM_SEATS[20].stand, seat: 8, sitting: null }), { kind: "other", seat: 8 });
+  assert.deepEqual(classroomAct({ point: CLASSROOM_SEATS[20].stand, seat: 8, sitting: null }), { kind: "other", seat: 8, at: 20 });
   // 책상에서 멀다
   assert.deepEqual(classroomAct({ point: CLASSROOM_ROOM.spawn, seat: 8, sitting: null }), { kind: "far", seat: 8 });
   // 자리표에 없는 학생
@@ -372,11 +454,11 @@ test("흩어 서기 — 방마다 제 띠에(교실은 뒤쪽 · 책상 옆이 �
   assert.ok(seen.size > 30, "흩어진다");
 });
 
-test("펫 — 주인이 앉아 있는 동안은 책상 옆 복도에서 기다린다", () => {
+test("펫 — 주인이 앉아 있는 동안은 그 책상의 러그 귀(가까운 쪽)에서 기다린다", () => {
   const room = CLASSROOM_ROOM;
   const seat = CLASSROOM_SEATS[8];
   const owner = { x: seat.sit.x, y: seat.sit.y, facing: "up" };
-  // 주인을 따라 복도에 서 있다가 — 주인이 앉으면 기다릴 자리로 걸어간다(책상 줄 밖으로만)
+  // 주인을 따라 복도에 서 있다가 — 주인이 앉으면 기다릴 자리(러그의 귀)로 걸어간다(책상 줄 밖으로만)
   const pet = plazaPetStart({ x: seat.stand.x, y: seat.stand.y + 40 }, "down", room);
   for (let i = 0; i < 200; i += 1) {
     plazaPetFollow(pet, owner, 1 / 60, { room, stay: seat.pet });
@@ -384,10 +466,21 @@ test("펫 — 주인이 앉아 있는 동안은 책상 옆 복도에서 기다�
   }
   assert.ok(Math.hypot(pet.x - seat.pet.x, pet.y - seat.pet.y) < 2, "기다릴 자리에 섬");
   assert.equal(pet.facing, "up", "주인과 같은 쪽(칠판)을 본다");
-  // 처음 본 친구가 이미 앉아 있으면(펫이 의자 자리에서 시작) 기다릴 자리로 곧바로
-  const fresh = plazaPetStart(owner, "up", room);
-  plazaPetFollow(fresh, owner, 1 / 60, { room, stay: seat.pet });
-  assert.deepEqual({ x: fresh.x, y: fresh.y }, { x: seat.pet.x, y: seat.pet.y });
+  // 처음 본 친구가 이미 앉아 있으면 — 펫은 의자 옆 바닥에서 시작해 **가까운 쪽** 기다릴 자리로 간다
+  // (책상이 한 줄씩이라 양옆이 모두 복도 — 반대쪽으로는 책상 줄에 막혀 못 가므로 무대는 늘 가까운 쪽을 고른다)
+  for (const index of [0, 8, 17, 29]) {
+    const at = CLASSROOM_SEATS[index];
+    const sitter = { x: at.sit.x, y: at.sit.y, facing: "up" };
+    const fresh = plazaPetStart(sitter, "up", room);
+    const side = classroomSeatSide(index, fresh);
+    for (let i = 0; i < 120; i += 1) plazaPetFollow(fresh, sitter, 1 / 60, { room, stay: side.pet });
+    assert.ok(Math.hypot(fresh.x - side.pet.x, fresh.y - side.pet.y) < 2, `자리 ${index} — 가까운 쪽 기다릴 자리에 섬`);
+    assert.equal(classroomNearSeat(fresh, index), true, "주인의 러그 위에서 기다린다");
+  }
+  // 바닥이 아닌 곳에서 시작하면(의자 자리) 기다릴 자리로 곧바로
+  const lost = { ...plazaPetStart(owner, "up", room), x: seat.sit.x, y: seat.sit.y };
+  plazaPetFollow(lost, owner, 1 / 60, { room, stay: seat.pet });
+  assert.deepEqual({ x: lost.x, y: lost.y }, { x: seat.pet.x, y: seat.pet.y });
   // 주인이 일어서면 곁자리로 다시 온다
   const up = { x: seat.stand.x, y: seat.stand.y, facing: "right" };
   for (let i = 0; i < 200; i += 1) plazaPetFollow(pet, up, 1 / 60, { room });

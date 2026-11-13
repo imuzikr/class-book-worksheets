@@ -217,8 +217,9 @@
 
 /* ── 교실 · 포털(선생님 요청 — 책 광장의 둘째 방) ─────────────────────────────
    그림 안(.plaza-world)에 얹는 것은 자리만 그림을 따라가고(%), 글자 · 단추의 크기는 화면 px 그대로입니다. */
-/* 포털 — 그림에 그려진 포털 위에 얹는 도는 소용돌이. 동그란 그림을 돌리면서 납작하게 눌러(--portal-k = 세로/가로)
-   비스듬히 본 바닥의 소용돌이가 도는 것처럼 보입니다. 누름은 뒤의 마당으로 통과합니다. */
+/* 포털 — 바닥에 놓는 그림(배경에는 그려져 있지 않음)과 그 위에 얹는 도는 빛. 동그란 빛을 돌리면서 납작하게 눌러
+   (--portal-k = 세로/가로) 비스듬히 본 바닥의 소용돌이가 도는 것처럼 보입니다. 누름은 뒤의 마당으로 통과합니다. */
+.plaza-portal-base { position: absolute; z-index: 2; display: block; max-width: none; pointer-events: none; user-select: none; }
 .plaza-portal { position: absolute; z-index: 3; pointer-events: none; }
 .plaza-portal img {
   position: absolute; left: 0; top: 50%; width: 100%; height: auto; aspect-ratio: 1; max-width: none; display: block;
@@ -229,25 +230,42 @@
 /* 포털의 이름표 — 어디로 가는지(누르면 포털로 걸어감). 다른 이름표보다 작고 민트빛 */
 .plaza-sign--portal { padding: 4px 11px; border-color: #4f9c8d; background: #f1fffaf2; color: #24594f; box-shadow: 0 3px 0 #4f9c8d55, 0 6px 14px #1f4a4226; }
 .plaza-sign--portal:hover { background: #fff; }
+/* 방을 막 건너와 그 포털 위에 서 있는 동안 — 이름표가 내 캐릭터의 얼굴 높이라 걷습니다(벗어나면 다시 보임) */
+.plaza-sign--portal { transition: transform .15s, background .15s, opacity .2s; }
+.plaza-sign--portal.is-under { opacity: 0; pointer-events: none; }
 /* 방을 옮길 때의 반짝임 — 무대를 덮었다가 걷힙니다(누름은 통과) */
 .plaza-warp { position: absolute; inset: 0; z-index: 3000; pointer-events: none; background: radial-gradient(circle at 50% 55%, #f6fff9 0%, #d9f6ecf2 45%, #bfeee0e6 100%); animation: plaza-warp .55s ease-out both; }
 @keyframes plaza-warp { from { opacity: .96; } to { opacity: 0; } }
 
-/* 책상의 이름표 — 책상 윗면 가운데(선생님: 학생 이름 · 학생: '내 자리'). 캐릭터보다 아래 층이라 앉으면 몸에 가립니다 */
+/* 러그와 책상·의자 — 교실 배경에는 없고 자리 좌표대로 따로 놓습니다(PlazaFurniture). 러그가 아래, 책상·의자가 위,
+   캐릭터는 그 위(z 10+). 앉은 캐릭터 위에는 '의자만'의 그림을 한 번 더 그립니다(.plaza-chair). 누름은 통과합니다. */
+.plaza-rug, .plaza-desk-art { position: absolute; display: block; max-width: none; pointer-events: none; user-select: none; }
+.plaza-rug { z-index: 1; }
+.plaza-desk-art { z-index: 4; }
+/* 내 러그 — 러그(보이는 타원)를 두른 살구빛 테. 러그가 곧 내 자리의 범위라(선생님 요청) 어디에 올라서면 되는지 보입니다.
+   책상보다 아래 층이라 책상 · 의자에 가린 가운데는 안 보이고 양옆의 귀가 드러납니다. 올라서면 밝아지고, 앉으면 옅어집니다. */
+.plaza-rug-mine {
+  position: absolute; z-index: 2; box-sizing: border-box; pointer-events: none; border-radius: 50%;
+  border: 2.5px solid #e8784a; background: #ffb48a47; box-shadow: 0 0 0 3px #ffb48a40;
+  transition: background .2s, box-shadow .2s, border-color .2s;
+}
+.plaza-rug-mine.is-on { border-color: #d9562a; background: #ff9e6b75; box-shadow: 0 0 0 5px #ff9e6b59, 0 0 16px 4px #ff9e6b66; animation: plaza-rug-on 1.5s ease-in-out infinite; }
+.plaza-rug-mine.is-seated { border-color: #e8784a80; background: #ffb48a1f; box-shadow: none; }
+@keyframes plaza-rug-on { 0%, 100% { box-shadow: 0 0 0 5px #ff9e6b59, 0 0 16px 4px #ff9e6b66; } 50% { box-shadow: 0 0 0 8px #ff9e6b33, 0 0 20px 7px #ff9e6b4d; } }
+/* 책상의 이름표 — 책상 윗면 가운데(선생님: 학생 이름 · 학생: '내 자리'). 캐릭터보다 아래 층이라 앉으면 몸에 가립니다.
+   폭의 천장은 '✓ + 이름 다섯 글자'까지 — ✓가 붙으면서 5.2em으로는 세 글자 이름이 '김…'으로 잘렸습니다(실측). */
 .plaza-desk-name {
   position: absolute; z-index: 6; transform: translate(-50%, -50%); pointer-events: none;
-  max-width: 5.2em; padding: 1px 6px; border-radius: 7px; background: #fffaf0e0; color: #5a3a1b;
+  max-width: 7.6em; padding: 1px 6px; border-radius: 7px; background: #fffaf0e0; color: #5a3a1b;
   font-size: clamp(9.5px, 1.15cqw, 12.5px); font-weight: 700; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .plaza-desk-name--mine { background: #c2622fe6; color: #fff; }
-/* 내 책상 — 책상과 의자를 두른 살구빛 테(앉으면 옅어짐) */
-.plaza-desk-mine { position: absolute; z-index: 5; box-sizing: border-box; pointer-events: none; border: 2.5px solid #e8784a; border-radius: 14px; background: #ffb48a26; box-shadow: 0 0 0 4px #ffb48a40; }
-.plaza-desk-mine.is-seated { border-color: #e8784a8c; background: none; box-shadow: none; }
-/* 출석 표시 — 책상 오른쪽 모서리의 초록 동그라미(앉은 캐릭터 위에도 보이게 위 층) */
-.plaza-desk-check {
-  position: absolute; z-index: 1500; transform: translate(-50%, -50%); pointer-events: none;
-  display: grid; place-items: center; width: 20px; height: 20px; border: 2px solid #fff; border-radius: 50%;
-  background: #2f8f5b; color: #fff; font-size: 12px; font-weight: 800; line-height: 1; box-shadow: 0 2px 5px #0000003d;
+/* 오늘 출석 — 이름표 앞의 초록 ✓ 동그라미(책상의 이름표 · 앉거나 선 캐릭터의 이름표가 같은 모습).
+   이름표의 바탕색은 그대로 둡니다 — 내 것 살구 · 친구 남색 · 선생님 초록이라는 뜻을 건드리지 않게. */
+.plaza-desk-name i, .plaza-avatar-check {
+  display: inline-grid; place-items: center; width: 1.3em; height: 1.3em; margin-right: 3px; border-radius: 50%;
+  background: #2f8f5b; color: #fff; font-size: .8em; font-style: normal; font-weight: 800; line-height: 1; vertical-align: -.12em;
+  box-shadow: 0 0 0 1.5px #ffffffd9;
 }
 /* 물음표 — 지금 A를 누르면 물을 것이 있습니다(책상 위 · 칠판). 눌러도 같습니다 */
 .plaza-mark {
@@ -261,13 +279,24 @@
 .plaza-mark:hover { background: #fff; }
 .plaza-mark:focus-visible { outline: 3px solid #478fbd; outline-offset: 2px; }
 @keyframes plaza-mark { 0%, 100% { translate: 0 0; } 50% { translate: 0 -4px; } }
-/* 고르기 — 물음표 자리에 뜨는 두 단추(같은 크기 · S와 C로도 고름) */
+/* 고르기 — 물음표 자리에 뜨는 두 단추(같은 크기 · S와 C로도 고름). 놓는 자리는 transform, 떠오르는 움직임은 translate
+   (갈라 두어야 칠판의 상자처럼 놓는 자리가 다른 것도 같은 움직임을 씁니다) */
 .plaza-act {
   position: absolute; z-index: 2200; transform: translate(-50%, -100%);
   width: max-content; max-width: min(300px, 86cqw); padding: 9px; border: 2px solid #8a5a2b; border-radius: 16px;
   background: #fff9ecfa; box-shadow: 0 4px 0 #8a5a2b55, 0 10px 24px #3a261238; animation: plaza-act-in .16s ease-out both;
 }
-@keyframes plaza-act-in { from { opacity: 0; transform: translate(-50%, -100%) translateY(6px); } to { opacity: 1; transform: translate(-50%, -100%); } }
+@keyframes plaza-act-in { from { opacity: 0; translate: 0 6px; } to { opacity: 1; translate: 0 0; } }
+/* 칠판의 고르기(출석시작 · 출석종료) — 선생님 옆, 칠판 위. 상자의 아랫변이 선생님의 발 높이(--act-foot)이고, 선생님의 몸과
+   이름표(반폭 29px쯤)를 비켜 36px 옆에서 시작합니다. 칠판 가운데보다 왼쪽에 섰으면 오른쪽(.is-right), 아니면 왼쪽.
+   머리 위에 띄우던 때는 위쪽 자리가 모자라 상자가 화면 밖으로 잘렸습니다(PlazaClassroom.jsx의 BOARD_MENU_FOOT 주석). */
+.plaza-act--board { top: var(--act-foot); }
+.plaza-act--board.is-right { transform: translate(36px, -100%); }
+.plaza-act--board.is-left { transform: translate(calc(-100% - 36px), -100%); }
+/* 무대가 좁으면(폰) 옆에 놓을 자리가 없습니다 — 선생님의 발 아래 가운데에 */
+@container plazawrap (max-width: 700px) {
+  .plaza-act--board.is-right, .plaza-act--board.is-left { top: var(--act-below); transform: translate(-50%, 0); }
+}
 .plaza-act-note { margin: 0 2px 8px; color: #5a3a1b; font-size: 12.5px; font-weight: 600; line-height: 1.55; word-break: keep-all; }
 .plaza-act-note b { font-weight: 800; font-variant-numeric: tabular-nums; }
 .plaza-act-note small { display: block; margin-top: 2px; color: #8a7b66; font-size: 11.5px; font-weight: 500; }
@@ -284,9 +313,8 @@
 .plaza-act-no:hover { background: #e6dac5; transform: translateY(-1px); }
 .plaza-act-buttons button:disabled { background: #eeeae2; color: #a09f96; cursor: not-allowed; transform: none; }
 .plaza-act-buttons button:focus-visible { outline: 3px solid #478fbd; outline-offset: 2px; }
-/* 의자 — 배경에서 오린 조각을 앉은 캐릭터 위에 한 번 더 그립니다(PlazaActor) */
-.plaza-chair { position: absolute; overflow: hidden; pointer-events: none; }
-.plaza-chair img { position: absolute; display: block; max-width: none; }
+/* 의자 — 책상·의자 그림과 같은 자리에 '의자만'의 그림을 앉은 캐릭터 위에 한 번 더 그립니다(PlazaActor) */
+.plaza-chair { position: absolute; display: block; max-width: none; pointer-events: none; user-select: none; }
 /* 맵 위 오른쪽 — 교실의 알림(선생님: 출석 · 자리표에 없는 학생 / 학생: 내 자리 · 오늘 출석). 누름은 단추만 받습니다 */
 .plaza-hud > .plaza-hud-room { pointer-events: none; }
 .plaza-hud-room { position: absolute; right: 14px; top: 14px; display: flex; flex-direction: column; align-items: flex-end; gap: 7px; max-width: calc(100% - 28px); }
@@ -305,7 +333,6 @@
 .plaza-hint--note { background: #20364af2; font-weight: 600; max-width: min(520px, calc(100% - 28px)); white-space: normal; }
 @container plazastage (max-width: 860px) {
   .plaza-mark { width: 30px; height: 30px; font-size: 17px; }
-  .plaza-desk-check { width: 17px; height: 17px; font-size: 10.5px; }
 }
 @media (max-width: 720px) {
   .plaza-hud-room { right: 10px; top: 54px; align-items: flex-end; }
@@ -313,7 +340,7 @@
   .plaza-act-buttons button { min-width: 84px; height: 38px; font-size: 13.5px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .plaza-portal img, .plaza-mark, .plaza-warp, .plaza-act { animation: none; }
+  .plaza-portal img, .plaza-mark, .plaza-warp, .plaza-act, .plaza-rug-mine.is-on { animation: none; }
   .plaza-warp { display: none; }
 }
 

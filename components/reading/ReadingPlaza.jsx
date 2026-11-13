@@ -13,9 +13,12 @@
 // 교실로, 교실 오른쪽 아래(문 앞)의 포털에 올라서면 광장으로 옮겨 갑니다. 두 그림이 같은 크기라 무대 · 시점의 셈은
 // 그대로이고, 방마다 다른 것(바닥 · 여는 곳 · 포털)은 방 정의(lib/readingPlazaMap.js의 plazaRoomOf)가 듭니다.
 // 책 광장 탭을 열면 **마지막에 있던 방**에서 시작합니다(이 기기에 기억).
+// **포털 · 러그 · 책상과 의자는 배경에 그려져 있지 않습니다**(선생님이 주신 분리 그림) — 방 정의의 좌표대로 따로 그립니다
+// (포털은 여기서, 교실의 러그 · 책상은 PlazaClassroom.jsx의 PlazaFurniture가). 겹치는 차례는
+// 바닥 → 러그 → 책상·의자 → 캐릭터 → (앉은 캐릭터의) 의자입니다.
 // 교실에서는 —
-//   · 학생: 자리표('자리 배정하기')의 제 책상 옆에 가면 책상 위에 물음표가 뜹니다. A → [앉기(S) · 취소(C)],
-//     앉은 채 A → [다시 서기(S) · 취소(C)]. 앉아 있는 동안은 걷지 않습니다.
+//   · 학생: 자리표('자리 배정하기')의 **제 책상의 러그**에 올라서면 책상 위에 물음표가 뜹니다(러그가 그 자리의 범위 —
+//     선생님 요청). A → [앉기(S) · 취소(C)], 앉은 채 A → [다시 서기(S) · 취소(C)]. 앉아 있는 동안은 걷지 않습니다.
 //   · 선생님: 칠판 앞에서 A → [출석시작(S) · 출석종료(C)]. **출석시작을 누르는 순간 제자리에 앉아 있던 학생만**
 //     출석이 됩니다(셈과 까닭은 lib/readingClassroom.js 머리말 — 앉아 있던 학생의 화면이 스스로 출석을 남김).
 // **걷는 키는 방향키뿐입니다**(선생님 결정 — A · S · C가 행동 키가 되어 W · A · S · D로는 걷지 않습니다. 광장에서도 A는
@@ -56,17 +59,17 @@ import { petProgress } from "@/lib/readingPet";
 import { plazaItems } from "@/lib/readingPlaza";
 import {
   classroomAct, classroomAtBoard, classroomAttendance, classroomBoardAt, classroomBoardMark, classroomBoardStand, classroomDesks,
-  classroomNearSeat, classroomRollCall, classroomSeatAt, classroomSeatLabel, classroomSeatOf, classroomUnseated, plazaArrowKey, plazaLetterKey,
+  classroomNearSeat, classroomRollCall, classroomSeatAt, classroomSeatLabel, classroomSeatOf, classroomSeatSide, classroomUnseated, plazaArrowKey, plazaLetterKey,
 } from "@/lib/readingClassroom";
 import { PLAZA_LIVE_KEY_MS, plazaRemoteEnter, plazaRemoteHear, plazaRemoteStep, plazaSpawnFor } from "@/lib/readingPlazaLive";
 import {
-  CLASSROOM_SEATS, PLAZA_H, PLAZA_NEAR, PLAZA_W,
+  CLASSROOM_SEATS, PLAZA_H, PLAZA_NEAR, PLAZA_W, PORTAL_ART,
   plazaArrival, plazaCamera, plazaNearest, plazaPath, plazaPortalAt, plazaPortalClicked, plazaRoomOf, plazaSpotAt, plazaSpotNear, plazaStep, plazaView, plazaWalkable,
 } from "@/lib/readingPlazaMap";
 import { PET_STRIDE, PLAZA_WALK_SPEED, SPRITE_IDLE, plazaFacing, plazaPetFollow, plazaPetStart, plazaWalkFrame } from "@/lib/readingPlazaSprites";
 import { PLAZA_STAGE_MIN_H, plazaRoom as stageRoom, plazaScroller } from "@/lib/plazaStageRoom";
 import PlazaActor from "./PlazaActor";
-import PlazaClassroom from "./PlazaClassroom";
+import PlazaClassroom, { PlazaFurniture } from "./PlazaClassroom";
 import PlazaPanel from "./PlazaPanel";
 import "./plaza.css";
 
@@ -149,6 +152,8 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   const [boardMark, setBoardMark] = useState(() => classroomBoardMark({ x: PLAZA_W / 2 }));
   const [note, setNote] = useState(null);
   const [warp, setWarp] = useState(0);
+  // 방을 막 건너와 서 있는 포털(그 id) — 벗어날 때까지 그 포털의 이름표를 걷습니다(이름표가 내 캐릭터의 얼굴 높이라 가림)
+  const [onGate, setOnGate] = useState(null);
 
   const stageRef = useRef(null);
   const wrapRef = useRef(null);
@@ -357,6 +362,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     setNearId(null);
     setMarker(null);
     setWalked(false);
+    setOnGate(next.portals.find((g) => g.to === from)?.id ?? null);
     say("");
     setWarp((n) => n + 1);
     if (myUid) {
@@ -394,11 +400,17 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     const index = sittingRef.current;
     if (index === null) return;
     const seat = CLASSROOM_SEATS[index];
-    const back = sitFrom.current && plazaWalkable(sitFrom.current.x, sitFrom.current.y, roomRef.current) ? sitFrom.current : seat.stand;
+    // 앉기 전에 서 있던 러그 위로 돌아갑니다(모르면 — 새로고침으로 앉은 채 시작했으면 — 펫이 기다리는 쪽 귀)
+    const back = sitFrom.current && plazaWalkable(sitFrom.current.x, sitFrom.current.y, roomRef.current) ? sitFrom.current : classroomSeatSide(index, myPet.current).stand;
     sitFrom.current = null;
     pos.current = { x: back.x, y: back.y };
     // 일어서면 책상 쪽을 봅니다
-    facingRef.current = seat.desk.x >= back.x ? "right" : "left";
+    facingRef.current = seat.rug.x >= back.x ? "right" : "left";
+    // 펫이 책상 줄 건너편에서 기다리고 있었으면 곁으로 데려옵니다(곧게만 걸어 건너오지 못함)
+    if (myPet.current && (myPet.current.x - seat.rug.x) * (back.x - seat.rug.x) < 0) {
+      myPet.current = plazaPetStart(pos.current, facingRef.current, roomRef.current);
+      meRef.current?.placePet(myPet.current.x, myPet.current.y);
+    }
     sittingRef.current = null;
     setSitting(null);
     setMenu(null);
@@ -456,7 +468,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     // 포털 — 발이 안쪽에 들어서면 그 방으로 옮겨 갑니다. 방금 건너온 포털은 벗어난 뒤에야 다시 듣습니다.
     if (!seated && place.portals.length) {
       if (!portalArmed.current) {
-        if (!plazaPortalAt(pos.current, place, PORTAL_REARM)) portalArmed.current = true;
+        if (!plazaPortalAt(pos.current, place, PORTAL_REARM)) { portalArmed.current = true; setOnGate(null); }
       } else {
         const gate = plazaPortalAt(pos.current, place);
         if (gate) {
@@ -471,13 +483,18 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
 
     const near = plazaSpotNear(pos.current, PLAZA_NEAR, place)?.id ?? null;
     if (near !== nearRef.current) { nearRef.current = near; setNearId(near); }
-    // 교실 — 지금 A를 누르면 물을 것이 있는가(내 책상 옆 · 앉아 있음 · 칠판 앞)
+    // 교실 — 지금 A를 누르면 물을 것이 있는가(내 자리의 러그 위 · 앉아 있음 · 칠판 앞)
     let ask = null;
     if (inClass) {
       if (isTeacher) ask = classroomAtBoard(pos.current) ? "board" : null;
       else if (seated || (mySeatRef.current !== null && classroomNearSeat(pos.current, mySeatRef.current))) ask = "seat";
     }
-    if (ask !== hintRef.current) { hintRef.current = ask; setHint(ask); }
+    if (ask !== hintRef.current) {
+      hintRef.current = ask;
+      setHint(ask);
+      // 물을 것이 생겼으면(러그에 올라섬 · 칠판 앞에 섬) '어디로 가라'던 한 줄은 걷습니다
+      if (ask) say("");
+    }
     if (ask === "board") {
       const mark = classroomBoardMark(pos.current);
       if (mark.x !== boardX.current) { boardX.current = mark.x; setBoardMark(mark); }
@@ -505,7 +522,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
         // 내 책상 · 칠판을 눌러 걸어왔습니다 — 다 왔으면 고르는 단추를 엽니다
         const want = pendingAct.current;
         pendingAct.current = null;
-        if (want === ask) setMenu({ kind: want === "board" ? "board" : "sit" });
+        if (want === ask) setMenu(want === "board" ? { kind: "board", x: pos.current.x } : { kind: "sit" });
       }
     }
 
@@ -518,11 +535,12 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     if (mode === 2 ? told.current !== 2 || time - toldAt.current >= PLAZA_LIVE_KEY_MS : mode === 0 && told.current !== 0) tell(time);
 
     // 펫 — 걷는 동안은 캐릭터가 지나온 길을 조금 뒤에서, 멈추면 곁자리로 옵니다(lib/readingPlazaSprites.js의 plazaPetFollow).
-    // 주인이 자리에 앉아 있는 동안에는 그 책상 옆 복도에서 기다립니다.
+    // 주인이 자리에 앉아 있는 동안에는 그 책상의 러그 귀에서 기다립니다(책상이 한 줄씩이라 양옆이 복도 — 펫이 있는 쪽으로.
+    // 반대쪽은 책상 줄에 막혀 못 갑니다).
     let petBusy = false;
     const pet = myPet.current;
     if (pet) {
-      const stay = seated ? CLASSROOM_SEATS[sittingRef.current].pet : null;
+      const stay = seated ? classroomSeatSide(sittingRef.current, pet).pet : null;
       const step = plazaPetFollow(pet, { x: pos.current.x, y: pos.current.y, facing: facingRef.current }, dt, { active, moved, from, room: place, stay });
       petBusy = step.busy;
       if (step.walking || dt === 0) me?.placePet(pet.x, pet.y);
@@ -546,7 +564,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
       // 이번에 걸었으면 한 프레임 더 — 다 와서 선 자세로 바꿔 그린 뒤에 쉽니다
       if (step.busy || step.moved > 0.01) castBusy = true;
       if (friend.pet) {
-        const hop = plazaPetFollow(friend.pet, actor, dt, { active: step.walking, moved: step.moved, from: was, room: place, stay: sat ? CLASSROOM_SEATS[friend.seat].pet : null });
+        const hop = plazaPetFollow(friend.pet, actor, dt, { active: step.walking, moved: step.moved, from: was, room: place, stay: sat ? classroomSeatSide(friend.seat, friend.pet).pet : null });
         if (handle && (fresh || hop.walking)) handle.placePet(friend.pet.x, friend.pet.y);
         handle?.showPet(friend.pet.facing, hop.walking && !calm.current ? plazaWalkFrame(friend.pet.stride, PET_STRIDE) : SPRITE_IDLE, hop.walking);
         if (hop.busy) castBusy = true;
@@ -566,7 +584,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
       lastTick.current = 0;
     }
     look();
-  }, [isTeacher, enterRoom, look, openSpot, tell]);
+  }, [isTeacher, enterRoom, look, openSpot, say, tell]);
 
   useLayoutEffect(() => {
     wakeRef.current = () => {
@@ -632,6 +650,11 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
           friend.actor = plazaRemoteEnter(fixed, 0, now);
           if (moved && friend.pet) friend.pet = plazaPetStart(friend.actor, friend.actor.facing, roomFor(state.room));
           friend.dirty = true;
+        }
+        // 자리에서 일어선 친구 — 펫이 책상 줄 건너편에서 기다리고 있었으면 곁으로 데려옵니다(곧게만 걸어 건너오지 못함)
+        if (!moved && friend.seat !== null && seat === null && friend.pet) {
+          const desk = CLASSROOM_SEATS[friend.seat].rug.x;
+          if ((friend.pet.x - desk) * (friend.actor.x - desk) < 0) { friend.pet = plazaPetStart(friend.actor, friend.actor.facing, roomRef.current); friend.dirty = true; }
         }
         if (moved || friend.seat !== seat || friend.reading !== state.reading) {
           friend.room = state.room;
@@ -811,13 +834,14 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     if (what.kind === "sit" || what.kind === "stand" || what.kind === "board") {
       halt();
       setMarker(null);
-      setMenu({ kind: what.kind });
+      // 칠판의 고르는 단추는 선생님 옆에 뜹니다 — 선 자리(x)를 함께 듭니다(단추가 떠 있는 동안에는 걷지 않음 · 걸으면 닫힘)
+      setMenu(what.kind === "board" ? { kind: "board", x: pos.current.x } : { kind: what.kind });
       return true;
     }
     if (what.kind === "noseat") say("아직 내 자리가 없어요. 선생님께 자리 배정을 부탁해 주세요.");
-    else if (what.kind === "other") say(`여기는 다른 친구의 자리예요. 내 자리는 ${classroomSeatLabel(what.seat)}예요.`);
+    else if (what.kind === "other") say(`여기는 ${desksRef.current[what.at] ? "다른 친구의 자리" : "빈자리"}예요. 내 자리는 ${classroomSeatLabel(what.seat)}예요.`);
     else if (isTeacher) say("칠판 앞에 서서 A를 누르면 출석시작(S) · 출석종료(C)를 고를 수 있어요.");
-    else say(`내 책상 옆에 가서 A를 누르면 앉을 수 있어요. 내 자리는 ${classroomSeatLabel(what.seat)}예요.`);
+    else say(`내 자리의 러그에 올라서서 A를 누르면 앉을 수 있어요. 내 자리는 ${classroomSeatLabel(what.seat)}예요.`);
     return true;
   }, [isTeacher, halt, openSpot, say]);
   // S(첫 단추) · C(둘째 단추)
@@ -858,13 +882,13 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     const spot = plazaSpotAt(x, y, room);
     if (spot) { goSpot(spot); return; }
     if (here === "classroom") {
-      // 내 책상을 누르면 그 옆으로 가서 앉기를 묻고, 선생님이 칠판을 누르면 그 앞으로 가서 출석을 묻습니다
+      // 내 책상을 누르면 그 러그로(지금 선 곳에서 가까운 쪽 귀) 가서 앉기를 묻고, 선생님이 칠판을 누르면 그 앞으로 가서 출석을 묻습니다
       if (mySeat !== null && classroomSeatAt(x, y) === mySeat) {
-        if (classroomNearSeat(pos.current, mySeat)) { halt(); setMenu({ kind: "sit" }); } else walkTo(CLASSROOM_SEATS[mySeat].stand, null, "seat");
+        if (classroomNearSeat(pos.current, mySeat)) { halt(); setMenu({ kind: "sit" }); } else walkTo(classroomSeatSide(mySeat, pos.current).stand, null, "seat");
         return;
       }
       if (isTeacher && classroomBoardAt(x, y)) {
-        if (classroomAtBoard(pos.current)) { halt(); setMenu({ kind: "board" }); } else walkTo(classroomBoardStand(x), null, "board");
+        if (classroomAtBoard(pos.current)) { halt(); setMenu({ kind: "board", x: pos.current.x }); } else walkTo(classroomBoardStand(x), null, "board");
         return;
       }
     }
@@ -941,7 +965,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   const stageLabel = !inClass
     ? "책 광장 마당. 누른 곳으로 걸어가고 방향키로도 걷습니다. 책꽂이나 가판대 앞에서 A 또는 Enter로 엽니다."
     : isTeacher ? "교실. 누른 곳으로 걸어가고 방향키로도 걷습니다. 칠판 앞에서 A를 누르면 출석시작(S)과 출석종료(C)를 고릅니다."
-      : "교실. 누른 곳으로 걸어가고 방향키로도 걷습니다. 내 책상 옆에서 A를 누르면 앉기(S)와 취소(C)를 고르고, 앉은 채 A를 누르면 다시 서기(S)를 고릅니다.";
+      : "교실. 누른 곳으로 걸어가고 방향키로도 걷습니다. 내 자리의 러그에 올라서서 A를 누르면 앉기(S)와 취소(C)를 고르고, 앉은 채 A를 누르면 다시 서기(S)를 고릅니다.";
 
   return (
     <section className="plaza" aria-label={ROOM_NAME[here]}>
@@ -953,14 +977,21 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
           {world && (
             <div className="plaza-world" ref={worldRef} style={{ width: world.worldW, height: world.worldH }}>
               <img className="plaza-bg" src={room.art} alt="" width={PLAZA_W} height={PLAZA_H} draggable={false} />
-              {/* 포털 — 그림에 그려진 포털 위에 도는 소용돌이를 얹고, 어디로 가는지 이름표를 답니다 */}
+              {/* 교실 — 러그와 책상·의자(배경에는 없음). 자리 좌표대로 서른 벌 */}
+              {inClass && <PlazaFurniture />}
+              {/* 포털 — 바닥에 놓는 그림 위에 도는 빛을 얹고, 어디로 가는지 이름표를 답니다 */}
               {room.portals.map((gate) => (
                 <Fragment key={gate.id}>
+                  <img className="plaza-portal-base" src={PORTAL_ART.src} alt="" draggable={false}
+                    style={{ left: pct(gate.art.x - gate.art.w / 2, PLAZA_W), top: pct(gate.art.y - gate.art.h / 2, PLAZA_H), width: pct(gate.art.w, PLAZA_W), height: pct(gate.art.h, PLAZA_H) }} />
                   <span className="plaza-portal" aria-hidden="true"
                     style={{ left: pct(gate.x - gate.swirl.rx, PLAZA_W), top: pct(gate.y - gate.swirl.ry, PLAZA_H), width: pct(gate.swirl.rx * 2, PLAZA_W), height: pct(gate.swirl.ry * 2, PLAZA_H), "--portal-k": (gate.swirl.ry / gate.swirl.rx).toFixed(4) }}>
-                    <img src="/reading-plaza/portal-swirl.webp" alt="" draggable={false} />
+                    <img src={PORTAL_ART.swirl} alt="" draggable={false} />
                   </span>
-                  <button type="button" className="plaza-sign plaza-sign--portal" style={{ left: pct(gate.sign.x, PLAZA_W), top: pct(gate.sign.y, PLAZA_H) }}
+                  {/* 이름표 — 포털에 선 캐릭터(발이 못 안쪽)보다 뒤 층에 두어 얼굴을 덮지 않고, 내가 막 건너와 서 있는 동안에는 걷습니다 */}
+                  <button type="button" className={`plaza-sign plaza-sign--portal${onGate === gate.id ? " is-under" : ""}`}
+                    style={{ left: pct(gate.sign.x, PLAZA_W), top: pct(gate.sign.y, PLAZA_H), zIndex: 9 + Math.floor(gate.y - gate.ry) }}
+                    tabIndex={onGate === gate.id ? -1 : undefined} aria-hidden={onGate === gate.id || undefined}
                     onClick={() => goPortal(gate)} aria-label={`${gate.label} — 포털로 걸어가기`}>{gate.label}</button>
                 </Fragment>
               ))}
@@ -989,11 +1020,11 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
                 return (
                   <PlazaActor key={friend.uid} ref={castRef(friend.uid)} character={friend.character} pet={member.pet ? friend.pet : null}
                     name={friend.name} teacher={friend.teacher} reading={friend.reading} scale={world.scale} at={member.actor} petAt={member.pet}
-                    seat={friend.seat !== null ? CLASSROOM_SEATS[friend.seat] : null} bg={room.art} />
+                    seat={friend.seat !== null ? CLASSROOM_SEATS[friend.seat] : null} checked={inClass && !friend.teacher && !!presentUids?.has(friend.uid)} />
                 );
               })}
               <PlazaActor ref={meRef} me character={who} pet={pet} name={myName} reading={reading} scale={world.scale} at={pos.current} petAt={myPet.current}
-                seat={inClass && sitting !== null ? CLASSROOM_SEATS[sitting] : null} bg={room.art} />
+                seat={inClass && sitting !== null ? CLASSROOM_SEATS[sitting] : null} checked={inClass && attended} />
             </div>
           )}
           {/* 방을 옮길 때의 반짝임 — 옮길 때마다 새로 그려 한 번 돕니다 */}
@@ -1047,7 +1078,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
               !inClass ? <p className="plaza-hint" aria-hidden="true">마당을 누르면 그곳으로 걸어가요<span> · 방향키로도 걷고, 책꽂이와 가판대 앞에서 A(또는 눌러서)로 열어요{classroomOn ? " · 왼쪽 아래 포털은 교실로 가요" : ""}</span></p>
                 : isTeacher ? <p className="plaza-hint" aria-hidden="true">칠판 앞에서 A를 누르면<span> 출석시작(S) · 출석종료(C)를 골라요 · 방향키나 누르기로 걸어요</span></p>
                   : sitting !== null ? <p className="plaza-hint" aria-hidden="true">자리에 앉아 있어요<span> · 일어서려면 A를 누르고 다시 서기(S)를 골라요</span></p>
-                    : <p className="plaza-hint" aria-hidden="true">내 책상 옆에 가면 물음표가 떠요<span> · A를 누르고 앉기(S)를 골라요 · 방향키나 누르기로 걸어요</span></p>
+                    : <p className="plaza-hint" aria-hidden="true">내 자리의 러그에 올라서면 물음표가 떠요<span> · A를 누르고 앉기(S)를 골라요 · 방향키나 누르기로 걸어요</span></p>
             )}
         </div>
       </div>

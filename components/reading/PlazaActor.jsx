@@ -14,13 +14,15 @@
 //
 // seat — 교실에서 자리에 앉아 있으면 그 자리(lib/readingPlazaMap.js의 CLASSROOM_SEATS 한 칸), 서 있으면 null.
 //   앉은 모습을 따로 그리지 않습니다 — 뒷모습(칠판 쪽을 봄)의 정지 그림을 의자에 내려 앉히고, 허리 아래는 잘라 낸 뒤
-//   **배경에서 오린 의자**(등받이부터 다리까지 — seat.chair)를 그 위에 한 번 더 그립니다. 그래서 캐릭터가 의자 뒤가 아니라
-//   의자에 앉아 등받이 위로 보입니다. 무대는 앉은 캐릭터를 seat.sit에 두고 "up"의 정지 그림을 보이게 합니다.
-//   bg는 그 방의 배경 그림 주소(의자를 오릴 그림).
+//   **의자만 남긴 그림**(CLASSROOM_DESK.chair — 책상·의자 그림과 같은 크기 · 같은 자리)을 그 위에 한 번 더 그립니다.
+//   그래서 겹치는 차례가 바닥 → 러그 → 책상·의자 → 캐릭터 → 의자가 되어, 캐릭터가 의자에 앉아 등받이 위로 보입니다.
+//   무대는 앉은 캐릭터를 seat.sit에 두고 "up"의 정지 그림을 보이게 합니다.
+// checked — 오늘 출석했는가(교실에서 · 선생님 화면의 학생들과 학생 화면의 나). 이름표 앞에 초록 ✓ 동그라미가 붙습니다
+//   (이름표의 바탕색은 그대로 — 내 것 살구 · 친구 남색 · 선생님 초록).
 // =============================================================
 import { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { characterImage } from "@/lib/readingCharacterCatalog";
-import { CLASSROOM_SIT_HIDE, PLAZA_BODY, PLAZA_H, PLAZA_W } from "@/lib/readingPlazaMap";
+import { CLASSROOM_DESK, CLASSROOM_SIT_HIDE, PLAZA_BODY, PLAZA_H, PLAZA_W } from "@/lib/readingPlazaMap";
 import { PLAZA_EGG_SIZE, SPRITE_BODY, SPRITE_CELL, SPRITE_FOOT, plazaCharacterSheet, plazaCharacterSize, plazaPetSheet, plazaPetSize } from "@/lib/readingPlazaSprites";
 import PetFigure from "./PetFigure";
 import PlazaSprite from "./PlazaSprite";
@@ -31,7 +33,7 @@ const layer = (y) => String(10 + Math.round(y));
 // 칸 크기에 대한 비율이라 화면 배율과 상관없이 같은 자리가 잘립니다.
 const SIT_CLIP = `inset(0 0 ${((SPRITE_CELL - SPRITE_FOOT.y + CLASSROOM_SIT_HIDE / (PLAZA_BODY / SPRITE_BODY)) / SPRITE_CELL * 100).toFixed(2)}% 0)`;
 
-const PlazaActor = forwardRef(function PlazaActor({ character, pet = null, name, scale, at, petAt = null, me = false, teacher = false, reading = false, seat = null, bg = null }, ref) {
+const PlazaActor = forwardRef(function PlazaActor({ character, pet = null, name, scale, at, petAt = null, me = false, teacher = false, reading = false, seat = null, checked = false }, ref) {
   const avatarRef = useRef(null);
   const petRef = useRef(null);
   const charSprite = useRef(null);
@@ -83,18 +85,17 @@ const PlazaActor = forwardRef(function PlazaActor({ character, pet = null, name,
             : <span className="plaza-pet-figure" style={{ left: -petFigure / 2, top: -petFigure * 0.93 }}><PetFigure species={pet.species} stage={pet.stage} ready={pet.ready} size={petFigure} /></span>}
         </div>
       )}
-      <div ref={avatarRef} className={`plaza-avatar${me ? " is-me" : ""}${teacher ? " is-teacher" : ""}${reading ? " is-reading" : ""}${seat ? " is-seated" : ""}`} aria-hidden="true"
+      <div ref={avatarRef} className={`plaza-avatar${me ? " is-me" : ""}${teacher ? " is-teacher" : ""}${reading ? " is-reading" : ""}${seat ? " is-seated" : ""}${checked ? " is-checked" : ""}`} aria-hidden="true"
         style={{ left: pct(at.x, PLAZA_W), top: pct(at.y, PLAZA_H), zIndex: layer(at.y) }}>
         {!seat && <span className="plaza-avatar-shadow" style={{ width: body.body * 0.5, height: body.body * 0.15 }} />}
         {sheet && !spriteMissing
           ? <PlazaSprite ref={charSprite} src={sheet} size={body.cell} style={{ left: -body.footX, top: -body.footY, clipPath: seat ? SIT_CLIP : undefined }} onMissing={() => setSpriteMissing(true)} />
           : <img className="plaza-avatar-img" src={characterImage(character)} alt="" draggable={false}
               style={{ width: body.body * 1.3, height: body.body * 1.3, left: -body.body * 0.65, top: -body.body * 1.24 }} />}
-        {/* 의자 — 배경의 그 자리를 오려 앉은 캐릭터 위에 한 번 더(닻은 seat.sit에 서 있음) */}
-        {seat && bg && (
-          <span className="plaza-chair" style={{ left: (seat.chair[0] - seat.sit.x) * scale, top: (seat.chair[1] - seat.sit.y) * scale, width: (seat.chair[2] - seat.chair[0]) * scale, height: (seat.chair[3] - seat.chair[1]) * scale }}>
-            <img src={bg} alt="" draggable={false} style={{ width: PLAZA_W * scale, height: PLAZA_H * scale, left: -seat.chair[0] * scale, top: -seat.chair[1] * scale }} />
-          </span>
+        {/* 의자 — 책상·의자 그림과 같은 자리에 '의자만'의 그림을 앉은 캐릭터 위에 한 번 더(닻은 seat.sit에 서 있음) */}
+        {seat && (
+          <img className="plaza-chair" src={CLASSROOM_DESK.chair} alt="" draggable={false}
+            style={{ left: (seat.box[0] - seat.sit.x) * scale, top: (seat.box[1] - seat.sit.y) * scale, width: CLASSROOM_DESK.w * scale, height: CLASSROOM_DESK.h * scale }} />
         )}
         {/* 이름표 — 서 있으면 머리 위, 앉아 있으면 의자 등받이에(머리 위에 띄우면 앞줄 친구의 의자를 가립니다) */}
         <span className="plaza-avatar-name" style={seat ? { top: Math.round((seat.chair[1] + 11 - seat.sit.y) * scale), translate: "0 -50%" } : { bottom: Math.round(body.body) + 5 }}>
@@ -104,6 +105,7 @@ const PlazaActor = forwardRef(function PlazaActor({ character, pet = null, name,
               <path d="M8 3.6C6.6 2.7 4.7 2.4 2.5 2.7v9.4c2.2-.3 4.1 0 5.5.9 1.4-.9 3.3-1.2 5.5-.9V2.7c-2.2-.3-4.1 0-5.5.9Zm0 0v9.4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
             </svg>
           )}
+          {checked && <i className="plaza-avatar-check">✓</i>}
           {name}
         </span>
       </div>
