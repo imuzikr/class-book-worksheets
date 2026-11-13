@@ -71,7 +71,7 @@ test("초기 상태와 6개 시리즈의 세 단계 뱃지 정의", () => {
   assert.ok(READING_BADGES.every((badge) => [1, 2, 3].includes(badge.tier)));
 });
 
-test("책 등록만으로는 경험치나 서재 뱃지를 지급하지 않음", () => {
+test("책 등록만으로는 경험치나 '독자의 길' 뱃지를 지급하지 않음", () => {
   const state = book(initialReadingState());
   const summary = deriveReading(state, NOW);
   assert.equal(summary.xp, 0); assert.equal(summary.earnedBadges.length, 0);

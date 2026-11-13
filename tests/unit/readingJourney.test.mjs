@@ -86,7 +86,7 @@ test(`하루에 ${STREAK_MIN_PAGES}쪽이 안 되면 연속일이 아님`, () =>
   const s = dailyReads(5, 4);
   assert.equal(s.longestStreak, 0);
   assert.equal(streakXp(s), 0);
-  assert.equal(s.xp, 20 + 20); // 쪽 20 + 서재의 시작 초급 뱃지 20
+  assert.equal(s.xp, 20 + 20); // 쪽 20 + '독자의 길' 초급 뱃지 20
 });
 
 test("같은 날 나눠 읽은 쪽은 합쳐서 셈", () => {
