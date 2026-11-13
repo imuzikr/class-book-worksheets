@@ -21,7 +21,7 @@ import ReadingHub from "@/components/reading/ReadingHub";
 import TeacherReadingView from "@/components/reading/TeacherReadingView";
 import ReadingLeaderboard from "@/components/reading/ReadingLeaderboard";
 import AdminSettingsPanel from "@/components/AdminSettingsPanel";
-import { readingEnabled, rankingEnabled, bookSearchEnabled, fruitBasketOn, plazaOn, classroomOn } from "@/lib/reading";
+import { readingEnabled, rankingEnabled, bookSearchEnabled, fruitBasketOn, plazaOn, classroomOn, classroomRollToday } from "@/lib/reading";
 import { characterChoiceEnabled } from "@/lib/readingCharacter";
 import { petEnabled } from "@/lib/readingPet";
 import { readingMapThemeOf } from "@/lib/readingMapCatalog";
@@ -403,6 +403,11 @@ function BooksPageInner() {
   const todayKey = todayDateKey();
   const attendanceOpenToday =
     !!currentClass?.attendanceOpen && currentClass?.attendanceOpenDate === todayKey;
+  // 오늘 선생님이 교실의 칠판에서 출석을 확인한 반 — 그런 날에는 제자리에 앉아 있어야만 출석이라(선생님 결정),
+  // 머리말의 '출석하기' 단추를 그리지 않습니다(교실을 나간 학생에게는 출석이 보이지 않게 · 이미 출석한 학생의
+  // '✓ 출석 완료'도 함께 — 교실의 내 책상과 '내 출석부'에서 봅니다). '출석 관리' 창으로만 출석을 받은 날과
+  // 교실을 끈 반은 지금까지처럼 단추로 출석합니다. 규칙은 그대로입니다 — 가리는 것은 화면입니다.
+  const classroomRollDay = classroomRollToday(currentClass, todayKey);
 
   // 출석 기록 — **늘 받는 것은 오늘 것뿐**입니다(교사: 그날 반 전체 · 학생: 그날 제 것 한 건).
   // 오늘 출석 · 자리표 · '출석하기' 단추가 쓰는 것이 그것뿐이라서요.
@@ -499,9 +504,9 @@ function BooksPageInner() {
     if (!classId || !user) return;
     await setStudyAttendanceByTeacher(classId, student, date, present, user);
   }
-  // [학생] 출석하기 — 선생님이 오늘 출석을 열었을 때만 섭니다.
+  // [학생] 출석하기 — 선생님이 오늘 출석을 열었을 때만 섭니다(칠판에서 출석을 확인한 날에는 서지 않음 — 위).
   async function handleAttendance() {
-    if (!classId || !user || attending || admin || attendedToday || !attendanceOpenToday) return;
+    if (!classId || !user || attending || admin || attendedToday || !attendanceOpenToday || classroomRollDay) return;
     setAttending(true);
     try {
       await markStudyAttendance(classId, user, todayKey);
@@ -1091,8 +1096,9 @@ function BooksPageInner() {
                   출석 관리
                 </button>
               )}
-              {/* 학생 — 선생님이 오늘 출석을 열었을 때만 섭니다 */}
-              {!admin && classId && attendanceOpenToday && (
+              {/* 학생 — 선생님이 오늘 출석을 열었을 때만 섭니다. 칠판에서 출석을 확인한 날에는 서지 않습니다
+                  (제자리에 앉아 있어야만 출석 — 선생님 결정) */}
+              {!admin && classId && attendanceOpenToday && !classroomRollDay && (
                 <button
                   className="btn-primary books-attend-btn"
                   onClick={handleAttendance}

@@ -1,11 +1,13 @@
 // 교실(책 광장의 둘째 방 — 선생님 요청) — 방의 지도 · 포털 · 자리 · 자판 · 출석 확인의 셈.
 //   lib/readingPlazaMap.js(방 정의 · 걷는 길) · lib/readingClassroom.js(자리표 · 행동 · 출석 확인) ·
-//   lib/readingPlazaLive.js(방 · 자리 칸) · lib/readingPlazaSprites.js(앉은 주인을 기다리는 펫) · lib/reading.js(스위치)
+//   lib/readingPlazaLive.js(방 · 자리 칸) · lib/readingPlazaSprites.js(앉은 주인을 기다리는 펫) ·
+//   lib/reading.js(스위치 · 칠판에서 출석을 확인한 날 판정)
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { classroomOn, featureValue, plazaOn, teacherFeatureSettings, TEACHER_FEATURES } from "../../lib/reading.js";
+import { classroomOn, classroomRollToday, featureValue, plazaOn, teacherFeatureSettings, TEACHER_FEATURES } from "../../lib/reading.js";
+import { dateKeyOf } from "../../lib/dates.js";
 import {
   CLASSROOM_SEAT_COUNT, classroomAct, classroomAtBoard, classroomAttendance, classroomBoardAt, classroomBoardMark, classroomBoardStand,
   classroomDesks, classroomNearSeat, classroomRollCall, classroomSeatAround, classroomSeatAt, classroomSeatLabel, classroomSeatOf,
@@ -40,6 +42,37 @@ test("스위치 — 교실은 책 광장이 켜진 반에서 교사가 켰을 �
   assert.equal(plazaOn({ readingEnabled: true, plazaEnabled: true, classroomEnabled: false }), true);
   assert.equal(teacherFeatureSettings([{ id: "a", classroomEnabled: true }, { id: "b" }]).classroomEnabled.on, false);
   assert.equal(teacherFeatureSettings([{ id: "a", classroomEnabled: true }]).classroomEnabled.on, true);
+});
+
+test("칠판에서 출석을 확인한 날 — 그날에만 교실 밖의 '출석하기' 단추를 걷는다(제자리에 앉아야만 출석 · 선생님 결정)", () => {
+  const on = { readingEnabled: true, plazaEnabled: true, classroomEnabled: true };
+  const noon = new Date(2026, 10, 13, 12, 0, 0);
+  const today = dateKeyOf(noon);
+  assert.equal(today, "2026-11-13");
+  // 오늘 칠판에서 출석시작을 눌렀음(출석을 끝낸 뒤에도 그날은 그대로 — 판정은 '확인한 때'의 날짜만 봄)
+  assert.equal(classroomRollToday({ ...on, attendanceOpen: true, attendanceOpenDate: today, classroomCallAt: noon.getTime() }, today), true);
+  assert.equal(classroomRollToday({ ...on, attendanceOpen: false, attendanceOpenDate: today, classroomCallAt: noon.getTime() }, today), true);
+  // 하루의 처음과 끝 — 날짜 열쇠는 출석 날짜와 같은 셈(기기 시간대)
+  assert.equal(classroomRollToday({ ...on, classroomCallAt: new Date(2026, 10, 13, 0, 0, 1).getTime() }, today), true);
+  assert.equal(classroomRollToday({ ...on, classroomCallAt: new Date(2026, 10, 13, 23, 59, 58).getTime() }, today), true);
+  // 어제 · 내일의 확인은 오늘의 것이 아님 — 다음 날 '출석 관리' 창으로 출석을 받으면 다시 단추로 출석
+  assert.equal(classroomRollToday({ ...on, classroomCallAt: new Date(2026, 10, 12, 23, 59, 59).getTime() }, today), false);
+  assert.equal(classroomRollToday({ ...on, classroomCallAt: new Date(2026, 10, 14, 0, 0, 1).getTime() }, today), false);
+  // 칠판에서 확인한 적이 없음('출석 관리' 창의 '출석 시작'은 이 값을 적지 않음) → 지금까지처럼 단추
+  assert.equal(classroomRollToday({ ...on, attendanceOpen: true, attendanceOpenDate: today }, today), false);
+  assert.equal(classroomRollToday({ ...on, classroomCallAt: 0 }, today), false);
+  // 교실을 끈 반(광장 · 책나눔을 끈 반 · 보관한 반 포함)은 앉을 자리가 없으니 늘 단추
+  assert.equal(classroomRollToday({ ...on, classroomEnabled: false, classroomCallAt: noon.getTime() }, today), false);
+  assert.equal(classroomRollToday({ ...on, plazaEnabled: false, classroomCallAt: noon.getTime() }, today), false);
+  assert.equal(classroomRollToday({ ...on, archived: true, classroomCallAt: noon.getTime() }, today), false);
+  // 읽을 수 없는 값 · 빈 값은 아닌 것으로(단추를 남김)
+  for (const bad of [null, undefined, "", "abc", NaN, -5, Infinity, 8.64e15 + 1, {}, []]) {
+    assert.equal(classroomRollToday({ ...on, classroomCallAt: bad }, today), false, String(bad));
+  }
+  assert.equal(classroomRollToday(null, today), false);
+  assert.equal(classroomRollToday(undefined, today), false);
+  assert.equal(classroomRollToday({ ...on, classroomCallAt: noon.getTime() }, ""), false);
+  assert.equal(classroomRollToday({ ...on, classroomCallAt: noon.getTime() }), false);
 });
 
 test("그림 — 방의 배경 셋과, 따로 놓는 러그 · 책상과 의자 · 의자 앞부분 · 포털 · 도는 빛이 들어 있다", () => {
