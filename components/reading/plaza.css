@@ -32,18 +32,12 @@
 /* 교사의 책나눔 — 광장은 반 전체의 자리라 왼쪽 학생 명단도 접습니다(나가면 돌아옴). */
 .reading-teacher:has(.reading-hub--plaza) { grid-template-columns: minmax(0, 1fr); }
 .reading-teacher:has(.reading-hub--plaza) .reading-teacher-rail { display: none; }
-/* 무대가 화면 끝에 닿으므로 모서리 · 그림자를 걷습니다. 자판으로 초점이 왔을 때의 테는 **무대 칸 위에 얹어** 그립니다 —
-   바깥 테(box-shadow)는 화면 밖이라 잘리고, 무대 안쪽에 두른 outline은 그림(.plaza-world — 제 층)에 덮여 안 보였습니다
-   (실측 — 계산된 스타일은 맞는데 화면의 가장자리 픽셀이 그림 색 그대로). 누름은 통과시키고, 흰 속선은 풀빛 · 물빛 그림
-   위에서 파란 테가 묻히지 않게 둡니다. 마우스로만 쓰는 동안에는 안 뜹니다(:focus-visible — 방향키를 쓰면 뜸).
-   :has()를 모르는 브라우저에서는 위의 '가리기'도 안 걸려 무대가 화면 끝에 닿지 않으므로, 아래 기본 규칙의 바깥 테를 그대로 씁니다. */
+/* 무대가 화면 끝에 닿으므로 모서리 · 그림자를 걷습니다.
+   **무대에는 초점 테를 두지 않습니다**(선생님 결정). 마당을 누른 뒤 방향키로 걸으면 브라우저가 '자판을 쓰는 중'으로 보아
+   (:focus-visible) 무대에 파란 테를 둘렀는데, 맵이 화면을 가득 채운 뒤로는 그것이 화면 전체를 두른 액자로 보였습니다.
+   무대 칸 위에 얹는 테(::after)도, 무대 바깥에 두르는 테(box-shadow)도 되살리지 마세요.
+   맵 위의 단추('나가기' 등)와 창 안의 칸은 제 초점 표시를 그대로 가집니다. */
 .reading-hub--plaza .plaza-stage { border-radius: 0; box-shadow: none; }
-@supports selector(:has(*)) {
-  .reading-hub--plaza .plaza-stage:focus-visible { box-shadow: none; }
-  .reading-hub--plaza .plaza-stage-wrap:has(.plaza-stage:focus-visible)::after {
-    content: ""; position: absolute; inset: 0; z-index: 3; border: 3px solid #478fbd; box-shadow: inset 0 0 0 1px #ffffffe6; pointer-events: none;
-  }
-}
 .plaza { min-width: 0; }
 
 /* 무대 칸 — 맵 위에 얹는 것(.plaza-hud)의 기준이자, 그것들을 접는 기준(폭) */
@@ -65,9 +59,9 @@
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
+  /* 초점 테 없음(선생님 결정 — 위 '광장 탭' 주석). :focus-visible 규칙을 다시 달지 마세요. */
   outline: none;
 }
-.plaza-stage:focus-visible { box-shadow: 0 0 0 3px #478fbd, 0 6px 26px #2a3f2f1f; }
 /* 광장을 내려받는 동안의 자리(ReadingHub의 PlazaLoading) — 무대와 같은 흙빛 바탕 · 같은 높이에 안내 한 줄이 가운데 서고,
    '책 광장 · 나가기' 팻말은 진짜와 같은 자리입니다(.plaza-hud-lead). 누를 것이 없는 자리라 손 모양을 걷습니다. */
 .plaza-stage--loading { display: flex; align-items: center; justify-content: center; gap: 12px; color: #5a3a1b; font-size: 13.5px; font-weight: 600; cursor: progress; }
