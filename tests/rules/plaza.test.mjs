@@ -162,4 +162,30 @@ describe("책 광장 규칙", () => {
     await assertSucceeds(updateDoc(doc(teacher, "classes", "cOff"), { plazaEnabled: true }));
     await assertSucceeds(getDoc(book(asStudent(env, "s1").firestore(), "cOff", "s1_b1")));
   });
+
+  // 교실(책 광장의 둘째 방) — 스위치와 칠판의 '출석시작'(lib/data/classes.js의 callClassroomRoll)
+  it("반 설정 classroomEnabled — 담당 교사가 참 · 거짓으로만, 운영 중인 반에서만", async () => {
+    const teacher = asTeacher(env, "teacherA").firestore();
+    await assertSucceeds(updateDoc(doc(teacher, "classes", "cOn"), { classroomEnabled: true }));
+    await assertSucceeds(updateDoc(doc(teacher, "classes", "cOn"), { classroomEnabled: false }));
+    await assertFails(updateDoc(doc(teacher, "classes", "cOn"), { classroomEnabled: "yes" }));
+    await assertFails(updateDoc(doc(teacher, "classes", "cOld"), { classroomEnabled: true }));
+    await assertFails(updateDoc(doc(asTeacher(env, "teacherB").firestore(), "classes", "cOn"), { classroomEnabled: true }));
+    await assertFails(updateDoc(doc(asStudent(env, "s1").firestore(), "classes", "cOn"), { classroomEnabled: true }));
+  });
+  it("칠판의 출석시작 — 담당 교사가 출석을 열면서 '확인한 때'(수)를 함께 적는다", async () => {
+    const teacher = asTeacher(env, "teacherA").firestore();
+    // 앱과 같은 한 번의 쓰기(세 칸) — 다시 부르면 '확인한 때'만 바뀐다
+    await assertSucceeds(updateDoc(doc(teacher, "classes", "cOn"), { attendanceOpen: true, attendanceOpenDate: "2026-11-13", classroomCallAt: 1794500000000 }));
+    await assertSucceeds(updateDoc(doc(teacher, "classes", "cOn"), { attendanceOpen: true, attendanceOpenDate: "2026-11-13", classroomCallAt: 1794500001234 }));
+    // 수가 아니거나 음수면 안 받는다
+    await assertFails(updateDoc(doc(teacher, "classes", "cOn"), { classroomCallAt: "now" }));
+    await assertFails(updateDoc(doc(teacher, "classes", "cOn"), { classroomCallAt: -1 }));
+    // 학생 · 다른 반 교사는 못 적는다(학생이 스스로 '출석 확인'을 꾸며 낼 수 없음), 보관된 반에도 못 적는다
+    await assertFails(updateDoc(doc(asStudent(env, "s1").firestore(), "classes", "cOn"), { classroomCallAt: 1794500002000 }));
+    await assertFails(updateDoc(doc(asTeacher(env, "teacherB").firestore(), "classes", "cOn"), { classroomCallAt: 1794500002000 }));
+    await assertFails(updateDoc(doc(teacher, "classes", "cOld"), { classroomCallAt: 1794500002000 }));
+    // 반 학생은 그 값을 읽는다(반 문서 한 건 — 앉아 있는 학생의 화면이 바뀌는 것을 본다)
+    await assertSucceeds(getDoc(doc(asStudent(env, "s1").firestore(), "classes", "cOn")));
+  });
 });

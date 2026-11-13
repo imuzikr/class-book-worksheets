@@ -9,6 +9,7 @@
 //  · 입장권(만료 전)이 있는 사람만 그 반의 광장을 읽는다 — 없는 사람 · 만료된 사람 · 다른 반 입장권 · 로그인 안 한 사람은 못 읽는다
 //  · 입장권은 앱에서 아무도 못 쓴다(본인도 — 이름표를 바꾸거나 만료를 늘리지 못하게)
 //  · 자리는 **제 것만**, 입장권이 살아 있을 때만, 정해진 모양 · 범위로만 쓴다(낯선 칸 · 그림 밖 · 꾸민 시각 거부)
+//  · 교실(z: 1) · 앉은 자리(s: 0~29 — 교실에 있을 때만)는 그 모양으로만 싣는다. 광장에 있을 때는 싣지 않는다
 //  · 자리를 지우지는 못한다(나갈 때는 '나감' 표시 g: 1) — 지웠다 쓰기를 되풀이해 잦은 쓰기 천장을 비켜 가지 못하게
 //  · 0.1초 안에 다시 쓰지 못한다(누군가 쏟아부어 반 전체의 내려받는 양을 불리지 못하게). '나감' 표시만 곧바로 된다.
 // =============================================================
@@ -104,6 +105,22 @@ describe("책 광장 실시간 규칙 (Realtime Database)", () => {
       await assertSucceeds(set(ref(db, "plaza/c1/pos/s1"), place({ x: 1672, y: 0, m: 0, f: 2, a: 1 })));
       // 선생님도 같은 길
       await assertSucceeds(set(ref(dbOf(asTeacher(env, "teacherA")), "plaza/c1/pos/teacherA"), place()));
+    });
+    it("교실에 있음(z) · 앉은 자리(s)를 싣는다 — 교실에서만, 자리 번호 0~29로만", async () => {
+      const db = dbOf(asStudent(env, "s1"));
+      const at = ref(db, "plaza/c1/pos/s1");
+      // 교실에 서 있음 → 제 책상에 앉음(칠판 쪽을 봄) → 맨 끝 자리 → 일어섬 → 광장으로 돌아옴(z를 싣지 않음)
+      for (const value of [place({ z: 1 }), place({ x: 353, y: 339, f: 2, z: 1, s: 0 }), place({ z: 1, s: 29 }), place({ z: 1 }), place()]) {
+        await assertSucceeds(set(at, value));
+        await sleep(140);
+      }
+      // 모양이 틀리면 거부 — 광장(0)을 적음 · 모르는 방 · 교실이 아닌데 앉음 · 없는 자리 · 정수가 아님 · 글자
+      const bad = [
+        place({ z: 0 }), place({ z: 2 }), place({ z: true }), place({ z: "1" }),
+        place({ s: 3 }), place({ z: 1, s: 30 }), place({ z: 1, s: -1 }), place({ z: 1, s: 1.5 }), place({ z: 1, s: "3" }), place({ z: 1, s: true }),
+      ];
+      for (const value of bad) await assertFails(set(at, value));
+      await assertSucceeds(set(at, place({ z: 1, s: 12 })));
     });
     it("남의 자리는 못 쓴다 — 친구 것도, 선생님 것도", async () => {
       await assertFails(set(ref(dbOf(asStudent(env, "s1")), "plaza/c1/pos/s2"), place()));

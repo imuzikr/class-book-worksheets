@@ -17,6 +17,8 @@
 //   · 학생 펫(petEnabled — 값이 없으면 켜짐, 책나눔이 켜져 있어야 씀 · lib/readingPet.js)
 //   · 책 광장(plazaEnabled — 기본 꺼짐, 책나눔이 켜져 있어야 씀 · lib/readingPlaza.js). 켜면 책나눔의 셋째 탭이
 //     '우리 반 랭킹' 대신 '책 광장'이 되고, 켠 뒤에 쓴 독서 발자국 · 꽂은 한 권의 책이 반 친구에게 보입니다.
+//   · 교실(classroomEnabled — 기본 꺼짐, 책 광장이 켜져 있어야 씀 · lib/readingClassroom.js). 켜면 책 광장에 교실로 가는
+//     문과 포털이 생기고, 학생이 자리표의 제 책상에 앉아 있으면 선생님이 칠판에서 출석을 확인합니다(선생님 요청).
 //   · 독서 맵(readingMapTheme — 모험 · 대륙)
 // 쓰기는 반 문서의 설정 칸이고, 규칙이 값과 보관 안 된 반만 받습니다.
 // =============================================================
@@ -61,6 +63,9 @@ const FEATURES = [
   { key: "plazaEnabled", label: "책 광장", needs: ["readingEnabled"], needsText: "책나눔 성장 기능을 먼저 켜 주세요",
     hint: "책나눔의 셋째 탭이 ‘우리 반 랭킹’ 대신 ‘책 광장’이 돼요. 켠 뒤에 쓰는 독서 발자국과 학생이 광장 책꽂이에 꽂은 ‘한 권의 책’을 반 친구들이 읽고 댓글을 남겨요. 순위는 상단바 리더보드에서 봐요.",
     on: "책 광장을 켰어요. 지금부터 쓰는 독서 발자국이 광장에 보여요.", off: "책 광장을 껐어요. 광장의 글과 댓글은 보관되고, 책나눔에는 ‘우리 반 랭킹’ 탭이 다시 서요." },
+  { key: "classroomEnabled", label: "교실", needs: ["readingEnabled", "plazaEnabled"], needsText: "책 광장을 먼저 켜 주세요",
+    hint: "책 광장에 교실로 가는 문과 포털이 생겨요. 학생이 ‘자리 배정하기’의 제 책상 옆에서 A → 앉기(S)로 앉고, 선생님이 칠판 앞에서 A → 출석시작(S)을 누르면 그 순간 앉아 있던 학생만 출석으로 확인돼요.",
+    on: "교실을 켰어요. 책 광장 왼쪽 아래의 포털로 교실에 들어가요.", off: "교실을 껐어요. 책 광장의 문과 포털이 사라지고, 출석 기록은 그대로예요." },
 ];
 
 // 성격이 같은 것끼리 묶습니다(선생님 요청 — 2 · 4 · 1, 2026년 11월 '함께 읽기'(책 광장) 한 묶음을 더함). 리더보드 옆에 독서 TOP 3(보이는 화면 둘), 그 아래 줄에
@@ -70,7 +75,7 @@ const FEATURES = [
 const GROUPS = [
   { key: "reading", title: "독서 기록", desc: "학생의 책꽂이와 책 정보", keys: ["readingEnabled", "bookSearchEnabled"] },
   { key: "growth", title: "리더보드 · 꾸미기", desc: "반 친구와 함께 보는 성장 · 캐릭터와 펫", keys: ["rankingEnabled", "readingTopEnabled", "characterEnabled", "petEnabled"] },
-  { key: "share", title: "함께 읽기", desc: "반 친구와 나누는 독서 발자국 · 한 권의 책", keys: ["plazaEnabled"] },
+  { key: "share", title: "함께 읽기", desc: "반 친구와 나누는 독서 발자국 · 한 권의 책 · 함께 앉는 교실", keys: ["plazaEnabled", "classroomEnabled"] },
   { key: "reward", title: "교실 보상", desc: "과일 모으기와 이벤트", keys: ["fruitBasketEnabled"] },
 ];
 

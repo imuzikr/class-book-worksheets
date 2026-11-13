@@ -324,7 +324,7 @@ test("관리자 설정은 선생님의 모든 반에 한 값 — 도서 검색 �
   assert.deepEqual(s.petEnabled, { on: true, mixed: false }); // 학생 펫도 값이 없으면 켜짐(선생님 결정)
   // 독서 TOP 3도 값이 없으면 켜짐 — 리더보드를 끈 반(b)이어도 TOP 3는 따로(선생님 요청)
   assert.deepEqual(s.readingTopEnabled, { on: true, mixed: false });
-  assert.deepEqual(featuresForNewClass(classes), { readingEnabled: true, bookSearchEnabled: false, rankingEnabled: false, readingTopEnabled: true, characterEnabled: true, fruitBasketEnabled: true, petEnabled: true, plazaEnabled: false, readingMapTheme: "cloud-islands" });
+  assert.deepEqual(featuresForNewClass(classes), { readingEnabled: true, bookSearchEnabled: false, rankingEnabled: false, readingTopEnabled: true, characterEnabled: true, fruitBasketEnabled: true, petEnabled: true, plazaEnabled: false, classroomEnabled: false, readingMapTheme: "cloud-islands" });
   assert.equal(featuresForNewClass([{ archived: true }]), null);
   assert.equal(teacherFeatureSettings([]).readingEnabled.on, false);
 });

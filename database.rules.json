@@ -16,6 +16,8 @@
             "m": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 2" },
             "f": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 3" },
             "a": { ".validate": "newData.val() === 1" },
+            "z": { ".validate": "newData.val() === 1" },
+            "s": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 29 && newData.val() % 1 === 0 && newData.parent().child('z').val() === 1" },
             "g": { ".validate": "newData.val() === 1" },
             "t": { ".validate": "newData.val() === now" },
             "$other": { ".validate": false }

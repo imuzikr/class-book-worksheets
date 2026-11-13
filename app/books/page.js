@@ -15,13 +15,13 @@
 //     (아직 모둠이 없으면 모둠 목록을 보여 줘 고르거나 기다리게 합니다)
 // =============================================================
 import { enterSampleClass, canUseSampleClass, sampleMode, SAMPLE_CLASS_ID } from "@/lib/sampleClass";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ReadingHub from "@/components/reading/ReadingHub";
 import TeacherReadingView from "@/components/reading/TeacherReadingView";
 import ReadingLeaderboard from "@/components/reading/ReadingLeaderboard";
 import AdminSettingsPanel from "@/components/AdminSettingsPanel";
-import { readingEnabled, rankingEnabled, bookSearchEnabled, fruitBasketOn, plazaOn } from "@/lib/reading";
+import { readingEnabled, rankingEnabled, bookSearchEnabled, fruitBasketOn, plazaOn, classroomOn } from "@/lib/reading";
 import { characterChoiceEnabled } from "@/lib/readingCharacter";
 import { petEnabled } from "@/lib/readingPet";
 import { readingMapThemeOf } from "@/lib/readingMapCatalog";
@@ -52,6 +52,7 @@ import {
   subscribeJoinCodes,
   startClassAttendance,
   stopClassAttendance,
+  callClassroomRoll,
   setStudyAttendanceByTeacher,
   markStudyAttendance,
   subscribeMyStudyAttendance,
@@ -262,6 +263,7 @@ function BooksPageInner() {
   // 떠 있는 동그라미(FloatingHub)는 `/books?open=…`으로 엽니다(아래).
   const [classManagerOpen, setClassManagerOpen] = useState(false);
   const [seatSetupOpen, setSeatSetupOpen] = useState(false);
+  const seatSetupAlone = useRef(false);
   const [attendanceOpen, setAttendanceOpen] = useState(false);
   const [fruitBasketOpen, setFruitBasketOpen] = useState(false);
   const [joinCodesMap, setJoinCodesMap] = useState({}); // 교사: classId→{code,expiresAt}
@@ -454,12 +456,20 @@ function BooksPageInner() {
     goToList();
   }
   // 자리 배정·모둠 설정 — '반 관리하기' 창에서 엽니다. 닫으면 그 창으로 돌아갑니다.
+  // 교실(책 광장)의 '자리표에 없는 학생' 알림에서 열었을 때는 닫으면 교실로 그대로 돌아갑니다(seatSetupAlone).
   function openSeatSetup() {
+    seatSetupAlone.current = false;
+    setClassManagerOpen(false);
+    setSeatSetupOpen(true);
+  }
+  function openSeatSetupAlone() {
+    seatSetupAlone.current = true;
     setClassManagerOpen(false);
     setSeatSetupOpen(true);
   }
   function closeSeatSetup() {
     setSeatSetupOpen(false);
+    if (seatSetupAlone.current) { seatSetupAlone.current = false; return; }
     setClassManagerOpen(true);
   }
 
@@ -500,6 +510,52 @@ function BooksPageInner() {
       setAttending(false);
     }
   }
+
+  // ── 교실(책 광장의 둘째 방 — 관리자 설정의 '교실') ──
+  // 출석 · 자리표의 화면과 규칙은 그대로이고, 교실은 그 자료를 읽고 같은 기록을 남기기만 합니다
+  // (무대 components/reading/ReadingPlaza.jsx · 셈 lib/readingClassroom.js).
+  // [교사] 칠판의 '출석시작' — 오늘 출석을 열면서 '확인한 때'를 새로 적습니다. 그 순간 제자리에 앉아 있던 학생의
+  // 화면이 스스로 출석을 남깁니다(이미 열려 있을 때 다시 누르면 한 번 더 확인).
+  async function handleClassroomRollCall() {
+    if (!classId || !admin || attendanceBusy) return;
+    setAttendanceBusy(true);
+    try {
+      await callClassroomRoll(classId, todayKey);
+      setToast(attendanceOpenToday ? "출석을 한 번 더 확인했어요. 지금 자리에 앉아 있는 학생이 출석으로 확인돼요."
+        : "출석을 시작했어요. 지금 자리에 앉아 있는 학생이 출석으로 확인돼요.");
+    } catch {
+      setToast("출석을 시작하지 못했어요. 잠시 뒤 다시 해 주세요.");
+    } finally {
+      setAttendanceBusy(false);
+    }
+  }
+  // [학생] 선생님이 출석을 확인한 순간 제자리에 앉아 있었습니다 — '출석하기' 단추와 같은 기록을 남깁니다.
+  async function handleClassroomAttend() {
+    if (!classId || !user || admin || attending || attendedToday || !attendanceOpenToday) return;
+    setAttending(true);
+    try {
+      await markStudyAttendance(classId, user, todayKey);
+      setToast("자리에 앉아 있어서 오늘 출석이 확인됐어요.");
+    } catch {
+      setToast("출석을 남기지 못했어요. 선생님께 다시 확인을 부탁해 주세요.");
+    } finally {
+      setAttending(false);
+    }
+  }
+  // 무대에 넘기는 묶음 — 교실을 끈 반은 on: false(광장만).
+  const classroomProps = {
+    on: classroomOn(currentClass),
+    openToday: attendanceOpenToday,
+    attended: attendedToday,
+    presentUids: todayPresentUids,
+    rollCall: currentClass?.classroomCallAt ?? null,
+    roster: admin ? roster : null,
+    seatLayout: admin ? seatLayout : null,
+    onAttend: handleClassroomAttend,
+    onRollCall: handleClassroomRollCall,
+    onStop: handleStopAttendance,
+    onSeatSetup: admin ? openSeatSetupAlone : null,
+  };
 
   // 과일 주기 — 이름표를 함께 넘겨 자리표·이력에 누구인지 남게 합니다.
   function awardReward(uid, count, delta = null) {
@@ -1057,12 +1113,12 @@ function BooksPageInner() {
           ) : readingOpen && admin ? (
             <TeacherReadingView classId={classId} user={user} roster={roster}
               studentUid={searchParams.get("student")} onPickStudent={(uid) => patchBooksQuery({ student: uid }, { replace: true })} bookSearchOn={bookSearchEnabled(currentClass)}
-              plazaOn={plazaOn(currentClass)} characterOn={characterOn} initialTab={searchParams.get("tab") || "library"}
+              plazaOn={plazaOn(currentClass)} characterOn={characterOn} initialTab={searchParams.get("tab") || "library"} classroom={classroomProps}
               activities={liveActivities} onOpenActivity={goToActivity}
               onDisabled={() => patchBooksQuery({ area: null }, { replace: true })} />
           ) : readingOpen ? (
             <ReadingHub key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin} bookSearchOn={bookSearchEnabled(currentClass)} petOn={petOn}
-              plazaOn={plazaOn(currentClass)} characterOn={characterOn}
+              plazaOn={plazaOn(currentClass)} characterOn={characterOn} classroom={classroomProps}
               activities={liveActivities} onOpenActivity={goToActivity}
               initialBookId={searchParams.get("book")} initialTab={searchParams.get("tab") || "library"}
               onDisabled={() => patchBooksQuery({ area: null }, { replace: true })} />

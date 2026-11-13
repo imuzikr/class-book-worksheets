@@ -119,7 +119,9 @@ function Modal({ title, onClose, children, wide = false, busy = false }) {
 // petOn — 관리자 설정의 '학생 펫'(lib/readingPet.js의 petEnabled). 학생 본인 화면에만 '나의 펫' 카드가 섭니다.
 // plazaOn — 관리자 설정의 '책 광장'(lib/reading.js의 plazaOn). 켠 반은 셋째 탭이 '우리 반 랭킹' 대신 '책 광장'입니다.
 // characterOn — 관리자 설정의 '학생 캐릭터'(끄면 광장에서도 기본 캐릭터).
-export default function ReadingHub({ classId, user, isTeacher = false, bookSearchOn = false, petOn = false, plazaOn = false, characterOn = true, onDisabled, activities = [], onOpenActivity, initialBookId = null, initialTab = "library", student = null }) {
+// classroom — 교실(관리자 설정의 '교실' — 책 광장의 둘째 방)에 넘길 묶음. 책방 페이지가 만들어 그대로 무대에 건넵니다
+//   (출석 · 자리표는 페이지가 이미 받아 둔 것 — ReadingPlaza.jsx 머리의 설명).
+export default function ReadingHub({ classId, user, isTeacher = false, bookSearchOn = false, petOn = false, plazaOn = false, characterOn = true, onDisabled, activities = [], onOpenActivity, initialBookId = null, initialTab = "library", student = null, classroom = null }) {
   // student가 있으면 교사가 그 학생의 책나눔을 보는 읽기 전용 화면입니다(선생님 결정 — 감상·발자국까지 전부 보임).
   const readOnly = !!student?.uid;
   const viewUid = readOnly ? student.uid : user?.uid;
@@ -261,7 +263,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
     {error && !dialog && !confirm && <div className="reading-error" role="alert">{error}<button type="button" onClick={() => setError("")} aria-label="오류 안내 닫기">×</button></div>}
     {notice && <div className="reading-notice" role="status">{notice}</div>}
     {/* 책 광장은 서재(정본)를 기다리지 않습니다 — 반의 공유 사본을 제 손으로 구독합니다. 펫의 단계만 서재에서 받습니다. */}
-    {tab === "plaza" ? <PlazaExitContext.Provider value={leavePlaza}><ReadingPlaza key={plazaJump?.key ?? "plaza"} classId={classId} user={user} isTeacher={isTeacher} characterOn={characterOn} petOn={showPet} growthXp={raw ? petGrowthOfSummary(stats) : null} initialBook={plazaJump} onExit={leavePlaza} /></PlazaExitContext.Provider>
+    {tab === "plaza" ? <PlazaExitContext.Provider value={leavePlaza}><ReadingPlaza key={plazaJump?.key ?? "plaza"} classId={classId} user={user} isTeacher={isTeacher} characterOn={characterOn} petOn={showPet} growthXp={raw ? petGrowthOfSummary(stats) : null} initialBook={plazaJump} onExit={leavePlaza} classroom={classroom} /></PlazaExitContext.Provider>
     : loading ? <div className="reading-loading" role="status"><span className="reading-loader" />독서 기록을 불러오고 있어요.</div> : !raw ? <div className="reading-empty"><BookIcon size={40} /><h3>독서 정보를 불러오지 못했어요.</h3><button type="button" className="btn-primary" onClick={() => setRevision((r) => r + 1)}>다시 불러오기</button></div> : <>
       <div className="reading-summary">
         <div className="reading-level"><span>독서 레벨</span><strong><small>Lv.</small>{stats.level}</strong><div className="reading-progress" role="progressbar" aria-label={stats.maxLevel ? "최고 레벨" : "다음 레벨까지"} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(stats.progress || 0)}><i style={{ width: `${stats.progress || 0}%` }} /></div><span>{stats.maxLevel ? `${number(stats.xp)} EXP · 최고 레벨` : `${number(stats.xp)} / ${number(stats.nextXp)} EXP`}</span></div>

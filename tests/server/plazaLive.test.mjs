@@ -94,6 +94,8 @@ function visit(kind, { teacher = false, times = {}, enterWith = null } = {}) {
     classId: CLASS, me: { uid, teacher },
     handlers: {
       current: () => view.state,
+      // 교실에서 제자리에 앉아 있는가(앉아 있으면 가만히 있어도 더 오래 이어 둠)
+      keep: () => !!view.seated,
       onJoin: (id, ticket, pos, age) => heard.here.set(id, { who: ticket, pos, age }),
       onWho: (id, ticket) => { const row = heard.here.get(id); if (row) row.who = ticket; },
       onMove: (id, pos) => { const row = heard.here.get(id); if (row) row.pos = pos; heard.moves.push(id); },
@@ -429,6 +431,35 @@ test("가만히 둔 화면 — 학생은 놓고(누르면 다시 이음), 선생
   await until(() => student.now() === "live" && teacher.heard.here.has(ids.b), "학생이 돌아옴");
   student.session.close();
   teacher.session.close();
+});
+
+test("교실 — 어느 방 · 어느 책상에 앉았는지가 진짜 규칙을 지나 전해지고, 앉아 있는 학생은 가만히 있어도 놓지 않는다", async () => {
+  // 가만히 둔 화면을 놓는 때 — 실제로는 서 있으면 10분 · 앉아 있으면 한 시간. 시험에서는 0.3초 · 1분.
+  const a = visit("a", { times: { idle: 300, idleSeated: 60000 } });
+  const b = visit("b");
+  // A가 교실에 들어가 제 책상(첫 자리)에 앉음 — 이어지자마자 그 자리를 올린다
+  a.view.seated = true;
+  a.view.state = { x: 353, y: 339, path: [], mode: 0, facing: "up", reading: false, room: "classroom", seat: 0 };
+  const sat = await until(() => { const row = b.heard.here.get(ids.a); return row?.pos.seat === 0 ? row : null; }, "B의 화면에 A가 앉아 있음");
+  assert.deepEqual({ room: sat.pos.room, seat: sat.pos.seat, facing: sat.pos.facing, x: sat.pos.x, y: sat.pos.y }, { room: "classroom", seat: 0, facing: "up", x: 353, y: 339 });
+  assert.deepEqual((await rtdb.ref(`plaza/${CLASS}/pos/${ids.a}`).get()).val().z, 1);
+  // 가만히 있어도(서 있는 학생이면 놓았을 0.3초가 한참 지나도) 이어져 있다
+  await sleep(900);
+  assert.equal(a.now(), "live");
+  assert.equal(b.heard.here.get(ids.a)?.pos.seat, 0);
+  // 일어서서 광장으로 나감 — 방 · 자리 칸을 싣지 않는다(규칙을 새로 게시하지 않은 배포의 광장과 같은 모양)
+  a.view.seated = false;
+  a.view.state = { x: 381, y: 823, path: [], mode: 0, facing: "down", reading: false, room: "plaza", seat: null };
+  a.view.input();
+  a.session.publish(a.view.state);
+  const out = await until(() => { const row = b.heard.here.get(ids.a); return row?.pos.room === "plaza" ? row : null; }, "A가 광장으로");
+  assert.equal(out.pos.seat, null);
+  const raw = (await rtdb.ref(`plaza/${CLASS}/pos/${ids.a}`).get()).val();
+  assert.equal("z" in raw || "s" in raw, false, "광장에서는 방 · 자리 칸이 없다");
+  // 이제는 서 있는 학생 — 가만히 있으면 놓는다
+  await until(() => a.now() === "resting", "서 있는 학생의 화면은 쉼", 3000);
+  a.session.close();
+  b.session.close();
 });
 
 test("입장권이 죽으면 — 새로 받아 다시 잇고, 반에서 빠진 학생은 서버가 거절해 그만둔다", async () => {

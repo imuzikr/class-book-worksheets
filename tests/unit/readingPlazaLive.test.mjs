@@ -60,7 +60,7 @@ test("자리 — 올리는 모양 · 받는 모양 · 길", () => {
 
   const walking = plazaLivePos({ x: 836.2, y: 330.7, path, mode: 1, facing: "right" });
   assert.deepEqual(walking, { x: 836, y: 331, m: 1, f: 1, w: "900,421,1010,455" });
-  assert.deepEqual(readPlazaLivePos({ ...walking, t: NOW }), { x: 836, y: 331, path: [{ x: 900, y: 421 }, { x: 1010, y: 455 }], mode: 1, facing: "right", reading: false, gone: false, t: NOW });
+  assert.deepEqual(readPlazaLivePos({ ...walking, t: NOW }), { x: 836, y: 331, path: [{ x: 900, y: 421 }, { x: 1010, y: 455 }], mode: 1, facing: "right", reading: false, room: "plaza", seat: null, gone: false, t: NOW });
   // 방향키 걸음 · 선 자리 · 글을 읽는 중
   assert.deepEqual(plazaLivePos({ x: 500, y: 700, mode: 2, facing: "left" }), { x: 500, y: 700, m: 2, f: 3 });
   assert.deepEqual(plazaLivePos({ x: 500, y: 700, mode: 0, facing: "up", reading: true }), { x: 500, y: 700, m: 0, f: 2, a: 1 });
@@ -73,7 +73,7 @@ test("자리 — 올리는 모양 · 받는 모양 · 길", () => {
   // 모양이 틀리면 없는 것으로(그림 밖 · 숫자가 아님)
   for (const bad of [null, {}, { x: "a", y: 1 }, { x: -1, y: 1 }, { x: 1, y: PLAZA_H + 1 }, { x: NaN, y: 0 }]) assert.equal(readPlazaLivePos(bad), null);
   // 모르는 방향 · 모드는 손질
-  assert.deepEqual({ ...readPlazaLivePos({ x: 1, y: 2, m: 9, f: 9 }), t: 0 }, { x: 1, y: 2, path: [], mode: 0, facing: "left", reading: false, gone: false, t: 0 });
+  assert.deepEqual({ ...readPlazaLivePos({ x: 1, y: 2, m: 9, f: 9 }), t: 0 }, { x: 1, y: 2, path: [], mode: 0, facing: "left", reading: false, room: "plaza", seat: null, gone: false, t: 0 });
 });
 
 test("올리는 간격 — 방향키 걸음은 규칙의 천장(0.1초)보다 넉넉히 드물게", () => {
