@@ -361,6 +361,20 @@
 .reading-teacher-sid { font-family: var(--font-mono); font-size: 12px; color: var(--text-sub); font-variant-numeric: tabular-nums; }
 .reading-teacher-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .reading-teacher-main { min-width: 0; }
+/* 선생님의 책 광장 입구 — 명단 위의 나무 팻말(광장 안의 '책 광장' · '나가기' 팻말과 같은 색이라 그 문으로 읽힘).
+   책 광장은 반 전체의 자리라 고른 학생의 화면(탭 줄) 밖에 둡니다 — 학생이 한 명도 없는 반에서도 섭니다.
+   명단의 단추 규칙(.reading-teacher-rail button — 가로 줄 · 투명 바탕 · 좁은 화면의 width:auto)에 지지 않게 선택자를 겹쳐 씁니다. */
+.reading-teacher-rail .reading-teacher-plaza {
+  display: grid; gap: 3px; width: 100%; margin: 0 0 12px; padding: 10px 12px;
+  border: 2px solid #8a5a2b; border-radius: 12px; background: #fff6e2; color: #5a3a1b;
+  text-align: left; white-space: normal; box-shadow: 0 2px 0 #8a5a2b55;
+  transition: background .15s, transform .15s, box-shadow .15s;
+}
+.reading-teacher-rail .reading-teacher-plaza:hover { background: #fff; transform: translateY(-1px); }
+.reading-teacher-rail .reading-teacher-plaza:active { transform: translateY(1px); box-shadow: 0 1px 0 #8a5a2b55; }
+.reading-teacher-rail .reading-teacher-plaza:focus-visible { outline: 3px solid #478fbd; outline-offset: 2px; }
+.reading-teacher-plaza strong { display: flex; justify-content: space-between; gap: 8px; font-size: 15px; font-weight: 800; letter-spacing: -.02em; line-height: 1.25; }
+.reading-teacher-plaza small { font-size: 12px; font-weight: 500; color: #7a5a3a; line-height: 1.35; }
 @media (max-width: 900px) {
   .reading-teacher { grid-template-columns: minmax(0, 1fr); }
   .reading-teacher-rail { position: static; max-height: none; }

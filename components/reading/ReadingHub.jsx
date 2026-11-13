@@ -49,6 +49,19 @@ function PlazaLoading() {
 }
 const ReadingPlaza = dynamic(() => import("./ReadingPlaza"), { ssr: false, loading: PlazaLoading });
 
+// 선생님의 책 광장 — **반 전체의 자리**라 '고른 학생'의 책나눔(아래 ReadingHub) 밖에 따로 섭니다
+// (TeacherReadingView의 '책 광장 들어가기'). 한때 선생님이 들어가는 길이 고른 학생 화면의 셋째 탭 하나뿐이라,
+// 학생이 한 명도 없는 반에서는 탭 줄 자체가 없어 들어갈 길이 없었고(주소에 ?tab=plaza를 붙여도), 학생이 있는
+// 반에서도 '○○의 독서 여정' 안에 섞여 입구로 보이지 않았습니다(선생님 신고). 틀의 클래스(.reading-hub--plaza)가
+// 학생 화면과 같아 '광장 탭'의 CSS(머리말 · 명단 · 옆 패널 가리기)가 그대로 듣습니다. 선생님에게는 펫 · 곧바로 열 책이 없습니다.
+export function TeacherPlaza({ classId, user, characterOn = true, classroom = null, onExit }) {
+  return <section className="reading-hub reading-hub--plaza" aria-label="책 광장">
+    <PlazaExitContext.Provider value={onExit}>
+      <ReadingPlaza classId={classId} user={user} isTeacher characterOn={characterOn} petOn={false} growthXp={null} initialBook={null} onExit={onExit} classroom={classroom} />
+    </PlazaExitContext.Provider>
+  </section>;
+}
+
 const ReadingErrorContext = createContext("");
 const TIER_NAMES = { 1: "초급", 2: "중급", 3: "고급", beginner: "초급", intermediate: "중급", advanced: "고급" };
 const FILTERS = [["all", "전체"], ["reading", "읽는 중"], ["completed", "완독"], ["paused", "잠시 멈춤"], ["archived", "보관함"]];
