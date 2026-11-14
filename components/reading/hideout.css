@@ -1,5 +1,5 @@
 /* Personal room: all decor coordinates stay in the approved1536×1024 world. */
-.hideout { --hideout-ink: #35513e; --hideout-line: #d9dece; color: var(--hideout-ink); min-width: 0; padding: 8px 0 20px; }
+.hideout { --hideout-ink: #35513e; --hideout-line: #d9dece; --hideout-scene-max: calc((100dvh - 200px) * 1.5); color: var(--hideout-ink); min-width: 0; padding: 8px clamp(12px, 1.6vw, 24px) 20px; }
 .hideout button, .hideout select, .hideout-dialog button { font: inherit; min-height: 44px; }
 .hideout button, .hideout-dialog button { cursor: pointer; border: 1px solid #cfd8c7; border-radius: 10px; padding: 9px 14px; background: #fffdf7; color: #35513e; }
 .hideout button:hover:not(:disabled), .hideout-dialog button:hover:not(:disabled) { background: #eaf0e3; }
@@ -16,9 +16,12 @@
 .hideout-status { margin: 0 0 10px; min-height: 20px; font-size: 13px; color: #52734b; }
 .hideout-error { border: 1px solid #dfbfb0; background: #fff2e9; padding: 12px 14px; border-radius: 12px; margin: 10px 0; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
 .hideout-error p { margin: 0; font-size: 14px; }
-.hideout-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 360px); align-items: start; gap: 20px; }
+/* 두 칸(선생님 요청) — 그림 칸은 그림 폭(화면 높이에 맞춘 폭 --hideout-scene-max)까지만 잡고 왼쪽에 붙이며, 남는 폭은 오른쪽
+   아이템 고르기가 씁니다. 한때 그림 칸이 남는 폭을 다 가져가고 그림이 그 가운데 서서(margin auto), 1920px 화면에서 그림 왼쪽
+   170px · 그림과 패널 사이 190px이 비고 패널은 360px에 묶였습니다. 그림 칸(고정 상한)이 먼저 자라고 패널(1fr)이 나머지를 받습니다. */
+.hideout-layout { display: grid; grid-template-columns: minmax(0, var(--hideout-scene-max)) minmax(380px, 1fr); align-items: start; gap: 16px; }
 .hideout-room { min-width: 0; position: sticky; top: 12px; }
-.hideout-scene { position: relative; width: 100%; max-width: min(100%, calc((100dvh - 200px) * 1.5)); margin-inline: auto; aspect-ratio: 1536 / 1024; overflow: hidden; isolation: isolate; border-radius: 14px; background: #e6c8a0; touch-action: pan-y; user-select: none; outline: none; }
+.hideout-scene { position: relative; width: 100%; max-width: min(100%, var(--hideout-scene-max)); margin: 0; aspect-ratio: 1536 / 1024; overflow: hidden; isolation: isolate; border-radius: 14px; background: #e6c8a0; touch-action: pan-y; user-select: none; outline: none; }
 .hideout-background { display: block; width: 100%; height: 100%; pointer-events: none; }
 .hideout-prop { position: absolute; height: auto; max-width: none; transform: translate(-50%, -100%); pointer-events: none; }
 .hideout-prop.is-grounded { filter: drop-shadow(0 calc(var(--hideout-unit, 1px) * 3) calc(var(--hideout-unit, 1px) * 2) #50301838); }
@@ -41,7 +44,7 @@
 .hideout-return-portal > span { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); padding: 2px 8px; border-radius: 20px; background: #fffdf4e8; font-size: clamp(8px, .9vw, 12px); white-space: nowrap; pointer-events: none; }
 .hideout-walk-marker { position: absolute; z-index: 2; width: 12px; height: 6px; border: 1.5px solid #57795c; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; }
 .hideout-walk-help { font-size: 12px; line-height: 1.7; color: #75816e; margin: 9px 0 18px; }
-.hideout-editor { min-width: 0; max-height: calc(100dvh - 210px); overflow-y: auto; scrollbar-gutter: stable; border: 1px solid var(--hideout-line); border-radius: 14px; padding: 16px; background: #faf9f1; }
+.hideout-editor { min-width: 0; max-width: 720px; max-height: calc(100dvh - 210px); overflow-y: auto; scrollbar-gutter: stable; border: 1px solid var(--hideout-line); border-radius: 14px; padding: 16px; background: #faf9f1; }
 .hideout-editor-heading { margin: 0 0 14px; }
 .hideout-editor-heading h3 { margin: 0 0 3px; font-size: 18px; }
 .hideout-editor-heading p { margin: 0; color: #78836f; font-size: 12px; }
@@ -49,13 +52,18 @@
 .hideout-item-groups > button { padding: 8px 4px; font-size: 12px; font-weight: 650; }
 .hideout-item-groups > button.is-selected { background: #456b4c; border-color: #456b4c; color: #fff; }
 .hideout-item-groups > button.is-selected:hover { background: #365a3c; }
-.hideout-item-types { display: flex; flex-wrap: wrap; gap: 6px; padding: 14px 0; margin-bottom: 12px; border-bottom: 1px solid var(--hideout-line); }
-.hideout-item-types > button { padding: 7px 10px; font-size: 12px; border-radius: 22px; }
+/* 종류 단추 — 같은 크기의 알약(선생님 요청 · 한때 글자 길이대로 폭이 제각각이었음). 칸 수는 패널 폭에 따라 정하되(auto-fill) 빈 칸도
+   남겨 두어, 종류가 셋인 묶음과 일곱인 묶음의 알약 크기가 같습니다. 100px · 좌우 여백 6px은 가장 긴 이름('펫 장난감 바구니' ·
+   '완독 기념 트로피' — 맑은 고딕 12px로 91px 남짓)이 한 줄에 들면서 패널이 가장 좁을 때(380px)도 한 줄에 셋이 서는 값입니다
+   (위 묶음 단추와 같은 세 칸). 이름을 늘리면 다시 재세요 — 넘치면 말줄임이고 마우스를 올리면 전체 이름이 뜹니다. */
+.hideout-item-types { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 6px; padding: 14px 0; margin-bottom: 12px; border-bottom: 1px solid var(--hideout-line); }
+.hideout-item-types > button { padding: 7px 6px; font-size: 12px; border-radius: 999px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hideout-item-types > button.is-selected { background: #e6eddc; border-color: #648354; font-weight: 700; }
-.hideout-preview-heading { display: flex; gap: 10px; align-items: baseline; justify-content: space-between; margin: 0 0 12px; }
-.hideout-preview-heading h4 { margin: 0; font-size: 15px; }
+.hideout-preview-heading { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; margin: 0 0 12px; }
+.hideout-preview-heading h4 { margin: 0 auto 0 0; font-size: 15px; }
+.hideout .hideout-clear-slot { min-height: 34px; padding: 4px 12px; border-radius: 999px; font-size: 12px; }
 .hideout-preview-heading > span { color: #78836f; font-size: 11px; }
-.hideout-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.hideout-choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 9px; }
 .hideout-baseline-choice { display: flex; width: 100%; gap: 12px; text-align: left; align-items: center; margin-bottom: 12px; }
 .hideout-baseline-choice img { flex: none; object-fit: contain; }
 .hideout-baseline-choice > span:nth-of-type(1) { display: grid; gap: 3px; flex: 1; min-width: 0; }
@@ -70,8 +78,10 @@
 .hideout-choice small { font-size: 11px; line-height: 1.55; color: #78816d; margin-top: 4px; }
 .hideout-choice.is-chosen { border: 2px solid #648354; background: #edf2e4; }
 .hideout-choice.is-locked small { color: #8e744b; }
-.hideout-edit-actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; margin-top: 18px; border-top: 1px solid var(--hideout-line); padding-top: 16px; }
-.hideout-draft-status { font-size: 13px; color: #6b7c5f; margin: 0; }
+/* 꾸미는 동안 머리줄의 '아지트 꾸미기' 자리에 서는 표시 — 그 옆에 모든 소품 기본으로 · 꾸미기 취소 · 꾸미기 완료(ReadingHideout) */
+.hideout-editing-chip { display: inline-flex; align-items: center; min-height: 32px; padding: 0 12px; border-radius: 20px; background: #e9efdf; color: #456b4c; font-size: 12px; font-weight: 650; white-space: nowrap; }
+.hideout-editing-chip.is-dirty { background: #fbecd2; color: #8a5a1c; }
+.hideout.is-editing .hideout-editor { border-color: #9fb58f; }
 .hideout-empty { padding: 24px; }
 .hideout-dialog { box-sizing: border-box; width: min(620px, calc(100vw - 30px)); max-height: calc(100dvh - 32px); margin: auto; overflow: auto; border: 1px solid #d3dbc9; border-radius: 17px; padding: 24px; background: #fffdf7; color: #35513e; box-shadow: 0 18px 70px #1f342c4d; }
 .hideout-dialog::backdrop { background: #20362988; }
@@ -90,10 +100,11 @@
 .hideout-reveal span { font-size: 13px; color: #748367; }
 @keyframes hideout-portal-spin { to { transform: translateY(-50%) scaleY(.5) rotate(360deg); } }
 @keyframes hideout-reveal-once { from { opacity: 0; transform: translateY(8px) scale(.97); } to { opacity: 1; transform: none; } }
-@media (max-width: 860px) {
+@media (max-width: 980px) {
   .hideout-layout { grid-template-columns: minmax(0, 1fr); gap: 8px; }
   .hideout-room { position: static; }
-  .hideout-editor { max-height: none; overflow: visible; scrollbar-gutter: auto; }
+  .hideout-scene { margin-inline: auto; }
+  .hideout-editor { max-width: none; max-height: none; overflow: visible; scrollbar-gutter: auto; }
 }
 @media (max-width: 700px) {
   .hideout-heading h2 { font-size: 22px; }
@@ -101,8 +112,6 @@
   .hideout-heading > .hideout-actions > button { flex: 1 1 auto; }
   .hideout-scene { border-radius: 10px; }
   .hideout-editor { padding: 14px; }
-  .hideout-edit-actions > .hideout-actions { width: 100%; }
-  .hideout-edit-actions button { flex: 1 1 auto; }
   .hideout-dialog { padding: 18px; }
   .hideout-dialog-heading h3 { font-size: 20px; }
   .hideout-detail-image { height: 220px; }

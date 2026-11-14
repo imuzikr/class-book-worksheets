@@ -15,6 +15,7 @@ import { characterImage, characterName, characterOf } from "@/lib/readingCharact
 import { petGrowthOfSummary, petProgress } from "@/lib/readingPet";
 import { careAway } from "@/lib/petCare";
 import { kstToday } from "@/lib/reading";
+import { eulReul } from "@/lib/korean";
 import { PLAZA_WALK_SPEED, SPRITE_CELL, SPRITE_FOOT, plazaCharacterSheet, plazaFacing, plazaWalkFrame } from "@/lib/readingPlazaSprites";
 import { hasModalAbove } from "@/lib/modal";
 import PetFigure from "./PetFigure";
@@ -187,7 +188,7 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
   }
   function applyItem(item) {
     if (readOnly || saving || !isHideoutItemUnlocked(item, eligibility)) return;
-    setDraft({ ...shownRoom.layout, [item.slot]: item.id }); setEditing(true); setDetail(null); setNotice(`${item.name}을 놓았어요. 꾸미기를 마치면 저장돼요.`);
+    setDraft({ ...shownRoom.layout, [item.slot]: item.id }); setEditing(true); setDetail(null); setNotice(`${eulReul(item.name)} 놓았어요. ‘꾸미기 완료’를 누르면 저장돼요.`);
   }
   function clearSlot() {
     if (readOnly || saving || HIDEOUT_DEFAULT_LAYOUT[category] != null) return;
@@ -238,9 +239,17 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
   return <section className={`hideout${editing ? " is-editing" : ""}`} aria-label={`${myName}의 아지트`} aria-busy={saving}>
     <header className="hideout-heading">
       <div><p className="hideout-eyebrow">이야기가 머무는 작은 방</p><h2>{readOnly ? `${myName}의 아지트` : "나의 아지트"}</h2></div>
+      {/* 꾸미기를 시작한 그 자리에 마치는 단추가 섭니다(선생님 신고 — 한때 '꾸미기 취소 · 꾸미기 완료'가 오른쪽 패널의 소품 카드
+          맨 아래에 있어, 패널을 끝까지 굴려야 보였고 꾸미기를 켜면 저장 · 끝내기가 없는 것처럼 보였음). 그 자리로 되돌리지 마세요. */}
       <div className="hideout-actions">
         <span className="hideout-level">독서 레벨 <strong>{eligibility.level}</strong></span>
         {!readOnly && !editing && <button type="button" className="hideout-primary" onClick={() => { movement.stop(); setEditing(true); setNotice(""); }}>아지트 꾸미기</button>}
+        {!readOnly && editing && <>
+          <span className={`hideout-editing-chip${dirty ? " is-dirty" : ""}`}>꾸미는 중{dirty ? " · 아직 저장 안 함" : ""}</span>
+          <button type="button" onClick={() => setResetPending(true)} disabled={saving}>모든 소품 기본으로</button>
+          <button type="button" onClick={cancelEditing} disabled={saving}>꾸미기 취소</button>
+          <button type="button" className="hideout-primary" onClick={() => finish()} disabled={saving}>{saving ? "저장 중…" : "꾸미기 완료"}</button>
+        </>}
         {onExit && <button type="button" onClick={requestExit} disabled={saving}>{readOnly ? "학생 서재로" : "교실로 돌아가기"}</button>}
       </div>
     </header>
@@ -274,7 +283,7 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
       </div>
       {pet && bed && <RestingPet pet={pet} bed={bed} />}
     </div>
-    <p className="hideout-walk-help">{readOnly ? "학생 본인만 아지트를 꾸밀 수 있어요." : editing ? "이름과 큰 그림으로 소품을 골라 보세요. 마음에 들면 ‘꾸미기 완료’를 눌러요." : `빈 바닥을 누르거나 방향키로 걸어요. ${petGone ? "펫은 먹이를 찾아 떠나 있어요(책나눔에서 다시 불러요)." : "펫은 창가에서 쉬고,"} 오른쪽 포털로 교실에 돌아가요.`}</p>
+    <p className="hideout-walk-help">{readOnly ? "학생 본인만 아지트를 꾸밀 수 있어요." : editing ? "이름과 큰 그림으로 소품을 골라 놓아 보세요. 마음에 들면 위쪽의 ‘꾸미기 완료’를 눌러 저장해요." : `빈 바닥을 누르거나 방향키로 걸어요. ${petGone ? "펫은 먹이를 찾아 떠나 있어요(책나눔에서 다시 불러요)." : "펫은 창가에서 쉬고,"} 오른쪽 포털로 교실에 돌아가요.`}</p>
     </div>
 
     <section className="hideout-editor" aria-label="아지트 소품">
@@ -287,12 +296,15 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
       <div className="hideout-item-types" id={`${categoryId}-types`} role="group" aria-label={`${selectedGroup.label} 종류`}>
         {selectedGroup.slots.map((id) => {
           const slot = HIDEOUT_SLOTS.find((entry) => entry.id === id);
-          return <button type="button" key={id} data-hideout-category={id} className={category === id ? "is-selected" : ""}
+          return <button type="button" key={id} data-hideout-category={id} className={category === id ? "is-selected" : ""} title={slot.label}
             aria-pressed={category === id} aria-controls={`${categoryId}-preview`} disabled={saving} onClick={() => chooseCategory(id)}>{slot.label}</button>;
         })}
       </div>
       <div className="hideout-item-preview" id={`${categoryId}-preview`} role="region" aria-labelledby={`${categoryId}-title`}>
-      <div className="hideout-preview-heading"><h4 id={`${categoryId}-title`}>{selectedSlot.label}</h4><span>네 가지 테마</span></div>
+      <div className="hideout-preview-heading"><h4 id={`${categoryId}-title`}>{selectedSlot.label}</h4><span>네 가지 테마</span>
+        {!readOnly && editing && HIDEOUT_DEFAULT_LAYOUT[category] == null && <button type="button" className="hideout-clear-slot" onClick={clearSlot}
+          disabled={saving || shownRoom.layout[category] == null}>이 자리 비우기</button>}
+      </div>
       {baselineChoice && <button type="button" className={`hideout-baseline-choice${shownRoom.layout[category] === baselineChoice.id ? " is-chosen" : ""}`} disabled={saving}
         aria-label={`${baselineChoice.name} 크게 보기`} onClick={() => showDetail(baselineChoice)}>
         <img src={baselineChoice.src} alt="" width={64} height={56} /><span><strong>{baselineChoice.name}</strong><small>처음부터 사용할 수 있는 기본 소품{shownRoom.layout[category] === baselineChoice.id ? " · 현재 배치" : ""}</small></span><span aria-hidden="true">살펴보기</span>
@@ -308,15 +320,6 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
         </button>;
       })}</div>
       </div>
-      {!readOnly && editing && <div className="hideout-edit-actions">
-        <p className="hideout-draft-status">{dirty ? "아직 저장하지 않은 모습이에요." : "저장된 모습과 같아요."}</p>
-        <div className="hideout-actions">
-          {HIDEOUT_DEFAULT_LAYOUT[category] == null && <button type="button" onClick={clearSlot} disabled={saving || shownRoom.layout[category] == null}>이 자리 비우기</button>}
-          <button type="button" onClick={() => setResetPending(true)} disabled={saving}>모든 소품 기본으로</button>
-          <button type="button" onClick={cancelEditing} disabled={saving}>꾸미기 취소</button>
-          <button type="button" className="hideout-primary" onClick={() => finish()} disabled={saving}>{saving ? "저장 중…" : "꾸미기 완료"}</button>
-        </div>
-      </div>}
     </section>
     </div>
 
@@ -331,7 +334,7 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
     </HideoutDialog>}
     {resetPending && <HideoutDialog title="기본 소품으로 바꿀까요?" onClose={() => setResetPending(false)} alert>
       <p>기본 가구를 놓고 추가 소품은 치워요. 열린 소품은 다시 고를 수 있어요.</p><div className="hideout-dialog-actions">
-        <button type="button" onClick={() => setResetPending(false)}>계속 꾸미기</button><button type="button" className="hideout-primary" onClick={() => { setDraft({ ...HIDEOUT_DEFAULT_LAYOUT }); setResetPending(false); setNotice("기본 소품을 놓았어요. 꾸미기를 마치면 저장돼요."); }}>기본 소품 놓기</button>
+        <button type="button" onClick={() => setResetPending(false)}>계속 꾸미기</button><button type="button" className="hideout-primary" onClick={() => { setDraft({ ...HIDEOUT_DEFAULT_LAYOUT }); setResetPending(false); setNotice("기본 소품을 놓았어요. ‘꾸미기 완료’를 누르면 저장돼요."); }}>기본 소품 놓기</button>
       </div>
     </HideoutDialog>}
   </section>;
