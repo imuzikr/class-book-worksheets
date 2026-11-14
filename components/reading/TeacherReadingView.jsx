@@ -69,6 +69,9 @@ export default function TeacherReadingView({ classId, user, roster = [], student
     }
   }
   const picked = student ? careOf.get(student.uid) : null;
+  // 고른 학생의 화면('아지트 보기' 탭의 쉬는 펫)에 넘길 먹이 규칙 — 그 학생이 반에 들어온 날부터 셉니다
+  const studentJoined = student?.joinedAt ?? null;
+  const studentFeed = useMemo(() => (feedOn ? careRulesFor(petFeed, studentJoined) : null), [feedOn, petFeed, studentJoined]);
   // 책 광장에 들어가 있는가 — 주소의 ?tab=plaza로 열었으면 처음부터(학생 화면과 같은 주소). 나가면 명단으로 돌아옵니다.
   const [plazaOpen, setPlazaOpen] = useState(initialTab === "plaza");
   const seenCall = useRef(plazaCall);
@@ -126,7 +129,7 @@ export default function TeacherReadingView({ classId, user, roster = [], student
             <button type="button" className="btn-primary" disabled={recalling} onClick={() => recall(student)}>{recalling ? "불러 주는 중…" : "불러 주기"}</button>
           </div>
         )}
-        {student ? <ReadingHub key={`${classId}:${student.uid}`} classId={classId} user={user} isTeacher student={{ uid: student.uid, name: student.name }} plazaOn={plazaOn} initialTab={hubTab} {...hubProps} />
+        {student ? <ReadingHub key={`${classId}:${student.uid}`} classId={classId} user={user} isTeacher student={{ uid: student.uid, name: student.name }} plazaOn={plazaOn} petOn={petOn} petFeed={studentFeed} initialTab={hubTab} {...hubProps} />
           : <div className="reading-empty"><h3>학생을 기다리고 있어요.</h3><p>학생이 참여 코드로 들어오면 이곳에서 학생마다의 책나눔을 볼 수 있어요.{plazaOn ? " 책 광장은 지금도 ‘책 광장 들어가기’로 둘러볼 수 있어요." : ""}</p></div>}
       </div>
     </div>

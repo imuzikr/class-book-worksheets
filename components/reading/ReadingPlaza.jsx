@@ -142,9 +142,11 @@ const friendRow = (uid, who, friend) => ({
 //       그것을 내놓은 때 · 아니면 0) · moveWaiting(세는 중인가 — [선생님] 단추를 쉬게 함),
 //     onAttend([학생] 출석 남기기) · onRollCall([선생님] 출석시작) · onStop([선생님] 출석종료) · onSeatSetup([선생님] 자리 배정하기 열기) ·
 //     onMoveAll([선생님] 모두 이동 — 방 id를 받아 신호를 적음) }
-export default function ReadingPlaza({ classId, user, isTeacher = false, characterOn = true, petOn = false, petFeed = null, growthXp = null, initialBook = null, onExit = null, classroom = null }) {
+export default function ReadingPlaza({ classId, user, isTeacher = false, characterOn = true, petOn = false, petFeed = null, growthXp = null, initialBook = null, onExit = null, classroom = null, hideoutOn = false, onEnterHideout = null, initialRoom = null }) {
   const myUid = user?.uid;
   const classroomOn = !!classroom?.on;
+  const hideoutEntryOn = classroomOn && hideoutOn === true && !isTeacher && typeof onEnterHideout === "function";
+  const returningFromHideout = initialRoom === "classroom" && classroomOn;
   const [shelves, setShelves] = useState(null);
   const [error, setError] = useState("");
   const [character, setCharacter] = useState(null);
@@ -159,9 +161,9 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   const [friends, setFriends] = useState([]);
   const [live, setLive] = useState({ status: "off", why: "" });
   // 방 — 교실을 켠 반은 마지막에 있던 방에서 시작합니다. 책꽂이에서 '광장에서 보기'로 넘어왔으면 광장에서.
-  const [roomId, setRoomId] = useState(() => (!initialBook && classroomOn && myUid && recall("localStorage", roomKey(classId, myUid)) === "classroom" ? "classroom" : "plaza"));
+  const [roomId, setRoomId] = useState(() => (returningFromHideout || (!initialBook && classroomOn && myUid && recall("localStorage", roomKey(classId, myUid)) === "classroom") ? "classroom" : "plaza"));
   const here = classroomOn && roomId === "classroom" ? "classroom" : "plaza";
-  const room = plazaRoomOf(here, classroomOn);
+  const room = plazaRoomOf(here, classroomOn, hideoutEntryOn);
   const [panel, setPanel] = useState(() => initialBook ? { place: initialBook.place || "stall", book: { uid: initialBook.uid, bookId: initialBook.bookId } } : null);
   // 교실 — [학생] 자리표(아직 못 받았으면 undefined · 없으면 null) · 앉아 있는 자리 · 고르는 중인 것 · 지금 A를 누르면 물을 것 ·
   // 칠판의 물음표 자리 · 잠깐 뜨는 한 줄 · 방을 옮길 때의 반짝임
@@ -187,9 +189,16 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   hereRef.current = here;
   const classroomOnRef = useRef(classroomOn);
   classroomOnRef.current = classroomOn;
+  const hideoutEntryRef = useRef(hideoutEntryOn);
+  hideoutEntryRef.current = hideoutEntryOn;
+  const onEnterHideoutRef = useRef(onEnterHideout);
+  onEnterHideoutRef.current = onEnterHideout;
+  const enteringHideout = useRef(false);
   // 처음 서는 자리 — 함께 보는 광장에서는 사람마다 조금씩 다른 자리(모두 한 점에 겹치지 않게), 아니면 늘 같은 자리
   const pos = useRef(null);
-  if (pos.current === null) pos.current = myUid && plazaLiveConfigured() ? plazaSpawnFor(myUid, room) : { ...room.spawn };
+  if (pos.current === null) pos.current = returningFromHideout
+    ? plazaArrival(room, "hideout")
+    : myUid && plazaLiveConfigured() ? plazaSpawnFor(myUid, room) : { ...room.spawn };
   // 그림을 얼마나 키웠나(plazaView) · 시점(그림의 어느 자리가 창의 왼쪽 위인가, 화면 px)
   const view = useRef(plazaView(0, 0));
   const cam = useRef({ x: 0, y: 0 });
@@ -228,10 +237,10 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   menuRef.current = menu;
   const hintRef = useRef(null);
   const boardX = useRef(boardMark.x);
-  const portalArmed = useRef(true);
+  const portalArmed = useRef(!returningFromHideout);
   const sitFrom = useRef(null);
   const noteTimer = useRef(0);
-  const seatRestored = useRef(false);
+  const seatRestored = useRef(returningFromHideout);
   const seenCall = useRef(undefined);
   // 모두 이동(선생님의 '모두 교실로 · 모두 광장으로') — 지금까지 본 신호의 '보낸 때' 가운데 가장 큰 값(화면을 열고 처음이면
   // undefined) · 옮겨 온 까닭을 알리는 한 줄을 붙들어 둘 때까지(그사이 물음표가 떠도 걷지 않음) ·
@@ -323,6 +332,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   }, []);
   // 친구들에게 알립니다 — 걸음마다가 아니라 걸음이 바뀔 때만(아래 tick · walkTo · 창을 여닫을 때 · 앉고 일어설 때 · 방을 옮길 때)
   const tell = useCallback((time = performance.now()) => {
+    if (enteringHideout.current) return;
     const state = liveState();
     told.current = state.mode;
     toldAt.current = time;
@@ -361,7 +371,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   // 친구들에게는 새 방 · 새 자리를 알립니다.
   const enterRoom = useCallback((nextId, forced = null) => {
     const from = hereRef.current;
-    const next = plazaRoomOf(nextId, classroomOnRef.current);
+    const next = plazaRoomOf(nextId, classroomOnRef.current, hideoutEntryRef.current);
     const id = next.id;
     const spot = forced?.at && plazaWalkable(forced.at.x, forced.at.y, next) ? forced.at : null;
     halt();
@@ -469,6 +479,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   // 고르고, 펫은 지나온 길을 따라오며, 시점은 캐릭터를 조금 늦게 따라붙습니다.
   // 멈추고 펫이 곁에 서고 시점도 다 따라붙으면 되풀이를 쉽니다.
   const tick = useCallback((time) => {
+    if (enteringHideout.current) { raf.current = 0; lastTick.current = 0; return; }
     const place = roomRef.current;
     const inClass = hereRef.current === "classroom";
     const seated = sittingRef.current !== null;
@@ -518,7 +529,19 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
           raf.current = 0;
           lastTick.current = 0;
           movingRef.current = false;
-          enterRoom(gate.to);
+          if (gate.to === "hideout") {
+            // 개인 방에 있는 동안 교실 자리·걸음을 보내지 않습니다. 부모가 개인 화면을 세우고 무대를 내립니다.
+            // 현재 권한과 콜백을 다시 보므로 설정을 끈 순간의 오래된 입력으로 들어가지 않습니다.
+            if (hideoutEntryRef.current && typeof onEnterHideoutRef.current === "function") {
+              enteringHideout.current = true;
+              portalArmed.current = false;
+              halt();
+              session.current?.close();
+              session.current = null;
+              if (myUid) remember("sessionStorage", seatKey(classId, myUid), null);
+              onEnterHideoutRef.current();
+            }
+          } else enterRoom(gate.to);
           return;
         }
       }
@@ -628,10 +651,11 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
       lastTick.current = 0;
     }
     look();
-  }, [isTeacher, enterRoom, look, openSpot, say, tell]);
+  }, [isTeacher, enterRoom, halt, myUid, classId, look, openSpot, say, tell]);
 
   useLayoutEffect(() => {
     wakeRef.current = () => {
+      if (enteringHideout.current) return;
       if (!raf.current) { lastTick.current = 0; raf.current = requestAnimationFrame(tick); }
     };
   }, [tick]);
@@ -927,6 +951,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   }, [openSpot, walkTo]);
   // 포털로 — 한가운데로 걸어가면 옮겨 갑니다
   const goPortal = useCallback((gate) => {
+    if (!roomRef.current.portals.some((active) => active.id === gate.id) || enteringHideout.current) return;
     stageRef.current?.focus({ preventScroll: true });
     if (sittingRef.current !== null) { say(SIT_HELP); return; }
     walkTo({ x: gate.x, y: gate.y });

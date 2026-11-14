@@ -21,7 +21,7 @@ import ReadingHub from "@/components/reading/ReadingHub";
 import TeacherReadingView from "@/components/reading/TeacherReadingView";
 import ReadingLeaderboard from "@/components/reading/ReadingLeaderboard";
 import AdminSettingsPanel from "@/components/AdminSettingsPanel";
-import { readingEnabled, rankingEnabled, bookSearchEnabled, fruitBasketOn, plazaOn, plazaNeedsSync, classroomOn, classroomRollToday } from "@/lib/reading";
+import { readingEnabled, rankingEnabled, bookSearchEnabled, fruitBasketOn, plazaOn, plazaNeedsSync, classroomOn, classroomRollToday, hideoutOn } from "@/lib/reading";
 import { abandonClassroomMove, feedClassroomMove, useClassroomMove, watchClassroomMove } from "@/lib/classroomMoveStore";
 import { classroomMoveShown } from "@/lib/classroomMove";
 import { characterChoiceEnabled } from "@/lib/readingCharacter";
@@ -1200,14 +1200,14 @@ function BooksPageInner() {
           ) : readingOpen && admin ? (
             <TeacherReadingView classId={classId} user={user} roster={roster}
               studentUid={searchParams.get("student")} onPickStudent={(uid) => patchBooksQuery({ student: uid }, { replace: true })} bookSearchOn={bookSearchEnabled(currentClass)}
-              plazaOn={plazaOn(currentClass)} characterOn={characterOn} initialTab={searchParams.get("tab") || "library"} classroom={classroomProps}
+              plazaOn={plazaOn(currentClass)} hideoutOn={hideoutOn(currentClass)} characterOn={characterOn} initialTab={searchParams.get("tab") || "library"} classroom={classroomProps}
               plazaCall={plazaCall} petOn={petOn} petFeed={petFeed} onToast={setToast}
               activities={liveActivities} onOpenActivity={goToActivity}
               onDisabled={() => patchBooksQuery({ area: null }, { replace: true })} />
           ) : readingOpen ? (
             <ReadingHub key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin} bookSearchOn={bookSearchEnabled(currentClass)} petOn={petOn}
               petFeed={petFeed} myFruit={myFruit}
-              plazaOn={plazaOn(currentClass)} characterOn={characterOn} classroom={classroomProps}
+              plazaOn={plazaOn(currentClass)} hideoutOn={hideoutOn(currentClass)} characterOn={characterOn} classroom={classroomProps}
               plazaCall={plazaCall}
               activities={liveActivities} onOpenActivity={goToActivity}
               initialBookId={searchParams.get("book")} initialTab={searchParams.get("tab") || "library"}

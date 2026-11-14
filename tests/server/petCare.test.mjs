@@ -63,8 +63,11 @@ before(async () => {
   // 펫 먹이를 40일 전에 켠 반(주말에도 줆) — care-late는 그제 들어왔고, care-early는 들어온 때를 모릅니다(옛 소속 문서)
   batch.set(db.doc(`classes/${OLD}`), { createdBy: "care-teacher", readingEnabled: true, archived: false,
     petFeedEnabled: true, petFeedFrom: Date.parse(`${dayBefore(40)}T12:00:00+09:00`), petRestWeekend: false });
-  for (const [uid, joinedAt] of [["care-late", Timestamp.fromMillis(Date.parse(`${dayBefore(2)}T10:00:00+09:00`))], ["care-early", null]]) {
-    batch.set(db.doc(`users/${uid}`), { role: "student", realName: uid, studentId: uid === "care-late" ? "60201" : "60202", readingPet: hatched() });
+  // care-forged는 들어온 때를 먼 앞날로 꾸며 적은 학생 — 서버는 믿지 않고 켠 날부터 셉니다
+  const joins = [["care-late", Timestamp.fromMillis(Date.parse(`${dayBefore(2)}T10:00:00+09:00`)), "60201"], ["care-early", null, "60202"],
+    ["care-forged", Timestamp.fromMillis(Date.parse("2099-01-01T00:00:00+09:00")), "60203"]];
+  for (const [uid, joinedAt, studentId] of joins) {
+    batch.set(db.doc(`users/${uid}`), { role: "student", realName: uid, studentId, readingPet: hatched() });
     batch.set(db.doc(`memberships/${uid}_${OLD}`), { uid, classId: OLD, ...(joinedAt ? { joinedAt } : {}) });
     batch.set(db.doc(`classes/${OLD}/readingMembers/${uid}`), snapshot(uid, 300));
     batch.set(db.doc(`rewards/${OLD}_${uid}`), { classId: OLD, uid, count: 3 });
@@ -224,5 +227,21 @@ test("반에 들어온 날부터 셈 — 미리 만들어 둔 반에 나중에 �
   assert.equal(read.petEvent, "kept");
   await assert.rejects(() => readingPetAction(who("care-teacher"), { classId: OLD, action: "recall", uid: "care-late" }), (e) => e.status === 409 && e.code === "reading/pet-not-away");
   const back = await readingPetAction(who("care-teacher"), { classId: OLD, action: "recall", uid: "care-early" });
+  assert.deepEqual([back.event, back.care.away, back.care.full], ["returned", false, 60]);
+});
+
+test("꾸며 적은 '들어온 날' — 먼 앞날을 적어도 서버는 믿지 않고 켠 날부터 셈(펫을 지키지 못함)", async () => {
+  const forged = who("care-forged");
+  // 믿었다면 2099년까지 아무 날도 세지 않아 늘 100 — 걸러 내어 40일 전부터 세므로 떠나 있음
+  const view = await getReadingPet(forged, OLD);
+  assert.deepEqual([view.care.away, view.care.full], [true, 0]);
+  await assert.rejects(() => readingPetAction(forged, { classId: OLD, action: "feed" }), (e) => e.status === 409 && e.code === "reading/pet-away");
+  assert.equal(await fruits("care-forged", OLD), 3);
+  const rows = (await getReadingRankings(who("care-teacher"), OLD, "all-time", { maxAgeMs: 0 })).rankings;
+  assert.equal(rows.find((r) => r.uid === "care-forged").pet, null);
+  // 걸음으로 부르는 길 · 선생님이 불러 주는 길은 그대로
+  const step = await readingPetAction(forged, { classId: OLD, action: "call" });
+  assert.deepEqual([step.event, step.used, step.care.steps.done], ["step", 2, 1]);
+  const back = await readingPetAction(who("care-teacher"), { classId: OLD, action: "recall", uid: "care-forged" });
   assert.deepEqual([back.event, back.care.away, back.care.full], ["returned", false, 60]);
 });

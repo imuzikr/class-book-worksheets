@@ -389,3 +389,25 @@ test("반에 들어온 날부터 셈 — 미리 만들어 둔 반에 나중에 �
   const gone = pet({ care: { full: 0, day: "2026-10-30", kept: null, away: { on: "2026-10-31", days: [], fruit: 0 } } });
   assert.equal(careStatus(gone, late, "2026-11-12").away, true);
 });
+
+test("꾸며 적은 '들어온 날' — 서버가 오늘을 넘기면 내일보다 뒤의 날은 믿지 않음(화면은 그대로 믿음)", () => {
+  const rules = rulesFrom("2026-09-01");
+  const today = "2026-11-12";
+  // 지난 날 · 오늘 · 내일(서버끼리의 시계 차이)은 그대로
+  assert.equal(careRulesFor(rules, at("2026-11-10"), today).from, "2026-11-10");
+  assert.equal(careRulesFor(rules, at("2026-11-12"), today).from, "2026-11-12");
+  assert.equal(careRulesFor(rules, at("2026-11-13"), today).from, "2026-11-13");
+  // 모레부터는 꾸민 값 — 모르는 것으로 보아 켠 날부터 셈
+  assert.equal(careRulesFor(rules, at("2026-11-14"), today).from, "2026-09-01");
+  assert.equal(careRulesFor(rules, at("2099-01-01"), today).from, "2026-09-01");
+  // 꾸민 값으로는 펫을 지키지 못함 — 걸러 내지 않으면 2099년까지 아무 날도 세지 않아 늘 100
+  assert.equal(careStatus(pet(), careRulesFor(rules, at("2099-01-01")), today).full, 100);
+  assert.equal(careStatus(pet(), careRulesFor(rules, at("2099-01-01"), today), today).away, true);
+  // today를 넘기지 않는 화면은 그대로 믿음(기기 시계가 틀린 PC에서 멀쩡한 펫이 떠나 보이지 않게 — 적는 것은 서버)
+  assert.equal(careRulesFor(rules, at("2099-01-01")).from, "2099-01-01");
+  assert.equal(careRulesFor(rules, at("2099-01-01"), "오늘").from, "2099-01-01"); // 틀린 today는 없는 것으로
+  // careRules · petCareRules도 같은 값을 넘겨받음
+  assert.equal(careRules({ petFeedFrom: at("2026-09-01") }, true, at("2099-01-01"), today).from, "2026-09-01");
+  assert.equal(careRules({ petFeedFrom: at("2026-09-01") }, true, at("2026-11-10"), today).from, "2026-11-10");
+  assert.equal(petCareRules({ readingEnabled: true, petFeedEnabled: true, petFeedFrom: at("2026-09-01") }, at("2099-01-01"), today).from, "2026-09-01");
+});

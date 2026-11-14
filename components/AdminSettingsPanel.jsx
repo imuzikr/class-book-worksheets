@@ -85,6 +85,9 @@ const FEATURES = [
   { key: "classroomEnabled", label: "교실", needs: ["readingEnabled", "plazaEnabled"], needsText: "책 광장을 먼저 켜 주세요",
     hint: "책 광장에 교실로 가는 문과 포털이 생겨요. 학생이 ‘자리 배정하기’의 제 책상 옆에서 A → 앉기(S)로 앉고, 선생님이 칠판 앞에서 A → 출석시작(S)을 누르면 그 순간 앉아 있던 학생만 출석으로 확인돼요.",
     on: "교실을 켰어요. 책 광장 왼쪽 아래의 포털로 교실에 들어가요.", off: "교실을 껐어요. 책 광장의 문과 포털이 사라지고, 출석 기록은 그대로예요." },
+  { key: "hideoutEnabled", label: "개인 아지트", needs: ["readingEnabled", "plazaEnabled", "classroomEnabled"], needsText: "책 광장과 교실을 먼저 켜 주세요",
+    hint: "교실 왼쪽 아래 포털로 학생 자신의 아지트에 들어가요. 독서 레벨에 따라 열린 소품으로 꾸미고, 펫은 방석에서 쉬어요. 아지트 포털로 교실에 돌아와요. 다른 학생에게는 공개되지 않아요.",
+    on: "개인 아지트를 켰어요. 교실 왼쪽 아래에 아지트 포털이 생겨요.", off: "개인 아지트를 껐어요. 입구는 숨기고 저장한 꾸미기는 보관해요." },
 ];
 
 // 성격이 같은 것끼리 묶습니다(선생님 요청 — 2 · 4 · 1, 2026년 11월 '함께 읽기'(책 광장) 한 묶음을 더함). 리더보드 옆에 독서 TOP 3(보이는 화면 둘), 그 아래 줄에
@@ -94,7 +97,7 @@ const FEATURES = [
 const GROUPS = [
   { key: "reading", title: "독서 기록", desc: "학생의 책꽂이와 책 정보", keys: ["readingEnabled", "bookSearchEnabled"] },
   { key: "growth", title: "리더보드 · 꾸미기", desc: "반 친구와 함께 보는 성장 · 캐릭터와 펫", keys: ["rankingEnabled", "readingTopEnabled", "characterEnabled", "petEnabled"] },
-  { key: "share", title: "함께 읽기", desc: "반 친구와 나누는 독서 발자국 · 한 권의 책 · 함께 앉는 교실", keys: ["plazaEnabled", "classroomEnabled"] },
+  { key: "share", title: "함께 읽기", desc: "책 광장 · 함께 앉는 교실 · 나만의 아지트", keys: ["plazaEnabled", "classroomEnabled", "hideoutEnabled"] },
   { key: "reward", title: "교실 보상", desc: "과일 모으기와 이벤트 · 펫의 먹이", keys: ["fruitBasketEnabled", "petFeedEnabled"] },
 ];
 

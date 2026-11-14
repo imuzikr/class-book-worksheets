@@ -547,7 +547,8 @@ service cloud.firestore {
       // 독서 기록·보상 원장과 요청 영수증은 인증된 서버 API만 처리합니다.
       // Admin SDK는 규칙을 우회하므로 API가 활성 반/소속/본인 여부를 검사합니다.
       // 학생 탈퇴 때만 교사가 지울 수 있습니다(읽기는 그대로 막힘 — reading/main ·
-      // 독서 펫의 비밀 문서 reading/pet — 알 단계의 종이라 학생 본인도 못 읽음).
+      // 독서 펫의 비밀 문서 reading/pet — 알 단계의 종이라 학생 본인도 못 읽음 ·
+      // 개인 아지트의 방 reading/hideout — /api/reading/hideout만 읽고 씀, HIDEOUT.md).
       match /reading/{document} {
         allow read, write: if false;
         allow delete: if teacherMayWithdraw(userId,
@@ -580,7 +581,7 @@ service cloud.firestore {
       allow list: if isAdmin() || (isTeacher() && resource.data.createdBy == uid());
       // 새 반은 기본 꺼짐. 켜기는 운영 중인 반의 담당 교사/관리자만 합니다.
       // 관리자 설정 화면의 스위치(책나눔 성장 · 도서 검색 · 리더보드(rankingEnabled) · 독서 TOP 3 ·
-      // 학생 캐릭터 · 과일 바구니 · 학생 펫 · 펫 먹이 · 책 광장 · 교실)도 같은 판정 — 참·거짓만, 운영 중인 반에서만 바꿉니다.
+      // 학생 캐릭터 · 과일 바구니 · 학생 펫 · 펫 먹이 · 책 광장 · 교실 · 개인 아지트)도 같은 판정 — 참·거짓만, 운영 중인 반에서만 바꿉니다.
       // 독서 맵(readingMapTheme)은 대륙 · 모험의 식별자 두 개만 받습니다.
       // 교실의 칠판에서 선생님이 출석을 확인한 때(classroomCallAt — lib/data/classes.js의 callClassroomRoll)는
       // 0 이상의 수만 받습니다(앉아 있던 학생의 화면이 이 값이 바뀌는 것을 보고 출석을 남깁니다).
@@ -605,16 +606,19 @@ service cloud.firestore {
                && (!changed.hasAny(['readingTopEnabled']) || request.resource.data.get('readingTopEnabled', null) is bool)
                && (!changed.hasAny(['plazaEnabled']) || request.resource.data.get('plazaEnabled', null) is bool)
                && (!changed.hasAny(['classroomEnabled']) || request.resource.data.get('classroomEnabled', null) is bool)
+               && (!changed.hasAny(['hideoutEnabled']) || request.resource.data.get('hideoutEnabled', null) is bool)
                && (!changed.hasAny(['classroomCallAt'])
                    || (request.resource.data.get('classroomCallAt', null) is number && request.resource.data.classroomCallAt >= 0))
                && (!changed.hasAny(['readingMapTheme']) || request.resource.data.get('readingMapTheme', null) in ['continent', 'cloud-islands'])
-               && (!changed.hasAny(['readingEnabled', 'rankingEnabled', 'characterEnabled', 'bookSearchEnabled', 'fruitBasketEnabled', 'petEnabled', 'readingTopEnabled', 'plazaEnabled', 'classroomEnabled', 'classroomCallAt', 'readingMapTheme',
+               && (!changed.hasAny(['readingEnabled', 'rankingEnabled', 'characterEnabled', 'bookSearchEnabled', 'fruitBasketEnabled', 'petEnabled', 'readingTopEnabled', 'plazaEnabled', 'classroomEnabled', 'hideoutEnabled', 'classroomCallAt', 'readingMapTheme',
                                     'petFeedEnabled', 'petFeedFrom', 'petRestWeekend', 'petRests'])
                    || (resource.data.get('archived', false) != true
                        && request.resource.data.get('archived', false) != true));
       }
       allow create: if isTeacher() && request.resource.data.createdBy == uid()
                     && request.resource.data.get('readingEnabled', false) == false
+                    && (!request.resource.data.keys().hasAny(['hideoutEnabled'])
+                        || request.resource.data.hideoutEnabled is bool)
                     && (!request.resource.data.keys().hasAny(['readingMapTheme'])
                         || request.resource.data.readingMapTheme in ['continent', 'cloud-islands']);
       allow update: if (isAdmin()
@@ -1164,6 +1168,13 @@ service cloud.firestore {
       //    (코드를 잘못 눌러 옆 반에 들어간 학생을 바로잡는 길). **자기가 개설한
       //    반에만**(ownsClassEditable) 넣을 수 있고, 보관된 반은 막힙니다.
       //  · 한 학생이 여러 반에 속할 수 있습니다(다른 반 코드로 또 들어오면 됨).
+      //  · **들어온 때(joinedAt)는 서버 시각만 받습니다**(학생이 스스로 만들 때). 펫 먹이가 '그 반에 들어온
+      //    날'부터 배부름을 세므로(lib/petCare.js의 careRulesFor), 학생이 먼 앞날을 적어 넣으면 그날까지
+      //    아무 날도 세지 않아 펫이 영영 배고파지지 않습니다. 적지 않은 것(옛 화면)은 그대로 받습니다 —
+      //    모르는 날로 보아 선생님이 펫 먹이를 켠 날부터 셉니다. 고치기(update)는 아무에게도 열지 않아
+      //    들어온 뒤에는 바꿀 수 없고, 학생은 스스로 나갈 수도 없습니다(아래 delete) — 나갔다 다시 들어와
+      //    날짜를 새로 적는 길도 없습니다. 서버도 내일보다 뒤인 값은 믿지 않습니다(같은 함수).
+      //    시험 tests/rules/memberships.test.mjs('들어온 때').
       allow create: if signedIn()
                     && request.resource.data.uid is string
                     && mId == (request.resource.data.uid + '_' + request.resource.data.classId)
@@ -1172,6 +1183,7 @@ service cloud.firestore {
                       || (request.resource.data.uid == uid()
                           && request.resource.data.get('code', '') is string
                           && request.resource.data.get('code', '') != ''
+                          && request.resource.data.get('joinedAt', request.time) == request.time
                           && exists(/databases/$(database)/documents/joinCodes/$(request.resource.data.code))
                           && get(/databases/$(database)/documents/joinCodes/$(request.resource.data.code)).data.classId == request.resource.data.classId
                           && get(/databases/$(database)/documents/joinCodes/$(request.resource.data.code)).data.expiresAt > request.time)

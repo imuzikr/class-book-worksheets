@@ -192,6 +192,45 @@ describe("반 편성 고치기(교사)", () => {
       const db = asStudent(env, "stu1").firestore();
       await assertFails(setDoc(doc(db, "memberships", "stu2_classA"), join("ABC234")));
     });
+
+    // 펫 먹이는 '그 반에 들어온 날'부터 배부름을 셉니다(lib/petCare.js의 careRulesFor). 학생이 그 날을
+    // 먼 앞날로 꾸며 적으면 그날까지 아무 날도 세지 않아 펫이 영영 배고파지지 않으므로, 서버 시각만 받습니다.
+    it("들어온 때(joinedAt)는 서버 시각만 — 꾸며 적은 때는 거부된다", async () => {
+      const db = asStudent(env, "stu2").firestore();
+      const ref = doc(db, "memberships", "stu2_classA");
+      await assertFails(setDoc(ref, { ...join("ABC234"), joinedAt: new Date("2099-01-01T00:00:00Z") })); // 먼 앞날
+      await assertFails(setDoc(ref, { ...join("ABC234"), joinedAt: new Date(Date.now() + 86400000) })); // 내일
+      await assertFails(setDoc(ref, { ...join("ABC234"), joinedAt: new Date() })); // 기기의 지금(서버 시각이 아님)
+      await assertFails(setDoc(ref, { ...join("ABC234"), joinedAt: new Date(Date.now() - 86400000) })); // 어제
+      await assertFails(setDoc(ref, { ...join("ABC234"), joinedAt: 4102444800000 })); // 숫자
+      await assertFails(setDoc(ref, { ...join("ABC234"), joinedAt: "2099-01-01" })); // 글자
+      await assertFails(setDoc(ref, { ...join("ABC234"), joinedAt: null }));
+      await assertSucceeds(setDoc(ref, join("ABC234"))); // 서버 시각 — 앱이 쓰는 모양
+    });
+
+    it("들어온 때를 적지 않아도 들어간다(옛 화면 — 모르는 날로 보아 켠 날부터 셈)", async () => {
+      const db = asStudent(env, "stu2").firestore();
+      await assertSucceeds(setDoc(doc(db, "memberships", "stu2_classA"), { uid: "stu2", classId: "classA", code: "ABC234" }));
+    });
+
+    it("들어온 뒤에는 학생이 소속을 고치거나 지워 '들어온 때'를 새로 적을 수 없다", async () => {
+      await seed(env, async (db) => {
+        await setDoc(doc(db, "memberships", "stu2_classA"), { uid: "stu2", classId: "classA", code: "ABC234", joinedAt: new Date(Date.now() - 30 * 86400000) });
+        await setDoc(doc(db, "users", "stu2"), { role: "student", realName: "학생2", classIds: ["classA"] });
+      });
+      const db = asStudent(env, "stu2").firestore();
+      const ref = doc(db, "memberships", "stu2_classA");
+      await assertFails(updateDoc(ref, { joinedAt: serverTimestamp() }));
+      await assertFails(updateDoc(ref, { joinedAt: new Date("2099-01-01T00:00:00Z") }));
+      await assertFails(setDoc(ref, join("ABC234"))); // 덮어쓰기도 고치기라 막힘
+      await assertFails(deleteDoc(ref)); // 스스로 나갔다 다시 들어오는 길도 없음
+    });
+
+    it("담당 교사가 넣을 때는 지금까지처럼(서버 시각이든 아니든)", async () => {
+      const db = asTeacher(env, "teacherA").firestore();
+      await assertSucceeds(setDoc(doc(db, "memberships", "stu2_classA"), { uid: "stu2", classId: "classA", joinedAt: serverTimestamp() }));
+      await assertSucceeds(setDoc(doc(db, "memberships", "stu3_classA"), { uid: "stu3", classId: "classA" }));
+    });
   });
 
   it("학생은 여전히 남을 반에 넣을 수 없다", async () => {

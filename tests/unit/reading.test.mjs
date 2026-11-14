@@ -326,7 +326,7 @@ test("관리자 설정은 선생님의 모든 반에 한 값 — 도서 검색 �
   assert.deepEqual(s.readingTopEnabled, { on: true, mixed: false });
   // 펫 먹이는 값이 없으면 꺼짐(켠 것만 true) — 새 반도 그 값과 '배고파지지 않는 날'(주말 · 기간)을 따름
   assert.deepEqual(s.petFeedEnabled, { on: false, mixed: false });
-  assert.deepEqual(featuresForNewClass(classes), { readingEnabled: true, bookSearchEnabled: false, rankingEnabled: false, readingTopEnabled: true, characterEnabled: true, fruitBasketEnabled: true, petEnabled: true, petFeedEnabled: false, plazaEnabled: false, classroomEnabled: false, readingMapTheme: "cloud-islands", petRestWeekend: true, petRests: [] });
+  assert.deepEqual(featuresForNewClass(classes), { readingEnabled: true, bookSearchEnabled: false, rankingEnabled: false, readingTopEnabled: true, characterEnabled: true, fruitBasketEnabled: true, petEnabled: true, petFeedEnabled: false, plazaEnabled: false, classroomEnabled: false, hideoutEnabled: false, readingMapTheme: "cloud-islands", petRestWeekend: true, petRests: [] });
   assert.equal(featuresForNewClass([{ archived: true }]), null);
   assert.equal(teacherFeatureSettings([]).readingEnabled.on, false);
 });
