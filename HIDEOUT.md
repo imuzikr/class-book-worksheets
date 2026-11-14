@@ -40,7 +40,7 @@
 
 ## 디자인 기준
 
-**도트 그림(1번 스타일 · 2026년 11월)**을 `public/reading-hideout/`에 포함했습니다 — 광장 · 교실과 같은 그림체입니다. 선생님이 주신 묶음(`bookbom-pixel-style1`)의 PNG 원본을 `scripts/import-pixel-art.mjs`가 **같은 이름 · 같은 크기**의 WebP로 굽고(품질 88 · 알파 무손실 · 소품 120장 7.6MB → 3MB) `manifest.json`의 크기 · SHA-256을 새로 씁니다. 그 앞의 그림(검토를 마친 v2)과 크기 · 자리가 같아 배치(카탈로그)는 그대로이고, 쉬는 펫이 네 테마의 방석 안에 드는지 보는 시험도 그대로 통과합니다. 외부 작업 폴더나 ZIP이 있어야 실행되는 구조가 아닙니다. `scripts/import-hideout-art.mjs`는 옛 원본(v2)에서 카탈로그를 다시 만들 때만 쓰는 제작 도구입니다 — 그림까지 예전 것으로 되돌리므로, 돌린 뒤에는 `import-pixel-art.mjs`를 다시 돌리세요.
+**도트 그림(1번 스타일 · 2026년 11월)**을 `public/reading-hideout/`에 포함했습니다 — 광장 · 교실과 같은 그림체입니다. 선생님이 주신 묶음(`bookbom-pixel-style1`)의 PNG 원본을 `scripts/import-pixel-art.mjs`가 **같은 이름 · 같은 크기**의 WebP로 굽고(품질 88 · 알파 무손실 · 소품 120장 7.6MB → 3MB) `manifest.json`의 크기 · SHA-256을 새로 씁니다. 그 앞의 그림(검토를 마친 v2)과 크기 · 자리가 같아 배치(카탈로그)는 그대로이고, 쉬는 펫이 네 테마의 방석 안에 드는지 보는 시험도 그대로 통과합니다. 꾸미기 **벽시계 4종은 숫자 없는 시계**입니다 — 처음 묶음의 시계는 굵은 눈금이 로마 숫자 Ⅰ처럼 보여, 선생님이 작은 점 12개와 10시 10분의 두 바늘로 다시 그린 수정본(`bookbom-numberless-wall-clocks` — 캔버스 크기 · 아래 가운데 자리는 그대로)을 덧씌울 묶음으로 넣었습니다(`node scripts/import-pixel-art.mjs <도트 묶음> <넓은 러그 묶음> <숫자 없는 벽시계 묶음>`). 방석 위의 알은 **도트 알**(`public/reading-pets/egg-pixel.webp` — 카드 · 리더보드 · 독서 맵은 예전 알, 선생님 결정 · `READING_GROWTH.md`의 '독서 펫'). 외부 작업 폴더나 ZIP이 있어야 실행되는 구조가 아닙니다. `scripts/import-hideout-art.mjs`는 옛 원본(v2)에서 카탈로그를 다시 만들 때만 쓰는 제작 도구입니다 — 그림까지 예전 것으로 되돌리므로, 돌린 뒤에는 `import-pixel-art.mjs`를 다시 돌리세요.
 
 **교실로 가는 포털**은 그림 상자(152 × 76)와 누르는 단추(보이는 포털 104 × 66 · 타원)를 따로 둡니다(선생님 요청 — 도트 포털이 예전보다 좁아 상자만 한 단추면 포털 옆 바닥을 눌러도 포털로 걸어갔음). 도는 빛은 상자 폭의 절반(안쪽 소용돌이 안), 들어서는 타원은 가로 50 · 세로 38(`lib/readingHideoutMap.js`의 `HIDEOUT_RETURN_PORTAL` · 시험 `tests/unit/plazaArtFit.test.mjs`).
 

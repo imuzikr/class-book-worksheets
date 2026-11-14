@@ -438,23 +438,23 @@
     },
     {
       "path": "items/clock/forest.webp",
-      "bytes": 27572,
-      "sha256": "03cf00b6d19ac0fe04fd84adfe5d1cef44d21140c6ca8afa21d0b90b145860b0"
+      "bytes": 24406,
+      "sha256": "3551aa353991e2eb17370c220e9e25042603e8e3f2ef5c52a7518262133df773"
     },
     {
       "path": "items/clock/starlight.webp",
-      "bytes": 29630,
-      "sha256": "0a79ba6e19a63c200b104fb1939ae3e3f1a6275a0a24b7dddb01d664dc34d925"
+      "bytes": 27860,
+      "sha256": "fb47a59f4e5346908bcf1d25a153f94f467d684b972535f0d27679aba526655f"
     },
     {
       "path": "items/clock/explorer.webp",
-      "bytes": 31676,
-      "sha256": "e9ddb2501e4163bfbdf24a95b696cf331fac8969a866f1f1d4dc9b145a75b43b"
+      "bytes": 29014,
+      "sha256": "99e1e914d34a5fc6cb2212387db701b685d36e9239238b7c7d8f795bd11cc992"
     },
     {
       "path": "items/clock/coastal.webp",
-      "bytes": 36086,
-      "sha256": "52c2e74a4f52626fbb903b2b096cd590a63eac8fd891a8b606657ea9eb405c6f"
+      "bytes": 32276,
+      "sha256": "c491bed71e36049a5458cfa333b6d3475993a4200626b48b6f5aa6700e5c9cb4"
     },
     {
       "path": "items/hourglass/forest.webp",

@@ -5,7 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import path from "node:path";
 import sharp from "sharp";
-import { CLASSROOM_DESK, CLASSROOM_RUG, CLASSROOM_SEATS, CLASSROOM_SIT_HIDE, CLASSROOM_ROOM, PORTAL_ART } from "../../lib/readingPlazaMap.js";
+import { CLASSROOM_CLOCK, CLASSROOM_DESK, CLASSROOM_RUG, CLASSROOM_SEATS, CLASSROOM_SIT_HIDE, CLASSROOM_ROOM, PORTAL_ART } from "../../lib/readingPlazaMap.js";
 import { HIDEOUT_RETURN_PORTAL } from "../../lib/readingHideoutMap.js";
 
 const file = (src) => path.join(path.resolve("public"), src.replace(/^\//, ""));
@@ -77,4 +77,49 @@ test("아지트의 교실로 가는 포털 — 누르는 단추 · 들어서는 
   const visW = (outer.b[2] - outer.b[0]) * k, visH = (outer.b[3] - outer.b[1]) * k;
   assert.ok(Math.abs(portal.hit.width - visW) <= 3 && Math.abs(portal.hit.height - visH) <= 3, `단추 ${portal.hit.width}×${portal.hit.height} · 보이는 포털 ${visW.toFixed(1)}×${visH.toFixed(1)}`);
   assert.ok(portal.rx <= portal.hit.width / 2, "들어서는 곳이 보이는 포털보다 넓지 않다");
+});
+
+test("교실 벽시계 — 배경의 빈 시계판(크림)이 CLASSROOM_CLOCK 자리 · 지름이고, 얹는 시계판(점 12개 · 바늘)이 그 안에 든다", async () => {
+  const clock = CLASSROOM_CLOCK;
+  // 배경의 시계판 — (x, y)에서 이어진 밝은 크림 점들의 상자
+  const { data, info } = await sharp(file(CLASSROOM_ROOM.art)).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  const W = info.width;
+  const bright = (x, y) => { const i = (y * W + x) * 3; return data[i] > 225 && data[i + 1] > 205 && data[i + 2] > 170; };
+  const seen = new Set(), stack = [[clock.x, clock.y]];
+  let x0 = Infinity, y0 = Infinity, x1 = -1, y1 = -1;
+  while (stack.length) {
+    const [x, y] = stack.pop(), k = y * W + x;
+    if (x < 0 || y < 0 || x >= W || y >= info.height || seen.has(k) || !bright(x, y)) continue;
+    seen.add(k);
+    assert.ok(seen.size < 10000, "시계판이 아니라 넓은 벽을 칠하고 있습니다 — CLASSROOM_CLOCK의 자리를 다시 재세요");
+    if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+    stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+  }
+  const faceW = x1 - x0 + 1, faceH = y1 - y0 + 1;
+  assert.ok(Math.abs(faceW - clock.d) <= 3 && Math.abs(faceH - clock.d) <= 3, `배경의 시계판 ${faceW}×${faceH} · 지름 ${clock.d}`);
+  assert.ok(Math.abs((x0 + x1) / 2 - clock.x) <= 1.5 && Math.abs((y0 + y1) / 2 - clock.y) <= 1.5, `배경의 시계판 가운데 ${(x0 + x1) / 2}, ${(y0 + y1) / 2}`);
+  // 얹는 그림 — 진한 점(먹)이 시계판 안쪽에만 있고, 따로 떨어진 덩어리가 13개(점 12 + 바늘과 축 하나 — 숫자 · 긴 눈금이 없음)
+  const ink = await sharp(file(clock.src)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const S = ink.info.width, k = clock.d / S;
+  assert.equal(ink.info.height, S);
+  const solid = (x, y) => ink.data[(y * S + x) * 4 + 3] > 128;
+  const done = new Uint8Array(S * S);
+  let blobs = 0;
+  for (let y = 0; y < S; y += 1) {
+    for (let x = 0; x < S; x += 1) {
+      if (!solid(x, y)) continue;
+      const r = Math.hypot((x + 0.5) * k - clock.d / 2, (y + 0.5) * k - clock.d / 2);
+      assert.ok(r <= clock.d / 2 - 2, `시계판 그림의 먹이 테에 닿습니다(${r.toFixed(1)} / ${clock.d / 2})`);
+      if (done[y * S + x]) continue;
+      blobs += 1;
+      const fill = [[x, y]];
+      while (fill.length) {
+        const [px, py] = fill.pop();
+        if (px < 0 || py < 0 || px >= S || py >= S || done[py * S + px] || !solid(px, py)) continue;
+        done[py * S + px] = 1;
+        fill.push([px + 1, py], [px - 1, py], [px, py + 1], [px, py - 1]);
+      }
+    }
+  }
+  assert.equal(blobs, 13, "점 12개 + 바늘과 축 하나");
 });

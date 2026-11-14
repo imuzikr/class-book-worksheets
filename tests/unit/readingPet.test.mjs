@@ -7,7 +7,7 @@ import {
   PET_ART_READY, petCheerKind, petImageSrc, petImageSrcSet, petProgress, petSpecies, petStageName, pickPetSpecies,
   planPetAction, rankingPet,
 } from "@/lib/readingPet";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { deriveReading, getExpForReadingLevel, initialReadingState } from "@/lib/reading";
 import { createDemoPet } from "@/lib/demoPets";
 
@@ -175,19 +175,25 @@ test("그림 주소 — 파일이 준비된 종만, 알은 늘 '비밀 알'", ()
   assert.equal(petImageSrc("owl", 10, ready), "/reading-pets/owl-10.webp");
   assert.equal(petImageSrc(null, 1, ready), "/reading-pets/egg.webp");
   assert.equal(petImageSrc("owl", 1, ready), "/reading-pets/egg.webp"); // 알 단계는 종을 드러내지 않음
+  // 책 광장 · 아지트만 도트 알 — 카드 · 리더보드 · 독서 맵은 예전 알(선생님 결정). 깨어난 펫은 상관없음
+  assert.equal(petImageSrc(null, 1, ready, { pixelEgg: true }), "/reading-pets/egg-pixel.webp");
+  assert.equal(petImageSrc("owl", 1, ready, { pixelEgg: true }), "/reading-pets/egg-pixel.webp");
+  assert.equal(petImageSrc("owl", 3, ready, { pixelEgg: true }), "/reading-pets/owl-03.webp");
+  assert.equal(petImageSrc(null, 1, new Set(["owl"]), { pixelEgg: true }), null);
   assert.equal(petImageSrc("cat", 4, ready), null);
   assert.equal(petImageSrc("../x", 4, new Set(["../x"])), null);
   // 작은 그림(160px)을 함께 적은 srcset — 자리 크기로 브라우저가 고름
   assert.equal(petImageSrcSet("/reading-pets/owl-03.webp"), "/reading-pets/owl-03-160.webp 160w, /reading-pets/owl-03.webp 640w");
   assert.equal(petImageSrcSet("/reading-pets/egg.webp"), "/reading-pets/egg-160.webp 160w, /reading-pets/egg.webp 640w");
+  assert.equal(petImageSrcSet("/reading-pets/egg-pixel.webp"), "/reading-pets/egg-pixel-160.webp 160w, /reading-pets/egg-pixel.webp 640w");
   assert.equal(petImageSrcSet(null), undefined);
 });
 
-test("그림 파일 — PET_ART_READY에 적은 종은 2~10단계 그림이 두 크기로 다 있음(알은 egg 한 장)", () => {
+test("그림 파일 — PET_ART_READY에 적은 종은 2~10단계 그림이 두 크기로 다 있음(알은 egg · 도트 알 egg-pixel)", () => {
   const dir = new URL("../../public/reading-pets/", import.meta.url);
   const missing = [];
   for (const key of PET_ART_READY) {
-    const names = key === "egg" ? ["egg"] : Array.from({ length: 9 }, (_, i) => `${key}-${String(i + 2).padStart(2, "0")}`);
+    const names = key === "egg" ? ["egg", "egg-pixel"] : Array.from({ length: 9 }, (_, i) => `${key}-${String(i + 2).padStart(2, "0")}`);
     for (const name of names) {
       for (const file of [`${name}.webp`, `${name}-160.webp`]) if (!existsSync(new URL(file, dir))) missing.push(file);
     }
@@ -196,6 +202,11 @@ test("그림 파일 — PET_ART_READY에 적은 종은 2~10단계 그림이 두 
   // 선생님이 주신 그림으로 알과 열 종이 모두 들어갔습니다(2026년 11월)
   assert.ok(PET_ART_READY.has("egg"));
   assert.deepEqual(PET_SPECIES_KEYS.filter((key) => !PET_ART_READY.has(key)), [], "그림이 없는 종");
+  // 두 알은 다른 그림 — 카드 쪽(egg)에 도트 알을 다시 넣으면 카드 · 리더보드 · 독서 맵의 알이 도트가 됩니다(선생님 결정과 어긋남)
+  for (const suffix of ["", "-160"]) {
+    const card = readFileSync(new URL(`egg${suffix}.webp`, dir)), pixel = readFileSync(new URL(`egg-pixel${suffix}.webp`, dir));
+    assert.notDeepEqual(card, pixel, `egg${suffix}.webp와 egg-pixel${suffix}.webp가 같은 그림`);
+  }
 });
 
 test("알 받기 — 처음 한 번만, 받을 때의 경험치가 바탕이 되고 종은 비밀 문서에만", () => {

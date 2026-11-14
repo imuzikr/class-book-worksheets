@@ -1,7 +1,8 @@
 // =============================================================
 // 독서 펫 그림을 앱에 넣을 모양으로 다듬기 — public/reading-pets/
 // -------------------------------------------------------------
-//   node --import ./tests/unit/register.mjs scripts/prepare-pet-art.mjs egg <알 그림>
+//   node --import ./tests/unit/register.mjs scripts/prepare-pet-art.mjs egg <알 그림>          (카드 · 리더보드 · 독서 맵 · 축하 폭죽의 알)
+//   node --import ./tests/unit/register.mjs scripts/prepare-pet-art.mjs egg-pixel <도트 알 그림> (책 광장 · 아지트의 알 — 선생님 결정)
 //   node --import ./tests/unit/register.mjs scripts/prepare-pet-art.mjs <종 열쇠> <2단계 그림> <3단계> … <10단계>   (아홉 장, 단계 차례대로)
 //   (--import는 lib/의 셈 파일들이 확장자 없이 서로를 부르기 때문 — 시험이 쓰는 불러오기 도우미를 붙입니다)
 //
@@ -12,7 +13,7 @@
 //   · 두 크기로 줄여 WebP(품질 85)로 — 640px `{이름}.webp`(자세히 보기 132px · 축하 폭죽 180px)와
 //     160px `{이름}-160.webp`(카드 60px · 순위표 · 독서 맵처럼 작게 여러 장 뜨는 자리).
 //     어느 것을 받을지는 브라우저가 자리 크기로 고릅니다(PetFigure의 srcSet — lib/readingPet.js의 petImageSrcSet).
-// 이름: 알은 egg, 종은 {열쇠}-02 … {열쇠}-10(1단계는 모두가 같이 쓰는 비밀 알 — 종마다 그리지 않음).
+// 이름: 알은 egg(+ 도트 알 egg-pixel), 종은 {열쇠}-02 … {열쇠}-10(1단계는 모두가 같이 쓰는 비밀 알 — 종마다 그리지 않음).
 // 다 넣은 뒤 lib/readingPet.js의 PET_ART_READY에 종 열쇠(또는 "egg")를 더해야 화면에 나옵니다.
 // sharp는 next가 함께 설치합니다(따로 설치 없음).
 // =============================================================
@@ -38,12 +39,12 @@ function fail(message) {
 }
 
 const [key, ...files] = process.argv.slice(2);
-if (!key) fail("사용법: node scripts/prepare-pet-art.mjs egg <알 그림> | <종 열쇠> <2단계 그림> … <10단계 그림>");
+if (!key) fail("사용법: node scripts/prepare-pet-art.mjs egg <알 그림> | egg-pixel <도트 알 그림> | <종 열쇠> <2단계 그림> … <10단계 그림>");
 const stages = PET_STAGE_MAX - PET_HATCH_STAGE + 1; // 2~10단계 — 아홉 장
 let names;
-if (key === "egg") {
+if (key === "egg" || key === "egg-pixel") {
   if (files.length !== 1) fail("알 그림은 한 장이어야 합니다.");
-  names = ["egg"];
+  names = [key];
 } else {
   if (!PET_SPECIES_KEYS.includes(key)) fail(`모르는 종 열쇠예요: ${key} (가능: ${PET_SPECIES_KEYS.join(", ")})`);
   if (files.length !== stages) fail(`${key}: 2~10단계 그림 ${stages}장이 단계 차례대로 있어야 합니다(지금 ${files.length}장).`);
@@ -70,4 +71,4 @@ for (let i = 0; i < files.length; i += 1) {
   }
   console.log(`${names[i]} ← ${path.basename(files[i])} · ${sizes.join(" · ")}`);
 }
-console.log(`\n${OUT}에 넣었습니다. lib/readingPet.js의 PET_ART_READY에 이 열쇠를 더하세요(이미 있으면 그대로): "${key}"`);
+console.log(`\n${OUT}에 넣었습니다. lib/readingPet.js의 PET_ART_READY에 이 열쇠를 더하세요(이미 있으면 그대로): "${key === "egg-pixel" ? "egg" : key}"`);

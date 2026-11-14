@@ -1,7 +1,8 @@
 // =============================================================
 // 도트 그림 묶음(1번 스타일)을 앱에 넣기 — public/reading-hideout · public/reading-plaza
 // -------------------------------------------------------------
-//   node scripts/import-pixel-art.mjs <풀어 둔 도트 묶음 폴더> [<풀어 둔 넓은 러그 묶음 폴더>]
+//   node scripts/import-pixel-art.mjs <풀어 둔 도트 묶음 폴더> [<덧씌울 묶음 폴더> …]
+//   (2026년 11월: node scripts/import-pixel-art.mjs <도트 묶음> <넓은 러그 묶음> <숫자 없는 벽시계 묶음>)
 //
 // 선생님이 주신 묶음(bookbom-pixel-style1 — 두 ZIP을 한 폴더에 풀면 build/png-masters/ 아래에 PNG 원본)을
 // **같은 이름 · 같은 크기의 WebP**로 구워 public/에 넣습니다. 좌표(lib/readingPlazaMap.js · lib/readingHideoutCatalog.js)는
@@ -10,8 +11,11 @@
 //     1.5MB(예전 그림의 6배)였습니다 — 반 전체가 한꺼번에 들어오는 자리라 줄였고, 3배로 키워 견줘도 구별되지 않습니다.
 //   · 투명 그림(아지트 소품 120 · 기본 가구 7 · 빈 선반 4 · 교실 소품): 같은 품질 + 알파는 무손실(alphaQuality 100).
 //     테두리의 투명도가 원본 그대로라, 쉬는 펫이 방석 안에 드는지 보는 시험이 원본과 같은 결과를 냅니다.
-//   · 러그는 넓은 러그 수정본(bookbom-classroom-wide-rug)이 있으면 그것을 씁니다 — 처음 묶음의 러그는 폭이 좁아
-//     학생 · 펫이 서는 자리(책상 옆 ±72 · ±70)가 러그 밖이었습니다.
+//   · 덧씌울 묶음 — 처음 묶음의 몇 장만 다시 그려 보내 준 것(같은 build/png-masters/ 구조). 뒤에 적은 묶음이 앞의 것을
+//     덮고, 처음 묶음에 없는 그림은 받지 않습니다(이름이 틀렸을 수 있어 멈춤). 지금까지 둘입니다:
+//       넓은 러그(bookbom-classroom-wide-rug) — 처음 묶음의 러그는 폭이 좁아 학생 · 펫이 서는 자리(책상 옆 ±72 · ±70)가 러그 밖.
+//       숫자 없는 벽시계(bookbom-numberless-wall-clocks) — 아지트 꾸미기 시계 4종. 처음 묶음의 시계는 굵은 눈금이 로마 숫자 Ⅰ처럼
+//       보였습니다. 교실 벽의 빈 시계판은 이 시계판으로 scripts/prepare-classroom-clock.mjs가 따로 만듭니다.
 // 끝나면 public/reading-hideout/manifest.json의 파일 목록(크기 · SHA-256)을 새로 씁니다 — 시험이 그 값을 봅니다.
 // 펫 성장 그림 · 알은 scripts/prepare-pet-art.mjs로 따로 넣습니다(public/reading-pets).
 // 걷는 그림(sprites/) · 쉬는 펫(pets/)은 묶음에서도 예전 파일 그대로라 건드리지 않습니다.
@@ -28,13 +32,12 @@ const PUBLIC = path.join(ROOT, "public");
 const QUALITY = 88;
 const AREAS = ["reading-hideout", "reading-plaza"];
 
-const [packArg, rugArg] = process.argv.slice(2);
+const [packArg, ...overrideArgs] = process.argv.slice(2);
 if (!packArg) {
-  console.error("사용법: node scripts/import-pixel-art.mjs <풀어 둔 도트 묶음 폴더> [<풀어 둔 넓은 러그 묶음 폴더>]");
+  console.error("사용법: node scripts/import-pixel-art.mjs <풀어 둔 도트 묶음 폴더> [<덧씌울 묶음 폴더> …]");
   process.exit(1);
 }
 const masters = path.resolve(packArg, "build", "png-masters");
-const rugMaster = rugArg ? path.resolve(rugArg, "build", "png-masters", "reading-plaza", "rug.png") : null;
 
 async function walk(dir) {
   const entries = await fs.readdir(dir, { withFileTypes: true }).catch(() => []);
@@ -42,12 +45,21 @@ async function walk(dir) {
   return nested.flat();
 }
 
+// 덧씌울 그림 — 묶음 안의 자리(reading-plaza/rug.png 같은) → 그 묶음의 원본. 뒤에 적은 묶음이 이깁니다.
+const overrides = new Map();
+for (const arg of overrideArgs) {
+  const root = path.resolve(arg, "build", "png-masters");
+  const found = (await walk(root)).filter((f) => f.endsWith(".png")).sort();
+  if (!found.length) throw Error(`덧씌울 PNG 원본이 없어요: ${root}`);
+  for (const file of found) overrides.set(path.relative(root, file).split(path.sep).join("/"), file);
+}
+
 // 1) 무엇을 어디에 — 먼저 모두 확인하고(크기 · 빠진 파일), 하나라도 어긋나면 아무것도 쓰지 않습니다.
 const jobs = [];
 for (const area of AREAS) {
   for (const file of (await walk(path.join(masters, area))).filter((f) => f.endsWith(".png")).sort()) {
     const rel = path.relative(masters, file).split(path.sep).join("/");
-    const source = rel === "reading-plaza/rug.png" && rugMaster ? rugMaster : file;
+    const source = overrides.get(rel) ?? file;
     const target = path.join(PUBLIC, rel.replace(/\.png$/, ".webp"));
     const meta = await sharp(source).metadata();
     const now = await sharp(target).metadata().catch(() => null);
@@ -60,7 +72,8 @@ for (const area of AREAS) {
   }
 }
 if (!jobs.length) throw Error(`PNG 원본이 없어요: ${masters}`);
-if (rugArg && !jobs.some((j) => j.source === rugMaster)) throw Error(`넓은 러그 원본이 없어요: ${rugMaster}`);
+const stray = [...overrides.keys()].filter((rel) => !jobs.some((j) => j.rel === rel));
+if (stray.length) throw Error(`처음 묶음에 없는 덧씌울 그림이에요(이름 · 자리를 확인하세요): ${stray.join(", ")}`);
 
 // 2) 굽기
 let before = 0, after = 0;
@@ -89,6 +102,6 @@ for (const entry of manifest.files) {
 await fs.writeFile(manifestPath, JSON.stringify({ ...manifest, art: "pixel-style-1", files }, null, 2) + "\n");
 
 const mb = (n) => `${(n / 1048576).toFixed(2)}MB`;
-console.log(`${jobs.length}장을 구웠습니다 · ${mb(before)} → ${mb(after)}${rugArg ? " · 러그는 넓은 수정본" : ""}`);
+console.log(`${jobs.length}장을 구웠습니다 · ${mb(before)} → ${mb(after)}${overrides.size ? ` · 덧씌운 그림 ${overrides.size}장(${[...overrides.keys()].join(", ")})` : ""}`);
 for (const area of AREAS) console.log(`  ${area}: ${jobs.filter((j) => j.rel.startsWith(area + "/")).length}장`);
 if (untouched.length) console.warn(`  ! 묶음에 없어 예전 그림 그대로인 아지트 파일 ${untouched.length}개: ${untouched.slice(0, 5).join(", ")}…`);

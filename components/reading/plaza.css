@@ -260,9 +260,10 @@
 @keyframes plaza-warp { from { opacity: .96; } to { opacity: 0; } }
 
 /* 러그와 책상·의자 — 교실 배경에는 없고 자리 좌표대로 따로 놓습니다(PlazaFurniture). 러그가 아래, 책상·의자가 위,
-   캐릭터는 그 위(z 10+). 앉은 캐릭터 위에는 '의자만'의 그림을 한 번 더 그립니다(.plaza-chair). 누름은 통과합니다. */
-.plaza-rug, .plaza-desk-art { position: absolute; display: block; max-width: none; pointer-events: none; user-select: none; }
-.plaza-rug { z-index: 1; }
+   캐릭터는 그 위(z 10+). 앉은 캐릭터 위에는 '의자만'의 그림을 한 번 더 그립니다(.plaza-chair). 누름은 통과합니다.
+   벽시계의 시계판(.plaza-clock)도 배경의 빈 시계판 위에 따로 얹습니다 — 칠판 위 벽이라 캐릭터와 겹치지 않습니다. */
+.plaza-rug, .plaza-desk-art, .plaza-clock { position: absolute; display: block; max-width: none; pointer-events: none; user-select: none; }
+.plaza-rug, .plaza-clock { z-index: 1; }
 .plaza-desk-art { z-index: 4; }
 /* 내 러그 — 러그(보이는 타원)를 두른 살구빛 테. 러그가 곧 내 자리의 범위라(선생님 요청) 어디에 올라서면 되는지 보입니다.
    책상보다 아래 층이라 책상 · 의자에 가린 가운데는 안 보이고 양옆의 귀가 드러납니다. 올라서면 밝아지고, 앉으면 옅어집니다. */

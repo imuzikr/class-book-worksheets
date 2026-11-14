@@ -9,7 +9,7 @@
 //
 // character — { style, number }(lib/readingCharacterCatalog.js의 characterOf)
 // pet       — null(없음) · { species, stage, hatched, ready }. 깨어난 펫은 걷는 그림(단계가 오를수록 크게),
-//             알은 종을 드러내지 않는 공통 알(PetFigure) — 알과 걷는 그림이 없는 펫은 걷는 동안 통통 뜁니다(CSS).
+//             알은 종을 드러내지 않는 공통 알 — 광장에서는 도트 알(PetFigure의 pixelEgg) · 알과 걷는 그림이 없는 펫은 걷는 동안 통통 뜁니다(CSS).
 // 걷는 그림(시트)을 못 받으면 캐릭터는 예전 그림, 펫은 단계 그림으로 섭니다.
 //
 // seat — 교실에서 자리에 앉아 있으면 그 자리(lib/readingPlazaMap.js의 CLASSROOM_SEATS 한 칸), 서 있으면 null.
@@ -82,7 +82,7 @@ const PlazaActor = forwardRef(function PlazaActor({ character, pet = null, name,
           <span className="plaza-avatar-shadow" style={{ width: petBody.body * 0.62, height: petBody.body * 0.2 }} />
           {petSheet
             ? <PlazaSprite ref={petSprite} src={petSheet} size={petBody.cell} style={{ left: -petBody.footX, top: -petBody.footY }} onMissing={() => setPetSpriteMissing(true)} />
-            : <span className="plaza-pet-figure" style={{ left: -petFigure / 2, top: -petFigure * 0.93 }}><PetFigure species={pet.species} stage={pet.stage} ready={pet.ready} size={petFigure} /></span>}
+            : <span className="plaza-pet-figure" style={{ left: -petFigure / 2, top: -petFigure * 0.93 }}><PetFigure species={pet.species} stage={pet.stage} ready={pet.ready} size={petFigure} pixelEgg /></span>}
         </div>
       )}
       <div ref={avatarRef} className={`plaza-avatar${me ? " is-me" : ""}${teacher ? " is-teacher" : ""}${reading ? " is-reading" : ""}${seat ? " is-seated" : ""}${checked ? " is-checked" : ""}`} aria-hidden="true"

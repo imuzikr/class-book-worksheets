@@ -6,6 +6,7 @@
 // 글자 · 단추의 크기는 화면 px 그대로입니다(맵을 줄여도 읽을 수 있게).
 //   · PlazaFurniture — **러그 서른 장과 책상·의자 서른 벌**. 교실 배경에는 책상이 없고(선생님이 주신 분리 그림),
 //     자리 좌표(lib/readingPlazaMap.js의 CLASSROOM_SEATS)대로 여기서 그립니다. 러그가 아래, 책상·의자가 위.
+//     칠판 위 벽시계의 시계판(점 12개 · 10시 10분 바늘 — 도트 배경에는 빈 동그라미)도 여기서 얹습니다(CLASSROOM_CLOCK).
 //   · 학생 — **내 러그**에 살구빛 테(그 러그가 내 자리의 범위 — 선생님 요청)와 책상 위의 '내 자리' 이름표.
 //     러그에 올라서면 테가 밝아지고 책상 위(이름표 자리)에 물음표가 뜹니다. A(또는 물음표를 누름) → [앉기(S) · 취소(C)].
 //     앉아 있으면 A(또는 내 자리를 누름) → [다시 서기(S) · 취소(C)] — 앉은 동안에는 물음표를 띄우지 않습니다(앉은 캐릭터의 머리를 가림).
@@ -16,7 +17,7 @@
 // 어디에 서 있는지 · 무엇을 고르는 중인지는 무대가 정해 넘깁니다(셈은 lib/readingClassroom.js).
 // =============================================================
 import { memo } from "react";
-import { CLASSROOM_BOARD, CLASSROOM_DESK, CLASSROOM_RUG, CLASSROOM_SEATS, PLAZA_H, PLAZA_W } from "@/lib/readingPlazaMap";
+import { CLASSROOM_BOARD, CLASSROOM_CLOCK, CLASSROOM_DESK, CLASSROOM_RUG, CLASSROOM_SEATS, PLAZA_H, PLAZA_W } from "@/lib/readingPlazaMap";
 
 const pct = (value, whole) => `${(value / whole * 100).toFixed(3)}%`;
 const at = (point) => ({ left: pct(point.x, PLAZA_W), top: pct(point.y, PLAZA_H) });
@@ -24,6 +25,9 @@ const at = (point) => ({ left: pct(point.x, PLAZA_W), top: pct(point.y, PLAZA_H)
 export const PlazaFurniture = memo(function PlazaFurniture() {
   return (
     <>
+      {/* 벽시계의 시계판 — 배경의 빈 시계판 위에(그림은 점 · 바늘 · 축만, 크림 바탕은 배경의 것이 비침) */}
+      <img className="plaza-clock" src={CLASSROOM_CLOCK.src} alt="" draggable={false}
+        style={{ left: pct(CLASSROOM_CLOCK.x - CLASSROOM_CLOCK.d / 2, PLAZA_W), top: pct(CLASSROOM_CLOCK.y - CLASSROOM_CLOCK.d / 2, PLAZA_H), width: pct(CLASSROOM_CLOCK.d, PLAZA_W), height: pct(CLASSROOM_CLOCK.d, PLAZA_H) }} />
       {CLASSROOM_SEATS.map((seat) => (
         <img key={`rug-${seat.index}`} className="plaza-rug" src={CLASSROOM_RUG.src} alt="" draggable={false}
           style={{ left: pct(seat.rug.x - CLASSROOM_RUG.w / 2, PLAZA_W), top: pct(seat.rug.y - CLASSROOM_RUG.h / 2, PLAZA_H), width: pct(CLASSROOM_RUG.w, PLAZA_W), height: pct(CLASSROOM_RUG.h, PLAZA_H) }} />

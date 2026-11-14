@@ -3,7 +3,8 @@
 // =============================================================
 // 독서 펫 그림 한 장(lib/readingPet.js)
 // -------------------------------------------------------------
-// 그림 파일(public/reading-pets/{종}-{단계}.webp · egg.webp)이 준비된 종은 그 그림을,
+// 그림 파일(public/reading-pets/{종}-{단계}.webp · egg.webp — 책 광장 · 아지트는 pixelEgg로 도트 알 egg-pixel.webp)이
+// 준비된 종은 그 그림을,
 // 아직 없으면 자리표시를 그립니다 — 알은 그린 알 한 개(종을 드러내지 않음), 깨어난 펫은
 // 옅은 동그라미 안의 동물 그림 문자(단계가 오를수록 커짐). 그림이 오면 PET_ART_READY에
 // 종을 더하는 것만으로 바뀝니다(없는 파일을 학생마다 요청하지 않게).
@@ -45,10 +46,11 @@ export function PetEgg({ ready = false, size = 64 }) {
 
 /**
  * species — 종 열쇠(알이면 null) · stage — 1~10 · ready — 곧 깨어날 알 · size — 한 변(px)
+ * pixelEgg — 알을 도트 알로(책 광장 · 아지트만 — 카드 · 리더보드 · 독서 맵은 예전 알, 선생님 결정)
  */
-export default function PetFigure({ species = null, stage = 1, ready = false, size = 64, className = "" }) {
+export default function PetFigure({ species = null, stage = 1, ready = false, size = 64, className = "", pixelEgg = false }) {
   const egg = !species || stage <= 1;
-  const src = petImageSrc(egg ? null : species, egg ? 1 : stage);
+  const src = petImageSrc(egg ? null : species, egg ? 1 : stage, undefined, { pixelEgg });
   const box = { width: size, height: size };
   if (src) {
     return (

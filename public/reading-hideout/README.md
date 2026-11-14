@@ -8,7 +8,8 @@ PNG 원본을 `scripts/import-pixel-art.mjs`로 **같은 이름 · 같은 크기
 - `items/{종류}/{테마}.webp`: 120개 본품.
 - `helpers/empty-wall-shelf/{테마}.webp`: 실제 배치·상세에서 사용하는 빈 선반.
 - `desk-basic.webp` 등 기본형 일곱 장: 성장 단계와 관계없이 제공하는 기본 방.
-- `pets/rest-{종}.webp`: 열 종의96×96 휴식 전용 도트 그림. 펫은 이 방에서 움직이지 않습니다. 알은 공통 알(`public/reading-pets/egg.webp`)을 씁니다. 도트 묶음에서도 예전 파일 그대로입니다.
+- `pets/rest-{종}.webp`: 열 종의96×96 휴식 전용 도트 그림. 펫은 이 방에서 움직이지 않습니다. 알은 도트 알(`public/reading-pets/egg-pixel.webp` — 카드 · 리더보드 · 독서 맵은 예전 알 `egg.webp`, 선생님 결정)을 씁니다. 쉬는 펫 그림은 도트 묶음에서도 예전 파일 그대로입니다.
+- `items/clock/{테마}.webp`: 꾸미기 벽시계 4종은 **숫자 없는 시계**(작은 점 12개 · 10시 10분 바늘)입니다 — 처음 묶음의 굵은 눈금이 로마 숫자 Ⅰ처럼 보여 다시 그린 수정본(`bookbom-numberless-wall-clocks`)을 덧씌웠습니다. 교실 벽시계의 시계판도 이 그림에서 떠냅니다(`scripts/prepare-classroom-clock.mjs`).
 - `background.webp`: 1536×1024 아지트 배경.
 - `manifest.json`: 각 파일의 크기·SHA-256(`import-pixel-art.mjs`가 새로 씀 — `tests/unit/readingHideoutPetAssets.test.mjs`가 봄).
 
@@ -18,5 +19,5 @@ PNG 원본을 `scripts/import-pixel-art.mjs`로 **같은 이름 · 같은 크기
 
 카탈로그·고정 배치는 `lib/readingHideoutCatalog.js`, 공통 검증은 `lib/readingHideout.js`에 있습니다.
 
-- **그림을 다시 넣을 때**: 두 ZIP을 한 폴더에 풀고 `node scripts/import-pixel-art.mjs <그 폴더> [<넓은 러그 묶음 폴더>]`. 크기가 지금 그림과 다른 파일이 하나라도 있으면 아무것도 쓰지 않고 멈춥니다(배치 · 좌표가 그 크기에 맞춰 있음).
+- **그림을 다시 넣을 때**: 두 ZIP을 한 폴더에 풀고 `node scripts/import-pixel-art.mjs <그 폴더> <넓은 러그 묶음 폴더> <숫자 없는 벽시계 묶음 폴더>`(뒤의 둘은 몇 장만 다시 그린 덧씌울 묶음 — 빼면 처음 묶음의 좁은 러그 · 눈금 있는 시계로 돌아갑니다). 크기가 지금 그림과 다른 파일이 하나라도 있으면 아무것도 쓰지 않고 멈춥니다(배치 · 좌표가 그 크기에 맞춰 있음).
 - 옛 그림(refined-v2)의 `scripts/import-hideout-art.mjs`는 배치(카탈로그)를 다시 만들 때만 씁니다 — 그림까지 예전 것으로 되돌리므로, 돌린 뒤에는 `import-pixel-art.mjs`를 다시 돌리세요.

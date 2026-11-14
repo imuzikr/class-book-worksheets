@@ -358,7 +358,7 @@ function RestingPet({ pet, bed }) {
   if (!placement) return null;
   return <div className={`hideout-pet${egg ? " hideout-pet--egg" : " hideout-pet--resting"}`} data-pet-pose={egg ? "egg" : "rest"} data-resting-pet={egg ? undefined : rest?.species}
     style={{ ...place(placement.x, placement.y, placement.width), aspectRatio: "1", zIndex: 102 + bed.y }} role="img" aria-label={egg ? "창가 방석에서 쉬는 신비한 알" : "창가 방석에 앉아 쉬는 펫"}>
-    {egg ? <PetFigure species={null} stage={1} ready={false} size={placement.width} /> : rest && missing !== rest.src ? <img src={rest.src} alt="" width={rest.cell || 96} height={rest.cell || 96} draggable={false} onError={() => setMissing(rest.src)} />
+    {egg ? <PetFigure species={null} stage={1} ready={false} size={placement.width} pixelEgg /> : rest && missing !== rest.src ? <img src={rest.src} alt="" width={rest.cell || 96} height={rest.cell || 96} draggable={false} onError={() => setMissing(rest.src)} />
       : <PetFigure species={pet.species} stage={pet.stage} ready={false} size={placement.width} />}
   </div>;
 }
