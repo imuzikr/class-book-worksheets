@@ -1,5 +1,8 @@
 // node scripts/import-hideout-art.mjs /path/to/hideout-refined-v2
 // The approved WebP assets are checked in; this command only regenerates the catalog from the source delivery.
+// 주의(2026년 11월): 아지트 그림은 도트 그림(1번 스타일)으로 바꿨고 scripts/import-pixel-art.mjs로 넣습니다.
+// 이 스크립트는 옛 그림(refined-v2)을 함께 복사하므로 그대로 돌리면 그림이 예전 것으로 돌아갑니다 —
+// 배치(lib/readingHideoutCatalog.js)만 다시 만들 때 쓰고, 그 뒤 import-pixel-art.mjs를 다시 돌리세요.
 import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";

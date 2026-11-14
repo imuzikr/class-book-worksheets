@@ -30,10 +30,13 @@
 .hideout-pet > img { width: 100%; height: 100%; display: block; object-fit: contain; image-rendering: pixelated; }
 .hideout-pet .pet-figure { width: 100% !important; height: 100% !important; }
 .hideout-pet .pet-figure > img, .hideout-pet .pet-egg { width: 100%; height: 100%; object-fit: contain; }
-.hideout-return-portal { position: absolute; z-index: 20; transform: translate(-50%, -50%); min-height: 0 !important; border: 0 !important; border-radius: 50% !important; background: transparent !important; padding: 0 !important; overflow: visible; }
-.hideout-return-portal > img { position: absolute; display: block; inset: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+/* 교실로 돌아가는 포털 — 그림(상자)과 누르는 단추(보이는 포털 크기의 타원)를 따로 둡니다(lib/readingHideoutMap.js의 HIDEOUT_RETURN_PORTAL) */
+.hideout-return-portal-art { position: absolute; z-index: 20; transform: translate(-50%, -50%); pointer-events: none; }
+.hideout-return-portal-art > img { position: absolute; display: block; inset: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+/* 도는 빛 — 상자 폭의 절반(도트 포털의 안쪽 청록 소용돌이 안). 예전 그림처럼 상자 폭을 다 쓰면 금테를 덮습니다 */
+.hideout-return-portal-art > .hideout-portal-swirl { inset: auto; left: 25%; top: 50%; width: 50%; height: auto; aspect-ratio: 1; transform: translateY(-50%) scaleY(.5) rotate(0deg); opacity: .92; animation: hideout-portal-spin 7s linear infinite; }
+.hideout-return-portal { position: absolute; z-index: 21; transform: translate(-50%, -50%); min-height: 0 !important; border: 0 !important; border-radius: 50% !important; background: transparent !important; padding: 0 !important; overflow: visible; }
 .hideout-return-portal > span { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); padding: 2px 8px; border-radius: 20px; background: #fffdf4e8; font-size: clamp(8px, .9vw, 12px); white-space: nowrap; pointer-events: none; }
-.hideout-return-portal > .hideout-portal-swirl { inset: auto; left: 0; top: 50%; height: auto; aspect-ratio: 1; transform: translateY(-50%) scaleY(.5) rotate(0deg); opacity: .92; animation: hideout-portal-spin 7s linear infinite; }
 .hideout-walk-marker { position: absolute; z-index: 2; width: 12px; height: 6px; border: 1.5px solid #57795c; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; }
 .hideout-walk-help { font-size: 12px; line-height: 1.7; color: #75816e; margin: 9px 0 18px; }
 .hideout-editor { border: 1px solid var(--hideout-line); border-radius: 14px; padding: 18px; background: #faf9f1; }
@@ -96,5 +99,5 @@
   .hideout-dialog-actions > button { flex: 1 1 auto; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .hideout-return-portal > .hideout-portal-swirl, .hideout-reveal { animation: none; }
+  .hideout-return-portal-art > .hideout-portal-swirl, .hideout-reveal { animation: none; }
 }

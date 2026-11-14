@@ -1,5 +1,8 @@
 # 책 광장 '교실' 그림 만들기 — 선생님이 주신 분리 자료(배경 · 러그 · 책상과 의자 · 포털) → public/reading-plaza/ 의 WebP.
 #
+# 주의(2026년 11월): 광장 · 교실 그림은 도트 그림(1번 스타일)으로 바꿨고 scripts/import-pixel-art.mjs로 넣습니다
+# (의자 앞부분 그림도 묶음에 따로 들어 있음). 이 스크립트는 그 앞의 그림을 만들던 기록입니다 — 다시 돌리면 예전 그림으로 돌아갑니다.
+#
 #   python3 -I scripts/prepare-classroom-art.py <풀어 둔 묶음 폴더> <내보낼 폴더>
 #   (입력: 사용자 제공 bookbom-separated-classroom-rug-assets.zip — maps/ 와 objects/ 폴더)
 #   (출력: 아래 일곱 장 → public/reading-plaza/ 에 넣음)

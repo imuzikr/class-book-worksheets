@@ -242,9 +242,12 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
         data-hideout-slot={prop.category || prop.slot} data-hideout-item={prop.itemId || prop.id} alt="" draggable={false}
         style={{ ...place(prop.x, prop.y, prop.width), zIndex: prop.z }} />)}
       {props.filter((prop) => prop.category === "door-plaque").map((prop) => <span key={`${prop.id}-label`} className="hideout-plaque-label" style={{ left: `${prop.x / HIDEOUT_SCENE.width * 100}%`, top: `${(prop.y - prop.height * .46) / HIDEOUT_SCENE.height * 100}%` }}>{myName}의 아지트</span>)}
-      {onExit && !readOnly && <button type="button" className="hideout-return-portal" style={{ ...place(portal.x, portal.y, portal.width), aspectRatio: `${portal.width}/${portal.height}` }}
+      {/* 그림(상자 152 × 76)과 누르는 단추(보이는 포털 크기 — portal.hit)를 따로 둡니다: 단추가 그림 상자만 하면 포털 옆의 빈 바닥을 눌러도 포털로 걸어갑니다 */}
+      {onExit && !readOnly && <div className="hideout-return-portal-art" aria-hidden="true" style={{ ...place(portal.x, portal.y, portal.width), aspectRatio: `${portal.width}/${portal.height}` }}>
+        <img src={portal.src} alt="" draggable={false} /><img className="hideout-portal-swirl" src={portal.swirl} alt="" draggable={false} />
+      </div>}
+      {onExit && !readOnly && <button type="button" className="hideout-return-portal" style={{ ...place(portal.x, portal.y, portal.hit.width), aspectRatio: `${portal.hit.width}/${portal.hit.height}` }}
         aria-label="포털로 교실 돌아가기" title="포털까지 걸어 교실로 돌아가기" onClick={(e) => { e.stopPropagation(); movement.walkTo({ x: portal.x, y: portal.y }); }} disabled={saving || editing}>
-        <img src="/reading-plaza/portal.webp" alt="" draggable={false} /><img className="hideout-portal-swirl" src="/reading-plaza/portal-swirl.webp" alt="" draggable={false} />
         <span>교실로</span>
       </button>}
       {movement.marker && <span className="hideout-walk-marker" aria-hidden="true" style={{ left: `${movement.marker.x / HIDEOUT_SCENE.width * 100}%`, top: `${movement.marker.y / HIDEOUT_SCENE.height * 100}%` }} />}

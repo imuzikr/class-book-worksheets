@@ -296,9 +296,9 @@ test("길 찾기 — 어디서든 여는 곳까지 이어지고, 걷는 구간�
 test("방향키 걸음 — 막히면 벽을 따라 미끄러진다", () => {
   assert.deepEqual(plazaStep({ x: 700, y: 700 }, 10, 0), { x: 710, y: 700 });
   // 책꽂이 앞에서 위로는 못 가지만 옆으로는 간다
-  const top = { x: 800, y: 200 };
+  const top = { x: 800, y: 220 };
   assert.deepEqual(plazaStep(top, 0, -10), top);
-  assert.deepEqual(plazaStep(top, 10, -10), { x: 810, y: 200 });
+  assert.deepEqual(plazaStep(top, 10, -10), { x: 810, y: 220 });
 });
 
 test("방향키 걸음 — 분수에 막히면 둘레를 돌아 지나간다(처음 자리에서 아래로만 눌러도)", () => {

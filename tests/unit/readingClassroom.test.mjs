@@ -138,8 +138,9 @@ test("포털 — 안쪽에 들어서면 다른 방으로, 건너온 포털의 �
   assert.deepEqual({ x: door.x, y: door.y }, CLASSROOM_PORTAL);
   // 포털은 배경에 그려져 있지 않다 — 그림을 놓을 상자(선생님이 주신 배치 자료의 자리 · 크기)가 따로 있고,
   // 들어서는 타원 · 도는 빛은 그 그림 안에 든다
-  assert.deepEqual(gate.art, { x: 382, y: 826, w: 230, h: 100 });
-  assert.deepEqual(door.art, { x: 1475, y: 858, w: 230, h: 100 });
+  // (도트 포털 — 금테가 고르게 둘러 그림의 가운데가 곧 못의 가운데. 예전 그림은 테가 아래로 두꺼워 3px 아래였음)
+  assert.deepEqual(gate.art, { x: 382, y: 823, w: 230, h: 100 });
+  assert.deepEqual(door.art, { x: 1475, y: 855, w: 230, h: 100 });
   for (const g of [gate, door]) {
     assert.ok(g.rx < g.swirl.rx && g.swirl.rx < g.art.w / 2 && g.ry < g.swirl.ry && g.swirl.ry < g.art.h / 2, g.id);
     assert.ok(g.ring.rx <= g.art.w / 2 && g.ring.ry <= g.art.h / 2, g.id);
@@ -164,8 +165,11 @@ test("포털 — 안쪽에 들어서면 다른 방으로, 건너온 포털의 �
     const ways = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dy]) => plazaClear(at, { x: at.x + dx * 90, y: at.y + dy * 60 }, room));
     assert.ok(ways.length >= 2, `${room.id} 포털에서 나오는 길 ${ways.length}`);
   }
-  // 누르기 — 포털의 금빛 테 안 · 문 그림을 누르면 포털로 걸어간다(그 둘레의 바닥은 아님)
-  assert.equal(plazaPortalClicked(gate.x + 100, gate.y, PLAZA_DOOR_ROOM)?.to, "classroom");
+  // 누르기 — 포털의 금빛 테 안 · 문 그림을 누르면 포털로 걸어간다(그 둘레의 바닥은 아님).
+  // 누르는 범위는 도트 포털의 보이는 크기(가로 77 · 세로 47 — 선생님 요청). 예전 포털(가로 112)이면 포털이던 100px 옆은 이제 바닥
+  assert.equal(plazaPortalClicked(gate.x + 70, gate.y, PLAZA_DOOR_ROOM)?.to, "classroom");
+  assert.equal(plazaPortalClicked(gate.x, gate.y - 40, PLAZA_DOOR_ROOM)?.to, "classroom", "위쪽 손잡이");
+  assert.equal(plazaPortalClicked(gate.x + 100, gate.y, PLAZA_DOOR_ROOM), null);
   assert.equal(plazaPortalClicked(180, 740, PLAZA_DOOR_ROOM)?.to, "classroom", "문 그림");
   assert.equal(plazaPortalClicked(gate.x + 140, gate.y, PLAZA_DOOR_ROOM), null);
   assert.equal(plazaPortalClicked(gate.x, gate.y - 70, PLAZA_DOOR_ROOM), null);
@@ -186,10 +190,10 @@ test("교실 — 책상 30개가 자리표의 30자리와 같은 차례(6칸 × 
   for (let i = 1; i < 6; i += 1) assert.ok(CLASSROOM_SEATS[i].desk.x > CLASSROOM_SEATS[i - 1].desk.x);
   for (let r = 1; r < 5; r += 1) assert.ok(CLASSROOM_SEATS[r * 6].desk.y > CLASSROOM_SEATS[(r - 1) * 6].desk.y);
   // 선생님이 주신 배치 자료의 값 — 첫 자리 · 끝 자리의 러그 가운데와 책상·의자 그림의 상자
-  assert.deepEqual(CLASSROOM_SEATS[0].rug, { x: 355, y: 339 });
-  assert.deepEqual(CLASSROOM_SEATS[29].rug, { x: 1332, y: 704 });
-  assert.deepEqual(CLASSROOM_SEATS[0].box, [310, 280, 400, 358]);
-  assert.deepEqual(CLASSROOM_SEATS[29].box, [1287, 645, 1377, 723]);
+  assert.deepEqual(CLASSROOM_SEATS[0].rug, { x: 355, y: 369 });
+  assert.deepEqual(CLASSROOM_SEATS[29].rug, { x: 1332, y: 734 });
+  assert.deepEqual(CLASSROOM_SEATS[0].box, [310, 310, 400, 388]);
+  assert.deepEqual(CLASSROOM_SEATS[29].box, [1287, 675, 1377, 753]);
   // 책상이 한 줄씩 — 가로 간격이 고르다(두 칸씩 짝지은 묶음이 아님)
   const gaps = [1, 2, 3, 4, 5].map((i) => CLASSROOM_SEATS[i].rug.x - CLASSROOM_SEATS[i - 1].rug.x);
   assert.ok(Math.max(...gaps) - Math.min(...gaps) <= 12, `가로 간격 ${gaps}`);
@@ -257,7 +261,7 @@ test("교실 — 책상 줄은 못 가고, 자리마다 양옆의 러그 귀(서
     assert.ok(seat.mark.x === seat.rug.x && seat.mark.y > seat.desk.y && seat.mark.y <= seat.chair[1], tag);
   }
   // 책상 줄 사이의 복도(한가운데 · 러그의 귀) · 칠판 앞 · 교실 뒤쪽 · 양쪽 벽 옆은 다닌다
-  for (const [x, y] of [[452, 400], [649, 400], [1044, 500], [836, 252], [836, 800], [260, 500], [1450, 500], [410, 339], [300, 339]]) assert.equal(plazaWalkable(x, y, room), true, `${x},${y}`);
+  for (const [x, y] of [[452, 400], [649, 400], [1044, 500], [836, 292], [836, 800], [260, 500], [1450, 500], [410, 369], [300, 369]]) assert.equal(plazaWalkable(x, y, room), true, `${x},${y}`);
   // 교탁 · 책장 · 벽 · 창가의 책장 · 열린 문은 못 간다
   for (const [x, y] of [[300, 220], [1300, 200], [836, 150], [60, 500], [1640, 760], [1660, 400]]) assert.equal(plazaWalkable(x, y, room), false, `${x},${y}`);
   assert.equal(reach(room.spawn, CLASSROOM_PORTAL, room), true);
@@ -291,7 +295,7 @@ test("교실 — 칠판 앞(선생님이 출석을 시작하는 자리)", () => 
     assert.equal(reach(room.spawn, stand, room), true, `x ${x}`);
   }
   // 물음표는 선생님이 선 곳 위(칠판 가로 안에서) — 선생님의 머리(이름표)보다 위
-  const mark = classroomBoardMark({ x: 836, y: 252 });
+  const mark = classroomBoardMark({ x: 836, y: 292 });
   assert.ok(Math.abs(mark.x - 836) <= 30 && mark.y === CLASSROOM_BOARD.markY);
   assert.ok(CLASSROOM_BOARD.markY < CLASSROOM_BOARD.standY - 88 - 20, "서 있는 캐릭터의 이름표보다 위");
   assert.ok(classroomBoardMark({ x: 100 }).x >= CLASSROOM_BOARD.rect[0] && classroomBoardMark({ x: 1600 }).x <= CLASSROOM_BOARD.rect[2]);
@@ -329,7 +333,8 @@ test("러그 위인가 — 내 자리의 러그에 올라서야 하고, 복도 �
   // 러그의 가장자리 — 살짝 밟아도 올라선 것(여유), 그보다 밖은 아님
   assert.equal(classroomNearSeat({ x: mine.rug.x + CLASSROOM_RUG.rx + CLASSROOM_RUG_REACH - 1, y: mine.rug.y }, 8), true);
   assert.equal(classroomNearSeat({ x: mine.rug.x + CLASSROOM_RUG.rx + CLASSROOM_RUG_REACH + 3, y: mine.rug.y }, 8), false);
-  assert.equal(classroomNearSeat({ x: mine.rug.x + 60, y: mine.rug.y + 30 }, 8), true, "귀의 아래쪽");
+  // (도트 러그의 보이는 반지름은 83 × 34 — 예전 러그보다 세로가 2px 얇아 귀의 아래쪽 점도 그만큼 올림)
+  assert.equal(classroomNearSeat({ x: mine.rug.x + 60, y: mine.rug.y + 28 }, 8), true, "귀의 아래쪽");
   assert.equal(classroomNearSeat({ x: mine.rug.x + 60, y: mine.rug.y + 37 }, 8), false, "러그 밖(뒷줄과의 사이)");
   // 복도 한가운데(옆 자리와의 사이)는 어느 러그도 아니다
   const aisle = { x: (mine.rug.x + CLASSROOM_SEATS[9].rug.x) / 2, y: mine.rug.y };
@@ -374,9 +379,9 @@ test("A를 누르면 — 학생: 내 책상 옆이면 앉기 · 앉아 있으면
   // 자리표에 없는 학생
   assert.deepEqual(classroomAct({ point: mine.stand, seat: null, sitting: null }), { kind: "noseat" });
   // 학생은 칠판 앞에서도 출석을 시작하지 못한다
-  assert.equal(classroomAct({ point: { x: 836, y: 252 }, seat: 8, sitting: null }).kind, "far");
+  assert.equal(classroomAct({ point: { x: 836, y: 292 }, seat: 8, sitting: null }).kind, "far");
   // 선생님 — 칠판 앞에서만, 책상 옆에서는 앉지 않는다
-  assert.deepEqual(classroomAct({ teacher: true, point: { x: 836, y: 252 } }), { kind: "board" });
+  assert.deepEqual(classroomAct({ teacher: true, point: { x: 836, y: 292 } }), { kind: "board" });
   assert.deepEqual(classroomAct({ teacher: true, point: mine.stand, seat: 8 }), { kind: "far" });
   assert.deepEqual(classroomAct({ teacher: true, point: CLASSROOM_ROOM.spawn }), { kind: "far" });
 });
