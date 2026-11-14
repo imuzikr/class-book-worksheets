@@ -38,7 +38,7 @@ test("펫 먹이 스위치 — 학생 펫이 켜진 반에서 켠 것만(기본 
   assert.equal(petCareRules({ readingEnabled: true, petFeedFrom: at("2026-11-01") }).on, false);
 });
 
-test("반 설정 → 규칙 — 켠 날 · 주말(값이 없으면 쉼) · 기간(틀린 줄은 버림 · 시작일 차례)", () => {
+test("반 설정 → 규칙 — 켠 날 · 기간(틀린 줄은 버림 · 시작일 차례) · 주말 칸은 없음", () => {
   const rules = careRules({
     petFeedFrom: at("2026-11-01"),
     petRests: [
@@ -51,34 +51,37 @@ test("반 설정 → 규칙 — 켠 날 · 주말(값이 없으면 쉼) · 기�
     ],
   });
   assert.equal(rules.from, "2026-11-01");
-  assert.equal(rules.weekend, true);
+  // 주말에도 줄어듭니다(선생님 결정) — 규칙에 주말 칸이 없고, 반 문서에 남은 옛 칸(petRestWeekend)은 읽지 않음
+  assert.equal("weekend" in rules, false);
+  assert.equal("weekend" in careRules({ petRestWeekend: true }), false);
   assert.deepEqual(rules.rests, [
     { kind: "other", from: "2026-11-25", to: "2026-11-25" },
     { kind: "exam", from: "2026-12-08", to: "2026-12-11" },
     { kind: "vacation", from: "2026-12-24", to: "2027-02-01", note: "겨울 방학" },
   ]);
-  assert.equal(careRules({ petRestWeekend: false }).weekend, false);
   assert.equal(careRules({}).from, null);
   assert.equal(normalizeCareRests(Array.from({ length: 30 }, () => ({ kind: "other", from: "2026-11-25", to: "2026-11-25" }))).length, CARE_RESTS_MAX);
   assert.deepEqual(normalizeCareRests("x"), []);
 });
 
-test("쉬는 날 — 주말(쉬게 한 반) · 선생님이 넣은 기간", () => {
+test("쉬는 날 — 선생님이 넣은 기간뿐(주말도 줄어듦 — 선생님 결정)", () => {
   const rules = rulesFrom("2026-11-01", { petRests: [{ kind: "exam", from: "2026-11-10", to: "2026-11-11" }] });
-  assert.equal(isCareRestDay("2026-11-07", rules), true);  // 토
-  assert.equal(isCareRestDay("2026-11-08", rules), true);  // 일
+  assert.equal(isCareRestDay("2026-11-07", rules), false); // 토
+  assert.equal(isCareRestDay("2026-11-08", rules), false); // 일
   assert.equal(isCareRestDay("2026-11-09", rules), false); // 월
   assert.equal(isCareRestDay("2026-11-10", rules), true);
   assert.equal(isCareRestDay("2026-11-11", rules), true);
   assert.equal(isCareRestDay("2026-11-12", rules), false);
   assert.equal(careRestOf("2026-11-10", rules).kind, "exam");
   assert.equal(careRestOf("2026-11-07", rules), null);
-  const every = rulesFrom("2026-11-01", { petRestWeekend: false });
-  assert.equal(isCareRestDay("2026-11-07", every), false);
-  assert.equal(isCareRestDay("bad", every), false);
+  // 한때 '주말에는 줄지 않아요'(petRestWeekend)를 켜 둔 반 — 그 값이 반 문서에 남아 있어도 주말은 쉬지 않음
+  const old = rulesFrom("2026-11-01", { petRestWeekend: true });
+  assert.equal(isCareRestDay("2026-11-07", old), false);
+  assert.equal(isCareRestDay("2026-11-08", old), false);
+  assert.equal(isCareRestDay("bad", old), false);
 });
 
-test("매일 10씩 줄어듦 — 켠 날은 세지 않고, 그날이 끝나야 줄며, 주말은 쉼", () => {
+test("매일 10씩 줄어듦 — 켠 날은 세지 않고, 그날이 끝나야 줄며, 주말에도 줄어듦", () => {
   const rules = rulesFrom("2026-11-01"); // 일요일에 켬
   const p = pet();
   assert.equal(careStatus(p, rules, "2026-11-01", 3).full, 100);
@@ -86,16 +89,18 @@ test("매일 10씩 줄어듦 — 켠 날은 세지 않고, 그날이 끝나야 �
   assert.equal(careStatus(p, rules, "2026-11-03", 3).full, 90);  // 월요일이 끝남
   assert.equal(careStatus(p, rules, "2026-11-06", 3).full, 60);
   assert.equal(careStatus(p, rules, "2026-11-07", 3).full, 50);  // 금요일이 끝남
-  assert.equal(careStatus(p, rules, "2026-11-09", 3).full, 50);  // 주말은 그대로
+  assert.equal(careStatus(p, rules, "2026-11-08", 3).full, 40);  // 토요일도 줄어듦(선생님 결정 — '매일 -10')
+  assert.equal(careStatus(p, rules, "2026-11-09", 3).full, 30);  // 일요일도 — 11-02(월)부터 11-08(일)까지 이레
   const s = careStatus(p, rules, "2026-11-10", 3);
-  assert.equal(s.full, 40);
-  assert.equal(s.hungry, false);
-  assert.equal(s.daysLeft, 4);
-  assert.equal(s.room, 6);
+  assert.equal(s.full, 20);
+  assert.equal(s.hungry, true);
+  assert.equal(s.daysLeft, 2);
+  assert.equal(s.room, 8);
+  assert.equal(s.restToday, false);
   // 단계와 상관없이 같은 빠르기
-  assert.equal(careStatus(p, rules, "2026-11-10", 10).full, 40);
-  // 주말에도 줄게 한 반 — 11-02(월)부터 11-08(일)까지 이레
-  assert.equal(careStatus(p, rulesFrom("2026-11-01", { petRestWeekend: false }), "2026-11-09", 3).full, 30);
+  assert.equal(careStatus(p, rules, "2026-11-10", 10).full, 20);
+  // 한때 '주말에는 줄지 않아요'를 켜 둔 반(옛 값이 남아 있음)도 같음
+  assert.equal(careStatus(p, rulesFrom("2026-11-01", { petRestWeekend: true }), "2026-11-09", 3).full, 30);
 });
 
 test("알도 날마다 줄어듦 — 알을 받은 날이 켠 날보다 뒤면 받은 날부터", () => {
@@ -109,18 +114,19 @@ test("알도 날마다 줄어듦 — 알을 받은 날이 켠 날보다 뒤면 �
 test("30 이하면 배고픔, 10 이하면 오늘이 고비, 0이면 떠남(떠난 날)", () => {
   const rules = rulesFrom("2026-11-01");
   const p = pet();
-  assert.equal(careStatus(p, rules, "2026-11-11", 3).full, 30);
-  assert.equal(careStatus(p, rules, "2026-11-11", 3).hungry, true);
-  assert.equal(careStatus(p, rules, "2026-11-11", 3).low, false);
-  const last = careStatus(p, rules, "2026-11-13", 3);
+  // 11-02(월)부터 주말 없이 날마다 — 11-09에 30 · 11-11에 10 · 11-11이 끝나면 0
+  assert.equal(careStatus(p, rules, "2026-11-09", 3).full, 30);
+  assert.equal(careStatus(p, rules, "2026-11-09", 3).hungry, true);
+  assert.equal(careStatus(p, rules, "2026-11-09", 3).low, false);
+  const last = careStatus(p, rules, "2026-11-11", 3);
   assert.deepEqual([last.full, last.hungry, last.low, last.away], [10, true, true, false]);
-  const gone = careStatus(p, rules, "2026-11-14", 3);
-  assert.deepEqual([gone.full, gone.hungry, gone.away, gone.awayOn, gone.room], [0, false, true, "2026-11-14", 0]);
+  const gone = careStatus(p, rules, "2026-11-12", 3);
+  assert.deepEqual([gone.full, gone.hungry, gone.away, gone.awayOn, gone.room], [0, false, true, "2026-11-12", 0]);
   assert.deepEqual(gone.steps, { need: 3, done: 0, days: 0, fruit: 0 });
   // 한참 뒤에 봐도 떠난 날은 그대로
-  assert.equal(careStatus(p, rules, "2027-03-02", 3).awayOn, "2026-11-14");
-  assert.equal(careAway(p, rules, "2026-11-14"), true);
-  assert.equal(careAway(p, rules, "2026-11-13"), false);
+  assert.equal(careStatus(p, rules, "2027-03-02", 3).awayOn, "2026-11-12");
+  assert.equal(careAway(p, rules, "2026-11-12"), true);
+  assert.equal(careAway(p, rules, "2026-11-11"), false);
 });
 
 test("쉬는 기간에는 줄지 않음 — 방학 내내 그대로, 끝난 다음 날부터", () => {
@@ -152,12 +158,12 @@ test("옛 반(다시 켤 때 켠 때를 새로 적던 때) — 켠 때 앞의 �
   assert.equal(careStatus(p, rules, "2026-12-16", 3).full, 30);
 });
 
-// 11-02(월) 처음 켬 · 11-09(월) 15시 끔 · 11-23(월) 10시 다시 켬 — 주말에도 줄게 해 요일과 상관없이
-const paused = (extra = {}) => careRules({ petFeedFrom: at("2026-11-02"), petRestWeekend: false,
+// 11-02(월) 처음 켬 · 11-09(월) 15시 끔 · 11-23(월) 10시 다시 켬 — 주말에도 줄어 요일과 상관없이
+const paused = (extra = {}) => careRules({ petFeedFrom: at("2026-11-02"),
   petFeedOffAt: Date.parse("2026-11-09T15:00:00+09:00"), petFeedOnAt: Date.parse("2026-11-23T10:00:00+09:00"), ...extra }, true);
 
 test("껐다 다시 켜면 — 끈 순간의 배부름에서 그대로 이어짐(꺼 둔 날 · 끈 날 · 다시 켠 날은 세지 않음 — 선생님 결정)", () => {
-  const atOff = careRules({ petFeedFrom: at("2026-11-02"), petRestWeekend: false }, true);
+  const atOff = careRules({ petFeedFrom: at("2026-11-02") }, true);
   const cases = [
     // [펫, 끄던 순간(11-09)에 보이던 값, 다시 켠 날(11-23) · 이틀 뒤(11-25)]
     ["기록 없음", pet(), 40, 40, 30],                                          // 11-03 ~ 11-08 엿새 → 40
@@ -203,7 +209,7 @@ test("쉰 기간 — 지난 목록(petFeedPauses) + 지난번(petFeedOffAt ~ pet
     [false, true, true, false, true, false, false]);
   // 쉰 기간이 여럿이어도 — 9월 2일까지 적힌 뒤 손 놓은 펫은 두 쉰 기간을 빼고 셈(주말에도 줆)
   const old = pet({ care: { full: 100, day: "2026-09-02" } });
-  const r = careRules({ ...doc, petRestWeekend: false }, true);
+  const r = careRules(doc, true);
   // 9-03 ~ 9-09 이레 → 30, 9-21 → 20, 9-22 → 10, 9-23 → 0 → 9-24부터 떠남(쉰 기간이 없었다면 9-12에 떠남)
   assert.equal(careStatus(old, r, "2026-09-23", 3).full, 10);
   assert.equal(careStatus(old, r, "2026-09-24", 3).awayOn, "2026-09-24");
@@ -237,8 +243,13 @@ test("읽은 날에는 줄지 않음(유지) — 다시 차지는 않음", () =>
   assert.equal(undone.care.kept, null);
   // 읽지 않은 날의 저장(책 등록 등)은 아무것도 안 바꿈
   assert.deepEqual(planCareReadDay({ mirror: pet(), rules, today: "2026-11-04", stage: 3, ok: false }), { care: null, event: null });
-  // 쉬는 날에는 어차피 안 줄어 적지 않음
-  assert.deepEqual(planCareReadDay({ mirror: pet(), rules, today: "2026-11-07", stage: 3, ok: true }), { care: null, event: null });
+  // 주말에 읽어도 '읽은 날' — 주말에도 줄어드니까(11-02 ~ 11-06 닷새 → 50, 토요일은 유지)
+  const sat = planCareReadDay({ mirror: pet(), rules, today: "2026-11-07", stage: 3, ok: true });
+  assert.equal(sat.event, "kept");
+  assert.deepEqual(sat.care, { full: 50, day: "2026-11-06", kept: "2026-11-07", away: null, back: 0, fed: null });
+  // 쉬는 기간(선생님이 넣은 시험 기간)에는 어차피 안 줄어 적지 않음
+  const exam = rulesFrom("2026-11-01", { petRests: [{ kind: "exam", from: "2026-11-07", to: "2026-11-08" }] });
+  assert.deepEqual(planCareReadDay({ mirror: pet(), rules: exam, today: "2026-11-07", stage: 3, ok: true }), { care: null, event: null });
   // 펫 먹이를 끈 반
   assert.deepEqual(planCareReadDay({ mirror: pet(), rules: careRules({}, false), today: "2026-11-04", ok: true }), { care: null, event: null });
 });
@@ -246,23 +257,29 @@ test("읽은 날에는 줄지 않음(유지) — 다시 차지는 않음", () =>
 test("날마다 읽으면 과일 없이도 그대로 — 읽은 날을 이어 가도 지난 '읽은 날'을 잃지 않음", () => {
   const rules = rulesFrom("2026-11-01");
   let p = pet();
-  for (const day of ["2026-11-02", "2026-11-03", "2026-11-04", "2026-11-05", "2026-11-06", "2026-11-09", "2026-11-10"]) {
+  for (const day of ["2026-11-02", "2026-11-03", "2026-11-04", "2026-11-05", "2026-11-06", "2026-11-07", "2026-11-08", "2026-11-09", "2026-11-10"]) {
     const plan = planCareReadDay({ mirror: p, rules, today: day, stage: 3, ok: true });
     assert.equal(plan.event, "kept", day);
     p = pet({ care: plan.care });
   }
   assert.equal(careStatus(p, rules, "2026-11-11", 3).full, 100);
+  // 평일에만 읽은 학생 — 주말 이틀(11-07 · 11-08)은 줄어 80(주말에도 줄어듦 — 선생님 결정)
+  let weekdays = pet();
+  for (const day of ["2026-11-02", "2026-11-03", "2026-11-04", "2026-11-05", "2026-11-06", "2026-11-09", "2026-11-10"]) {
+    weekdays = pet({ care: planCareReadDay({ mirror: weekdays, rules, today: day, stage: 3, ok: true }).care });
+  }
+  assert.equal(careStatus(weekdays, rules, "2026-11-11", 3).full, 80);
 });
 
 test("먹이 주기 — 과일 1개에 +10, 100까지만, 알 · 떠난 펫 · 배부른 펫은 안 먹음", () => {
   const rules = rulesFrom("2026-11-01");
   const one = planCareFeed({ mirror: pet(), rules, today: "2026-11-10", stage: 3, fruits: 5, want: 1, now: 1234 });
   assert.equal(one.used, 1);
-  assert.deepEqual(one.care, { full: 50, day: "2026-11-09", kept: null, away: null, back: 0, fed: 1234 });
+  assert.deepEqual(one.care, { full: 30, day: "2026-11-09", kept: null, away: null, back: 0, fed: 1234 }); // 11-02 ~ 11-09 여드레 → 20 + 10
   // 여러 개 — 가진 과일 · 빈 자리 안에서
   assert.equal(planCareFeed({ mirror: pet(), rules, today: "2026-11-10", stage: 3, fruits: 2, want: 9 }).used, 2);
   const fill = planCareFeed({ mirror: pet(), rules, today: "2026-11-10", stage: 3, fruits: 50, want: 50 });
-  assert.equal(fill.used, 6);
+  assert.equal(fill.used, 8);
   assert.equal(fill.care.full, 100);
   // 먹인 뒤에도 그날의 '읽은 날' 표시는 그대로
   const kept = pet({ care: { full: 30, day: "2026-11-09", kept: "2026-11-10" } });
@@ -291,7 +308,7 @@ test("다시 부르기 — 읽은 날이 한 걸음, 걸음을 채우면 배부�
   assert.equal(careStatus(p, rules, "2026-11-16", 3).away, true);
   const first = planCareReadDay({ mirror: p, rules, today: "2026-11-16", stage: 3, ok: true });
   assert.equal(first.event, "step");
-  assert.deepEqual(first.care.away, { on: "2026-11-14", days: ["2026-11-16"], fruit: 0 });
+  assert.deepEqual(first.care.away, { on: "2026-11-12", days: ["2026-11-16"], fruit: 0 });
   p = pet({ care: first.care });
   // 같은 날 또 저장해도 한 걸음
   assert.deepEqual(planCareReadDay({ mirror: p, rules, today: "2026-11-16", stage: 3, ok: true }), { care: null, event: null });
@@ -308,9 +325,10 @@ test("다시 부르기 — 읽은 날이 한 걸음, 걸음을 채우면 배부�
   assert.equal(p.species, "owl"); // 같은 펫
   assert.equal(careStatus(p, rules, "2026-11-19", 3).full, 60); // 돌아온 날은 세지 않고, 그날 읽었으니 유지
   assert.equal(careStatus(p, rules, "2026-11-20", 3).full, 50);
-  // 쉬는 날(주말)에 읽어도 걸음이 됨
-  const weekend = planCareReadDay({ mirror: pet(), rules, today: "2026-11-21", stage: 3, ok: true });
-  assert.equal(weekend.event, "step");
+  // 주말(11-21 토)에 읽어도 · 쉬는 기간(방학)에 읽어도 걸음이 됨
+  assert.equal(planCareReadDay({ mirror: pet(), rules, today: "2026-11-21", stage: 3, ok: true }).event, "step");
+  const vacation = rulesFrom("2026-11-01", { petRests: [{ kind: "vacation", from: "2026-11-20", to: "2026-11-30" }] });
+  assert.equal(planCareReadDay({ mirror: pet(), rules: vacation, today: "2026-11-23", stage: 3, ok: true }).event, "step");
 });
 
 test("다시 부르기 — 과일 2개로 한 걸음, 단계가 높을수록 걸음이 더 듦", () => {
@@ -392,8 +410,8 @@ test("순위 장에 적어 둘 care — 보낼 때 반 설정 · 날짜로 '떠�
   const rules = rulesFrom("2026-11-01");
   const seed = careSeed(pet());
   assert.deepEqual(seed, { joined: null, assignedAt: at("2026-09-01"), care: null });
-  assert.equal(careAway(seed, rules, "2026-11-13"), false);
-  assert.equal(careAway(seed, rules, "2026-11-14"), true);
+  assert.equal(careAway(seed, rules, "2026-11-11"), false);
+  assert.equal(careAway(seed, rules, "2026-11-12"), true);
   const away = careSeed(pet({ care: { full: 0, day: "2026-11-13", kept: null, away: { on: "2026-11-14", days: ["2026-11-16"], fruit: 1 } } }));
   assert.deepEqual(away.care, { full: 0, day: "2026-11-13", kept: null, away: { on: "2026-11-14" } });
   assert.equal(careAway(away, rules, "2026-11-17"), true);
@@ -426,8 +444,8 @@ test("반에 들어온 날부터 셈 — 미리 만들어 둔 반에 나중에 �
   assert.equal(careRulesFor(rulesFrom("2026-09-01"), 0).from, "2026-09-01");
   assert.equal(careRulesFor(null, ms), null);
   assert.equal(petCareRules({ readingEnabled: true, petFeedEnabled: true, ...cls }, ms).from, "2026-11-10");
-  // 주말 · 기간 같은 다른 칸은 그대로
-  const base = rulesFrom("2026-09-01", { petRestWeekend: false, petRests: [{ kind: "exam", from: "2026-12-08", to: "2026-12-11" }] });
+  // 쉬는 기간 · 꺼 둔 기간 같은 다른 칸은 그대로
+  const base = rulesFrom("2026-09-01", { petRests: [{ kind: "exam", from: "2026-12-08", to: "2026-12-11" }] });
   assert.deepEqual({ ...careRulesFor(base, ms), from: null }, { ...base, from: null });
 
   // 다른 반에서 옮겨 온 학생의 펫(care 없음 · 9월에 받음) — 들어온 날을 안 보면 들어오자마자 떠나 있음
@@ -514,7 +532,7 @@ test("꺼 둔 기간 목록이 넘치면 — 가장 오래된 두 줄을 합침(
 
 test("검토에서 찾은 일 — 방학 두 달을 꺼 둔 뒤 껐다 켜기를 42번 해도, 그동안 갱신되지 않은 펫의 배부름이 그대로", () => {
   const KST = (s) => Date.parse(s + "+09:00");
-  let doc = { readingEnabled: true, petEnabled: true, petFeedEnabled: true, petFeedFrom: KST("2026-09-01T09:00:00"), petRestWeekend: true };
+  let doc = { readingEnabled: true, petEnabled: true, petFeedEnabled: true, petFeedFrom: KST("2026-09-01T09:00:00") };
   const toggle = (on, at) => {
     const patch = { petFeedEnabled: on };
     const extra = petFeedTimesPatch(doc, patch, { stamp: () => at, remove: () => undefined });
@@ -524,8 +542,9 @@ test("검토에서 찾은 일 — 방학 두 달을 꺼 둔 뒤 껐다 켜기를
   // 9월 1일에 배부름 100으로 적힌 뒤로 갱신이 없는 펫(방학 내내 읽지도 먹이를 받지도 않은 학생)
   const pet = normalizePetMirror({ species: "owl", baseXp: 0, assignedAt: KST("2026-08-20T09:00:00"), hatchedAt: KST("2026-08-25T09:00:00"), care: { full: 100, day: "2026-09-01" } });
   const fullNow = () => careStatus(pet, careRules(doc, true), "2026-11-03", 3);
+  // 9월 2일에 끄고 11월 2일(월) 아침에 다시 켬 — 사이에 켜 있던 날이 없음(주말에도 줄어드니, 켜 있던 날이 끼면 그만큼 줆)
   toggle(false, KST("2026-09-02T10:00:00"));
-  toggle(true, KST("2026-10-30T10:00:00"));
+  toggle(true, KST("2026-11-02T09:00:00"));
   // 11월 2일(월) 하루에 껐다 켜기를 거듭 — 한때 42번째로 끄는 순간 두 달 기록이 지워져 배부름 100 → 0 · 떠남.
   // 배부름은 펫 먹이가 켜져 있을 때만 셈하므로 다시 켤 때마다 봅니다(끈 날 · 다시 켠 날인 11월 2일은 세지 않아 100)
   let t = KST("2026-11-02T10:00:00");

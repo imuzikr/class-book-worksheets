@@ -57,18 +57,13 @@
 @container admset (max-width: 420px) { .adm-map-options { grid-template-columns: minmax(0, 1fr); } }
 @media (prefers-reduced-motion: reduce) { .adm-map-option { transition: none; } }
 
-/* ── 펫 먹이의 '배고파지지 않는 날'(components/PetRestSettings.jsx) — 주말 · 방학 · 시험 기간 · 기타의 기간 ── */
+/* ── 펫 먹이의 '배고파지지 않는 날'(components/PetRestSettings.jsx) — 방학 · 시험 기간 · 기타의 기간(주말은 줄어듦 · 선생님 결정) ── */
 .adm-ask-fruit { font-size: 28px; line-height: 1; }
 .adm-rest-group.is-off { opacity: .6; }
 .adm-rest { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
 .adm-rest-hint, .adm-rest-foot { margin: 0; font-size: 12px; line-height: 1.5; color: var(--text-sub); word-break: keep-all; }
 .adm-rest-hint strong { color: var(--primary-dark); font-weight: 600; }
 .adm-rest-foot { color: var(--text-faint); }
-.adm-rest-weekend { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: #fff; cursor: pointer; }
-.adm-rest-weekend input { margin: 2px 0 0; width: 17px; height: 17px; flex-shrink: 0; accent-color: var(--primary); }
-.adm-rest-weekend span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.adm-rest-weekend strong { font-size: 14px; color: var(--dark); }
-.adm-rest-weekend small { font-size: 12px; color: var(--text-faint); line-height: 1.45; word-break: keep-all; }
 .adm-rest-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .adm-rest-row { display: grid; grid-template-columns: 104px auto minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: #fff; }
 .adm-rest-row.is-bad { border-color: #e2a39b; }

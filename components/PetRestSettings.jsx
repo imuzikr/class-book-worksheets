@@ -3,8 +3,9 @@
 // 관리자 설정 — 펫 먹이의 '배고파지지 않는 날' (선생님 요청)
 // -------------------------------------------------------------
 // 펫의 배부름은 날마다 10씩 줄어듭니다(lib/petCare.js). 방학 · 시험 기간 · 기타(명절 · 예외적인 연휴)를
-// **셀지 말지는 선생님이 여기서 정합니다** — 기간을 넣어 두면 그 날들은 줄지 않습니다. 주말도 스위치 하나로
-// 쉬게 하거나 세게 합니다(끄지 않았으면 쉼).
+// **셀지 말지는 선생님이 여기서 정합니다** — 기간을 넣어 두면 그 날들은 줄지 않습니다.
+// **주말에도 줄어듭니다**(선생님 결정 — '매일 -10'). 한때 이 칸 맨 위에 '주말에는 줄지 않아요'(값이 없으면 쉼)가
+// 있었는데, 선생님이 "주말에도 줄어들게 · 설정에 넣을 필요가 없다"고 하셔서 걷었습니다 — 되살리지 마세요.
 //   · 다른 스위치처럼 선생님의 **운영 중인 반 모두에 한 값**입니다(setTeacherPetRests — 한 묶음으로 씀).
 //   · 날짜를 고치는 동안에는 저장하지 않습니다 — 시작일만 바꾼 순간의 '끝이 시작보다 앞선 기간'이 저장되지 않게,
 //     '저장'을 눌러야 적용됩니다(되돌리기로 고치던 것을 버림).
@@ -14,7 +15,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { setTeacherPetRests } from "@/lib/store";
 import { kstToday, teacherPetRestSettings } from "@/lib/reading";
-import { CARE_REST_KINDS, CARE_REST_NOTE_MAX, CARE_RESTS_MAX, careRestLabel, careRestOf, isCareRestDay, normalizeCareRests } from "@/lib/petCare";
+import { CARE_REST_KINDS, CARE_REST_NOTE_MAX, CARE_RESTS_MAX, careRestLabel, careRestOf, normalizeCareRests } from "@/lib/petCare";
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 let rowSeq = 0;
@@ -27,14 +28,13 @@ export default function PetRestSettings({ classes = [], feedOn = false, ready = 
   const ids = useMemo(() => classes.map((c) => c.id), [classes]);
   const saved = useMemo(() => {
     const s = teacherPetRestSettings(classes);
-    return { weekend: s.weekend, rests: normalizeCareRests(s.rests), mixed: s.mixed };
+    return { rests: normalizeCareRests(s.rests), mixed: s.mixed };
   }, [classes]);
-  const savedKey = JSON.stringify([saved.weekend, saved.rests]);
-  const [weekend, setWeekend] = useState(saved.weekend);
+  const savedKey = JSON.stringify(saved.rests);
   const [rows, setRows] = useState(() => saved.rests.map(withId));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const draftKey = JSON.stringify([weekend, normalizeCareRests(plain(rows))]);
+  const draftKey = JSON.stringify(normalizeCareRests(plain(rows)));
   const problems = rows.map(rowProblem);
   // 날짜가 덜 찬 줄이 있으면 '고치는 중'입니다(normalize가 그 줄을 버려 저장된 것과 같아 보이더라도)
   const dirty = draftKey !== savedKey || problems.some(Boolean);
@@ -43,17 +43,13 @@ export default function PetRestSettings({ classes = [], feedOn = false, ready = 
   dirtyRef.current = dirty;
   useEffect(() => {
     if (dirtyRef.current) return;
-    const [savedWeekend, savedRests] = JSON.parse(savedKey);
-    setWeekend(savedWeekend);
-    setRows(savedRests.map(withId));
+    setRows(JSON.parse(savedKey).map(withId));
   }, [savedKey]);
 
   const today = kstToday();
-  const savedRules = { weekend: saved.weekend, rests: saved.rests };
-  const restNow = careRestOf(today, savedRules);
+  const restNow = careRestOf(today, { rests: saved.rests });
   const todayLine = restNow ? `오늘은 ‘${restNow.note || careRestLabel(restNow.kind)}’ 기간이라 배부름이 줄지 않아요.`
-    : isCareRestDay(today, savedRules) ? "오늘은 주말이라 배부름이 줄지 않아요."
-      : "오늘은 배부름이 줄어드는 날이에요(책을 읽고 발자국을 남긴 학생은 그대로).";
+    : "오늘은 배부름이 줄어드는 날이에요(책을 읽고 발자국을 남긴 학생은 그대로).";
 
   const change = (id, patch) => setRows((list) => list.map((row) => (row.id === id ? { ...row, ...patch } : row)));
   function add() {
@@ -61,7 +57,6 @@ export default function PetRestSettings({ classes = [], feedOn = false, ready = 
     setRows((list) => [...list, withId({ kind: "vacation", from: today, to: today })]);
   }
   function revert() {
-    setWeekend(saved.weekend);
     setRows(saved.rests.map(withId));
     setError("");
   }
@@ -70,7 +65,7 @@ export default function PetRestSettings({ classes = [], feedOn = false, ready = 
     setBusy(true);
     setError("");
     try {
-      await setTeacherPetRests(ids, { weekend, rests: plain(rows) });
+      await setTeacherPetRests(ids, { rests: plain(rows) });
       onToast?.(`펫이 배고파지지 않는 날을 저장했어요.${ids.length > 1 ? ` (반 ${ids.length}개 모두)` : ""}`);
     } catch (e) {
       setError(e?.message || "저장하지 못했어요. 잠시 뒤 다시 해 주세요.");
@@ -83,17 +78,13 @@ export default function PetRestSettings({ classes = [], feedOn = false, ready = 
     <section className={`adm-group adm-rest-group${ready ? "" : " is-off"}`} aria-labelledby="adm-rest-title">
       <header className="adm-group-head">
         <h3 id="adm-rest-title">펫이 배고파지지 않는 날</h3>
-        <span>주말 · 방학 · 시험 기간 · 명절 같은 날을 셀지 정해요</span>
+        <span>방학 · 시험 기간 · 명절처럼 빼고 셀 기간을 정해요</span>
       </header>
       <div className="adm-rest">
         <p className="adm-rest-hint">
           {ready ? (feedOn ? todayLine : "펫 먹이를 켜면 적용돼요. 기간은 미리 넣어 둘 수 있어요.") : "학생 펫을 먼저 켜 주세요."}
           {saved.mixed && <strong> 반마다 다르게 저장되어 있어요 — 저장하면 모든 반을 같게 맞춰요.</strong>}
         </p>
-        <label className="adm-rest-weekend">
-          <input type="checkbox" checked={weekend} disabled={!ready || busy} onChange={(e) => setWeekend(e.target.checked)} />
-          <span><strong>주말에는 줄지 않아요</strong><small>끄면 토요일 · 일요일에도 배부름이 10씩 줄어요.</small></span>
-        </label>
         {rows.length > 0 && (
           <ul className="adm-rest-rows" aria-label="배부름이 줄지 않는 기간">
             {rows.map((row, i) => (
@@ -124,7 +115,7 @@ export default function PetRestSettings({ classes = [], feedOn = false, ready = 
           )}
         </div>
         {error && <p className="form-error" role="alert">{error}</p>}
-        <p className="adm-rest-foot">기간에 든 날과 (쉬게 한) 주말에는 펫의 배부름이 줄지 않아요. 방학 · 시험 기간이 시작되기 전에 넣어 두세요.</p>
+        <p className="adm-rest-foot">넣어 둔 기간에는 펫의 배부름이 줄지 않아요(주말에는 줄어요). 방학 · 시험 기간이 시작되기 전에 넣어 두세요.</p>
       </div>
     </section>
   );

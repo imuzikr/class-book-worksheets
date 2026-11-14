@@ -33,10 +33,10 @@ const away = (days = [], fruit = 0) => ({ full: 0, day: dayBefore(1), kept: null
 
 before(async () => {
   const batch = db.batch();
-  // 펫 먹이를 사흘 전에 켠 반 — 주말에도 줄게 해 요일과 상관없이 같은 값(켠 날은 안 세고 그제 · 어제 이틀 → 80)
+  // 펫 먹이를 사흘 전에 켠 반 — 주말에도 줄어(선생님 결정) 요일과 상관없이 같은 값(켠 날은 안 세고 그제 · 어제 이틀 → 80)
   // 켠 때는 실서비스처럼 서버 시각(Timestamp — 앱이 serverTimestamp()로 적음). 아래 OLD 반은 ms 수(체험반 · 옛 값)로 둡니다.
   batch.set(db.doc(`classes/${C}`), { createdBy: "care-teacher", readingEnabled: true, archived: false,
-    petFeedEnabled: true, petFeedFrom: Timestamp.fromMillis(Date.parse(`${dayBefore(3)}T12:00:00+09:00`)), petRestWeekend: false });
+    petFeedEnabled: true, petFeedFrom: Timestamp.fromMillis(Date.parse(`${dayBefore(3)}T12:00:00+09:00`)) });
   batch.set(db.doc(`classes/${OFF}`), { createdBy: "care-teacher", readingEnabled: true, archived: false });
   batch.set(db.doc("users/care-teacher"), { role: "teacher", realName: "선생님" });
   batch.set(db.doc("users/care-other-teacher"), { role: "teacher", realName: "다른 선생님" });
@@ -65,7 +65,7 @@ before(async () => {
   batch.set(db.doc(`rewards/${C}_care-e`), { classId: C, uid: "care-e", count: 5 });
   // 펫 먹이를 40일 전에 켠 반(주말에도 줆) — care-late는 그제 들어왔고, care-early는 들어온 때를 모릅니다(옛 소속 문서)
   batch.set(db.doc(`classes/${OLD}`), { createdBy: "care-teacher", readingEnabled: true, archived: false,
-    petFeedEnabled: true, petFeedFrom: Date.parse(`${dayBefore(40)}T12:00:00+09:00`), petRestWeekend: false });
+    petFeedEnabled: true, petFeedFrom: Date.parse(`${dayBefore(40)}T12:00:00+09:00`) });
   // care-forged는 들어온 때를 먼 앞날로 꾸며 적은 학생 — 서버는 믿지 않고 켠 날부터 셉니다
   const joins = [["care-late", Timestamp.fromMillis(Date.parse(`${dayBefore(2)}T10:00:00+09:00`)), "60201"], ["care-early", null, "60202"],
     ["care-forged", Timestamp.fromMillis(Date.parse("2099-01-01T00:00:00+09:00")), "60203"]];
@@ -75,9 +75,9 @@ before(async () => {
     batch.set(db.doc(`classes/${OLD}/readingMembers/${uid}`), snapshot(uid, 300));
     batch.set(db.doc(`rewards/${OLD}_${uid}`), { classId: OLD, uid, count: 3 });
   }
-  // 처리 도중에 바뀌는 반(아래 '처리 도중') — 사흘 전에 켬 · 주말에도 줆 · 과일 5개씩
+  // 처리 도중에 바뀌는 반(아래 '처리 도중') — 사흘 전에 켬(주말에도 줆) · 과일 5개씩
   batch.set(db.doc(`classes/${RACE}`), { createdBy: "care-teacher", readingEnabled: true, archived: false,
-    petFeedEnabled: true, petFeedFrom: Timestamp.fromMillis(Date.parse(`${dayBefore(3)}T12:00:00+09:00`)), petRestWeekend: false });
+    petFeedEnabled: true, petFeedFrom: Timestamp.fromMillis(Date.parse(`${dayBefore(3)}T12:00:00+09:00`)) });
   for (const [uid, readingPet, studentId] of [["care-race", hatched(), "60301"], ["care-race-away", hatched({ care: away() }), "60302"]]) {
     batch.set(db.doc(`users/${uid}`), { role: "student", realName: uid, studentId, readingPet });
     batch.set(db.doc(`memberships/${uid}_${RACE}`), { uid, classId: RACE });
@@ -86,7 +86,7 @@ before(async () => {
   }
   // 열흘 전에 켬 · 아흐레 전 하루 껐다 켬(목록) · 엿새 전 15시에 끄고 이틀 전 10시에 다시 켬(지난번) — 주말에도 줆
   const kst = (n, h) => Timestamp.fromMillis(Date.parse(`${dayBefore(n)}T${String(h).padStart(2, "0")}:00:00+09:00`));
-  batch.set(db.doc(`classes/${PAUSE}`), { createdBy: "care-teacher", readingEnabled: true, archived: false, petFeedEnabled: true, petRestWeekend: false,
+  batch.set(db.doc(`classes/${PAUSE}`), { createdBy: "care-teacher", readingEnabled: true, archived: false, petFeedEnabled: true,
     petFeedFrom: kst(10, 12), petFeedPauses: [{ off: kst(9, 9), on: kst(9, 18) }], petFeedOffAt: kst(6, 15), petFeedOnAt: kst(2, 10) });
   batch.set(db.doc("users/care-paused"), { role: "student", realName: "care-paused", studentId: "60401", readingPet: hatched() });
   batch.set(db.doc(`memberships/care-paused_${PAUSE}`), { uid: "care-paused", classId: PAUSE });

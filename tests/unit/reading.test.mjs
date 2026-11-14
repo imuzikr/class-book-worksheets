@@ -324,9 +324,9 @@ test("관리자 설정은 선생님의 모든 반에 한 값 — 도서 검색 �
   assert.deepEqual(s.petEnabled, { on: true, mixed: false }); // 학생 펫도 값이 없으면 켜짐(선생님 결정)
   // 독서 TOP 3도 값이 없으면 켜짐 — 리더보드를 끈 반(b)이어도 TOP 3는 따로(선생님 요청)
   assert.deepEqual(s.readingTopEnabled, { on: true, mixed: false });
-  // 펫 먹이는 값이 없으면 꺼짐(켠 것만 true) — 새 반도 그 값과 '배고파지지 않는 날'(주말 · 기간)을 따름
+  // 펫 먹이는 값이 없으면 꺼짐(켠 것만 true) — 새 반도 그 값과 '배고파지지 않는 날'(쉬는 기간)을 따름
   assert.deepEqual(s.petFeedEnabled, { on: false, mixed: false });
-  assert.deepEqual(featuresForNewClass(classes), { readingEnabled: true, bookSearchEnabled: false, rankingEnabled: false, readingTopEnabled: true, characterEnabled: true, fruitBasketEnabled: true, petEnabled: true, petFeedEnabled: false, plazaEnabled: false, classroomEnabled: false, hideoutEnabled: false, readingMapTheme: "cloud-islands", petRestWeekend: true, petRests: [] });
+  assert.deepEqual(featuresForNewClass(classes), { readingEnabled: true, bookSearchEnabled: false, rankingEnabled: false, readingTopEnabled: true, characterEnabled: true, fruitBasketEnabled: true, petEnabled: true, petFeedEnabled: false, plazaEnabled: false, classroomEnabled: false, hideoutEnabled: false, readingMapTheme: "cloud-islands", petRests: [] });
   assert.equal(featuresForNewClass([{ archived: true }]), null);
   assert.equal(teacherFeatureSettings([]).readingEnabled.on, false);
 });
@@ -335,18 +335,19 @@ test("펫 먹이의 '배고파지지 않는 날'은 선생님의 모든 반에 �
   const { teacherFeatureSettings, teacherPetRestSettings, featuresForNewClass } = await import("@/lib/reading");
   const rest = { kind: "vacation", from: "2026-12-24", to: "2027-02-01" };
   const same = [
-    { id: "a", readingEnabled: true, petFeedEnabled: true, petRestWeekend: false, petRests: [rest] },
-    { id: "b", readingEnabled: true, petFeedEnabled: true, petRestWeekend: false, petRests: [rest] },
+    { id: "a", readingEnabled: true, petFeedEnabled: true, petRests: [rest] },
+    // 한때의 '주말에는 줄지 않아요'(petRestWeekend)가 남은 반 — 읽지 않으므로 같은 값으로 봄(주말에도 줄어듦 — 선생님 결정)
+    { id: "b", readingEnabled: true, petFeedEnabled: true, petRestWeekend: true, petRests: [rest] },
     { id: "old", archived: true, petRests: [] },
   ];
   assert.deepEqual(teacherFeatureSettings(same).petFeedEnabled, { on: true, mixed: false });
-  assert.deepEqual(teacherPetRestSettings(same), { weekend: false, rests: [rest], mixed: false });
+  assert.deepEqual(teacherPetRestSettings(same), { rests: [rest], mixed: false });
   const made = featuresForNewClass(same);
-  assert.deepEqual([made.petFeedEnabled, made.petRestWeekend, made.petRests], [true, false, [rest]]);
-  // 값이 없으면 주말은 쉼 · 기간 없음. 반마다 다르면 mixed
-  assert.deepEqual(teacherPetRestSettings([{ id: "a" }]), { weekend: true, rests: [], mixed: false });
+  assert.deepEqual([made.petFeedEnabled, made.petRests, "petRestWeekend" in made], [true, [rest], false]);
+  // 값이 없으면 기간 없음. 반마다 다르면 mixed
+  assert.deepEqual(teacherPetRestSettings([{ id: "a" }]), { rests: [], mixed: false });
   assert.equal(teacherPetRestSettings([{ id: "a", petRests: [rest] }, { id: "b" }]).mixed, true);
-  assert.deepEqual(teacherPetRestSettings([]), { weekend: true, rests: [], mixed: false });
+  assert.deepEqual(teacherPetRestSettings([]), { rests: [], mixed: false });
 });
 
 test("새 반은 운영 중인 반의 독서 맵을 따르고 보관된 반·혼합된 선택은 기본 맵으로 처리", async () => {

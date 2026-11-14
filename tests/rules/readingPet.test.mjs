@@ -8,8 +8,9 @@
 //  · 알 단계의 종을 적어 둔 users/{uid}/reading/pet은 학생 본인도 못 읽음(비밀 — 선생님 결정)
 //  · 관리자 설정의 '학생 펫'(petEnabled)은 참 · 거짓만, 운영 중인 반에서만
 //  · 펫 먹이(lib/petCare.js) — 배부름(readingPet.care)도 서버만 적고(학생이 제 펫을 배부르게 고치지 못함),
-//    반 설정 네 칸(petFeedEnabled · petFeedFrom · petRestWeekend · petRests)은 모양이 맞을 때만 담당 교사가
-//    (켠 때 petFeedFrom은 서버 시각만 — 반을 만들 때 끼워 넣어도 같은 검사)
+//    반 설정 칸(petFeedEnabled · petFeedFrom · petRests)은 모양이 맞을 때만 담당 교사가
+//    (켠 때 petFeedFrom은 서버 시각만 — 반을 만들 때 끼워 넣어도 같은 검사). 옛 '주말에는 줄지 않아요'(petRestWeekend)는
+//    앱이 더 쓰지 않지만(주말에도 줄어듦 — 선생님 결정) 규칙은 그대로 참 · 거짓만 받습니다(배포 중의 옛 화면 · 남은 값)
 //  · 펫 먹이를 껐다 켤 때 — 끈 때(petFeedOffAt) · 다시 켠 때(petFeedOnAt)는 서버 시각만, 쉰 기간 목록(petFeedPauses)은
 //    저장된 두 때 그대로만 끝에 덧붙음(그 사이의 날을 세지 않아 끈 순간의 배부름에서 이어짐 — lib/readingPet.js의 petFeedTimesPatch)
 //    40줄이 차면 가장 오래된 두 줄을 합침 — 가장 오래된 줄을 빼는 쓰기는 거부(지운 기간이 다시 세어져 펫이 한꺼번에 떠났음)
@@ -93,7 +94,7 @@ describe("독서 펫 — 프로필의 펫과 비밀 문서", () => {
     await assertFails(updateDoc(teacher, { "readingPet.care": care }));
   });
 
-  it("관리자 설정 '펫 먹이' — 스위치 · 켠 때 · 주말 · 쉬는 기간은 모양이 맞을 때만, 운영 중인 반의 담당 교사가", async () => {
+  it("관리자 설정 '펫 먹이' — 스위치 · 켠 때 · 쉬는 기간(옛 주말 칸)은 모양이 맞을 때만, 운영 중인 반의 담당 교사가", async () => {
     const db = asTeacher(env, "teacherA").firestore();
     const c1 = doc(db, "classes", "c1");
     // 켤 때 — 스위치와 켠 때를 한 번에(lib/data/classes.js의 featureWrite). 켠 때는 서버 시각만
@@ -112,11 +113,15 @@ describe("독서 펫 — 프로필의 펫과 비밀 문서", () => {
     await assertFails(updateDoc(c1, { petFeedFrom: "2026-11-14" }));
     await assertFails(updateDoc(c1, { petFeedFrom: -1 }));
     await assertFails(updateDoc(c1, { petFeedFrom: deleteField() }));
-    // 배고파지지 않는 날 — 주말(참 · 거짓) · 기간 목록(20줄까지)
+    // 배고파지지 않는 날 — 기간 목록(20줄까지). 지금 앱은 기간만 씁니다(lib/data/classes.js의 setTeacherPetRests)
     const rest = { kind: "vacation", from: "2026-12-24", to: "2027-02-01", note: "겨울 방학" };
-    await assertSucceeds(updateDoc(c1, { petRestWeekend: false, petRests: [rest, { kind: "exam", from: "2026-12-08", to: "2026-12-11" }] }));
+    await assertSucceeds(updateDoc(c1, { petRests: [rest, { kind: "exam", from: "2026-12-08", to: "2026-12-11" }] }));
+    // 옛 화면의 '주말에는 줄지 않아요'(참 · 거짓)도 그대로 받음 — 배포 중에 옛 화면에서 저장해도 막히지 않게(앱은 읽지 않음)
+    await assertSucceeds(updateDoc(c1, { petRestWeekend: false, petRests: [rest] }));
     await assertSucceeds(updateDoc(c1, { petRestWeekend: true, petRests: [] }));
     await assertFails(updateDoc(c1, { petRestWeekend: "no" }));
+    // 남은 옛 값을 지우는 쓰기는 받지 않음(바뀐 칸이면 참 · 거짓을 요구) — 그래서 앱은 그 값을 지우지 않고 그냥 둡니다
+    await assertFails(updateDoc(c1, { petRestWeekend: deleteField() }));
     await assertFails(updateDoc(c1, { petRests: "2026-12-24" }));
     await assertFails(updateDoc(c1, { petRests: { 0: rest } }));
     await assertFails(updateDoc(c1, { petRests: Array.from({ length: 21 }, () => rest) }));

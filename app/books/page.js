@@ -366,7 +366,7 @@ function BooksPageInner() {
   const characterOn = characterChoiceEnabled(currentClass);
   // 학생 펫(관리자 설정 — 값이 없으면 켜짐, lib/readingPet.js) — 책나눔의 '나의 펫' · 리더보드의 펫
   const petOn = petEnabled(currentClass);
-  // 펫 먹이(관리자 설정 — 기본 꺼짐, lib/petCare.js) — 그 반의 규칙(켠 날 · 주말 · 쉬는 기간). 내용이 같으면 같은 객체로
+  // 펫 먹이(관리자 설정 — 기본 꺼짐, lib/petCare.js) — 그 반의 규칙(켠 날 · 쉬는 기간 · 꺼 둔 기간). 내용이 같으면 같은 객체로
   // 넘겨, 반 문서의 다른 칸이 바뀔 때마다 펫 카드가 배부름을 다시 세지 않게 합니다. 끈 반이면 on이 거짓.
   // **학생은 이 반에 들어온 날부터 셉니다**(내 소속 문서의 joinedAt — 반을 미리 만들어 둔 반에 나중에 들어와도
   // 그 사이의 날을 세지 않게, lib/petCare.js의 careRulesFor). 선생님 화면은 학생마다의 때를 명단(roster)이 넘깁니다.
