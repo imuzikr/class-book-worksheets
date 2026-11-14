@@ -3,10 +3,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   CARE_DAY_DROP, CARE_FRUIT, CARE_HUNGRY, CARE_MAX, CARE_PAUSES_MAX, CARE_READ_CHARS, CARE_READ_PAGES, CARE_RESTS_MAX, CARE_RETURN, CARE_STEP_FRUIT,
-  careAfterHatch, careAway, carePausesOf, careRestOf, careRules, careRulesFor, careSeed, careStatus, careStepsNeeded, isCarePausedDay, isCareRestDay, normalizeCare, normalizeCareRests,
+  appendCarePause, careAfterHatch, careAway, carePausesOf, compactCarePauses, careRestOf, careRules, careRulesFor, careSeed, careStatus, careStepsNeeded, isCarePausedDay, isCareRestDay, normalizeCare, normalizeCareRests,
   planCareFeed, planCareReadDay, planCareRecall, planCareStep, readingDayProof,
 } from "@/lib/petCare";
-import { normalizePetMirror, petCareRules, petFeedOn, planPetAction } from "@/lib/readingPet";
+import { normalizePetMirror, petCareRules, petFeedOn, petFeedTimesPatch, planPetAction } from "@/lib/readingPet";
 import { applyReadingAction, deriveReading, initialReadingState } from "@/lib/reading";
 
 // 서울 날짜 d의 낮 12시(ms)
@@ -193,9 +193,10 @@ test("쉰 기간 — 지난 목록(petFeedPauses) + 지난번(petFeedOffAt ~ pet
   assert.deepEqual(carePausesOf({ petFeedFrom: ms("2026-11-02"), petFeedOnAt: ms("2026-11-23") }), [{ from: "2026-11-02", to: "2026-11-23" }]);
   assert.deepEqual(carePausesOf({}), []);
   assert.deepEqual(carePausesOf({ petFeedPauses: "x" }), []);
-  // 천장 — 오래된 줄부터 버림
+  // 천장을 넘는 목록(규칙상 생기지 않음)도 지우지 않고 가장 오래된 줄들을 합쳐 읽음 — 첫 줄이 1월 1일부터
   const many = Array.from({ length: CARE_PAUSES_MAX + 5 }, (_, i) => ({ off: ms("2026-01-01") + i * 864e5, on: ms("2026-01-01") + i * 864e5 }));
-  assert.equal(carePausesOf({ petFeedPauses: many }).length, CARE_PAUSES_MAX);
+  const read = carePausesOf({ petFeedPauses: many });
+  assert.deepEqual([read.length, read[0], read.at(-1)], [CARE_PAUSES_MAX, { from: "2026-01-01", to: "2026-01-06" }, { from: "2026-02-14", to: "2026-02-14" }]);
   assert.equal(CARE_PAUSES_MAX, 40);
   const rules = careRules(doc, true);
   assert.deepEqual(["2026-09-09", "2026-09-10", "2026-09-20", "2026-09-21", "2026-11-23", "2026-11-24", "bad"].map((d) => isCarePausedDay(d, rules)),
@@ -495,4 +496,47 @@ test("켠 때의 모양 — 서버 시각(Timestamp)도 ms 수도 받고, 범위
     assert.equal(careRulesFor(rules, huge).from, "2026-11-01");
   }
   assert.equal(careSeed(pet(), 1e20).joined, null);
+});
+
+test("꺼 둔 기간 목록이 넘치면 — 가장 오래된 두 줄을 합침(지우지 않음)", () => {
+  const list = Array.from({ length: CARE_PAUSES_MAX }, (_, i) => ({ off: i * 10, on: i * 10 + 5 }));
+  // 천장 아래에서는 끝에 덧붙이기만
+  assert.deepEqual(appendCarePause(list.slice(0, 3), { off: 900, on: 905 }), [...list.slice(0, 3), { off: 900, on: 905 }]);
+  assert.deepEqual(appendCarePause(null, { off: 1, on: 2 }), [{ off: 1, on: 2 }]);
+  // 넘치면 첫째의 끈 때 ~ 둘째의 다시 켠 때 한 줄로 — 줄 수는 40 그대로, 나머지는 그대로
+  const next = appendCarePause(list, { off: 900, on: 905 });
+  assert.deepEqual([next.length, next[0], next[1], next.at(-1)], [CARE_PAUSES_MAX, { off: 0, on: 15 }, { off: 20, on: 25 }, { off: 900, on: 905 }]);
+  // 한꺼번에 여러 줄 넘쳐도 한 줄씩 차례로 합침(끈 때를 모르는 줄은 null 그대로)
+  const over = compactCarePauses([{ off: null, on: 1 }, ...list]);
+  assert.deepEqual([over.length, over[0]], [CARE_PAUSES_MAX, { off: null, on: 5 }]);
+  assert.deepEqual(compactCarePauses("x"), []);
+});
+
+test("검토에서 찾은 일 — 방학 두 달을 꺼 둔 뒤 껐다 켜기를 42번 해도, 그동안 갱신되지 않은 펫의 배부름이 그대로", () => {
+  const KST = (s) => Date.parse(s + "+09:00");
+  let doc = { readingEnabled: true, petEnabled: true, petFeedEnabled: true, petFeedFrom: KST("2026-09-01T09:00:00"), petRestWeekend: true };
+  const toggle = (on, at) => {
+    const patch = { petFeedEnabled: on };
+    const extra = petFeedTimesPatch(doc, patch, { stamp: () => at, remove: () => undefined });
+    doc = { ...doc, ...patch };
+    for (const [k, v] of Object.entries(extra)) { if (v === undefined) delete doc[k]; else doc[k] = v; }
+  };
+  // 9월 1일에 배부름 100으로 적힌 뒤로 갱신이 없는 펫(방학 내내 읽지도 먹이를 받지도 않은 학생)
+  const pet = normalizePetMirror({ species: "owl", baseXp: 0, assignedAt: KST("2026-08-20T09:00:00"), hatchedAt: KST("2026-08-25T09:00:00"), care: { full: 100, day: "2026-09-01" } });
+  const fullNow = () => careStatus(pet, careRules(doc, true), "2026-11-03", 3);
+  toggle(false, KST("2026-09-02T10:00:00"));
+  toggle(true, KST("2026-10-30T10:00:00"));
+  // 11월 2일(월) 하루에 껐다 켜기를 거듭 — 한때 42번째로 끄는 순간 두 달 기록이 지워져 배부름 100 → 0 · 떠남.
+  // 배부름은 펫 먹이가 켜져 있을 때만 셈하므로 다시 켤 때마다 봅니다(끈 날 · 다시 켠 날인 11월 2일은 세지 않아 100)
+  let t = KST("2026-11-02T10:00:00");
+  for (let i = 0; i < 45; i += 1) {
+    toggle(false, (t += 60000));
+    toggle(true, (t += 60000));
+    const s = fullNow();
+    assert.equal(s.away, false, `${i + 1}번째로 껐다 켠 뒤 펫이 떠남`);
+    assert.equal(s.full, 100, `${i + 1}번째로 껐다 켠 뒤 배부름 ${s.full}`);
+  }
+  assert.equal(doc.petFeedPauses.length, CARE_PAUSES_MAX);
+  // 합친 첫 줄은 9월 2일에 끈 때부터 — 두 달 쉰 기간이 그대로 들어 있음
+  assert.equal(doc.petFeedPauses[0].off, KST("2026-09-02T10:00:00"));
 });

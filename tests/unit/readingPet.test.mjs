@@ -55,10 +55,10 @@ test("펫 먹이가 켜지고 꺼지는 쓰기 — 처음 켬 · 끔 · 다시 �
   // 끈 때를 모르는 옛 반을 다시 켰던 반 — 처음 켠 때부터를 쉰 기간으로
   assert.deepEqual(times({ ...running, petFeedOnAt: 9 }, { petFeedEnabled: false }),
     { petFeedOffAt: "지금", petFeedPauses: [{ off: 1, on: 9 }], petFeedOnAt: "지움" });
-  // 목록 천장 40 — 가장 오래된 줄부터 뺌
-  const full = Array.from({ length: 40 }, (_, i) => ({ off: i, on: i }));
-  const trimmed = times({ ...running, petFeedOffAt: 50, petFeedOnAt: 60, petFeedPauses: full }, { petFeedEnabled: false }).petFeedPauses;
-  assert.deepEqual([trimmed.length, trimmed[0], trimmed.at(-1)], [40, { off: 1, on: 1 }, { off: 50, on: 60 }]);
+  // 목록 천장 40 — 가장 오래된 줄을 빼지 않고 가장 오래된 두 줄을 합침(첫째의 끈 때 ~ 둘째의 다시 켠 때)
+  const full = Array.from({ length: 40 }, (_, i) => ({ off: i * 2, on: i * 2 + 1 }));
+  const merged = times({ ...running, petFeedOffAt: 90, petFeedOnAt: 95, petFeedPauses: full }, { petFeedEnabled: false }).petFeedPauses;
+  assert.deepEqual([merged.length, merged[0], merged[1], merged.at(-1)], [40, { off: 0, on: 3 }, { off: 4, on: 5 }, { off: 90, on: 95 }]);
   // 켜짐 · 꺼짐이 그대로인 쓰기는 아무것도 더하지 않음(이미 돌던 반 · 펫 먹이를 안 켠 반 · 학생 펫이 꺼진 반 · 상관없는 스위치)
   assert.deepEqual(times(running, { petFeedEnabled: true }), {});
   assert.deepEqual(times(running, { plazaEnabled: false }), {});

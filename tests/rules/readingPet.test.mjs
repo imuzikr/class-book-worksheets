@@ -12,6 +12,7 @@
 //    (켠 때 petFeedFrom은 서버 시각만 — 반을 만들 때 끼워 넣어도 같은 검사)
 //  · 펫 먹이를 껐다 켤 때 — 끈 때(petFeedOffAt) · 다시 켠 때(petFeedOnAt)는 서버 시각만, 쉰 기간 목록(petFeedPauses)은
 //    저장된 두 때 그대로만 끝에 덧붙음(그 사이의 날을 세지 않아 끈 순간의 배부름에서 이어짐 — lib/readingPet.js의 petFeedTimesPatch)
+//    40줄이 차면 가장 오래된 두 줄을 합침 — 가장 오래된 줄을 빼는 쓰기는 거부(지운 기간이 다시 세어져 펫이 한꺼번에 떠났음)
 // =============================================================
 import { describe, it, before, after, beforeEach } from "node:test";
 import { assertSucceeds, assertFails } from "@firebase/rules-unit-testing";
@@ -165,7 +166,7 @@ describe("독서 펫 — 프로필의 펫과 비밀 문서", () => {
     await assertFails(updateDoc(doc(asTeacher(env, "teacherB").firestore(), "classes", "pf"), { petFeedEnabled: true, petFeedOnAt: serverTimestamp() }));
   });
 
-  it("반을 보관 · 되살릴 때도 끈 때 · 다시 켠 때를 함께, 40줄이 차면 가장 오래된 줄을 빼고 · 만들 때는 받지 않음", async () => {
+  it("반을 보관 · 되살릴 때도 끈 때 · 다시 켠 때를 함께, 40줄이 차면 가장 오래된 두 줄을 합치고(빼지 않음) · 만들 때는 받지 않음", async () => {
     const t = (ms) => Timestamp.fromMillis(ms);
     const full = Array.from({ length: 40 }, (_, i) => ({ off: t(1.7e12 + i * 2e8), on: t(1.7e12 + i * 2e8 + 1e8) }));
     await seed(env, (s) => setDoc(doc(s, "classes", "pa"), { name: "보관 반", createdBy: "teacherA", archived: false, readingEnabled: true,
@@ -173,9 +174,16 @@ describe("독서 펫 — 프로필의 펫과 비밀 문서", () => {
     const db = asTeacher(env, "teacherA").firestore();
     const pa = doc(db, "classes", "pa");
     const pair = { off: t(1.71e12), on: t(1.711e12) };
-    // 보관하며 끔 — 41줄은 거부, 가장 오래된 줄을 빼고 덧붙이면 통과
-    await assertFails(updateDoc(pa, { archived: true, petFeedOffAt: serverTimestamp(), petFeedPauses: [...full, pair], petFeedOnAt: deleteField() }));
-    await assertSucceeds(updateDoc(pa, { archived: true, petFeedOffAt: serverTimestamp(), petFeedPauses: [...full.slice(1), pair], petFeedOnAt: deleteField() }));
+    // 보관하며 끔 — 41줄은 거부, 가장 오래된 줄을 빼는 것도 거부(지운 기간이 다시 '줄어드는 날'로 세어짐)
+    const off = (pauses) => updateDoc(pa, { archived: true, petFeedOffAt: serverTimestamp(), petFeedPauses: pauses, petFeedOnAt: deleteField() });
+    await assertFails(off([...full, pair]));
+    await assertFails(off([...full.slice(1), pair]));
+    // 합친 줄을 꾸미면 거부 — 첫째 줄만 남기고 둘째를 버림 · 셋째까지 넓힘 · 끈 때를 앞당김
+    await assertFails(off([full[0], ...full.slice(2), pair]));
+    await assertFails(off([{ off: full[0].off, on: full[2].on }, ...full.slice(2), pair]));
+    await assertFails(off([{ off: t(1.6e12), on: full[1].on }, ...full.slice(2), pair]));
+    // 가장 오래된 두 줄을 한 줄로 합치고(첫째의 끈 때 ~ 둘째의 다시 켠 때) 덧붙이면 통과
+    await assertSucceeds(off([{ off: full[0].off, on: full[1].on }, ...full.slice(2), pair]));
     // 보관된 반을 되살리며 다시 켬
     await assertSucceeds(updateDoc(pa, { archived: false, petFeedOnAt: serverTimestamp() }));
     // 만들 때는 세 칸을 받지 않음(새 반에는 쉰 기간이 없음)

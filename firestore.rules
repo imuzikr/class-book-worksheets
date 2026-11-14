@@ -599,7 +599,8 @@ service cloud.firestore {
       // (petFeedOffAt), 다시 켤 때 다시 켠 때(petFeedOnAt)를 **서버 시각만** 받고, 지난번 쉰 기간은 다음에 끌 때
       // petFeedPauses 끝으로 옮깁니다(lib/readingPet.js의 petFeedTimesPatch · 셈은 lib/petCare.js의 carePausesOf — 그 사이의
       // 날을 세지 않음). 한때 다시 켤 때 켠 때를 새로 적어 펫마다 마지막으로 적힌 배부름으로 돌아갔습니다(50 → 100처럼 회복).
-      // 목록은 **저장된 두 때 그대로만** 끝에 덧붙습니다(아래 petFeedPauseFlowOk — 꾸민 기간을 끼워 넣지 못하게 · 40줄 천장).
+      // 목록은 **저장된 두 때 그대로만** 끝에 덧붙습니다(아래 petFeedPauseFlowOk — 꾸민 기간을 끼워 넣지 못하게 · 40줄 천장 ·
+      // 넘치면 가장 오래된 두 줄을 합침 — 지우지 않음).
       // 이 '때'들(petFeedFrom · petFeedOffAt · petFeedOnAt · petFeedPauses)은 반을 보관 · 되살릴 때 함께 적히므로 아래 '보관된 반은
       // 못 바꿈'의 목록에 넣지 않습니다(값은 서버 시각 · 저장된 값뿐이라 보관된 반에서 고쳐도 셈이 꾸며지지 않음).
       function classSettingsShapeOk(d, keys) {
@@ -629,7 +630,10 @@ service cloud.firestore {
       //  · 끈 때(petFeedOffAt)는 처음 끌 때, 또는 지난번 쉰 기간(petFeedOnAt)을 목록으로 옮기며 끌 때만 — 꺼 둔 동안 끈 때를
       //    다시 적으면 쉰 기간의 앞이 지워집니다
       //  · 목록(petFeedPauses)은 저장된 두 때({ off: 끈 때(모르면 처음 켠 때), on: 다시 켠 때 })를 끝에 덧붙일 때만 바뀌고,
-      //    40줄이 차 있으면 가장 오래된 한 줄을 뺍니다
+      //    40줄이 차 있으면 **가장 오래된 두 줄을 한 줄로 합칩니다**({ off: 첫째 줄의 끈 때, on: 둘째 줄의 다시 켠 때 }).
+      //    가장 오래된 줄을 빼는 쓰기는 받지 않습니다 — 한때 그렇게 지웠더니 지운 기간이 다시 '배부름이 줄어드는 날'로 세어져,
+      //    그 뒤로 배부름이 새로 적히지 않은 펫이 한꺼번에 떠났습니다(검토에서 찾음 · lib/petCare.js의 compactCarePauses).
+      //    old[0] · old[1]은 40줄일 때만 읽습니다(let에 담으면 짧은 목록에서도 미리 계산되어 오류)
       function petFeedPauseFlowOk(changed) {
         let offAt = resource.data.get('petFeedOffAt', null);
         let onAt = resource.data.get('petFeedOnAt', null);
@@ -644,7 +648,9 @@ service cloud.firestore {
         let pair = {'off': offAt != null ? offAt : resource.data.get('petFeedFrom', null), 'on': onAt};
         let next = request.resource.data.get('petFeedPauses', null);
         return onAt != null && request.resource.data.get('petFeedOnAt', null) == null
-               && (next == old.concat([pair]) || (old.size() >= 40 && next == old[1:old.size()].concat([pair])));
+               && (next == old.concat([pair])
+                   || (old.size() >= 40
+                       && next == [{'off': old[0].get('off', null), 'on': old[1].get('on', null)}].concat(old[2:old.size()]).concat([pair])));
       }
       function readingSettingValid() {
         let changed = request.resource.data.diff(resource.data).affectedKeys();
