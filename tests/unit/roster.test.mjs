@@ -26,6 +26,15 @@ test("디렉터리에 없는 학생도 빠지지 않고 '이름 미설정'으로
   assert.deepEqual(r, [{ uid: "ghost", name: "이름 미설정", studentId: null, emoji: "🙂", email: null, count: 0 }]);
 });
 
+test("펫 · 반에 들어온 때는 아는 학생의 줄에만 붙습니다(펫 먹이가 그날부터 셈)", () => {
+  const pet = { species: "owl", baseXp: 0, assignedAt: 1, hatchedAt: 2 };
+  const r = buildClassRoster(["u1", "u2", "u3"], [{ ...directory[1], readingPet: pet }, directory[0], directory[2]], rewards, { u1: 1762700000000, u3: 0, ghost: 5 });
+  assert.deepEqual(r[0], { uid: "u1", name: "김하윤", studentId: "30301", emoji: "🐰", email: null, count: 7, pet, joinedAt: 1762700000000 });
+  assert.equal("joinedAt" in r[1], false); // 때를 모르는 학생(옛 소속 문서)
+  assert.equal("joinedAt" in r[2], false);
+  assert.equal("pet" in r[1], false);
+});
+
 test("빈 입력은 빈 명단", () => {
   assert.deepEqual(buildClassRoster(), []);
   assert.deepEqual(buildClassRoster([], directory, rewards), []);

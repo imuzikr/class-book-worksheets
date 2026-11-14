@@ -25,7 +25,7 @@ import { readingEnabled, rankingEnabled, bookSearchEnabled, fruitBasketOn, plaza
 import { abandonClassroomMove, feedClassroomMove, useClassroomMove, watchClassroomMove } from "@/lib/classroomMoveStore";
 import { classroomMoveShown } from "@/lib/classroomMove";
 import { characterChoiceEnabled } from "@/lib/readingCharacter";
-import { petEnabled } from "@/lib/readingPet";
+import { petCareRules, petEnabled } from "@/lib/readingPet";
 import { readingMapThemeOf } from "@/lib/readingMapCatalog";
 import {
   subscribeBookActivities,
@@ -366,6 +366,13 @@ function BooksPageInner() {
   const characterOn = characterChoiceEnabled(currentClass);
   // 학생 펫(관리자 설정 — 값이 없으면 켜짐, lib/readingPet.js) — 책나눔의 '나의 펫' · 리더보드의 펫
   const petOn = petEnabled(currentClass);
+  // 펫 먹이(관리자 설정 — 기본 꺼짐, lib/petCare.js) — 그 반의 규칙(켠 날 · 주말 · 쉬는 기간). 내용이 같으면 같은 객체로
+  // 넘겨, 반 문서의 다른 칸이 바뀔 때마다 펫 카드가 배부름을 다시 세지 않게 합니다. 끈 반이면 on이 거짓.
+  // **학생은 이 반에 들어온 날부터 셉니다**(내 소속 문서의 joinedAt — 반을 미리 만들어 둔 반에 나중에 들어와도
+  // 그 사이의 날을 세지 않게, lib/petCare.js의 careRulesFor). 선생님 화면은 학생마다의 때를 명단(roster)이 넘깁니다.
+  const myJoinedAt = admin ? null : memberships.find((m) => m.classId === classId)?.joinedAt ?? null;
+  const petFeedKey = JSON.stringify(petCareRules(currentClass, myJoinedAt));
+  const petFeed = useMemo(() => JSON.parse(petFeedKey), [petFeedKey]);
   const leaderboardOpen = rankingOn && !openActivityId && searchParams.get("area") === "leaderboard";
   // 관리자 설정 — 교사에게만(학생이 주소로 와도 책방 목록이 섭니다)
   const settingsOpen = admin && !openActivityId && searchParams.get("area") === "settings";
@@ -417,11 +424,13 @@ function BooksPageInner() {
   // 왼쪽 '오늘' 패널 — 오늘 이 반이 어떻게 움직였는지(출석·성찰·과일)를
   // 활동을 하는 동안에도 볼 수 있게 놓습니다. 출석은 아래에서 구독합니다.
 
-  // 학생: 내 과일 수 — 과일 바구니 창을 열었을 때만(문서 1건).
+  // 학생: 내 과일 수 — 과일 바구니 창을 열었을 때, 그리고 펫 먹이를 켠 반의 책나눔을 연 동안(펫에게 줄 과일 —
+  // 문서 1건. 상단바의 과일 뱃지가 같은 질의를 이미 듣고 있어 읽기가 늘지 않습니다).
+  const needMyFruit = fruitBasketOpen || (readingOpen && petFeed.on);
   useEffect(() => {
-    if (admin || !fruitBasketOpen || !classId || !myUid) return;
+    if (admin || !needMyFruit || !classId || !myUid) return;
     return subscribeMyClassRewardCount(classId, myUid, (n) => setMyFruit(n ?? 0));
-  }, [admin, fruitBasketOpen, classId, myUid]);
+  }, [admin, needMyFruit, classId, myUid]);
 
   // 이 반의 과일 **누적 총계** — 자리표를 눌러 뜨는 '과일 주기' 창이 씁니다.
   // 여기를 안 받고 있어서, 책방에서는 그 창의 '누적'이 늘 0으로 보이고
@@ -1192,11 +1201,12 @@ function BooksPageInner() {
             <TeacherReadingView classId={classId} user={user} roster={roster}
               studentUid={searchParams.get("student")} onPickStudent={(uid) => patchBooksQuery({ student: uid }, { replace: true })} bookSearchOn={bookSearchEnabled(currentClass)}
               plazaOn={plazaOn(currentClass)} characterOn={characterOn} initialTab={searchParams.get("tab") || "library"} classroom={classroomProps}
-              plazaCall={plazaCall}
+              plazaCall={plazaCall} petOn={petOn} petFeed={petFeed} onToast={setToast}
               activities={liveActivities} onOpenActivity={goToActivity}
               onDisabled={() => patchBooksQuery({ area: null }, { replace: true })} />
           ) : readingOpen ? (
             <ReadingHub key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin} bookSearchOn={bookSearchEnabled(currentClass)} petOn={petOn}
+              petFeed={petFeed} myFruit={myFruit}
               plazaOn={plazaOn(currentClass)} characterOn={characterOn} classroom={classroomProps}
               plazaCall={plazaCall}
               activities={liveActivities} onOpenActivity={goToActivity}

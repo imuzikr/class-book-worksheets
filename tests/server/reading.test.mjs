@@ -511,8 +511,11 @@ test("독서 펫 — 학생만 알 하나(받을 때의 경험치가 바탕 · �
   await assert.rejects(() => readingPetAction(principal("other"), { classId: "api-pet", action: "adopt" }), (e) => e.status === 403);
   await assert.rejects(() => readingPetAction(a, { classId: "api-pet-off", action: "adopt" }), (e) => e.status === 403 && e.code === "reading/pet-disabled");
   await assert.rejects(() => getReadingPet(a, "api-pet-off"), (e) => e.code === "reading/pet-disabled");
-  await assert.rejects(() => readingPetAction(a, { classId: "api-pet", action: "feed" }), (e) => e.status === 400);
+  await assert.rejects(() => readingPetAction(a, { classId: "api-pet", action: "play" }), (e) => e.status === 400);
   await assert.rejects(() => readingPetAction(a, { classId: "api-pet", action: "adopt", uid: "pet-b" }), (e) => e.status === 400);
+  // 펫 먹이를 켜지 않은 반 — 먹이 주기 · 다시 부르기는 막힘(기본 꺼짐 · 자세한 시험은 tests/server/petCare.test.mjs)
+  await assert.rejects(() => readingPetAction(a, { classId: "api-pet", action: "feed" }), (e) => e.status === 403 && e.code === "reading/pet-feed-disabled");
+  await assert.rejects(() => readingPetAction(a, { classId: "api-pet", action: "call" }), (e) => e.status === 403 && e.code === "reading/pet-feed-disabled");
   // 펫을 끈 반의 리더보드에는 펫을 싣지 않음
   await db.doc("classes/api-pet").update({ petEnabled: false });
   assert.equal((await rankingsNow(principal("teacher"), "api-pet", "all-time")).rankings.find((r) => r.uid === "pet-a").pet, null);

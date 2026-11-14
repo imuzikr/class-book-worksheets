@@ -361,6 +361,20 @@
 .reading-teacher-sid { font-family: var(--font-mono); font-size: 12px; color: var(--text-sub); font-variant-numeric: tabular-nums; }
 .reading-teacher-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .reading-teacher-main { min-width: 0; }
+/* 펫 먹이(lib/petCare.js) — 명단의 배부름 · 떠난 펫 불러 주기 */
+.reading-teacher-care { margin: -4px 4px 10px; font-size: 12px; color: var(--text-faint); }
+.reading-teacher-care.is-alert { color: #a85a22; }
+.reading-teacher-care b { font-variant-numeric: tabular-nums; }
+.reading-teacher-chip { margin-left: auto; flex-shrink: 0; padding: 2px 7px; border-radius: 999px; background: #eef5ef; color: #4d7a5a; font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.reading-teacher-chip.is-hungry { background: #fdeed9; color: #a85a22; }
+.reading-teacher-chip.is-low { background: #fde3df; color: #b3392f; }
+.reading-teacher-chip.is-away { background: #ebe8e1; color: #6f675c; }
+.reading-teacher-recall { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; padding: 12px 14px; border: 1px solid #d9d4c8; border-radius: 14px; background: #f7f5f0; }
+.reading-teacher-recall span { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1 1 280px; }
+.reading-teacher-recall strong { font-size: 14px; color: var(--dark); }
+.reading-teacher-recall small { font-size: 12.5px; line-height: 1.5; color: var(--text-sub); word-break: keep-all; }
+.reading-teacher-recall .reading-teacher-recall-error { color: #b3392f; }
+.reading-teacher-recall button { height: 40px; padding: 0 18px; display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; }
 /* 선생님의 책 광장 입구 — 명단 위의 나무 팻말(광장 안의 '책 광장' · '나가기' 팻말과 같은 색이라 그 문으로 읽힘).
    책 광장은 반 전체의 자리라 고른 학생의 화면(탭 줄) 밖에 둡니다 — 학생이 한 명도 없는 반에서도 섭니다.
    명단의 단추 규칙(.reading-teacher-rail button — 가로 줄 · 투명 바탕 · 좁은 화면의 width:auto)에 지지 않게 선택자를 겹쳐 씁니다. */

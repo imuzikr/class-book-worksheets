@@ -580,10 +580,14 @@ service cloud.firestore {
       allow list: if isAdmin() || (isTeacher() && resource.data.createdBy == uid());
       // 새 반은 기본 꺼짐. 켜기는 운영 중인 반의 담당 교사/관리자만 합니다.
       // 관리자 설정 화면의 스위치(책나눔 성장 · 도서 검색 · 리더보드(rankingEnabled) · 독서 TOP 3 ·
-      // 학생 캐릭터 · 과일 바구니 · 학생 펫 · 책 광장 · 교실)도 같은 판정 — 참·거짓만, 운영 중인 반에서만 바꿉니다.
+      // 학생 캐릭터 · 과일 바구니 · 학생 펫 · 펫 먹이 · 책 광장 · 교실)도 같은 판정 — 참·거짓만, 운영 중인 반에서만 바꿉니다.
       // 독서 맵(readingMapTheme)은 대륙 · 모험의 식별자 두 개만 받습니다.
       // 교실의 칠판에서 선생님이 출석을 확인한 때(classroomCallAt — lib/data/classes.js의 callClassroomRoll)는
       // 0 이상의 수만 받습니다(앉아 있던 학생의 화면이 이 값이 바뀌는 것을 보고 출석을 남깁니다).
+      // 펫 먹이(lib/petCare.js) — 스위치(petFeedEnabled) · 주말에 쉬는가(petRestWeekend)는 참 · 거짓만, 켠 때
+      // (petFeedFrom)는 0 이상의 수만, 배고파지지 않는 기간(petRests — 방학 · 시험 기간 · 기타)은 20줄까지의 목록만.
+      // 줄의 모양(날짜 · 종류)은 읽는 쪽이 다시 고릅니다(normalizeCareRests — 틀린 줄은 버림). 펫의 배부름 자체는
+      // 학생 프로필의 readingPet.care에 서버만 적습니다(아래 users 규칙 — 학생 · 교사 모두 readingPet을 못 고침).
       function readingSettingValid() {
         let changed = request.resource.data.diff(resource.data).affectedKeys();
         return (!changed.hasAny(['readingEnabled']) || request.resource.data.get('readingEnabled', null) is bool)
@@ -592,13 +596,20 @@ service cloud.firestore {
                && (!changed.hasAny(['bookSearchEnabled']) || request.resource.data.get('bookSearchEnabled', null) is bool)
                && (!changed.hasAny(['fruitBasketEnabled']) || request.resource.data.get('fruitBasketEnabled', null) is bool)
                && (!changed.hasAny(['petEnabled']) || request.resource.data.get('petEnabled', null) is bool)
+               && (!changed.hasAny(['petFeedEnabled']) || request.resource.data.get('petFeedEnabled', null) is bool)
+               && (!changed.hasAny(['petRestWeekend']) || request.resource.data.get('petRestWeekend', null) is bool)
+               && (!changed.hasAny(['petFeedFrom'])
+                   || (request.resource.data.get('petFeedFrom', null) is number && request.resource.data.petFeedFrom >= 0))
+               && (!changed.hasAny(['petRests'])
+                   || (request.resource.data.get('petRests', null) is list && request.resource.data.petRests.size() <= 20))
                && (!changed.hasAny(['readingTopEnabled']) || request.resource.data.get('readingTopEnabled', null) is bool)
                && (!changed.hasAny(['plazaEnabled']) || request.resource.data.get('plazaEnabled', null) is bool)
                && (!changed.hasAny(['classroomEnabled']) || request.resource.data.get('classroomEnabled', null) is bool)
                && (!changed.hasAny(['classroomCallAt'])
                    || (request.resource.data.get('classroomCallAt', null) is number && request.resource.data.classroomCallAt >= 0))
                && (!changed.hasAny(['readingMapTheme']) || request.resource.data.get('readingMapTheme', null) in ['continent', 'cloud-islands'])
-               && (!changed.hasAny(['readingEnabled', 'rankingEnabled', 'characterEnabled', 'bookSearchEnabled', 'fruitBasketEnabled', 'petEnabled', 'readingTopEnabled', 'plazaEnabled', 'classroomEnabled', 'classroomCallAt', 'readingMapTheme'])
+               && (!changed.hasAny(['readingEnabled', 'rankingEnabled', 'characterEnabled', 'bookSearchEnabled', 'fruitBasketEnabled', 'petEnabled', 'readingTopEnabled', 'plazaEnabled', 'classroomEnabled', 'classroomCallAt', 'readingMapTheme',
+                                    'petFeedEnabled', 'petFeedFrom', 'petRestWeekend', 'petRests'])
                    || (resource.data.get('archived', false) != true
                        && request.resource.data.get('archived', false) != true));
       }

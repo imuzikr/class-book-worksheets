@@ -6,6 +6,7 @@ import { deriveReading, initialReadingState, kstToday, READING_BADGES } from "@/
 import { subscribeReadingState, mutateReading, fetchReadingRankings } from "@/lib/data/reading";
 import { rankingAsOf, rankingsForPeriod } from "@/lib/readingJourney";
 import { petGrowthOfSummary } from "@/lib/readingPet";
+import { CARE_READ_CHARS, CARE_READ_PAGES, readingDayProof } from "@/lib/petCare";
 import ReadingBadge from "./ReadingBadge";
 import BookSearch from "./BookSearch";
 import { hasModalAbove } from "@/lib/modal";
@@ -136,7 +137,8 @@ function Modal({ title, onClose, children, wide = false, busy = false }) {
 //   (출석 · 자리표는 페이지가 이미 받아 둔 것 — ReadingPlaza.jsx 머리의 설명).
 // plazaCall — 선생님의 '모두 이동'이 10초를 다 세고 모두를 데려오는 신호의 '보낸 때'(책방 페이지가 넘김 · 없으면 0).
 //   이 값이 **이 화면이 떠 있는 동안 바뀌면** 책 광장 탭으로 넘어갑니다(아래).
-export default function ReadingHub({ classId, user, isTeacher = false, bookSearchOn = false, petOn = false, plazaOn = false, characterOn = true, onDisabled, activities = [], onOpenActivity, initialBookId = null, initialTab = "library", student = null, classroom = null, plazaCall = 0 }) {
+// petFeed — 그 반의 펫 먹이 규칙(lib/readingPet.js의 petCareRules — 끈 반이면 on이 거짓) · myFruit — 내가 가진 과일 수(먹이).
+export default function ReadingHub({ classId, user, isTeacher = false, bookSearchOn = false, petOn = false, plazaOn = false, characterOn = true, onDisabled, activities = [], onOpenActivity, initialBookId = null, initialTab = "library", student = null, classroom = null, plazaCall = 0, petFeed = null, myFruit = 0 }) {
   // student가 있으면 교사가 그 학생의 책나눔을 보는 읽기 전용 화면입니다(선생님 결정 — 감상·발자국까지 전부 보임).
   const readOnly = !!student?.uid;
   const viewUid = readOnly ? student.uid : user?.uid;
@@ -252,7 +254,9 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
       const result = await mutateReading(classId, action);
       if (result?.state) setRaw(result.state);
       else if (Array.isArray(result?.books) && Array.isArray(result?.logs)) setRaw(result);
-      if (success) setNotice(success);
+      // 펫 먹이 — 이 저장으로 오늘이 '읽은 날'이 됐거나(배부름 유지) 떠난 펫을 부르는 걸음이 됐으면 함께 알립니다
+      const petNews = PET_NEWS[result?.petEvent] ?? "";
+      if (success || petNews) setNotice(`${success || ""}${success && petNews ? " " : ""}${petNews}`);
       return true;
     } catch (e) {
       setError(e?.message || "저장하지 못했어요. 다시 시도해 주세요.");
@@ -266,6 +270,9 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
   const selected = dialog?.bookId ? books.find((b) => b.id === dialog.bookId) : null;
   const featured = (stats.badges || []).find((b) => b.id === (stats.featuredBadge?.id || stats.featuredBadge));
   const showPet = petOn && !readOnly && !isTeacher && !!user?.uid;
+  // 펫 먹이를 켠 반의 학생 — 발자국 창이 '오늘의 읽기'(쪽 · 글자 수)를 보여 줍니다(lib/petCare.js의 readingDayProof)
+  const feedOn = showPet && !!petFeed?.on;
+  const readToday = useMemo(() => (feedOn && raw ? readingDayProof(stats, day) : null), [feedOn, raw, stats, day]);
   // 광장에서 나가기(맵 위의 '나가기') — 첫 탭(책꽂이)으로 돌아갑니다. 광장 탭에서는 책방 머리말과 탭 줄을 가리므로
   // (plaza.css의 '광장 탭') 나가는 길은 이 단추입니다. 나온 뒤에는 초점을 그 탭에 둡니다 — 광장이 사라지며 초점이 길을 잃지 않게.
   const tabsRef = useRef(null);
@@ -289,7 +296,8 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
       {(featured?.earned || showPet) && <div className="reading-intro-side">
         {featured?.earned && <div className="reading-featured"><ReadingBadge badge={featured} size={70} /><span>{readOnly ? "대표 뱃지" : "나의 대표 뱃지"}<strong>{featured.name}</strong></span></div>}
         {/* 나의 펫 — 단계는 이미 받은 서재로 셉니다(lib/readingPet.js). 서재를 받기 전에는 카드도 기다립니다. */}
-        {showPet && <PetCard classId={classId} uid={user.uid} growthXp={raw ? petGrowthOfSummary(stats) : null} level={raw ? stats.level : null} onLevelCheer={markPetLevel} />}
+        {showPet && <PetCard classId={classId} uid={user.uid} growthXp={raw ? petGrowthOfSummary(stats) : null} level={raw ? stats.level : null} onLevelCheer={markPetLevel}
+          feed={petFeed} fruits={myFruit} today={day} />}
       </div>}
     </div>
     <nav className="reading-tabs" aria-label="책나눔 메뉴" ref={tabsRef}>
@@ -298,7 +306,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
     {error && !dialog && !confirm && <div className="reading-error" role="alert">{error}<button type="button" onClick={() => setError("")} aria-label="오류 안내 닫기">×</button></div>}
     {notice && <div className="reading-notice" role="status">{notice}</div>}
     {/* 책 광장은 서재(정본)를 기다리지 않습니다 — 반의 공유 사본을 제 손으로 구독합니다. 펫의 단계만 서재에서 받습니다. */}
-    {tab === "plaza" ? <PlazaExitContext.Provider value={leavePlaza}><ReadingPlaza key={plazaJump?.key ?? "plaza"} classId={classId} user={user} isTeacher={isTeacher} characterOn={characterOn} petOn={showPet} growthXp={raw ? petGrowthOfSummary(stats) : null} initialBook={plazaJump} onExit={leavePlaza} classroom={classroom} /></PlazaExitContext.Provider>
+    {tab === "plaza" ? <PlazaExitContext.Provider value={leavePlaza}><ReadingPlaza key={plazaJump?.key ?? "plaza"} classId={classId} user={user} isTeacher={isTeacher} characterOn={characterOn} petOn={showPet} petFeed={petFeed} growthXp={raw ? petGrowthOfSummary(stats) : null} initialBook={plazaJump} onExit={leavePlaza} classroom={classroom} /></PlazaExitContext.Provider>
     : loading ? <div className="reading-loading" role="status"><span className="reading-loader" />독서 기록을 불러오고 있어요.</div> : !raw ? <div className="reading-empty"><BookIcon size={40} /><h3>독서 정보를 불러오지 못했어요.</h3><button type="button" className="btn-primary" onClick={() => setRevision((r) => r + 1)}>다시 불러오기</button></div> : <>
       <div className="reading-summary">
         <div className="reading-level"><span>독서 레벨</span><strong><small>Lv.</small>{stats.level}</strong><div className="reading-progress" role="progressbar" aria-label={stats.maxLevel ? "최고 레벨" : "다음 레벨까지"} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(stats.progress || 0)}><i style={{ width: `${stats.progress || 0}%` }} /></div><span>{stats.maxLevel ? `${number(stats.xp)} EXP · 최고 레벨` : `${number(stats.xp)} / ${number(stats.nextXp)} EXP`}</span></div>
@@ -322,11 +330,20 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
     {dialog?.type === "detail" && selected && <BookDetail book={selected} classId={classId} readOnly={readOnly} activity={activities.find((a) => a.id === selected.activityId)} onOpenActivity={onOpenActivity} logs={(stats.logs || raw?.logs || []).filter((l) => l.bookId === selected.id)} review={(stats.reviews || raw?.reviews || []).find((r) => r.bookId === selected.id)} busy={busy} onClose={() => setDialog(null)} onEdit={() => setDialog({ type: "book", bookId: selected.id })} onLog={(log) => setDialog({ type: "log", bookId: selected.id, log })} onReview={() => setDialog({ type: "review", bookId: selected.id })} onDeleteLog={(log) => ask("이 독서 기록을 삭제할까요? 경험치와 달성 기록도 다시 계산해요.", { type: "deleteLog", logId: log.id })} onDeleteReview={() => ask("이 ‘한 권의 책’을 삭제할까요? 받은 보상도 함께 정정해요.", { type: "deleteReview", bookId: selected.id })} onArchive={() => ask(selected.archived ? "이 책을 책꽂이로 돌려놓을까요?" : "이 책을 보관함으로 옮길까요? 독서 기록은 그대로 남아요.", { type: "archiveBook", bookId: selected.id, archived: !selected.archived })}
       plaza={ownPlaza ? plazaInfo(selected.id) : null}
       onOpenPlaza={(place) => { setDialog(null); setError(""); setPlazaJump({ uid: viewUid, bookId: selected.id, place, key: `jump-${Date.now()}` }); setTab("plaza"); }} />}
-    {dialog?.type === "log" && selected && <LogForm key={dialog.log?.id || selected.id} book={selected} log={dialog.log} today={day} busy={busy} plaza={ownPlaza ? (plazaInfo(selected.id).blocked ? "blocked" : "shown") : null} onClose={() => setDialog({ type: "detail", bookId: selected.id })} onSave={async (values) => { const ok = await run({ type: dialog.log ? "updateLog" : "addLog", bookId: selected.id, ...(dialog.log ? { logId: dialog.log.id } : {}), ...values }, "오늘의 독서를 기록했어요."); if (ok) setDialog({ type: "detail", bookId: selected.id }); }} />}
+    {dialog?.type === "log" && selected && <LogForm key={dialog.log?.id || selected.id} book={selected} log={dialog.log} today={day} busy={busy} petRead={readToday} plaza={ownPlaza ? (plazaInfo(selected.id).blocked ? "blocked" : "shown") : null} onClose={() => setDialog({ type: "detail", bookId: selected.id })} onSave={async (values) => { const ok = await run({ type: dialog.log ? "updateLog" : "addLog", bookId: selected.id, ...(dialog.log ? { logId: dialog.log.id } : {}), ...values }, "오늘의 독서를 기록했어요."); if (ok) setDialog({ type: "detail", bookId: selected.id }); }} />}
     {dialog?.type === "review" && selected && <ReviewForm key={selected.id} book={selected} review={(stats.reviews || raw?.reviews || []).find((r) => r.bookId === selected.id)} busy={busy} plaza={ownPlaza ? (plazaInfo(selected.id).blocked ? "blocked" : "shown") : null} onClose={() => setDialog({ type: "detail", bookId: selected.id })} onSave={async (values) => { const ok = await run({ type: "saveReview", bookId: selected.id, ...values }, "책을 읽고 남긴 생각을 저장했어요."); if (ok) setDialog({ type: "detail", bookId: selected.id }); }} />}
     {confirm && <Modal title="기록 확인" busy={busy} onClose={() => setConfirm(null)}><p className="reading-confirm-copy">{confirm.title}</p><div className="reading-form-actions"><button type="button" className="btn-ghost" onClick={() => setConfirm(null)} disabled={busy}>취소</button><button type="button" className="reading-danger-button" disabled={busy} onClick={async () => { if (await run(confirm.action, "기록을 정리했어요.")) setConfirm(null); }}>{busy ? "처리 중…" : "확인"}</button></div></Modal>}
   </section></ReadingErrorContext.Provider>;
 }
+
+// 독서를 저장했을 때의 펫 소식(서버 · 체험반이 돌려주는 petEvent — lib/petCare.js의 planCareReadDay)
+const PET_NEWS = {
+  kept: "펫의 배부름이 오늘은 줄지 않아요.",
+  unkept: "오늘의 ‘읽은 날’이 풀렸어요 — 5쪽 · 250자 이상이면 다시 유지돼요.",
+  step: "떠난 펫을 부르는 한 걸음을 채웠어요.",
+  unstep: "다시 부르기 걸음이 하나 줄었어요.",
+  returned: "펫이 돌아왔어요!",
+};
 
 function isDisabledError(e) {
   return ["reading-disabled", "reading/disabled", "disabled_feature", "READING_DISABLED"].includes(e?.code) || (e?.status === 403 && /비활성|사용.*중지|사용.*꺼/.test(e.message || ""));
@@ -415,15 +432,29 @@ function BookForm({ book, searchOn = false, pagesLocked, activities, busy, onSav
 
 // plaza — 책 광장을 켠 반의 학생: 이 발자국을 반 친구들이 함께 읽는다는 것을 쓰는 자리에서 알려 줍니다
 // ("shown" · 선생님이 이 책을 내렸으면 "blocked"). 학생이 고르는 칸은 없습니다(선생님 결정 — 광장을 켠 반에서는 모두 공개).
-function LogForm({ book, log, today, busy, plaza = null, onSave, onClose }) {
+// petRead — 펫 먹이를 켠 반의 학생에게만: 저장해 둔 오늘의 발자국 합계 { pages, chars }(lib/petCare.js의 readingDayProof).
+// 쓰는 동안 '오늘의 읽기 n쪽 · n자'를 보여 주어, 5쪽 · 250자 이상이면 오늘은 펫의 배부름이 줄지 않는다는 것을 알립니다.
+function LogForm({ book, log, today, busy, plaza = null, petRead = null, onSave, onClose }) {
   const [form, setForm] = useState({ date: log?.date || today, startPage: log?.startPage || Math.min((book.currentPage || 0) + 1, book.totalPages), endPage: log?.endPage || "", notes: log?.notes || "" });
   const change = (key, v) => setForm((p) => ({ ...p, [key]: v }));
+  // 펫 먹이 — 오늘의 읽기(저장해 둔 오늘 것 + 지금 쓰는 것). 고치는 중인 기록은 제 몫을 빼고 다시 더합니다.
+  // 오늘 날짜의 발자국만 셉니다('읽은 날'은 그날 안에 남긴 기록으로 — lib/petCare.js 머리말).
+  const mine = log && log.date === today ? { pages: log.endPage - log.startPage + 1, chars: String(log.notes ?? "").trim().length } : { pages: 0, chars: 0 };
+  const range = Number(form.startPage) >= 1 && Number(form.endPage) >= Number(form.startPage) ? Number(form.endPage) - Number(form.startPage) + 1 : 0;
+  const read = petRead && form.date === today
+    ? { pages: Math.max(0, petRead.pages - mine.pages) + range, chars: Math.max(0, petRead.chars - mine.chars) + form.notes.trim().length } : null;
+  const readOk = !!read && read.pages >= CARE_READ_PAGES && read.chars >= CARE_READ_CHARS;
   return <Modal title={log ? "독서 발자국 고치기" : "오늘의 독서 발자국"} onClose={onClose} busy={busy}>
     <form className="reading-form" onSubmit={(e) => { e.preventDefault(); onSave({ ...form, startPage: Number(form.startPage), endPage: Number(form.endPage), notes: form.notes.trim() }); }}>
       <div className="reading-form-book"><BookIcon /><strong>{book.title}</strong><span>총 {number(book.totalPages)}쪽</span></div>
       <label>읽은 날짜<input data-initial-focus required type="date" max={today} value={form.date} onChange={(e) => change("date", e.target.value)} /></label>
       <div className="reading-form-row"><label>시작 쪽<input required type="number" min={1} max={book.totalPages} step={1} value={form.startPage} onChange={(e) => change("startPage", e.target.value)} inputMode="numeric" /></label><label>마지막 쪽<input required type="number" min={Math.max(1, Number(form.startPage) || 1)} max={book.totalPages} step={1} value={form.endPage} onChange={(e) => change("endPage", e.target.value)} inputMode="numeric" /></label></div>
       <label>오늘의 짧은 감상<textarea required maxLength={2000} rows={4} value={form.notes} onChange={(e) => change("notes", e.target.value)} placeholder="마음에 남은 장면이나 새롭게 떠오른 생각을 적어 보세요." /><span className="reading-field-count">{form.notes.length} / 2,000</span></label>
+      {petRead && (read
+        ? <p className={`pet-read-note${readOk ? " is-ok" : ""}`}>🍊 오늘의 읽기 <b>{number(read.pages)}쪽</b> · <b>{number(read.chars)}자</b>{readOk
+          ? " — 오늘은 ‘읽은 날’이에요. 펫의 배부름이 줄지 않아요 ✓"
+          : ` — ${CARE_READ_PAGES}쪽 · ${CARE_READ_CHARS}자 이상이면 오늘은 펫의 배부름이 줄지 않아요.`}</p>
+        : <p className="pet-read-note">🍊 오늘 날짜의 발자국만 펫의 ‘읽은 날’이 돼요.</p>)}
       {plaza === "shown" && <p className="plaza-note">이 발자국은 책 광장에서 반 친구들이 함께 읽어요.</p>}
       {plaza === "blocked" && <p className="plaza-note plaza-note--off">선생님이 이 책을 광장에서 내려, 이 발자국은 나와 선생님만 봐요.</p>}
       <p className="reading-help">1쪽당 1 EXP. 그날 5쪽 이상 읽으면 연속 독서일로 쳐서 하루 한 번 보너스(연속일 × 15, 7일째부터 105)를 받아요. 이미 기록한 페이지는 중복 적립하지 않아요.</p>

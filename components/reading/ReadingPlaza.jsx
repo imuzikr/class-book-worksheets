@@ -56,6 +56,8 @@ import { subscribeStudySeatLayout } from "@/lib/store";
 import { todayDateKey } from "@/lib/dates";
 import { characterOf } from "@/lib/readingCharacterCatalog";
 import { petProgress } from "@/lib/readingPet";
+import { careAway } from "@/lib/petCare";
+import { kstToday } from "@/lib/reading";
 import { plazaItems } from "@/lib/readingPlaza";
 import {
   CLASSROOM_MOVE_LATE_MS, classroomAct, classroomAtBoard, classroomAttendance, classroomBoardAt, classroomBoardMark, classroomBoardStand, classroomDesks,
@@ -140,7 +142,7 @@ const friendRow = (uid, who, friend) => ({
 //       그것을 내놓은 때 · 아니면 0) · moveWaiting(세는 중인가 — [선생님] 단추를 쉬게 함),
 //     onAttend([학생] 출석 남기기) · onRollCall([선생님] 출석시작) · onStop([선생님] 출석종료) · onSeatSetup([선생님] 자리 배정하기 열기) ·
 //     onMoveAll([선생님] 모두 이동 — 방 id를 받아 신호를 적음) }
-export default function ReadingPlaza({ classId, user, isTeacher = false, characterOn = true, petOn = false, growthXp = null, initialBook = null, onExit = null, classroom = null }) {
+export default function ReadingPlaza({ classId, user, isTeacher = false, characterOn = true, petOn = false, petFeed = null, growthXp = null, initialBook = null, onExit = null, classroom = null }) {
   const myUid = user?.uid;
   const classroomOn = !!classroom?.on;
   const [shelves, setShelves] = useState(null);
@@ -1048,7 +1050,9 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     if (el.scrollLeft) el.scrollLeft = 0;
   }
 
-  const pet = petOn && !isTeacher ? petProgress(petState?.mirror ?? null, growthXp ?? 0) : null;
+  // 펫 먹이를 켠 반 — 먹이를 찾아 떠난 펫은 따라오지 않습니다(표시 없이 · 친구 화면의 입장권도 서버가 같은 셈으로 뺌)
+  const petGone = !!petFeed?.on && careAway(petState?.mirror ?? null, petFeed, kstToday());
+  const pet = petOn && !isTeacher && !petGone ? petProgress(petState?.mirror ?? null, growthXp ?? 0) : null;
   // 펫이 (늦게) 나타나면 지금 캐릭터 곁에 세웁니다 — 펫 자료가 늦게 와 그사이 걸어 나갔을 수 있습니다.
   // 그리면서 맞춥니다(한 번) — 처음 자리에 한 번 보였다가 옮겨 가지 않게.
   if (!pet) myPet.current = null;

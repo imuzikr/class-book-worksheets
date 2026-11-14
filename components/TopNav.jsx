@@ -6,7 +6,7 @@
 // 왼쪽: 책봄 로고 ｜ 책방 · 책나눔(관리자 설정에서 켰을 때)
 // 오른쪽: 역할 전환(개발용) ｜ 돌발 퀴즈 ｜ 손들기 ｜ 공지 ｜ 알림 ｜ 사용자 프로필(로그아웃은 그 메뉴 안)
 // =============================================================
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isAdmin, isTeacher } from "@/lib/user";
 import { isFirebaseConfigured, sampleMode } from "@/lib/firebase";
@@ -42,11 +42,16 @@ import { useRewardCelebration } from "@/lib/useRewardCelebration";
 import { useClassMembers } from "@/lib/useClassRoster";
 import { IconLogo, IconBook, IconTrophy, IconSettings } from "./StatusIcons";
 import { ensureReadingPet, READING_PET_EVENT, saveReadingCharacter, subscribeMyReadingCharacter, subscribeMyReadingPet } from "@/lib/data/reading";
-import { readingEnabled, readingTopOn, fruitBasketOn } from "@/lib/reading";
+import { kstToday, readingEnabled, readingTopOn, fruitBasketOn } from "@/lib/reading";
 import { characterChoiceEnabled } from "@/lib/readingCharacter";
-import { petEnabled } from "@/lib/readingPet";
+import { petCareRules, petEnabled } from "@/lib/readingPet";
+import { careRulesFor, careStatus } from "@/lib/petCare";
+import { petCareNotice } from "./reading/PetCard";
 import { characterOf } from "./reading/CharacterChooser";
 import Toast from "./Toast";
+
+// 펫 먹이 알림을 이미 띄운 날(이 탭이 떠 있는 동안) — 상단바는 화면을 옮길 때마다 새로 서므로 모듈에 둡니다
+const petCareTold = new Map();
 
 export default function TopNav({ active, growthEnabled = false, rankingOn = true, readingOpen = false, leaderboardOpen = false, settingsOpen = false, onStudyExport = null }) {
   const router = useRouter();
@@ -162,12 +167,15 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
   const [myCharacter, setMyCharacter] = useState(null);
   // 독서 펫 — 관리자 설정의 '학생 펫'이 켜진 반의 학생만(선생님 · 관리자는 펫이 없음 · lib/readingPet.js)
   const [petOn, setPetOn] = useState(false);
+  // 펫 먹이(관리자 설정 — lib/petCare.js)의 규칙 — 글자로 들어, 반 문서의 다른 칸이 바뀔 때는 그대로입니다
+  const [petFeedKey, setPetFeedKey] = useState("");
   useEffect(() => {
     setCharacterOn(false);
     setFruitOn(true);
     setTopOn(false);
     setTopCharacters(false);
     setPetOn(false);
+    setPetFeedKey("");
     if (!quizClassId) return;
     // 선생님의 '모두 이동' 신호 — 어느 화면에서든 알림 띠가 뜨게 여기서 먹입니다(lib/classroomMoveStore.js).
     // 보는 동안임을 알려 둡니다(한참 안 보다 다시 본 첫 값은 '이미 있던 신호'로 다룸). 아직 못 받은 문서(null)는 먹이지 않습니다.
@@ -179,6 +187,7 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
       setTopCharacters(!!c && characterChoiceEnabled(c));
       if (!admin) setCharacterOn(!!c && readingEnabled(c) && characterChoiceEnabled(c));
       if (!admin) setPetOn(!!c && petEnabled(c));
+      if (!admin) setPetFeedKey(c ? JSON.stringify(petCareRules(c)) : "");
     });
     return () => { off(); unwatch(); };
   }, [admin, quizClassId]);
@@ -209,6 +218,40 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
     window.addEventListener(READING_PET_EVENT, onAdopted);
     return () => window.removeEventListener(READING_PET_EVENT, onAdopted);
   }, [admin, myUid]);
+  // 펫 먹이 — 펫이 배고프거나(배부름 30 이하) 먹이를 찾아 떠났으면 **어느 화면에서든 하루에 한 번** 알립니다
+  // (선생님 요청 — 펫이 말을 걸어 알려 줌). 화면을 가리지 않는 알림 한 줄입니다(알을 받았을 때와 같은 자리).
+  // 배부름은 이미 구독한 내 프로필의 펫과 반 문서로 셉니다(읽기 0). 알린 날은 이 기기에 적어 둡니다 —
+  // 화면을 옮길 때마다 다시 뜨지 않게(저장이 막힌 기기는 이 탭이 떠 있는 동안만 기억).
+  const [careDay, setCareDay] = useState(() => kstToday());
+  useEffect(() => {
+    const timer = setInterval(() => setCareDay(kstToday()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+  const myPetMirror = myPet.loaded && !myPet.failed ? myPet.mirror : null;
+  // 내가 이 반에 들어온 때 — 그날보다 앞의 날은 세지 않습니다(lib/petCare.js의 careRulesFor). 소속을 아직 못 받았으면
+  // 알리지 않습니다(들어온 날을 모르는 채로 세면, 반을 미리 만들어 둔 선생님 반에 옮겨 온 학생에게 잘못 알림).
+  const myMembership = admin ? null : memberships.find((m) => m.classId === quizClassId) ?? null;
+  const myJoinedAt = myMembership?.joinedAt ?? null;
+  const myFeedKey = useMemo(
+    () => (petFeedKey && myMembership ? JSON.stringify(careRulesFor(JSON.parse(petFeedKey), myJoinedAt)) : ""),
+    [petFeedKey, myMembership, myJoinedAt]
+  );
+  useEffect(() => {
+    if (admin || !myUid || !myFeedKey || !myPetMirror) return;
+    const rules = JSON.parse(myFeedKey);
+    const status = rules.on ? careStatus(myPetMirror, rules, careDay) : null;
+    const notice = petCareNotice(status, myPetMirror);
+    if (!notice) return;
+    const key = `bookbom.pet.care.v1:${encodeURIComponent(myUid)}`;
+    const mark = `${careDay}:${status.away ? "away" : "hungry"}`;
+    if (petCareTold.get(key) === mark) return;
+    try {
+      if (window.localStorage.getItem(key) === mark) { petCareTold.set(key, mark); return; }
+      window.localStorage.setItem(key, mark);
+    } catch { /* 저장이 막힌 기기 — 아래 기억으로만 */ }
+    petCareTold.set(key, mark);
+    setPetToast(notice);
+  }, [admin, myUid, myFeedKey, myPetMirror, careDay]);
   useEffect(() => {
     setMyCharacter(null);
     if (admin || !myUid || !characterOn) return;
@@ -482,7 +525,7 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
     {user && quizClassId && <ClassMoveBanner classId={quizClassId} isTeacher={admin} />}
 
     {/* 독서 펫의 알을 처음 받은 순간 — 막지 않는 한 줄 알림(수업 중이어도 화면을 가리지 않게) */}
-    {petToast && <Toast message={petToast} duration={4200} onDone={clearPetToast} />}
+    {petToast && <Toast message={petToast} duration={6000} onDone={clearPetToast} />}
 
     {/* 교사 화면 — 자기 반에 방송이 켜져 있으면 어디서든 바로 끌 수 있는 안전장치.
         책방 활동의 수업 화면 창이 떠 있어도 **비키지 않습니다**(선생님 요청 —

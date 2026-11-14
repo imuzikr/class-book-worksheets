@@ -15,6 +15,10 @@
 //   · 학생 캐릭터(characterEnabled — 값이 없으면 켜짐, 책나눔이 켜져 있어야 씀. 리더보드를 꺼도 '내 프로필'에서 고름)
 //   · 과일 바구니(fruitBasketEnabled — 값이 없으면 켜짐, 끄면 떠 있는 동그라미에서도 가림)
 //   · 학생 펫(petEnabled — 값이 없으면 켜짐, 책나눔이 켜져 있어야 씀 · lib/readingPet.js)
+//   · 펫 먹이(petFeedEnabled — 기본 꺼짐, 학생 펫이 켜져 있어야 씀 · lib/petCare.js). 켜면 그날부터 펫(알 포함)이
+//     날마다 배가 고파지고(하루 10), 과일(1개에 +10)과 독서(그날 발자국 5쪽 · 250자 이상이면 유지)로 돌봅니다.
+//     0이 되면 먹이를 찾아 떠나고 책을 읽어 다시 부릅니다 — 펫이 떠날 수 있는 기능이라 **켤 때만** 한 번 되묻습니다.
+//     바로 아래 '펫이 배고파지지 않는 날'(PetRestSettings — 주말 · 방학 · 시험 기간 · 기타)이 함께 섭니다.
 //   · 책 광장(plazaEnabled — 기본 꺼짐, 책나눔이 켜져 있어야 씀 · lib/readingPlaza.js). 켜면 책나눔의 셋째 탭이
 //     '우리 반 랭킹' 대신 '책 광장'이 되고, **그 반에서 쓴 독서 발자국 · 한 권의 책이 모두 반 친구에게 보입니다**
 //     (켜기 전에 쓴 글도 · 학생이 고르는 것이 없음 — 선생님 결정). 끄면 본인과 선생님만 봅니다. 켜는 순간 무엇이
@@ -29,6 +33,7 @@ import { setTeacherFeature, setTeacherReadingMapTheme } from "@/lib/store";
 import { teacherFeatureSettings } from "@/lib/reading";
 import { READING_MAP_THEMES, readingMapThemeSettings } from "@/lib/readingMapCatalog";
 import ConfirmModal from "./ConfirmModal";
+import PetRestSettings from "./PetRestSettings";
 import { IconGroup } from "./StatusIcons";
 
 const byName = (a, b) => String(a.name || "").localeCompare(String(b.name || ""), "ko", { numeric: true });
@@ -64,6 +69,12 @@ const FEATURES = [
   { key: "petEnabled", label: "학생 펫", needs: ["readingEnabled"], needsText: "책나눔 성장 기능을 먼저 켜 주세요",
     hint: "학생마다 알을 하나씩 받아 독서 경험치로 키워요. 책나눔 · 리더보드 · 내 프로필에 보여요. 선생님은 펫이 없어요.",
     on: "학생 펫을 켰어요. 학생마다 알을 하나씩 받아요.", off: "학생 펫을 껐어요. 키우던 펫은 보관되고, 다시 켜면 그대로 이어져요." },
+  { key: "petFeedEnabled", label: "펫 먹이", needs: ["readingEnabled", "petEnabled"], needsText: "학생 펫을 먼저 켜 주세요",
+    hint: "펫(알 포함)이 날마다 배가 고파져요(하루에 배부름 10). 과일 1개를 먹이면 +10, 그날 독서 발자국을 5쪽 · 250자 이상 남기면 줄지 않아요. 배부름이 0이 되면 펫이 먹이를 찾아 떠나고, 책을 읽으면 같은 펫이 돌아와요.",
+    on: "펫 먹이를 켰어요. 오늘부터 펫이 날마다 배가 고파져요.", off: "펫 먹이를 껐어요. 배고픔이 멈추고 떠난 펫도 다시 보여요. 배부름은 보관돼요.",
+    // 켠 날부터 펫이 배고파지고 떠날 수도 있으므로 **켤 때만** 한 번 되묻습니다(끌 때는 곧바로).
+    ask: { title: "펫 먹이를 켤까요?", confirmLabel: "켜기", icon: "fruit",
+      description: "켜면 오늘부터 모든 학생의 펫(알 포함)이 날마다 배가 고파져요. 책을 읽지도 과일을 주지도 않으면 열흘쯤 뒤에 펫이 먹이를 찾아 떠나요(책을 읽으면 같은 펫이 돌아와요). 켜기 전에 학생들에게 먼저 알려 주세요." } },
   { key: "plazaEnabled", label: "책 광장", needs: ["readingEnabled"], needsText: "책나눔 성장 기능을 먼저 켜 주세요",
     hint: "책나눔의 셋째 탭이 ‘우리 반 랭킹’ 대신 ‘책 광장’이 돼요. 켜면 학생들이 이 반에서 쓴 독서 발자국과 ‘한 권의 책’이 모두 반 친구들에게 보이고(켜기 전에 쓴 글도 · 학생이 따로 고르지 않아요) 서로 댓글을 남겨요. 끄면 자기 글은 본인과 선생님만 봐요. 순위는 상단바 리더보드에서 봐요.",
     on: "책 광장을 켰어요. 학생들이 쓴 독서 발자국과 ‘한 권의 책’이 모두 반 친구들에게 보여요.", off: "책 광장을 껐어요. 이제 자기 글은 본인과 선생님만 봐요. 광장의 글과 댓글은 보관되고, 책나눔에는 ‘우리 반 랭킹’ 탭이 다시 서요.",
@@ -84,7 +95,7 @@ const GROUPS = [
   { key: "reading", title: "독서 기록", desc: "학생의 책꽂이와 책 정보", keys: ["readingEnabled", "bookSearchEnabled"] },
   { key: "growth", title: "리더보드 · 꾸미기", desc: "반 친구와 함께 보는 성장 · 캐릭터와 펫", keys: ["rankingEnabled", "readingTopEnabled", "characterEnabled", "petEnabled"] },
   { key: "share", title: "함께 읽기", desc: "반 친구와 나누는 독서 발자국 · 한 권의 책 · 함께 앉는 교실", keys: ["plazaEnabled", "classroomEnabled"] },
-  { key: "reward", title: "교실 보상", desc: "과일 모으기와 이벤트", keys: ["fruitBasketEnabled"] },
+  { key: "reward", title: "교실 보상", desc: "과일 모으기와 이벤트 · 펫의 먹이", keys: ["fruitBasketEnabled", "petFeedEnabled"] },
 ];
 
 export default function AdminSettingsPanel({ classes = [], onToast }) {
@@ -162,6 +173,11 @@ export default function AdminSettingsPanel({ classes = [], onToast }) {
           })}
               </ul>
             </section>
+            {/* 펫 먹이의 '배고파지지 않는 날' — 과일 바구니 · 펫 먹이 카드 바로 아래 */}
+            {g.key === "reward" && (
+              <PetRestSettings classes={rows} feedOn={settings.petFeedEnabled.on}
+                ready={settings.readingEnabled.on && settings.petEnabled.on} onToast={onToast} />
+            )}
             {g.key === "growth" && (
               <section className="adm-group adm-map-group" aria-labelledby={`${mapId}-title`}>
                 <header className="adm-group-head">
@@ -208,7 +224,7 @@ export default function AdminSettingsPanel({ classes = [], onToast }) {
       <p className="adm-settings-foot">보관된 반은 바꿀 수 없어 빼고 적용해요. 새로 만드는 반도 지금 설정을 따라요.</p>
       {asking && (
         <ConfirmModal
-          icon={<IconGroup size={30} />}
+          icon={asking.ask.icon === "fruit" ? <span className="adm-ask-fruit" aria-hidden="true">🍊</span> : <IconGroup size={30} />}
           title={asking.ask.title}
           description={`${asking.ask.description}${rows.length > 1 ? ` 선생님의 반 ${rows.length}개 모두에 적용돼요.` : ""}`}
           confirmLabel={asking.ask.confirmLabel}
