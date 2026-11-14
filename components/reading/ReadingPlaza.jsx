@@ -252,6 +252,12 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   // [학생] 자리표를 아직 못 받은 채 교실로 옮겨져 뒤쪽에 서 있는 자리({ x, y }) — 자리표가 오면 제 러그로 옮겨 세웁니다(아래)
   const seatOwed = useRef(null);
 
+  // 아지트의 포털로 교실에 돌아온 때 — 곧바로 방향키로 이어 걷게 무대에 초점을 둡니다(아지트의 무대가 사라져 초점이
+  // 본문으로 떨어지면 무대를 한 번 눌러야 방향키가 들었습니다). 이 길에는 열려 있는 창이 없어 빼앗을 초점도 없습니다.
+  useEffect(() => {
+    if (returningFromHideout) stageRef.current?.focus({ preventScroll: true });
+  }, [returningFromHideout]);
+
   // 자리표 — 선생님은 책방 페이지가 이미 받아 둔 것을, 학생은 여기서 한 장 구독합니다(반 학생에게 읽기가 열려 있음)
   useEffect(() => {
     setLayout(undefined);

@@ -76,7 +76,8 @@ export function petCallName(mirrorOrProgress) {
 export function petSay(care, hatched) {
   if (!care || care.away || !care.hungry) return "";
   if (!hatched) return care.low ? "알이 차갑게 식어 가요… 오늘 책을 읽어 주세요!" : "알이 조금 식었어요. 책을 읽어 따뜻하게 해 주세요.";
-  if (care.low) return "오늘 아무것도 못 먹으면 먹이를 찾아 떠나야 할 것 같아요…";
+  // 배부름 10(오늘이 지나면 떠남) — 선생님이 고르신 말(한때 '오늘 아무것도 못 먹으면 먹이를 찾아 떠나야 할 것 같아요…')
+  if (care.low) return "배가 고파서 먹이를 찾아 떠나야 할 것 같아요…";
   return care.full <= CARE_DAY_DROP * 2 ? "꼬르륵… 배가 많이 고파요." : "배가 고파요… 과일 하나만 주세요!";
 }
 /** 상단바가 하루에 한 번 띄우는 알림 한 줄 — 배고픔 · 떠남(할 말이 없으면 ""). mirror: 프로필의 펫. */

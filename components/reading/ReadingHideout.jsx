@@ -34,7 +34,9 @@ const place = (x, y, width) => ({ left: `${x / HIDEOUT_SCENE.width * 100}%`, top
 const disabledError = (error) => /disabled|reading-off/.test(String(error?.code || ""));
 const themeName = (item) => ({ forest: "숲속", starlight: "별빛", explorer: "탐험", coastal: "바닷가" }[item.theme] || "기본");
 const unlockLevel = (item) => item.unlock?.level || item.unlockStage || item.sampleUnlockStage || 0;
-const WALK_KEYS = { ArrowUp: "up", KeyW: "up", ArrowDown: "down", KeyS: "down", ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right" };
+// 걷는 키는 방향키뿐 — 책 광장 · 교실과 같게(선생님 결정: 그 두 방에서 A는 행동 · S와 C는 고르는 키라, 아지트에서만
+// W A S D로 걸면 같은 키가 방마다 다른 일을 합니다. 한때 아지트만 W A S D로도 걸었습니다 — 되살리지 마세요).
+const WALK_KEYS = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right" };
 
 // Identity is the editor's lifetime: requests and drafts from a previous student
 // must not appear after a teacher changes students or classes.
@@ -136,6 +138,12 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
     enabled: !!room && !loading && !readOnly && !editing && !saving && !detail && !exitPending && !resetPending,
     map, spriteRef, onPortal: () => requestExitRef.current?.(),
   });
+  // 들어오자마자 방향키로 걷게 무대에 초점을 둡니다 — 교실의 포털로 들어오면 광장의 무대가 사라져 초점이 본문으로
+  // 떨어지고, 그때는 방을 한 번 눌러야 방향키가 들었습니다(선생님 신고). 꾸미기를 마치거나 거둔 뒤에도(꾸미던 단추가
+  // 사라짐). 소품 창 · 되묻는 창을 닫을 때는 그 창이 초점을 돌려주므로 건드리지 않습니다(walkReady가 그대로).
+  const walkReady = !!room && !loading && !readOnly && !editing;
+  const { focusStage } = movement;
+  useEffect(() => { if (walkReady) focusStage(); }, [walkReady, focusStage]);
 
   useEffect(() => {
     const scene = movement.stageRef.current;
@@ -225,7 +233,8 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
     </header>
     {error && <div className="hideout-error" role="alert"><p>{error}</p><button type="button" disabled={saving} onClick={() => { movement.stop(); keepDraft(draftKey, null); draftSnapshot.current = null; setReload((value) => value + 1); }}>저장된 모습 다시 불러오기</button></div>}
     <p className="hideout-status" role="status" aria-live="polite">{notice}</p>
-    <div className="hideout-scene" ref={movement.stageRef} style={{ "--hideout-unit": `${sceneWidth / HIDEOUT_SCENE.width}px` }} tabIndex={readOnly || editing ? -1 : 0} role="group" aria-label="아지트 이동 공간"
+    <div className="hideout-scene" ref={movement.stageRef} style={{ "--hideout-unit": `${sceneWidth / HIDEOUT_SCENE.width}px` }} tabIndex={readOnly || editing ? -1 : 0} role={readOnly ? "group" : "application"}
+      aria-label={readOnly ? "아지트 이동 공간" : "나의 아지트. 누른 곳으로 걸어가고 방향키로도 걷습니다. 오른쪽 포털로 교실에 돌아갑니다."}
       onClick={movement.onClick} onKeyDown={movement.onKeyDown} onBlur={movement.stop}
       onPointerDown={movement.onPointerDown} onPointerMove={movement.onPointerMove} onPointerUp={movement.onPointerUp} onPointerCancel={movement.onPointerCancel}>
       <img className="hideout-background" src={HIDEOUT_SCENE.background} width={HIDEOUT_SCENE.width} height={HIDEOUT_SCENE.height} alt="창가와 나무 바닥이 있는 아늑한 독서방" draggable={false} />
@@ -247,7 +256,7 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
       </div>
       {pet && bed && <RestingPet pet={pet} bed={bed} />}
     </div>
-    <p className="hideout-walk-help">{readOnly ? "학생 본인만 아지트를 꾸밀 수 있어요." : editing ? "이름과 큰 그림으로 소품을 골라 보세요. 마음에 들면 ‘꾸미기 완료’를 눌러요." : `빈 바닥을 누르거나 방향키 · W A S D로 걸어요. ${petGone ? "펫은 먹이를 찾아 떠나 있어요(책나눔에서 다시 불러요)." : "펫은 창가에서 쉬고,"} 오른쪽 포털로 교실에 돌아가요.`}</p>
+    <p className="hideout-walk-help">{readOnly ? "학생 본인만 아지트를 꾸밀 수 있어요." : editing ? "이름과 큰 그림으로 소품을 골라 보세요. 마음에 들면 ‘꾸미기 완료’를 눌러요." : `빈 바닥을 누르거나 방향키로 걸어요. ${petGone ? "펫은 먹이를 찾아 떠나 있어요(책나눔에서 다시 불러요)." : "펫은 창가에서 쉬고,"} 오른쪽 포털로 교실에 돌아가요.`}</p>
 
     <section className="hideout-editor" aria-label="아지트 소품">
       <div className="hideout-editor-heading"><div><h3>{editing ? "오늘은 어떻게 꾸밀까요?" : "독서로 만나는 소품"}</h3><p>종류마다 네 가지 테마를 골라 섞을 수 있어요.</p></div>
@@ -407,6 +416,31 @@ function useMovement({ enabled, map, spriteRef, onPortal }) {
     if (!map.walkable(position.current.x, position.current.y)) position.current = map.nearest(position.current.x, position.current.y);
     draw();
   }, [map, enabled, draw, stop]);
+  const focusStage = useCallback(() => { stageRef.current?.focus({ preventScroll: true }); }, []);
+  // 방향키 하나를 누름 — 걸을 수 있을 때만. 처리했으면 참.
+  const pressRef = useRef(null);
+  pressRef.current = (e) => {
+    if (!enabledRef.current || e.altKey || e.ctrlKey || e.metaKey || e.isComposing || hasModalAbove(stageRef.current)) return false;
+    if (e.code === "Escape") { e.preventDefault(); stop(); return true; }
+    if (!WALK_KEYS[e.code]) return false;
+    e.preventDefault();   // 방향키가 페이지를 굴리지 않게
+    if (blocked.current.has(e.code) && e.repeat) return true;
+    blocked.current.delete(e.code); held.current.add(e.code); setMarker(null); wake();
+    return true;
+  };
+  // 아무 칸에도 초점이 없을 때(본문) 누른 방향키도 걷기로 받고 무대에 초점을 옮깁니다 — 들어오는 길에 초점이 무대에
+  // 닿지 못했거나, 누르던 단추가 사라지며 초점이 본문으로 떨어진 때. 다른 칸(소품 종류 고르기 · 단추)에 초점이 있으면
+  // 그 칸의 키라 건드리지 않습니다. 무대에 초점이 있으면 무대의 onKeyDown이 받습니다(여기서는 넘어감).
+  useEffect(() => {
+    const loose = (e) => {
+      const active = document.activeElement;
+      if (active && active !== document.body && active !== document.documentElement) return;
+      if (e.defaultPrevented || !WALK_KEYS[e.code] || !stageRef.current || !enabledRef.current) return;
+      if (pressRef.current?.(e)) stageRef.current.focus({ preventScroll: true });
+    };
+    window.addEventListener("keydown", loose);
+    return () => window.removeEventListener("keydown", loose);
+  }, []);
   useEffect(() => {
     const heldSet = held.current;
     const release = (e) => { held.current.delete(e.code); blocked.current.delete(e.code); };
@@ -427,14 +461,9 @@ function useMovement({ enabled, map, spriteRef, onPortal }) {
     stageRef.current.focus({ preventScroll: true }); path.current = route; setMarker(route.at(-1)); wake();
   }
   function onKeyDown(e) {
-    if (!enabledRef.current || e.target !== e.currentTarget || e.altKey || e.ctrlKey || e.metaKey || e.isComposing || hasModalAbove(stageRef.current)) return;
-    if (e.code === "Escape") { e.preventDefault(); stop(); return; }
-    if (!WALK_KEYS[e.code]) return;
-    e.preventDefault();
-    if (blocked.current.has(e.code) && e.repeat) return;
-    blocked.current.delete(e.code); held.current.add(e.code); setMarker(null); wake();
+    if (e.target === e.currentTarget) pressRef.current?.(e);
   }
-  return { stageRef, avatarRef, position, marker, stop, walkTo, onClick, onKeyDown,
+  return { stageRef, avatarRef, position, marker, stop, walkTo, focusStage, onClick, onKeyDown,
     onPointerDown(e) { if (e.button !== 0 || e.target.closest?.("button")) return; pointer.current = { id: e.pointerId, x: e.clientX, y: e.clientY }; dragged.current = false; stop(); },
     onPointerMove(e) { if (pointer.current?.id === e.pointerId && Math.hypot(e.clientX - pointer.current.x, e.clientY - pointer.current.y) > 8) dragged.current = true; },
     onPointerUp() { pointer.current = null; }, onPointerCancel() { pointer.current = null; dragged.current = true; },
