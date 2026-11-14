@@ -2,8 +2,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  CARE_DAY_DROP, CARE_FRUIT, CARE_HUNGRY, CARE_MAX, CARE_READ_CHARS, CARE_READ_PAGES, CARE_RESTS_MAX, CARE_RETURN, CARE_STEP_FRUIT,
-  careAfterHatch, careAway, careRestOf, careRules, careRulesFor, careSeed, careStatus, careStepsNeeded, isCareRestDay, normalizeCare, normalizeCareRests,
+  CARE_DAY_DROP, CARE_FRUIT, CARE_HUNGRY, CARE_MAX, CARE_PAUSES_MAX, CARE_READ_CHARS, CARE_READ_PAGES, CARE_RESTS_MAX, CARE_RETURN, CARE_STEP_FRUIT,
+  careAfterHatch, careAway, carePausesOf, careRestOf, careRules, careRulesFor, careSeed, careStatus, careStepsNeeded, isCarePausedDay, isCareRestDay, normalizeCare, normalizeCareRests,
   planCareFeed, planCareReadDay, planCareRecall, planCareStep, readingDayProof,
 } from "@/lib/petCare";
 import { normalizePetMirror, petCareRules, petFeedOn, planPetAction } from "@/lib/readingPet";
@@ -144,12 +144,68 @@ test("펫 먹이를 끈 반 · 켠 날을 모르는 반 — 세지 않음", () =
   assert.equal(careStatus(p, noFrom, "2026-11-20", 3).away, false);
 });
 
-test("껐다 다시 켜면 — 그 사이의 날은 세지 않고 배부름은 그대로 이어짐", () => {
+test("옛 반(다시 켤 때 켠 때를 새로 적던 때) — 켠 때 앞의 날은 세지 않음", () => {
   const p = pet({ care: { full: 40, day: "2026-11-10", kept: null } });
-  // 11-10까지 셈해 40 → 한 달 꺼 두었다가 12-14(월)에 다시 켬
+  // 11-10까지 셈해 40 → 한 달 꺼 두었다가 12-14(월)에 다시 켜며 켠 때를 새로 적은 반
   const rules = rulesFrom("2026-12-14");
   assert.equal(careStatus(p, rules, "2026-12-14", 3).full, 40);
   assert.equal(careStatus(p, rules, "2026-12-16", 3).full, 30);
+});
+
+// 11-02(월) 처음 켬 · 11-09(월) 15시 끔 · 11-23(월) 10시 다시 켬 — 주말에도 줄게 해 요일과 상관없이
+const paused = (extra = {}) => careRules({ petFeedFrom: at("2026-11-02"), petRestWeekend: false,
+  petFeedOffAt: Date.parse("2026-11-09T15:00:00+09:00"), petFeedOnAt: Date.parse("2026-11-23T10:00:00+09:00"), ...extra }, true);
+
+test("껐다 다시 켜면 — 끈 순간의 배부름에서 그대로 이어짐(꺼 둔 날 · 끈 날 · 다시 켠 날은 세지 않음 — 선생님 결정)", () => {
+  const atOff = careRules({ petFeedFrom: at("2026-11-02"), petRestWeekend: false }, true);
+  const cases = [
+    // [펫, 끄던 순간(11-09)에 보이던 값, 다시 켠 날(11-23) · 이틀 뒤(11-25)]
+    ["기록 없음", pet(), 40, 40, 30],                                          // 11-03 ~ 11-08 엿새 → 40
+    ["5일까지 80으로 적힘", pet({ care: { full: 80, day: "2026-11-05" } }), 50, 50, 40], // 11-06 ~ 11-08 사흘 → 50
+    ["8일에 읽은 날", pet({ care: { full: 50, day: "2026-11-07", kept: "2026-11-08" } }), 50, 50, 40],
+  ];
+  for (const [label, p, off, back, later] of cases) {
+    assert.equal(careStatus(p, atOff, "2026-11-09", 3).full, off, `${label} — 끄던 순간`);
+    // 한때는 다시 켤 때 켠 때를 새로 적어 마지막으로 적힌 값(기록 없음은 100 · 80)으로 돌아갔습니다 — 50 → 100처럼 회복
+    assert.equal(careStatus(p, paused(), "2026-11-23", 3).full, back, `${label} — 다시 켠 날`);
+    assert.equal(careStatus(p, paused(), "2026-11-24", 3).full, back, `${label} — 다음 날(다시 켠 날은 안 셈)`);
+    assert.equal(careStatus(p, paused(), "2026-11-25", 3).full, later, `${label} — 이틀 뒤`);
+  }
+  // 끄던 순간 떠나 있던 펫은 다시 켜도 떠나 있음(계산으로만 떠났어도 — 한때는 돌아왔음)
+  const gone = pet({ care: { full: 20, day: "2026-11-05" } });
+  assert.deepEqual([careStatus(gone, atOff, "2026-11-09", 3).awayOn, careStatus(gone, paused(), "2026-11-23", 3).awayOn], ["2026-11-08", "2026-11-08"]);
+  // 꺼 둔 동안은 세지 않음(화면에도 배부름이 없음)
+  assert.equal(careStatus(pet(), careRules({ petFeedFrom: at("2026-11-02"), petFeedOffAt: Date.parse("2026-11-09T15:00:00+09:00") }, false), "2026-11-15", 3), null);
+});
+
+test("쉰 기간 — 지난 목록(petFeedPauses) + 지난번(petFeedOffAt ~ petFeedOnAt), 틀린 줄은 버림 · 옛 반은 처음 켠 때부터", () => {
+  const ms = (d, h = 12) => Date.parse(`${d}T${String(h).padStart(2, "0")}:00:00+09:00`);
+  const doc = { petFeedFrom: ms("2026-09-01"), petFeedPauses: [
+    { off: ms("2026-09-10"), on: ms("2026-09-20") }, null, { off: "bad", on: ms("2026-09-30") }, { off: ms("2026-10-05"), on: ms("2026-10-01") },
+    { off: ms("2026-10-10", 23), on: ms("2026-10-11", 1) },
+  ], petFeedOffAt: ms("2026-11-09", 15), petFeedOnAt: ms("2026-11-23", 10) };
+  assert.deepEqual(carePausesOf(doc), [
+    { from: "2026-09-10", to: "2026-09-20" }, { from: "2026-10-10", to: "2026-10-11" }, { from: "2026-11-09", to: "2026-11-23" },
+  ]);
+  // 꺼 둔 동안(아직 다시 켜지 않음) — 지난번 쉰 기간은 목록에 이미 있고, 지금 꺼 둔 기간은 다시 켤 때 생김
+  assert.deepEqual(carePausesOf({ ...doc, petFeedOnAt: undefined }).length, 2);
+  // 끈 때를 모르는 옛 반(예전 앱으로 끈 반을 새 앱으로 다시 켬) — 처음 켠 때부터 다시 켠 때까지를 쉰 것으로(새로 세는 것과 같음)
+  assert.deepEqual(carePausesOf({ petFeedFrom: ms("2026-11-02"), petFeedOnAt: ms("2026-11-23") }), [{ from: "2026-11-02", to: "2026-11-23" }]);
+  assert.deepEqual(carePausesOf({}), []);
+  assert.deepEqual(carePausesOf({ petFeedPauses: "x" }), []);
+  // 천장 — 오래된 줄부터 버림
+  const many = Array.from({ length: CARE_PAUSES_MAX + 5 }, (_, i) => ({ off: ms("2026-01-01") + i * 864e5, on: ms("2026-01-01") + i * 864e5 }));
+  assert.equal(carePausesOf({ petFeedPauses: many }).length, CARE_PAUSES_MAX);
+  assert.equal(CARE_PAUSES_MAX, 40);
+  const rules = careRules(doc, true);
+  assert.deepEqual(["2026-09-09", "2026-09-10", "2026-09-20", "2026-09-21", "2026-11-23", "2026-11-24", "bad"].map((d) => isCarePausedDay(d, rules)),
+    [false, true, true, false, true, false, false]);
+  // 쉰 기간이 여럿이어도 — 9월 2일까지 적힌 뒤 손 놓은 펫은 두 쉰 기간을 빼고 셈(주말에도 줆)
+  const old = pet({ care: { full: 100, day: "2026-09-02" } });
+  const r = careRules({ ...doc, petRestWeekend: false }, true);
+  // 9-03 ~ 9-09 이레 → 30, 9-21 → 20, 9-22 → 10, 9-23 → 0 → 9-24부터 떠남(쉰 기간이 없었다면 9-12에 떠남)
+  assert.equal(careStatus(old, r, "2026-09-23", 3).full, 10);
+  assert.equal(careStatus(old, r, "2026-09-24", 3).awayOn, "2026-09-24");
 });
 
 test("care의 모양 — 틀린 값은 버리고, 프로필의 펫에 붙어 다님", () => {

@@ -595,6 +595,13 @@ service cloud.firestore {
       // 이 모양 검사는 **만들 때(들어 있는 칸)와 고칠 때(바뀐 칸)가 같은 함수**입니다. 앱은 새 반을 만든 뒤 설정을 따로
       // 고쳐 쓰지만(addClass), 요청을 꾸며 만들 때 끼워 넣어도 같은 모양만 받습니다(한때 만들 때는 아지트 · 독서 맵만 봄).
       // 시험 tests/rules/readingPet.test.mjs('반을 만들 때도').
+      // **껐다 다시 켜면 끈 순간의 배부름에서 이어집니다**(선생님 결정) — 펫 먹이가 꺼질 때(세 스위치 · 반 보관) 끈 때
+      // (petFeedOffAt), 다시 켤 때 다시 켠 때(petFeedOnAt)를 **서버 시각만** 받고, 지난번 쉰 기간은 다음에 끌 때
+      // petFeedPauses 끝으로 옮깁니다(lib/readingPet.js의 petFeedTimesPatch · 셈은 lib/petCare.js의 carePausesOf — 그 사이의
+      // 날을 세지 않음). 한때 다시 켤 때 켠 때를 새로 적어 펫마다 마지막으로 적힌 배부름으로 돌아갔습니다(50 → 100처럼 회복).
+      // 목록은 **저장된 두 때 그대로만** 끝에 덧붙습니다(아래 petFeedPauseFlowOk — 꾸민 기간을 끼워 넣지 못하게 · 40줄 천장).
+      // 이 '때'들(petFeedFrom · petFeedOffAt · petFeedOnAt · petFeedPauses)은 반을 보관 · 되살릴 때 함께 적히므로 아래 '보관된 반은
+      // 못 바꿈'의 목록에 넣지 않습니다(값은 서버 시각 · 저장된 값뿐이라 보관된 반에서 고쳐도 셈이 꾸며지지 않음).
       function classSettingsShapeOk(d, keys) {
         return (!keys.hasAny(['readingEnabled']) || d.get('readingEnabled', null) is bool)
                && (!keys.hasAny(['rankingEnabled']) || d.get('rankingEnabled', null) is bool)
@@ -605,6 +612,9 @@ service cloud.firestore {
                && (!keys.hasAny(['petFeedEnabled']) || d.get('petFeedEnabled', null) is bool)
                && (!keys.hasAny(['petRestWeekend']) || d.get('petRestWeekend', null) is bool)
                && (!keys.hasAny(['petFeedFrom']) || d.get('petFeedFrom', null) == request.time)
+               && (!keys.hasAny(['petFeedOffAt']) || d.get('petFeedOffAt', null) == request.time)
+               && (!keys.hasAny(['petFeedOnAt']) || d.get('petFeedOnAt', null) == request.time || !d.keys().hasAny(['petFeedOnAt']))
+               && (!keys.hasAny(['petFeedPauses']) || (d.get('petFeedPauses', null) is list && d.petFeedPauses.size() <= 40))
                && (!keys.hasAny(['petRests']) || (d.get('petRests', null) is list && d.petRests.size() <= 20))
                && (!keys.hasAny(['readingTopEnabled']) || d.get('readingTopEnabled', null) is bool)
                && (!keys.hasAny(['plazaEnabled']) || d.get('plazaEnabled', null) is bool)
@@ -614,16 +624,40 @@ service cloud.firestore {
                    || (d.get('classroomCallAt', null) is number && d.classroomCallAt >= 0))
                && (!keys.hasAny(['readingMapTheme']) || d.get('readingMapTheme', null) in ['continent', 'cloud-islands']);
       }
+      // 펫 먹이의 쉰 기간이 바뀌는 차례 — 고칠 때만(만들 때는 이 세 칸을 받지 않음 · 아래 create).
+      //  · 다시 켠 때(petFeedOnAt)는 비어 있을 때만 적고, 지우는 것은 쉰 기간을 목록으로 옮길 때뿐
+      //  · 끈 때(petFeedOffAt)는 처음 끌 때, 또는 지난번 쉰 기간(petFeedOnAt)을 목록으로 옮기며 끌 때만 — 꺼 둔 동안 끈 때를
+      //    다시 적으면 쉰 기간의 앞이 지워집니다
+      //  · 목록(petFeedPauses)은 저장된 두 때({ off: 끈 때(모르면 처음 켠 때), on: 다시 켠 때 })를 끝에 덧붙일 때만 바뀌고,
+      //    40줄이 차 있으면 가장 오래된 한 줄을 뺍니다
+      function petFeedPauseFlowOk(changed) {
+        let offAt = resource.data.get('petFeedOffAt', null);
+        let onAt = resource.data.get('petFeedOnAt', null);
+        let moving = changed.hasAny(['petFeedPauses']);
+        return (!moving || petFeedPauseMoved(offAt, onAt))
+               && (!changed.hasAny(['petFeedOnAt'])
+                   || (request.resource.data.get('petFeedOnAt', null) != null ? onAt == null : moving))
+               && (!changed.hasAny(['petFeedOffAt']) || (onAt != null ? moving : offAt == null));
+      }
+      function petFeedPauseMoved(offAt, onAt) {
+        let old = resource.data.get('petFeedPauses', []);
+        let pair = {'off': offAt != null ? offAt : resource.data.get('petFeedFrom', null), 'on': onAt};
+        let next = request.resource.data.get('petFeedPauses', null);
+        return onAt != null && request.resource.data.get('petFeedOnAt', null) == null
+               && (next == old.concat([pair]) || (old.size() >= 40 && next == old[1:old.size()].concat([pair])));
+      }
       function readingSettingValid() {
         let changed = request.resource.data.diff(resource.data).affectedKeys();
         return classSettingsShapeOk(request.resource.data, changed)
+               && petFeedPauseFlowOk(changed)
                && (!changed.hasAny(['readingEnabled', 'rankingEnabled', 'characterEnabled', 'bookSearchEnabled', 'fruitBasketEnabled', 'petEnabled', 'readingTopEnabled', 'plazaEnabled', 'classroomEnabled', 'hideoutEnabled', 'classroomCallAt', 'readingMapTheme',
-                                    'petFeedEnabled', 'petFeedFrom', 'petRestWeekend', 'petRests'])
+                                    'petFeedEnabled', 'petRestWeekend', 'petRests'])
                    || (resource.data.get('archived', false) != true
                        && request.resource.data.get('archived', false) != true));
       }
       allow create: if isTeacher() && request.resource.data.createdBy == uid()
                     && request.resource.data.get('readingEnabled', false) == false
+                    && !request.resource.data.keys().hasAny(['petFeedOffAt', 'petFeedOnAt', 'petFeedPauses'])
                     && classSettingsShapeOk(request.resource.data, request.resource.data.keys());
       allow update: if (isAdmin()
                     || (isTeacher() && resource.data.createdBy == uid()))

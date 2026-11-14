@@ -10,10 +10,12 @@
 //  · 펫 먹이(lib/petCare.js) — 배부름(readingPet.care)도 서버만 적고(학생이 제 펫을 배부르게 고치지 못함),
 //    반 설정 네 칸(petFeedEnabled · petFeedFrom · petRestWeekend · petRests)은 모양이 맞을 때만 담당 교사가
 //    (켠 때 petFeedFrom은 서버 시각만 — 반을 만들 때 끼워 넣어도 같은 검사)
+//  · 펫 먹이를 껐다 켤 때 — 끈 때(petFeedOffAt) · 다시 켠 때(petFeedOnAt)는 서버 시각만, 쉰 기간 목록(petFeedPauses)은
+//    저장된 두 때 그대로만 끝에 덧붙음(그 사이의 날을 세지 않아 끈 순간의 배부름에서 이어짐 — lib/readingPet.js의 petFeedTimesPatch)
 // =============================================================
 import { describe, it, before, after, beforeEach } from "node:test";
 import { assertSucceeds, assertFails } from "@firebase/rules-unit-testing";
-import { deleteField, doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
+import { Timestamp, deleteField, doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { makeEnv, asStudent, asTeacher, seed } from "./helpers.mjs";
 
 const signupProfile = (extra = {}) => ({
@@ -96,11 +98,9 @@ describe("독서 펫 — 프로필의 펫과 비밀 문서", () => {
     // 켤 때 — 스위치와 켠 때를 한 번에(lib/data/classes.js의 featureWrite). 켠 때는 서버 시각만
     await assertSucceeds(updateDoc(c1, { petFeedEnabled: true, petFeedFrom: serverTimestamp() }));
     await assertSucceeds(updateDoc(c1, { petFeedEnabled: false }));
-    // 학생 펫 · 책나눔을 다시 켜 펫 먹이가 다시 돌 때도 켠 때를 함께(lib/readingPet.js의 petFeedStarts) — 서버 시각만
-    await assertSucceeds(updateDoc(c1, { petEnabled: true, petFeedFrom: serverTimestamp() }));
+    // 켠 때를 학생 펫 · 책나눔과 함께 적어도 서버 시각만
     await assertSucceeds(updateDoc(c1, { readingEnabled: true, petFeedFrom: serverTimestamp() }));
     await assertFails(updateDoc(c1, { petEnabled: true, petFeedFrom: Date.now() }));
-    await assertFails(updateDoc(c1, { readingEnabled: true, petFeedFrom: new Date() }));
     await assertFails(updateDoc(c1, { petFeedEnabled: "true" }));
     await assertFails(updateDoc(c1, { petFeedEnabled: null }));
     // 기기의 시각 · 아주 이른 날(켜자마자 펫이 한꺼번에 떠남) · 아주 큰 수(날짜 셈이 멈춤) · 글자 · 지우기는 거부
@@ -128,6 +128,60 @@ describe("독서 펫 — 프로필의 펫과 비밀 문서", () => {
     await assertFails(updateDoc(doc(asTeacher(env, "teacherB").firestore(), "classes", "c1"), { petFeedEnabled: true }));
     // 학생은 반 문서의 설정을 읽는다(배부름을 스스로 셈)
     await assertSucceeds(getDoc(doc(asStudent(env, "s2").firestore(), "classes", "c1")));
+  });
+
+  it("펫 먹이를 껐다 켤 때 — 끈 때 · 다시 켠 때는 서버 시각만, 쉰 기간은 저장된 두 때 그대로만 목록 끝에", async () => {
+    await seed(env, (s) => setDoc(doc(s, "classes", "pf"), { name: "먹이 반", createdBy: "teacherA", archived: false,
+      readingEnabled: true, petFeedEnabled: true, petFeedFrom: Timestamp.fromMillis(Date.parse("2026-11-02T09:00:00+09:00")) }));
+    const db = asTeacher(env, "teacherA").firestore();
+    const pf = doc(db, "classes", "pf");
+    const read = async () => (await getDoc(pf)).data();
+    // 끔 — 끈 때는 서버 시각만(기기 시계 · 수는 거부)
+    await assertFails(updateDoc(pf, { petFeedEnabled: false, petFeedOffAt: new Date() }));
+    await assertFails(updateDoc(pf, { petFeedEnabled: false, petFeedOffAt: Date.now() }));
+    await assertSucceeds(updateDoc(pf, { petFeedEnabled: false, petFeedOffAt: serverTimestamp() }));
+    // 꺼 둔 동안 끈 때를 다시 적지 못함(쉰 기간의 앞이 지워짐)
+    await assertFails(updateDoc(pf, { petFeedOffAt: serverTimestamp() }));
+    // 다시 켬(학생 펫을 다시 켜도 같음) — 다시 켠 때도 서버 시각만
+    await assertFails(updateDoc(pf, { petFeedEnabled: true, petFeedOnAt: new Date() }));
+    await assertSucceeds(updateDoc(pf, { petFeedEnabled: true, petEnabled: true, petFeedOnAt: serverTimestamp() }));
+    // 다시 켠 때를 덮어쓰거나 그냥 지우지 못함
+    await assertFails(updateDoc(pf, { petFeedOnAt: serverTimestamp() }));
+    await assertFails(updateDoc(pf, { petFeedOnAt: deleteField() }));
+    const { petFeedOffAt: off1, petFeedOnAt: on1 } = await read();
+    // 다시 끔 — 지난번 쉰 기간을 옮기지 않으면 · 꾸민 기간이면 · 다시 켠 때를 안 지우면 거부, 저장된 두 때 그대로면 통과
+    await assertFails(updateDoc(pf, { petFeedEnabled: false, petFeedOffAt: serverTimestamp() }));
+    await assertFails(updateDoc(pf, { petFeedEnabled: false, petFeedOffAt: serverTimestamp(), petFeedPauses: [{ off: Timestamp.fromMillis(1000), on: on1 }], petFeedOnAt: deleteField() }));
+    await assertFails(updateDoc(pf, { petFeedEnabled: false, petFeedOffAt: serverTimestamp(), petFeedPauses: [{ off: off1, on: on1 }] }));
+    await assertSucceeds(updateDoc(pf, { petFeedEnabled: false, petFeedOffAt: serverTimestamp(), petFeedPauses: [{ off: off1, on: on1 }], petFeedOnAt: deleteField() }));
+    // 목록은 끝에 덧붙이기만 — 지난 줄을 빼거나 바꾸지 못함
+    await assertSucceeds(updateDoc(pf, { petFeedEnabled: true, petFeedOnAt: serverTimestamp() }));
+    const { petFeedOffAt: off2, petFeedOnAt: on2 } = await read();
+    await assertFails(updateDoc(pf, { petFeedEnabled: false, petFeedOffAt: serverTimestamp(), petFeedPauses: [{ off: off2, on: on2 }], petFeedOnAt: deleteField() }));
+    await assertFails(updateDoc(pf, { petFeedEnabled: false, petFeedOffAt: serverTimestamp(), petFeedPauses: [{ off: off2, on: on2 }, { off: off1, on: on1 }], petFeedOnAt: deleteField() }));
+    await assertSucceeds(updateDoc(pf, { petFeedEnabled: false, petFeedOffAt: serverTimestamp(), petFeedPauses: [{ off: off1, on: on1 }, { off: off2, on: on2 }], petFeedOnAt: deleteField() }));
+    // 학생 · 다른 선생님은 못 씀
+    await assertFails(updateDoc(doc(asStudent(env, "s2").firestore(), "classes", "pf"), { petFeedEnabled: true, petFeedOnAt: serverTimestamp() }));
+    await assertFails(updateDoc(doc(asTeacher(env, "teacherB").firestore(), "classes", "pf"), { petFeedEnabled: true, petFeedOnAt: serverTimestamp() }));
+  });
+
+  it("반을 보관 · 되살릴 때도 끈 때 · 다시 켠 때를 함께, 40줄이 차면 가장 오래된 줄을 빼고 · 만들 때는 받지 않음", async () => {
+    const t = (ms) => Timestamp.fromMillis(ms);
+    const full = Array.from({ length: 40 }, (_, i) => ({ off: t(1.7e12 + i * 2e8), on: t(1.7e12 + i * 2e8 + 1e8) }));
+    await seed(env, (s) => setDoc(doc(s, "classes", "pa"), { name: "보관 반", createdBy: "teacherA", archived: false, readingEnabled: true,
+      petFeedEnabled: true, petFeedFrom: t(1.69e12), petFeedOffAt: t(1.71e12), petFeedOnAt: t(1.711e12), petFeedPauses: full }));
+    const db = asTeacher(env, "teacherA").firestore();
+    const pa = doc(db, "classes", "pa");
+    const pair = { off: t(1.71e12), on: t(1.711e12) };
+    // 보관하며 끔 — 41줄은 거부, 가장 오래된 줄을 빼고 덧붙이면 통과
+    await assertFails(updateDoc(pa, { archived: true, petFeedOffAt: serverTimestamp(), petFeedPauses: [...full, pair], petFeedOnAt: deleteField() }));
+    await assertSucceeds(updateDoc(pa, { archived: true, petFeedOffAt: serverTimestamp(), petFeedPauses: [...full.slice(1), pair], petFeedOnAt: deleteField() }));
+    // 보관된 반을 되살리며 다시 켬
+    await assertSucceeds(updateDoc(pa, { archived: false, petFeedOnAt: serverTimestamp() }));
+    // 만들 때는 세 칸을 받지 않음(새 반에는 쉰 기간이 없음)
+    for (const extra of [{ petFeedOffAt: serverTimestamp() }, { petFeedOnAt: serverTimestamp() }, { petFeedPauses: [] }]) {
+      await assertFails(setDoc(doc(db, "classes", `pnew${Object.keys(extra)[0]}`), { name: "새 반", createdBy: "teacherA", readingEnabled: false, ...extra }));
+    }
   });
 
   it("반을 만들 때도 — 설정 칸은 고칠 때와 같은 모양만(켠 때는 서버 시각만)", async () => {

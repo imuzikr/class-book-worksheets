@@ -16,6 +16,8 @@ const db = getFirestore(app);
 const C = "care-class";
 const OFF = "care-off";
 const OLD = "care-old"; // 펫 먹이를 40일 전에 켠 반 — 나중에 들어온 학생
+const RACE = "care-race"; // 먹이를 주는 도중에 선생님이 펫 먹이를 끄거나 학생을 사용 중지 · 반에서 빼는 반
+const PAUSE = "care-pause"; // 펫 먹이를 껐다 다시 켠 반 — 꺼 둔 날은 세지 않음
 const today = kstToday(new Date());
 const dayBefore = (n) => readingDayKey(readingDayNumber(today) - n);
 const who = (uid) => ({ uid, roleClaim: null, db });
@@ -73,9 +75,45 @@ before(async () => {
     batch.set(db.doc(`classes/${OLD}/readingMembers/${uid}`), snapshot(uid, 300));
     batch.set(db.doc(`rewards/${OLD}_${uid}`), { classId: OLD, uid, count: 3 });
   }
+  // 처리 도중에 바뀌는 반(아래 '처리 도중') — 사흘 전에 켬 · 주말에도 줆 · 과일 5개씩
+  batch.set(db.doc(`classes/${RACE}`), { createdBy: "care-teacher", readingEnabled: true, archived: false,
+    petFeedEnabled: true, petFeedFrom: Timestamp.fromMillis(Date.parse(`${dayBefore(3)}T12:00:00+09:00`)), petRestWeekend: false });
+  for (const [uid, readingPet, studentId] of [["care-race", hatched(), "60301"], ["care-race-away", hatched({ care: away() }), "60302"]]) {
+    batch.set(db.doc(`users/${uid}`), { role: "student", realName: uid, studentId, readingPet });
+    batch.set(db.doc(`memberships/${uid}_${RACE}`), { uid, classId: RACE });
+    batch.set(db.doc(`classes/${RACE}/readingMembers/${uid}`), snapshot(uid, 300));
+    batch.set(db.doc(`rewards/${RACE}_${uid}`), { classId: RACE, uid, count: 5 });
+  }
+  // 열흘 전에 켬 · 아흐레 전 하루 껐다 켬(목록) · 엿새 전 15시에 끄고 이틀 전 10시에 다시 켬(지난번) — 주말에도 줆
+  const kst = (n, h) => Timestamp.fromMillis(Date.parse(`${dayBefore(n)}T${String(h).padStart(2, "0")}:00:00+09:00`));
+  batch.set(db.doc(`classes/${PAUSE}`), { createdBy: "care-teacher", readingEnabled: true, archived: false, petFeedEnabled: true, petRestWeekend: false,
+    petFeedFrom: kst(10, 12), petFeedPauses: [{ off: kst(9, 9), on: kst(9, 18) }], petFeedOffAt: kst(6, 15), petFeedOnAt: kst(2, 10) });
+  batch.set(db.doc("users/care-paused"), { role: "student", realName: "care-paused", studentId: "60401", readingPet: hatched() });
+  batch.set(db.doc(`memberships/care-paused_${PAUSE}`), { uid: "care-paused", classId: PAUSE });
+  batch.set(db.doc(`classes/${PAUSE}/readingMembers/care-paused`), snapshot("care-paused", 300));
+  batch.set(db.doc(`rewards/${PAUSE}_care-paused`), { classId: PAUSE, uid: "care-paused", count: 5 });
   await batch.commit();
 });
 after(async () => { await deleteApp(app); });
+
+// 먼저 읽는 확인(petAccess — 읽기만)과 과일을 빼는 트랜잭션 사이에 change를 끼워 넣은 학생 — '처리 도중에' 선생님이 무언가를
+// 바꾼 것과 같습니다(트랜잭션 밖에서 한 번만 읽던 때는 그 사이에 꺼져도 과일이 빠졌습니다).
+const midway = (uid, change) => {
+  let done = false;
+  const wrapped = new Proxy(db, {
+    get(target, key) {
+      if (key === "runTransaction") {
+        return async (fn, options) => {
+          if (!options?.readOnly && !done) { done = true; await change(); }
+          return target.runTransaction(fn, options);
+        };
+      }
+      const value = target[key];
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
+  return { uid, roleClaim: null, db: wrapped };
+};
 
 test("먹이 주기 — 과일 1개에 +10, 과일은 서버가 줄이고, 100이면 더 안 먹음", async () => {
   const a = who("care-a");
@@ -245,4 +283,43 @@ test("꾸며 적은 '들어온 날' — 먼 앞날을 적어도 서버는 믿지
   assert.deepEqual([step.event, step.used, step.care.steps.done], ["step", 2, 1]);
   const back = await readingPetAction(who("care-teacher"), { classId: OLD, action: "recall", uid: "care-forged" });
   assert.deepEqual([back.event, back.care.away, back.care.full], ["returned", false, 60]);
+});
+
+test("처리 도중 — 펫 먹이 · 학생 펫 · 책나눔을 끄거나, 학생을 사용 중지 · 반에서 빼면 과일이 빠지지 않음", async () => {
+  const classRef = db.doc(`classes/${RACE}`);
+  const memberRef = db.doc(`memberships/care-race_${RACE}`);
+  const userRef = db.doc("users/care-race");
+  const before = await care("care-race");
+  const cases = [
+    ["펫 먹이를 끔", () => classRef.update({ petFeedEnabled: false }), () => classRef.update({ petFeedEnabled: true }), "reading/pet-feed-disabled"],
+    ["학생 펫을 끔", () => classRef.update({ petEnabled: false }), () => classRef.update({ petEnabled: true }), "reading/pet-disabled"],
+    ["책나눔을 끔", () => classRef.update({ readingEnabled: false }), () => classRef.update({ readingEnabled: true }), "reading/disabled"],
+    ["학생을 사용 중지", () => userRef.update({ suspended: true }), () => userRef.update({ suspended: false }), "reading/suspended"],
+    ["반에서 뺌", () => memberRef.delete(), () => memberRef.set({ uid: "care-race", classId: RACE }), "reading/forbidden"],
+  ];
+  for (const [label, change, undo, code] of cases) {
+    await assert.rejects(() => readingPetAction(midway("care-race", change), { classId: RACE, action: "feed", count: 2 }),
+      (e) => e.status === 403 && e.code === code, label);
+    assert.equal(await fruits("care-race", RACE), 5, `${label} — 과일 그대로`);
+    assert.deepEqual(await care("care-race"), before, `${label} — 배부름 그대로`);
+    await undo();
+  }
+  // 다시 부르기의 과일 걸음도 같음
+  await assert.rejects(() => readingPetAction(midway("care-race-away", () => classRef.update({ petFeedEnabled: false })), { classId: RACE, action: "call" }),
+    (e) => e.status === 403 && e.code === "reading/pet-feed-disabled");
+  assert.equal(await fruits("care-race-away", RACE), 5);
+  await classRef.update({ petFeedEnabled: true });
+  // 아무것도 안 바뀌면 그대로 먹음(같은 길로 끼워 넣어도)
+  const fed = await readingPetAction(midway("care-race", async () => {}), { classId: RACE, action: "feed", count: 2 });
+  assert.deepEqual([fed.event, fed.used, fed.fruits], ["fed", 2, 3]);
+  assert.equal(await fruits("care-race", RACE), 3);
+});
+
+test("껐다 다시 켠 반 — 꺼 둔 날(목록 · 지난번)은 세지 않고 이어짐(서버 시각 Timestamp)", async () => {
+  // 셀 날: 8 · 7일 전(9일 전은 쉼) + 어제(6 ~ 2일 전은 쉼) → 사흘 → 70. 쉰 기간을 몰랐다면 아흐레 → 10
+  const view = await getReadingPet(who("care-paused"), PAUSE);
+  assert.deepEqual([view.care.full, view.care.away], [70, false]);
+  // 먹이도 그 값에서 — 과일 3개면 100
+  const fed = await readingPetAction(who("care-paused"), { classId: PAUSE, action: "feed", count: 3 });
+  assert.deepEqual([fed.used, fed.care.full, fed.fruits], [3, 100, 2]);
 });

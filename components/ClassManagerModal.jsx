@@ -140,7 +140,7 @@ export default function ClassManagerModal({
     setBusyId(c.id);
     setError("");
     try {
-      await archiveClass(c.id);
+      await archiveClass(c.id, c);
       onToast?.(`'${c.name}' 반을 보관했어요. 학생은 더 이상 접근할 수 없어요.`);
     } catch {
       setError("반을 보관하지 못했어요.");
@@ -154,7 +154,7 @@ export default function ClassManagerModal({
     setBusyId(c.id);
     setError("");
     try {
-      await unarchiveClass(c.id, user);
+      await unarchiveClass(c.id, user, c);
       onToast?.(`'${c.name}' 반을 복원했어요. 새 참여 코드가 발급됐어요.`);
     } catch {
       setError("반을 복원하지 못했어요.");

@@ -3,7 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   PET_SPECIES, PET_SPECIES_KEYS, PET_STAGES, PET_STAGE_MAX, PET_HATCH_XP,
-  normalizePetMirror, normalizePublicPet, petEnabled, petFeedStarts, petGrowthOfSummary, petGrowthXp,
+  normalizePetMirror, normalizePublicPet, petEnabled, petFeedTimesPatch, petGrowthOfSummary, petGrowthXp,
   PET_ART_READY, petCheerKind, petImageSrc, petImageSrcSet, petProgress, petSpecies, petStageName, pickPetSpecies,
   planPetAction, rankingPet,
 } from "@/lib/readingPet";
@@ -33,31 +33,46 @@ test("학생 펫 스위치 — 책나눔이 켜진 반에서, 값이 없으면 �
   assert.equal(petEnabled(null), false);
 });
 
-test("펫 먹이가 다시 켜지는 쓰기 — 세 스위치(책나눔 · 학생 펫 · 펫 먹이) 가운데 무엇으로 켜지든 '켠 때'를 새로 적음", () => {
-  const running = { readingEnabled: true, petFeedEnabled: true };
-  // 펫 먹이 스위치를 켤 때
-  assert.equal(petFeedStarts({ readingEnabled: true }, { petFeedEnabled: true }), true);
-  // 학생 펫 · 책나눔을 껐다 다시 켤 때 — 펫 먹이 스위치는 켜진 채 남아 있음(한때 여기서 옛 '켠 때'가 남아 펫이 한꺼번에 떠남)
-  assert.equal(petFeedStarts({ ...running, petEnabled: false }, { petEnabled: true }), true);
-  assert.equal(petFeedStarts({ ...running, readingEnabled: false }, { readingEnabled: true }), true);
-  // 이미 돌고 있는 반에는 새로 적지 않음(반마다 달라 '모두 켜기'를 누를 때 셈이 흔들리지 않게)
-  assert.equal(petFeedStarts(running, { petFeedEnabled: true }), false);
-  assert.equal(petFeedStarts(running, { petEnabled: true }), false);
-  // 켜도 펫 먹이가 돌지 않으면 적지 않음 — 펫 먹이를 안 켠 반 · 학생 펫이 꺼진 반 · 끄는 쓰기
-  assert.equal(petFeedStarts({ readingEnabled: false }, { readingEnabled: true }), false);
-  assert.equal(petFeedStarts({ readingEnabled: true, petEnabled: false, petFeedEnabled: true }, { readingEnabled: true }), false);
-  assert.equal(petFeedStarts(running, { petFeedEnabled: false }), false);
-  assert.equal(petFeedStarts({ ...running, archived: true }, { petEnabled: true }), false);
-  // 쓰기 전의 반을 모르면 세 스위치 가운데 하나를 켜는 쓰기인가로(새로 적는 쪽이 안전)
-  assert.equal(petFeedStarts(null, { petEnabled: true }), true);
-  assert.equal(petFeedStarts(null, { readingEnabled: true }), true);
-  assert.equal(petFeedStarts(null, { petFeedEnabled: true }), true);
-  assert.equal(petFeedStarts(null, { plazaEnabled: true }), false);
-  assert.equal(petFeedStarts(null, { petEnabled: false }), false);
-  assert.equal(petFeedStarts(running, null), false);
+test("펫 먹이가 켜지고 꺼지는 쓰기 — 처음 켬 · 끔 · 다시 켬의 '때'(세 스위치 · 반 보관 모두)", () => {
+  const stamps = { stamp: () => "지금", remove: () => "지움" };
+  const times = (before, patch) => petFeedTimesPatch(before, patch, stamps);
+  const running = { readingEnabled: true, petFeedEnabled: true, petFeedFrom: 1 };
+  // 처음 켬 — 켠 때(그날부터 셈)
+  assert.deepEqual(times({ readingEnabled: true }, { petFeedEnabled: true }), { petFeedFrom: "지금" });
+  // 끔 — 끈 때. 세 스위치 · 반 보관 가운데 무엇으로 꺼도 같음
+  for (const patch of [{ petFeedEnabled: false }, { petEnabled: false }, { readingEnabled: false }, { archived: true }]) {
+    assert.deepEqual(times(running, patch), { petFeedOffAt: "지금" });
+  }
+  // 다시 켬 — 다시 켠 때(꺼 둔 동안은 세지 않아 끈 순간의 배부름에서 이어짐 · 켠 때는 그대로)
+  const off = { ...running, petFeedEnabled: false, petFeedOffAt: 5 };
+  assert.deepEqual(times(off, { petFeedEnabled: true }), { petFeedOnAt: "지금" });
+  assert.deepEqual(times({ ...running, petEnabled: false, petFeedOffAt: 5 }, { petEnabled: true }), { petFeedOnAt: "지금" });
+  assert.deepEqual(times({ ...running, archived: true, petFeedOffAt: 5 }, { archived: false }), { petFeedOnAt: "지금" });
+  // 다시 끔 — 지난번 쉰 기간을 목록 끝으로 옮기고 다시 켠 때를 지움
+  const back = { ...running, petFeedOffAt: 5, petFeedOnAt: 9, petFeedPauses: [{ off: 2, on: 3 }] };
+  assert.deepEqual(times(back, { petEnabled: false }),
+    { petFeedOffAt: "지금", petFeedPauses: [{ off: 2, on: 3 }, { off: 5, on: 9 }], petFeedOnAt: "지움" });
+  // 끈 때를 모르는 옛 반을 다시 켰던 반 — 처음 켠 때부터를 쉰 기간으로
+  assert.deepEqual(times({ ...running, petFeedOnAt: 9 }, { petFeedEnabled: false }),
+    { petFeedOffAt: "지금", petFeedPauses: [{ off: 1, on: 9 }], petFeedOnAt: "지움" });
+  // 목록 천장 40 — 가장 오래된 줄부터 뺌
+  const full = Array.from({ length: 40 }, (_, i) => ({ off: i, on: i }));
+  const trimmed = times({ ...running, petFeedOffAt: 50, petFeedOnAt: 60, petFeedPauses: full }, { petFeedEnabled: false }).petFeedPauses;
+  assert.deepEqual([trimmed.length, trimmed[0], trimmed.at(-1)], [40, { off: 1, on: 1 }, { off: 50, on: 60 }]);
+  // 켜짐 · 꺼짐이 그대로인 쓰기는 아무것도 더하지 않음(이미 돌던 반 · 펫 먹이를 안 켠 반 · 학생 펫이 꺼진 반 · 상관없는 스위치)
+  assert.deepEqual(times(running, { petFeedEnabled: true }), {});
+  assert.deepEqual(times(running, { plazaEnabled: false }), {});
+  assert.deepEqual(times({ readingEnabled: false }, { readingEnabled: true }), {});
+  assert.deepEqual(times({ readingEnabled: true, petEnabled: false, petFeedEnabled: true, petFeedFrom: 1 }, { readingEnabled: true }), {});
+  assert.deepEqual(times(off, { petFeedEnabled: false }), {});
+  assert.deepEqual(times(running, null), {});
   // 새 반 — 책나눔이 꺼진 채 만들고 선생님의 설정을 한 번에(addClass)
-  assert.equal(petFeedStarts({ readingEnabled: false }, { readingEnabled: true, petEnabled: true, petFeedEnabled: true }), true);
-  assert.equal(petFeedStarts({ readingEnabled: false }, { readingEnabled: true, petFeedEnabled: false }), false);
+  assert.deepEqual(times({ readingEnabled: false }, { readingEnabled: true, petEnabled: true, petFeedEnabled: true }), { petFeedFrom: "지금" });
+  assert.deepEqual(times({ readingEnabled: false }, { readingEnabled: true, petFeedEnabled: false }), {});
+  // 쓰기 전의 반을 모르면 세 스위치 가운데 하나를 켜는 쓰기인가로(켠 때를 새로 — 꺼 둔 날을 세지 않는 쪽)
+  assert.deepEqual(times(null, { petEnabled: true }), { petFeedFrom: "지금" });
+  assert.deepEqual(times(null, { plazaEnabled: true }), {});
+  assert.deepEqual(times(null, { petEnabled: false }), {});
 });
 
 test("펫이 자라는 바탕 — 누적 경험치 그대로(과일은 경험치가 아님)", () => {
