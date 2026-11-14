@@ -48,6 +48,14 @@ function PlazaLoading() {
   </section>;
 }
 const ReadingPlaza = dynamic(() => import("./ReadingPlaza"), { ssr: false, loading: PlazaLoading });
+function HideoutLoading() {
+  const onExit = useContext(PlazaExitContext);
+  return <section className="reading-loading" role="status" aria-label="아지트 불러오기">
+    <span className="reading-loader" />아지트를 펼치고 있어요.
+    {onExit && <button type="button" className="btn-ghost" onClick={onExit}>돌아가기</button>}
+  </section>;
+}
+const ReadingHideout = dynamic(() => import("./ReadingHideout"), { ssr: false, loading: HideoutLoading });
 
 // 선생님의 책 광장 — **반 전체의 자리**라 '고른 학생'의 책나눔(아래 ReadingHub) 밖에 따로 섭니다
 // (TeacherReadingView의 '책 광장 들어가기'). 한때 선생님이 들어가는 길이 고른 학생 화면의 셋째 탭 하나뿐이라,
@@ -136,7 +144,7 @@ function Modal({ title, onClose, children, wide = false, busy = false }) {
 //   (출석 · 자리표는 페이지가 이미 받아 둔 것 — ReadingPlaza.jsx 머리의 설명).
 // plazaCall — 선생님의 '모두 이동'이 10초를 다 세고 모두를 데려오는 신호의 '보낸 때'(책방 페이지가 넘김 · 없으면 0).
 //   이 값이 **이 화면이 떠 있는 동안 바뀌면** 책 광장 탭으로 넘어갑니다(아래).
-export default function ReadingHub({ classId, user, isTeacher = false, bookSearchOn = false, petOn = false, plazaOn = false, characterOn = true, onDisabled, activities = [], onOpenActivity, initialBookId = null, initialTab = "library", student = null, classroom = null, plazaCall = 0 }) {
+export default function ReadingHub({ classId, user, isTeacher = false, bookSearchOn = false, petOn = false, plazaOn = false, hideoutOn = false, characterOn = true, onDisabled, activities = [], onOpenActivity, initialBookId = null, initialTab = "library", student = null, classroom = null, plazaCall = 0 }) {
   // student가 있으면 교사가 그 학생의 책나눔을 보는 읽기 전용 화면입니다(선생님 결정 — 감상·발자국까지 전부 보임).
   const readOnly = !!student?.uid;
   const viewUid = readOnly ? student.uid : user?.uid;
@@ -148,11 +156,30 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
   // 순위 셈은 책나눔과 함께 늘 돌고, 리더보드 스위치는 상단바 리더보드 화면 · 독서 TOP 3만 켜고 끔).
   // 책 광장을 켠 반은 그 자리에 '책 광장'이 섭니다(선생님 요청 — 순위는 상단바 리더보드에서 봄). 끈 반은 지금처럼 '우리 반 랭킹'.
   const thirdTab = plazaOn ? "plaza" : "ranking";
-  const [tab, setTab] = useState(() => (initialTab === "plaza" || initialTab === "ranking" ? thirdTab : ["library", "growth"].includes(initialTab) ? initialTab : "library"));
+  const canHideout = hideoutOn && (readOnly || (!isTeacher && !!user?.uid));
+  const [tab, setTab] = useState(() => (initialTab === "plaza" || initialTab === "ranking" ? thirdTab : initialTab === "hideout" && canHideout && readOnly ? "hideout" : ["library", "growth"].includes(initialTab) ? initialTab : "library"));
   // 선생님이 설정을 바꿔 셋째 탭이 달라지면(광장 ↔ 랭킹) 보던 탭도 따라갑니다.
   useEffect(() => { setTab((current) => (current === "plaza" || current === "ranking" ? thirdTab : current)); }, [thirdTab]);
   // 책꽂이(첫 탭)에서 '광장에서 보기'로 넘어갈 때 곧바로 열 책({ uid, bookId, place, key })
   const [plazaJump, setPlazaJump] = useState(null);
+  const [plazaReturn, setPlazaReturn] = useState(null);
+  const returnSequence = useRef(0);
+  const enterHideout = useCallback(() => {
+    if (!canHideout || readOnly || !classroom?.on) return;
+    setDialog(null);
+    setError("");
+    setTab("hideout");
+  }, [canHideout, readOnly, classroom?.on]);
+  const leaveHideout = useCallback(() => {
+    setPlazaJump(null);
+    setDialog(null);
+    setError("");
+    setPlazaReturn({ room: "classroom", key: `hideout-return-${++returnSequence.current}` });
+    setTab(!readOnly && plazaOn && classroom?.on ? "plaza" : "library");
+  }, [plazaOn, classroom?.on, readOnly]);
+  useEffect(() => {
+    if (tab === "hideout" && !canHideout) leaveHideout();
+  }, [tab, canHideout, leaveHideout]);
   // 내 광장 목록 한 장 — 선생님이 내린 책 · 내 책에 달린 댓글 수(학생 본인 화면 · 광장을 켠 반에서만, 읽기 1)
   const [myShelf, setMyShelf] = useState(null);
   const ownPlaza = plazaOn && !readOnly && !isTeacher && !!user?.uid;
@@ -187,6 +214,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
     seenCall.current = plazaCall;
     if (!plazaCall || !plazaOn || readOnly || tabNow.current === "plaza") return;
     setPlazaJump(null);
+    setPlazaReturn(null);
     setError("");
     setDialog((current) => (current?.type === "detail" ? null : current));
     setTab("plaza");
@@ -283,7 +311,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
     entry: (Array.isArray(myShelf?.books) ? myShelf.books : []).find((b) => b?.id === bookId) ?? null,
   });
 
-  return <ReadingErrorContext.Provider value={error}><section className={`reading-hub${tab === "plaza" ? " reading-hub--plaza" : ""}`} aria-label="책나눔 성장 기능" aria-busy={loading || busy}>
+  return <ReadingErrorContext.Provider value={error}><section className={`reading-hub${tab === "plaza" || tab === "hideout" ? " reading-hub--plaza" : ""}`} aria-label="책나눔 성장 기능" aria-busy={tab === "hideout" ? false : loading || busy}>
     <div className="reading-intro">
       {readOnly ? <div><p className="reading-eyebrow">READING JOURNEY</p><h2>{student.name || "학생"}의 독서 여정</h2><p>학생이 남긴 책꽂이 · 독서 발자국 · 한 권의 책을 읽기만 합니다.</p></div> : <div><p className="reading-eyebrow">MY READING JOURNEY</p><h2>한 페이지씩, 나의 가능성을 넓히다.</h2><p>읽은 순간을 기록하고 나만의 독서 컬렉션을 완성해 보세요.</p></div>}
       {(featured?.earned || showPet) && <div className="reading-intro-side">
@@ -293,12 +321,13 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
       </div>}
     </div>
     <nav className="reading-tabs" aria-label="책나눔 메뉴" ref={tabsRef}>
-      {[["library", "책꽂이"], ["growth", "성장·뱃지"], [thirdTab, plazaOn ? "책 광장" : "우리 반 랭킹"]].map(([key, label]) => <button type="button" key={key} className={tab === key ? "active" : ""} aria-current={tab === key ? "page" : undefined} onClick={() => { setTab(key); setDialog(null); setError(""); setPlazaJump(null); }}>{label}</button>)}
+      {[["library", "책꽂이"], ["growth", "성장·뱃지"], [thirdTab, plazaOn ? "책 광장" : "우리 반 랭킹"], ...(readOnly && canHideout ? [["hideout", "아지트 보기"]] : [])].map(([key, label]) => <button type="button" key={key} className={tab === key ? "active" : ""} aria-current={tab === key ? "page" : undefined} onClick={() => { setTab(key); setDialog(null); setError(""); setPlazaJump(null); setPlazaReturn(null); }}>{label}</button>)}
     </nav>
     {error && !dialog && !confirm && <div className="reading-error" role="alert">{error}<button type="button" onClick={() => setError("")} aria-label="오류 안내 닫기">×</button></div>}
     {notice && <div className="reading-notice" role="status">{notice}</div>}
     {/* 책 광장은 서재(정본)를 기다리지 않습니다 — 반의 공유 사본을 제 손으로 구독합니다. 펫의 단계만 서재에서 받습니다. */}
-    {tab === "plaza" ? <PlazaExitContext.Provider value={leavePlaza}><ReadingPlaza key={plazaJump?.key ?? "plaza"} classId={classId} user={user} isTeacher={isTeacher} characterOn={characterOn} petOn={showPet} growthXp={raw ? petGrowthOfSummary(stats) : null} initialBook={plazaJump} onExit={leavePlaza} classroom={classroom} /></PlazaExitContext.Provider>
+    {tab === "plaza" ? <PlazaExitContext.Provider value={leavePlaza}><ReadingPlaza key={plazaJump?.key ?? plazaReturn?.key ?? "plaza"} classId={classId} user={user} isTeacher={isTeacher} characterOn={characterOn} petOn={showPet} growthXp={raw ? petGrowthOfSummary(stats) : null} initialBook={plazaJump} initialRoom={plazaJump ? null : plazaReturn?.room} onExit={leavePlaza} classroom={classroom} hideoutOn={canHideout} onEnterHideout={enterHideout} /></PlazaExitContext.Provider>
+    : tab === "hideout" && canHideout ? <PlazaExitContext.Provider value={leaveHideout}><ReadingHideout key={`${classId}:${viewUid}`} classId={classId} user={user} student={student} summary={stats} readOnly={readOnly} characterOn={characterOn} petOn={petOn} onDisabled={leaveHideout} onExit={leaveHideout} /></PlazaExitContext.Provider>
     : loading ? <div className="reading-loading" role="status"><span className="reading-loader" />독서 기록을 불러오고 있어요.</div> : !raw ? <div className="reading-empty"><BookIcon size={40} /><h3>독서 정보를 불러오지 못했어요.</h3><button type="button" className="btn-primary" onClick={() => setRevision((r) => r + 1)}>다시 불러오기</button></div> : <>
       <div className="reading-summary">
         <div className="reading-level"><span>독서 레벨</span><strong><small>Lv.</small>{stats.level}</strong><div className="reading-progress" role="progressbar" aria-label={stats.maxLevel ? "최고 레벨" : "다음 레벨까지"} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(stats.progress || 0)}><i style={{ width: `${stats.progress || 0}%` }} /></div><span>{stats.maxLevel ? `${number(stats.xp)} EXP · 최고 레벨` : `${number(stats.xp)} / ${number(stats.nextXp)} EXP`}</span></div>

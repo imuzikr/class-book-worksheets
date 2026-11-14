@@ -595,15 +595,18 @@ service cloud.firestore {
                && (!changed.hasAny(['readingTopEnabled']) || request.resource.data.get('readingTopEnabled', null) is bool)
                && (!changed.hasAny(['plazaEnabled']) || request.resource.data.get('plazaEnabled', null) is bool)
                && (!changed.hasAny(['classroomEnabled']) || request.resource.data.get('classroomEnabled', null) is bool)
+               && (!changed.hasAny(['hideoutEnabled']) || request.resource.data.get('hideoutEnabled', null) is bool)
                && (!changed.hasAny(['classroomCallAt'])
                    || (request.resource.data.get('classroomCallAt', null) is number && request.resource.data.classroomCallAt >= 0))
                && (!changed.hasAny(['readingMapTheme']) || request.resource.data.get('readingMapTheme', null) in ['continent', 'cloud-islands'])
-               && (!changed.hasAny(['readingEnabled', 'rankingEnabled', 'characterEnabled', 'bookSearchEnabled', 'fruitBasketEnabled', 'petEnabled', 'readingTopEnabled', 'plazaEnabled', 'classroomEnabled', 'classroomCallAt', 'readingMapTheme'])
+               && (!changed.hasAny(['readingEnabled', 'rankingEnabled', 'characterEnabled', 'bookSearchEnabled', 'fruitBasketEnabled', 'petEnabled', 'readingTopEnabled', 'plazaEnabled', 'classroomEnabled', 'hideoutEnabled', 'classroomCallAt', 'readingMapTheme'])
                    || (resource.data.get('archived', false) != true
                        && request.resource.data.get('archived', false) != true));
       }
       allow create: if isTeacher() && request.resource.data.createdBy == uid()
                     && request.resource.data.get('readingEnabled', false) == false
+                    && (!request.resource.data.keys().hasAny(['hideoutEnabled'])
+                        || request.resource.data.hideoutEnabled is bool)
                     && (!request.resource.data.keys().hasAny(['readingMapTheme'])
                         || request.resource.data.readingMapTheme in ['continent', 'cloud-islands']);
       allow update: if (isAdmin()

@@ -1,0 +1,730 @@
+{
+  "version": 2,
+  "catalogDesigns": 120,
+  "helperVariants": 4,
+  "baselineFurnishings": 7,
+  "restPetSpecies": [
+    "owl",
+    "hedgehog",
+    "chick",
+    "otter",
+    "fennec",
+    "redpanda",
+    "rabbit",
+    "bear",
+    "cat",
+    "puppy"
+  ],
+  "files": [
+    {
+      "path": "items/rug/forest.webp",
+      "bytes": 58296,
+      "sha256": "7b03e0306de198c26093ef7f1a4546638ea47c8b99396b9aa7e620f21a2ce341"
+    },
+    {
+      "path": "items/rug/starlight.webp",
+      "bytes": 77620,
+      "sha256": "ffde7b69d1f1accc1be1e0d7faae539e7d6c33c82100ba84cc76bf00127909ac"
+    },
+    {
+      "path": "items/rug/explorer.webp",
+      "bytes": 75016,
+      "sha256": "a824781bbebd1ed343e9683433d3b94a749bd66e7a407fd5e8352d56155b139f"
+    },
+    {
+      "path": "items/rug/coastal.webp",
+      "bytes": 74906,
+      "sha256": "1a0e23b6e28b1288150ef152789a50fc53d460168f5eae91603f5c9fae350e90"
+    },
+    {
+      "path": "items/cushion/forest.webp",
+      "bytes": 106692,
+      "sha256": "4b1774db4da43db5e55d4091749465258118b375bb8ea449194657c22d04e5ab"
+    },
+    {
+      "path": "items/cushion/starlight.webp",
+      "bytes": 111554,
+      "sha256": "12939e90f7e2422b94debeeca8cd378a031b7991942fa6e5bb0cd53a723f1a25"
+    },
+    {
+      "path": "items/cushion/explorer.webp",
+      "bytes": 113688,
+      "sha256": "40915ae885c4e5622228e3d9bf2bc5c61d4427d8aba51286ff568edf80f6705e"
+    },
+    {
+      "path": "items/cushion/coastal.webp",
+      "bytes": 119216,
+      "sha256": "9d105817f4ceafc1b74d8ee0f9da75a8cf2a3854b436cb4d9d1069cd373b0a36"
+    },
+    {
+      "path": "items/bookmark-rack/forest.webp",
+      "bytes": 123562,
+      "sha256": "b106c49eb2e86ccd287364409f8089351d3a6b961e98f86e81a80906786a55c4"
+    },
+    {
+      "path": "items/bookmark-rack/starlight.webp",
+      "bytes": 119564,
+      "sha256": "9848230179dc40e425141cf7fab1b77517bc910c5d6cc8ea0e7c6de686fbf867"
+    },
+    {
+      "path": "items/bookmark-rack/explorer.webp",
+      "bytes": 121694,
+      "sha256": "b75bdf29eea71ac0896be7cf850e11e546ac00275126cf6fcb2b47b2e4d2026f"
+    },
+    {
+      "path": "items/bookmark-rack/coastal.webp",
+      "bytes": 120870,
+      "sha256": "b854f3e8015768524dca8efe957425a4c6e6d923940f7c6aefefab42393dcc66"
+    },
+    {
+      "path": "items/desk/forest.webp",
+      "bytes": 209434,
+      "sha256": "2d63496ee4e7f6fa28585c767dbaaa82fed43dc9af789b876e28cbc0a3594d92"
+    },
+    {
+      "path": "items/desk/starlight.webp",
+      "bytes": 207672,
+      "sha256": "20f3c19d4f21d33953ead39e2e30ac07076629582cc6c8fdefae68b272ce66e4"
+    },
+    {
+      "path": "items/desk/explorer.webp",
+      "bytes": 189732,
+      "sha256": "f4739ab76037b9c43d2af97f0f5aeca0ae8951271cfc71c01defca276df4f137"
+    },
+    {
+      "path": "items/desk/coastal.webp",
+      "bytes": 209612,
+      "sha256": "1ed4eb19f1bd5149aaaddfe38419dd63b0713b044bfeebf2aeef5f01dfdf0c7e"
+    },
+    {
+      "path": "items/bookstand/forest.webp",
+      "bytes": 75404,
+      "sha256": "ccfca130757305d38672de7e70ee84fe2756c193b879fdd5c263939deb90f73b"
+    },
+    {
+      "path": "items/bookstand/starlight.webp",
+      "bytes": 72764,
+      "sha256": "9ff7db7eb3ad5b7049ac07030795a531376c2f93f11546ad794b128abc39f5bb"
+    },
+    {
+      "path": "items/bookstand/explorer.webp",
+      "bytes": 78676,
+      "sha256": "5bc9d6fcdee8e391fcac2202f2d952b86c2b44ebbd34846726a35baceda330e4"
+    },
+    {
+      "path": "items/bookstand/coastal.webp",
+      "bytes": 75764,
+      "sha256": "cb9a53fe0d86c817a0622534401f5a5d8489a8b40323b2b08e109fd1574eec01"
+    },
+    {
+      "path": "items/pencil-caddy/forest.webp",
+      "bytes": 94718,
+      "sha256": "608dd0896e8864f40e09e5dd28b4eedfcc01856dd2bd33d462ff6bd8f48f299e"
+    },
+    {
+      "path": "items/pencil-caddy/starlight.webp",
+      "bytes": 96458,
+      "sha256": "ae7fdd6feaecb776aef670a8564e86463a87929e31eb510dccc20868b31ba0c3"
+    },
+    {
+      "path": "items/pencil-caddy/explorer.webp",
+      "bytes": 101844,
+      "sha256": "987ae022f94dfcc3081b9357417de04e66b109402f25b7155c9355179e7ae523"
+    },
+    {
+      "path": "items/pencil-caddy/coastal.webp",
+      "bytes": 97172,
+      "sha256": "788d01af02db5cef0f72ed6245d9b9fb8591f43cdc11cc885b07e74ebe697702"
+    },
+    {
+      "path": "items/shelf/forest.webp",
+      "bytes": 73352,
+      "sha256": "c4b02e67a9f93e8efe0e58114394e7e505aa643e93f499cd1149a68ffb02874e"
+    },
+    {
+      "path": "items/shelf/starlight.webp",
+      "bytes": 282242,
+      "sha256": "9f9e0c61db59d257ccff7daed01f45ccfcd9762b1bfb7d4952d3259250862c9d"
+    },
+    {
+      "path": "items/shelf/explorer.webp",
+      "bytes": 317474,
+      "sha256": "911bb84c120819bf85f9bec439907c79ee52846ae027b2c35ddd7c146ca72da5"
+    },
+    {
+      "path": "items/shelf/coastal.webp",
+      "bytes": 302560,
+      "sha256": "25c32781b0024c235195b4ea5f24b325e0d14a63cb054acaf79724ed71b168d3"
+    },
+    {
+      "path": "items/bookends/forest.webp",
+      "bytes": 81666,
+      "sha256": "9182d84c901c391ba63464f66ab6d390cbda3df94d79c7b5e4d6ee4a8e2dde8d"
+    },
+    {
+      "path": "items/bookends/starlight.webp",
+      "bytes": 84446,
+      "sha256": "135151b6cc6f454c9ad0f64278ec6b69af5c4f435bca60f2c695b944ed3e2716"
+    },
+    {
+      "path": "items/bookends/explorer.webp",
+      "bytes": 84174,
+      "sha256": "71cd8e44ecaab94f8fd3219bad1f2422834ec630176599c98222403637999a34"
+    },
+    {
+      "path": "items/bookends/coastal.webp",
+      "bytes": 81946,
+      "sha256": "67c495ae70d1388374c392a393f7001879010569517e70ac76a00a60ce524cc2"
+    },
+    {
+      "path": "items/cover-display/forest.webp",
+      "bytes": 82500,
+      "sha256": "4945c593d17f817c555a910c2e2b4797653588072be59f23500426ec90c3926d"
+    },
+    {
+      "path": "items/cover-display/starlight.webp",
+      "bytes": 83278,
+      "sha256": "29a47655f38c998ce5c30b5dc99cc0c8c88801cf3da29e492886f6878a2a8f43"
+    },
+    {
+      "path": "items/cover-display/explorer.webp",
+      "bytes": 84026,
+      "sha256": "a5a1e47a05d08368ff38b2311ee620eedf06e645db7b0156feb120d7f17f9625"
+    },
+    {
+      "path": "items/cover-display/coastal.webp",
+      "bytes": 83662,
+      "sha256": "481e9cac972465be445df3b99032022bb8740bae361d035df979111f75e4e3ad"
+    },
+    {
+      "path": "items/bed/forest.webp",
+      "bytes": 73030,
+      "sha256": "999badd0d1c963fb169713190d6d46d6286bec503d99ce5befdf68cb71dcb3a4"
+    },
+    {
+      "path": "items/bed/starlight.webp",
+      "bytes": 273226,
+      "sha256": "83bf2aa9fdd59508fadc21a6f59751b3626c005e69a30d9ba2663b7fb2afd1d1"
+    },
+    {
+      "path": "items/bed/explorer.webp",
+      "bytes": 265982,
+      "sha256": "20168db3345e9a2bd17c02026e21bc6799ee8be52ad68a6732ff7211a79e5191"
+    },
+    {
+      "path": "items/bed/coastal.webp",
+      "bytes": 297944,
+      "sha256": "a17b4c8e0ad541e5f10420534e6742a82f041c57a2e2a61d2813bbf64f2a4f1c"
+    },
+    {
+      "path": "items/pet-water/forest.webp",
+      "bytes": 52544,
+      "sha256": "34cb187a85c58220cb32ecda55702fcd6e97102eb98c6e79bdb725cc4c93c40e"
+    },
+    {
+      "path": "items/pet-water/starlight.webp",
+      "bytes": 52280,
+      "sha256": "8c72f16621219996cea145e4a174cf44f9b1c14746fe99c243a7d037603b9128"
+    },
+    {
+      "path": "items/pet-water/explorer.webp",
+      "bytes": 56276,
+      "sha256": "5f132d699712917b49b1bb74168d79293be3d875ce12165cc280461c0f2bff52"
+    },
+    {
+      "path": "items/pet-water/coastal.webp",
+      "bytes": 51394,
+      "sha256": "27cd5e423773fe2a2880121eda033b80e067edd6c104595d8f893ac961758f9b"
+    },
+    {
+      "path": "items/pet-toys/forest.webp",
+      "bytes": 81376,
+      "sha256": "0bfa11dd57ed9015e263648a7dd7710931cdd43cccd253ce93a75c83d2790a5d"
+    },
+    {
+      "path": "items/pet-toys/starlight.webp",
+      "bytes": 82764,
+      "sha256": "7968d7ec3861a165c9fe1329f24eab80c0d58f62306d93eac9c69e8a6de925bd"
+    },
+    {
+      "path": "items/pet-toys/explorer.webp",
+      "bytes": 83414,
+      "sha256": "6eaeb6ef2119ed4f23d8d90dc3e8ddaeb5660892a1422752e2b479b554cb8d15"
+    },
+    {
+      "path": "items/pet-toys/coastal.webp",
+      "bytes": 83308,
+      "sha256": "dfe0cb44db8ecdc9597ca7388ed36084364f679a42667908912ffb6195ddbf33"
+    },
+    {
+      "path": "items/lamp/forest.webp",
+      "bytes": 30434,
+      "sha256": "06c48368e74bd1fec2c290974ea0966958696218583a925755659181f334ed12"
+    },
+    {
+      "path": "items/lamp/starlight.webp",
+      "bytes": 30788,
+      "sha256": "d71ff1d9e48dc288b7ca5cf2f7db98d750776b4169984297149c3989b65ccbc4"
+    },
+    {
+      "path": "items/lamp/explorer.webp",
+      "bytes": 38416,
+      "sha256": "216df0baf6217e53a60c80686829bc82fc7fba088268cecbd9b4353ec6b60cb1"
+    },
+    {
+      "path": "items/lamp/coastal.webp",
+      "bytes": 39108,
+      "sha256": "dd1e5031c7f54c1c3ebd0c7f8d31c5af0a2b0e78730cdb709cbb1ce36295f0c2"
+    },
+    {
+      "path": "items/mood-light/forest.webp",
+      "bytes": 49516,
+      "sha256": "78247c3258866012813f8d16feb1736628f6e0c0f7dffc40948a0312f309c42a"
+    },
+    {
+      "path": "items/mood-light/starlight.webp",
+      "bytes": 46192,
+      "sha256": "a0404c50384034faf610e49b4f0498c0b7ab3a28226e0e2af49b0924992bf597"
+    },
+    {
+      "path": "items/mood-light/explorer.webp",
+      "bytes": 47568,
+      "sha256": "b5c836bb0913ad907bdebabac0900a9de3f23d7ab992371aac8c508ed530a55c"
+    },
+    {
+      "path": "items/mood-light/coastal.webp",
+      "bytes": 50840,
+      "sha256": "b1f1648518319c834b6471c300350a302b1241679be91156e0a0363fc3fe15f2"
+    },
+    {
+      "path": "items/music-box/forest.webp",
+      "bytes": 80622,
+      "sha256": "cb8b5d61fb265b69e2a4026cb28a6a4c9d67374df5cd850272da322e02ab47cd"
+    },
+    {
+      "path": "items/music-box/starlight.webp",
+      "bytes": 83136,
+      "sha256": "515cd781fd4c7af77ff2fa65c98e634bc027e33275fa2ec383816174a1d38c75"
+    },
+    {
+      "path": "items/music-box/explorer.webp",
+      "bytes": 93182,
+      "sha256": "f5d6301241f7ae49f2ff509dc8f1d90fdfa14627dade3a62bc5127076b349d7a"
+    },
+    {
+      "path": "items/music-box/coastal.webp",
+      "bytes": 87866,
+      "sha256": "82dc43da7a3fd27d80d0c6158f7e01cc5cef86abac21a7cc5e41c3eda5b2e893"
+    },
+    {
+      "path": "items/plant/forest.webp",
+      "bytes": 87098,
+      "sha256": "70274635ecb7e9c8d2595ba4f412eddc3cf7ca706ee34954eaf192c201074abe"
+    },
+    {
+      "path": "items/plant/starlight.webp",
+      "bytes": 85584,
+      "sha256": "0d8e24674f89e17888ded5aef441cc550c0af1904f05a549a7747d751567d1d1"
+    },
+    {
+      "path": "items/plant/explorer.webp",
+      "bytes": 98590,
+      "sha256": "2f1b17bee3a2100b474fc61fc85bf9c39c46854e075fb006b3709e1e5fd82ca3"
+    },
+    {
+      "path": "items/plant/coastal.webp",
+      "bytes": 89368,
+      "sha256": "643a2e97a47d9bc9ca0e270c2643760647baa4fcedf8efe9b80b34f98d5fa87e"
+    },
+    {
+      "path": "items/terrarium/forest.webp",
+      "bytes": 84124,
+      "sha256": "0f122b0c48d2898b639a59388ad2819242cc3646e64f0af8775c8208b74e1f47"
+    },
+    {
+      "path": "items/terrarium/starlight.webp",
+      "bytes": 81908,
+      "sha256": "b95fe430a7bc4b14f4b20c4c2911290827b72a5433d668e665013d723f2a7824"
+    },
+    {
+      "path": "items/terrarium/explorer.webp",
+      "bytes": 86012,
+      "sha256": "06e4b21a837da53aa0d4beccdcaaebf743208e51a257bbca281536596ef1f164"
+    },
+    {
+      "path": "items/terrarium/coastal.webp",
+      "bytes": 82222,
+      "sha256": "01597b0ddb6a71b981c4856e085077cd7fc9294ca33062e5d9ae6ead98d56fb8"
+    },
+    {
+      "path": "items/hanging-planter/forest.webp",
+      "bytes": 73362,
+      "sha256": "54c02433ce64d6a8ccadc8b29ab2748ea87ff83d57ee7e2f361e19a972f028ac"
+    },
+    {
+      "path": "items/hanging-planter/starlight.webp",
+      "bytes": 75078,
+      "sha256": "b35e425e0d94b3b69d73e60d43a34d0332ffe906d7b79c262cdc52dd7d4e0fc5"
+    },
+    {
+      "path": "items/hanging-planter/explorer.webp",
+      "bytes": 82756,
+      "sha256": "a599d899f99579354fa3d23808e5c340ebb1f8560689a2acd2afe46fa8997f42"
+    },
+    {
+      "path": "items/hanging-planter/coastal.webp",
+      "bytes": 87426,
+      "sha256": "6b1b022539a84f60528ce3f184dfb086d7a912ed1a6346eb93391da7e8e69b5a"
+    },
+    {
+      "path": "items/wall/forest.webp",
+      "bytes": 106158,
+      "sha256": "87eb260160b7de6c86790ad861c8863be4acebbb7fe2c4a6a9d7cc79d06d8cfd"
+    },
+    {
+      "path": "items/wall/starlight.webp",
+      "bytes": 114408,
+      "sha256": "1666a192385809ec1f2bc4228ece2d48047d2a7f30b4d5b97a37155166447339"
+    },
+    {
+      "path": "items/wall/explorer.webp",
+      "bytes": 107796,
+      "sha256": "f2ae6be47ef3ab5913992f7e833cab843d5749d8220e934ec313cec0a9b801a4"
+    },
+    {
+      "path": "items/wall/coastal.webp",
+      "bytes": 103124,
+      "sha256": "4bf7ee617c79f90331d2c04981c885bae354ca95f7676766fa36f168ca77124d"
+    },
+    {
+      "path": "items/memo-board/forest.webp",
+      "bytes": 113848,
+      "sha256": "7cec59892db7101d5c264721c9e1581a36e621f9c249b607b2d76d1322cbac33"
+    },
+    {
+      "path": "items/memo-board/starlight.webp",
+      "bytes": 107848,
+      "sha256": "5527e23c549e71f094a7f49598d9e42471499967f8fe9660177850e839639450"
+    },
+    {
+      "path": "items/memo-board/explorer.webp",
+      "bytes": 116762,
+      "sha256": "abcb646e6e2ef269a58557453f506c2f5b130b247aa9afb6c0d77703f1393e31"
+    },
+    {
+      "path": "items/memo-board/coastal.webp",
+      "bytes": 114042,
+      "sha256": "1f62ab821e7bced8df5e546e0dd74f977a688e101a23a1addc9b466c10056a8a"
+    },
+    {
+      "path": "items/wall-shelf/forest.webp",
+      "bytes": 69528,
+      "sha256": "5b075bed8a683aa026c242639002ab2c9505b2f59c960519971bf0b928fb036d"
+    },
+    {
+      "path": "items/wall-shelf/starlight.webp",
+      "bytes": 74468,
+      "sha256": "78608340da30080a627926b00eed1f5e1bc7bf53a077b648bdda6d7af2ada03c"
+    },
+    {
+      "path": "items/wall-shelf/explorer.webp",
+      "bytes": 78040,
+      "sha256": "d1dd3e3f1301206c794436d2be891b10479f4f69f97fcf598c02354c25c89cf3"
+    },
+    {
+      "path": "items/wall-shelf/coastal.webp",
+      "bytes": 73850,
+      "sha256": "8ae714892edbebe3f157627b7837aa3324ad029f76c37d3939815ff87a88e1da"
+    },
+    {
+      "path": "items/clock/forest.webp",
+      "bytes": 73580,
+      "sha256": "99e68fe79f99307aae32d5297af7f4683f70d8df76129f63271b77d496a50461"
+    },
+    {
+      "path": "items/clock/starlight.webp",
+      "bytes": 81992,
+      "sha256": "0a15f82e07550f0882ff4994f6f4f300982c660b7275e6a3a649a5385cf4b8b0"
+    },
+    {
+      "path": "items/clock/explorer.webp",
+      "bytes": 85436,
+      "sha256": "3410506cc291d2291863b97e180b0af3a16ff29eadccb752662df6342345a68d"
+    },
+    {
+      "path": "items/clock/coastal.webp",
+      "bytes": 88056,
+      "sha256": "2f25b9b67ca5eea6ca59645e776f5dba1124652f7cab947d66ef77de13db88c9"
+    },
+    {
+      "path": "items/hourglass/forest.webp",
+      "bytes": 79504,
+      "sha256": "ec699cc004e3c6783a5d7ef83f514d3505fdb9a1f9142b8e8dc26ef7e5c32f35"
+    },
+    {
+      "path": "items/hourglass/starlight.webp",
+      "bytes": 79216,
+      "sha256": "9f317c8f049fb95334d9b36620f7cee8cf825c63509ad944d0362ec67d1bfcaa"
+    },
+    {
+      "path": "items/hourglass/explorer.webp",
+      "bytes": 81754,
+      "sha256": "64c7b3e0b64ecf7be1835a6fdf97f943f2f33ae80ed1b8bb62bd41bfc3ebbc4c"
+    },
+    {
+      "path": "items/hourglass/coastal.webp",
+      "bytes": 80236,
+      "sha256": "623ebd1a2021459ea92485d2b885d8243afb9e556693ae2c7e6ac79b41600f71"
+    },
+    {
+      "path": "items/desk-calendar/forest.webp",
+      "bytes": 98454,
+      "sha256": "69fdb1d80328718eda86b459eb49350c98f6e6c751aa5acae1fb5c447f360a1d"
+    },
+    {
+      "path": "items/desk-calendar/starlight.webp",
+      "bytes": 99196,
+      "sha256": "47a8501b983608bae6c2d92b9dea572310fbdefe9882e9e8a2e0da02fb7dd936"
+    },
+    {
+      "path": "items/desk-calendar/explorer.webp",
+      "bytes": 108318,
+      "sha256": "3e699a9c7164ebdc789f2d3fbab4d8a78f46ca399968188a5ce52e9dda0c5e6e"
+    },
+    {
+      "path": "items/desk-calendar/coastal.webp",
+      "bytes": 104904,
+      "sha256": "006df20e3534421cdc8e5a9703675f2457ee06c08d7e0544cb84e29e0518a594"
+    },
+    {
+      "path": "items/chest/forest.webp",
+      "bytes": 74050,
+      "sha256": "15c7f9a662af7b97a47b7df6270c3c282fbd53c7a8ef763844ce2db19158b4c4"
+    },
+    {
+      "path": "items/chest/starlight.webp",
+      "bytes": 77048,
+      "sha256": "47823b3f00f5a695d1d247cc79955caa620d8b08c46a7ff15fba2a2673c9e2a0"
+    },
+    {
+      "path": "items/chest/explorer.webp",
+      "bytes": 81538,
+      "sha256": "d0919d27c430bda97961d0edac5befd21828b2e8efce029855282ebde076f35b"
+    },
+    {
+      "path": "items/chest/coastal.webp",
+      "bytes": 81438,
+      "sha256": "c9c52f2bba671f5c2f1887c02bf8ef93ff00e6e4376399415cd3bf9b7adaafdb"
+    },
+    {
+      "path": "items/badge-display/forest.webp",
+      "bytes": 79474,
+      "sha256": "4b7d43a159b7d414bb3653a206abafb46243220aea1d8908b72431dc900be050"
+    },
+    {
+      "path": "items/badge-display/starlight.webp",
+      "bytes": 78098,
+      "sha256": "a34aa193c46e32765442b60cca0cfdf9d1285a8d7c75cf761377aed60b1873e9"
+    },
+    {
+      "path": "items/badge-display/explorer.webp",
+      "bytes": 79868,
+      "sha256": "9b0a6a662bab5e34bbfdf2aa97710f479f509edfe8f8195e70389c88e658dae3"
+    },
+    {
+      "path": "items/badge-display/coastal.webp",
+      "bytes": 78780,
+      "sha256": "344c88e04e99558cf6c17f3abbf9d266f253354b08192ae7b0bd7c2c6b383898"
+    },
+    {
+      "path": "items/travel-case/forest.webp",
+      "bytes": 79400,
+      "sha256": "a1cbed63ee79aaf0ea8614b08fc179aefb9679415eefba2f6e3b76d9538971ff"
+    },
+    {
+      "path": "items/travel-case/starlight.webp",
+      "bytes": 78408,
+      "sha256": "0b263709776f00270072625933f070b40389381f0d9f5179bcf2518b9d3ebfcf"
+    },
+    {
+      "path": "items/travel-case/explorer.webp",
+      "bytes": 84012,
+      "sha256": "4ca1aa1a5a22c13bb30a74f424afb617d6b02aa1f6525feb60d0842ac374b225"
+    },
+    {
+      "path": "items/travel-case/coastal.webp",
+      "bytes": 80636,
+      "sha256": "75e2e4033cc479100e69a3f9cc56819cc905f7de70f1f1c3ab86d28fbc253982"
+    },
+    {
+      "path": "items/garland/forest.webp",
+      "bytes": 54350,
+      "sha256": "254a3f89dd7e0be94940a1e2709ae663cd5192b9a3f78911e36cabcb65eed4b8"
+    },
+    {
+      "path": "items/garland/starlight.webp",
+      "bytes": 59232,
+      "sha256": "82203df7c247dc3d0054f1eed0788270b482fc283aec2fb48c2eff451facb51c"
+    },
+    {
+      "path": "items/garland/explorer.webp",
+      "bytes": 57222,
+      "sha256": "001d5f3e8754e9ad39c10654df3ccf60f37814590e2d134c38fbff843e22f245"
+    },
+    {
+      "path": "items/garland/coastal.webp",
+      "bytes": 64160,
+      "sha256": "0392d3739d61480b9c10580b0235e3626de7e4c6d116ee90f2b0e4028ee27060"
+    },
+    {
+      "path": "items/book-trophy/forest.webp",
+      "bytes": 104624,
+      "sha256": "df507596c6bd0e767a66d6bba0f4354b0ec111e684b1ae127b1c183b60829abf"
+    },
+    {
+      "path": "items/book-trophy/starlight.webp",
+      "bytes": 87316,
+      "sha256": "a3f58b7b5d639ff6d3069a6c5ea35a989d8fc68ceed80a44a70500241384631b"
+    },
+    {
+      "path": "items/book-trophy/explorer.webp",
+      "bytes": 94604,
+      "sha256": "d651a2d1018e58b01c50a40edb69bb92fa2b82095958581658e01cde288d5853"
+    },
+    {
+      "path": "items/book-trophy/coastal.webp",
+      "bytes": 91584,
+      "sha256": "9fd973b4b6b5c81428e86a65131c3a42f18859408c20e60f907fce73461b301a"
+    },
+    {
+      "path": "items/door-plaque/forest.webp",
+      "bytes": 49258,
+      "sha256": "9af96ab08706d1443427392c7aaf2c88ade6abb3431f8577d1f688be6ee933e4"
+    },
+    {
+      "path": "items/door-plaque/starlight.webp",
+      "bytes": 50726,
+      "sha256": "ccdfa38460e300b95630d54d6f9400c215fffba3a3cd0d0d1c6ba75503f34421"
+    },
+    {
+      "path": "items/door-plaque/explorer.webp",
+      "bytes": 52768,
+      "sha256": "7086d6f0888b027760870daf102f3c127c42b57caa9c8741c2a7aeed38848a5f"
+    },
+    {
+      "path": "items/door-plaque/coastal.webp",
+      "bytes": 50688,
+      "sha256": "8036e55c2aeafb321b81676932155f167f2a265613864cb69ab939c64969e6d1"
+    },
+    {
+      "path": "helpers/empty-wall-shelf/forest.webp",
+      "bytes": 35150,
+      "sha256": "ed0723a0af3b25fe6a2ec6a06eb4b674a0dbdec64520210e9aaa67a05372c32c"
+    },
+    {
+      "path": "helpers/empty-wall-shelf/starlight.webp",
+      "bytes": 34834,
+      "sha256": "99e42a53b37edff9fc83d7d522bdf21cb204f691345f61d09a5253325f37ca97"
+    },
+    {
+      "path": "helpers/empty-wall-shelf/explorer.webp",
+      "bytes": 36424,
+      "sha256": "02f54986b73b1c2cb02fa1896c473f43a9b5e77947e0fda8774817841f64787f"
+    },
+    {
+      "path": "helpers/empty-wall-shelf/coastal.webp",
+      "bytes": 36508,
+      "sha256": "5606f90c91ef19669ad3dfce5465826268a1af247390880b6c75f965b024c063"
+    },
+    {
+      "path": "desk-basic.webp",
+      "bytes": 63362,
+      "sha256": "febfe3719b234647bf0bd700ff880d0475c6c17e319748ab5af3dbf8e14ca209"
+    },
+    {
+      "path": "rug-linen.webp",
+      "bytes": 42584,
+      "sha256": "db99124b6964453bd0acd9e53e8377783ef075aa824cc248a4ea86d1c78710f3"
+    },
+    {
+      "path": "shelf-low.webp",
+      "bytes": 75294,
+      "sha256": "d0d4bed763370169710a0437bbed8f560649db7ef50e0633efe3b437c7e9c841"
+    },
+    {
+      "path": "lamp-linen.webp",
+      "bytes": 43566,
+      "sha256": "889d0b8a57e8d95ab43f6fbdb37d5a1b192f6f25fcd553a8258c17045f489197"
+    },
+    {
+      "path": "plant-leafy.webp",
+      "bytes": 117008,
+      "sha256": "44a3ab46c88b7943a7fb6fcc295755ba11115200413a87a09853940ce2b3fb8c"
+    },
+    {
+      "path": "wall-landscape.webp",
+      "bytes": 25558,
+      "sha256": "d0877f2e902c7d5cd7247681fe749594945e994558082505d0a4fc5a915d64bd"
+    },
+    {
+      "path": "bed-linen.webp",
+      "bytes": 61056,
+      "sha256": "b056855bcdaf7b4b19b366d17f3a9a0da4909a8569fe6302ade745ccdc10b63a"
+    },
+    {
+      "path": "background.webp",
+      "bytes": 129494,
+      "sha256": "bfbf2c49a5e89b0c45278461a28e23e260e9fc77c4ac93091b9552e87dc57cd0"
+    },
+    {
+      "path": "pets/rest-owl.webp",
+      "bytes": 856,
+      "sha256": "caa0d775267940916f7529d35cd00a1d76475d304862ed71279c000dea78752f"
+    },
+    {
+      "path": "pets/rest-hedgehog.webp",
+      "bytes": 822,
+      "sha256": "441a5b4afaac51199820e59a6d9d55ad19dc00b8c2511b57077cc328addf21f4"
+    },
+    {
+      "path": "pets/rest-chick.webp",
+      "bytes": 616,
+      "sha256": "f96e1f903adc574ae4b3ffb9674fcd35010b62646979cd1ad04030757de92743"
+    },
+    {
+      "path": "pets/rest-otter.webp",
+      "bytes": 776,
+      "sha256": "3ef20e521741ef279a5a25400f6d8ff3de2403b3762f6ba8d8a96d52cc4f8c1e"
+    },
+    {
+      "path": "pets/rest-fennec.webp",
+      "bytes": 924,
+      "sha256": "7f77aa8a105f86058325f0a5f875f7402b9980044fc9a1c698dc1b3732712561"
+    },
+    {
+      "path": "pets/rest-redpanda.webp",
+      "bytes": 5050,
+      "sha256": "992cfd9f862711df32348e36a4a1319c3090cb8597167cf7df412078818a2165"
+    },
+    {
+      "path": "pets/rest-rabbit.webp",
+      "bytes": 700,
+      "sha256": "573c155f827a9cf7ad335fa2e4c79a6968f6998a09a0ec25279076a7b8ded1c8"
+    },
+    {
+      "path": "pets/rest-bear.webp",
+      "bytes": 748,
+      "sha256": "2fec07760aa6528694f21a4c0bddb17c7d3785e94b580d1b3657c2b0a729222d"
+    },
+    {
+      "path": "pets/rest-cat.webp",
+      "bytes": 4510,
+      "sha256": "b251f99a0615587f14190d75fa247e18589ac17f522c3543a7d0f59d977fcfc6"
+    },
+    {
+      "path": "pets/rest-puppy.webp",
+      "bytes": 4564,
+      "sha256": "bb2ff2137188617f10814da99082f9a17245a7eeb5c053dbc6347dddb1fe6fae"
+    }
+  ]
+}
