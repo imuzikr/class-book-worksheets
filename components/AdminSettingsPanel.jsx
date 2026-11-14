@@ -120,7 +120,8 @@ export default function AdminSettingsPanel({ classes = [], onToast }) {
     setBusy(f.key);
     setError("");
     try {
-      await setTeacherFeature(rows.map((c) => c.id), f.key, enabled);
+      // rows — 쓰기 전의 반 문서(이 쓰기로 펫 먹이가 다시 켜지는 반에만 '켠 때'를 새로 적음 — 학생 펫 · 책나눔을 다시 켤 때도)
+      await setTeacherFeature(rows.map((c) => c.id), f.key, enabled, rows);
       onToast?.(`${enabled ? f.on : f.off}${rows.length > 1 ? ` (반 ${rows.length}개 모두)` : ""}`);
     } catch (e) {
       setError(e?.message || "설정을 저장하지 못했어요.");

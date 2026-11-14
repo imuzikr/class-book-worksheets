@@ -96,6 +96,11 @@ describe("독서 펫 — 프로필의 펫과 비밀 문서", () => {
     // 켤 때 — 스위치와 켠 때를 한 번에(lib/data/classes.js의 featureWrite). 켠 때는 서버 시각만
     await assertSucceeds(updateDoc(c1, { petFeedEnabled: true, petFeedFrom: serverTimestamp() }));
     await assertSucceeds(updateDoc(c1, { petFeedEnabled: false }));
+    // 학생 펫 · 책나눔을 다시 켜 펫 먹이가 다시 돌 때도 켠 때를 함께(lib/readingPet.js의 petFeedStarts) — 서버 시각만
+    await assertSucceeds(updateDoc(c1, { petEnabled: true, petFeedFrom: serverTimestamp() }));
+    await assertSucceeds(updateDoc(c1, { readingEnabled: true, petFeedFrom: serverTimestamp() }));
+    await assertFails(updateDoc(c1, { petEnabled: true, petFeedFrom: Date.now() }));
+    await assertFails(updateDoc(c1, { readingEnabled: true, petFeedFrom: new Date() }));
     await assertFails(updateDoc(c1, { petFeedEnabled: "true" }));
     await assertFails(updateDoc(c1, { petFeedEnabled: null }));
     // 기기의 시각 · 아주 이른 날(켜자마자 펫이 한꺼번에 떠남) · 아주 큰 수(날짜 셈이 멈춤) · 글자 · 지우기는 거부

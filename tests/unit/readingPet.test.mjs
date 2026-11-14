@@ -3,7 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   PET_SPECIES, PET_SPECIES_KEYS, PET_STAGES, PET_STAGE_MAX, PET_HATCH_XP,
-  normalizePetMirror, normalizePublicPet, petEnabled, petGrowthOfSummary, petGrowthXp,
+  normalizePetMirror, normalizePublicPet, petEnabled, petFeedStarts, petGrowthOfSummary, petGrowthXp,
   PET_ART_READY, petCheerKind, petImageSrc, petImageSrcSet, petProgress, petSpecies, petStageName, pickPetSpecies,
   planPetAction, rankingPet,
 } from "@/lib/readingPet";
@@ -31,6 +31,33 @@ test("학생 펫 스위치 — 책나눔이 켜진 반에서, 값이 없으면 �
   assert.equal(petEnabled({ readingEnabled: false }), false);
   assert.equal(petEnabled({ readingEnabled: true, archived: true }), false);
   assert.equal(petEnabled(null), false);
+});
+
+test("펫 먹이가 다시 켜지는 쓰기 — 세 스위치(책나눔 · 학생 펫 · 펫 먹이) 가운데 무엇으로 켜지든 '켠 때'를 새로 적음", () => {
+  const running = { readingEnabled: true, petFeedEnabled: true };
+  // 펫 먹이 스위치를 켤 때
+  assert.equal(petFeedStarts({ readingEnabled: true }, { petFeedEnabled: true }), true);
+  // 학생 펫 · 책나눔을 껐다 다시 켤 때 — 펫 먹이 스위치는 켜진 채 남아 있음(한때 여기서 옛 '켠 때'가 남아 펫이 한꺼번에 떠남)
+  assert.equal(petFeedStarts({ ...running, petEnabled: false }, { petEnabled: true }), true);
+  assert.equal(petFeedStarts({ ...running, readingEnabled: false }, { readingEnabled: true }), true);
+  // 이미 돌고 있는 반에는 새로 적지 않음(반마다 달라 '모두 켜기'를 누를 때 셈이 흔들리지 않게)
+  assert.equal(petFeedStarts(running, { petFeedEnabled: true }), false);
+  assert.equal(petFeedStarts(running, { petEnabled: true }), false);
+  // 켜도 펫 먹이가 돌지 않으면 적지 않음 — 펫 먹이를 안 켠 반 · 학생 펫이 꺼진 반 · 끄는 쓰기
+  assert.equal(petFeedStarts({ readingEnabled: false }, { readingEnabled: true }), false);
+  assert.equal(petFeedStarts({ readingEnabled: true, petEnabled: false, petFeedEnabled: true }, { readingEnabled: true }), false);
+  assert.equal(petFeedStarts(running, { petFeedEnabled: false }), false);
+  assert.equal(petFeedStarts({ ...running, archived: true }, { petEnabled: true }), false);
+  // 쓰기 전의 반을 모르면 세 스위치 가운데 하나를 켜는 쓰기인가로(새로 적는 쪽이 안전)
+  assert.equal(petFeedStarts(null, { petEnabled: true }), true);
+  assert.equal(petFeedStarts(null, { readingEnabled: true }), true);
+  assert.equal(petFeedStarts(null, { petFeedEnabled: true }), true);
+  assert.equal(petFeedStarts(null, { plazaEnabled: true }), false);
+  assert.equal(petFeedStarts(null, { petEnabled: false }), false);
+  assert.equal(petFeedStarts(running, null), false);
+  // 새 반 — 책나눔이 꺼진 채 만들고 선생님의 설정을 한 번에(addClass)
+  assert.equal(petFeedStarts({ readingEnabled: false }, { readingEnabled: true, petEnabled: true, petFeedEnabled: true }), true);
+  assert.equal(petFeedStarts({ readingEnabled: false }, { readingEnabled: true, petFeedEnabled: false }), false);
 });
 
 test("펫이 자라는 바탕 — 누적 경험치 그대로(과일은 경험치가 아님)", () => {
