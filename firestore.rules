@@ -547,7 +547,8 @@ service cloud.firestore {
       // 독서 기록·보상 원장과 요청 영수증은 인증된 서버 API만 처리합니다.
       // Admin SDK는 규칙을 우회하므로 API가 활성 반/소속/본인 여부를 검사합니다.
       // 학생 탈퇴 때만 교사가 지울 수 있습니다(읽기는 그대로 막힘 — reading/main ·
-      // 독서 펫의 비밀 문서 reading/pet — 알 단계의 종이라 학생 본인도 못 읽음).
+      // 독서 펫의 비밀 문서 reading/pet — 알 단계의 종이라 학생 본인도 못 읽음 ·
+      // 개인 아지트의 방 reading/hideout — /api/reading/hideout만 읽고 씀, HIDEOUT.md).
       match /reading/{document} {
         allow read, write: if false;
         allow delete: if teacherMayWithdraw(userId,
@@ -580,7 +581,7 @@ service cloud.firestore {
       allow list: if isAdmin() || (isTeacher() && resource.data.createdBy == uid());
       // 새 반은 기본 꺼짐. 켜기는 운영 중인 반의 담당 교사/관리자만 합니다.
       // 관리자 설정 화면의 스위치(책나눔 성장 · 도서 검색 · 리더보드(rankingEnabled) · 독서 TOP 3 ·
-      // 학생 캐릭터 · 과일 바구니 · 학생 펫 · 책 광장 · 교실)도 같은 판정 — 참·거짓만, 운영 중인 반에서만 바꿉니다.
+      // 학생 캐릭터 · 과일 바구니 · 학생 펫 · 책 광장 · 교실 · 개인 아지트)도 같은 판정 — 참·거짓만, 운영 중인 반에서만 바꿉니다.
       // 독서 맵(readingMapTheme)은 대륙 · 모험의 식별자 두 개만 받습니다.
       // 교실의 칠판에서 선생님이 출석을 확인한 때(classroomCallAt — lib/data/classes.js의 callClassroomRoll)는
       // 0 이상의 수만 받습니다(앉아 있던 학생의 화면이 이 값이 바뀌는 것을 보고 출석을 남깁니다).
