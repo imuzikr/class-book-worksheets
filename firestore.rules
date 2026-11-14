@@ -585,31 +585,38 @@ service cloud.firestore {
       // 독서 맵(readingMapTheme)은 대륙 · 모험의 식별자 두 개만 받습니다.
       // 교실의 칠판에서 선생님이 출석을 확인한 때(classroomCallAt — lib/data/classes.js의 callClassroomRoll)는
       // 0 이상의 수만 받습니다(앉아 있던 학생의 화면이 이 값이 바뀌는 것을 보고 출석을 남깁니다).
-      // 펫 먹이(lib/petCare.js) — 스위치(petFeedEnabled) · 주말에 쉬는가(petRestWeekend)는 참 · 거짓만, 켠 때
-      // (petFeedFrom)는 0 이상의 수만, 배고파지지 않는 기간(petRests — 방학 · 시험 기간 · 기타)은 20줄까지의 목록만.
-      // 줄의 모양(날짜 · 종류)은 읽는 쪽이 다시 고릅니다(normalizeCareRests — 틀린 줄은 버림). 펫의 배부름 자체는
-      // 학생 프로필의 readingPet.care에 서버만 적습니다(아래 users 규칙 — 학생 · 교사 모두 readingPet을 못 고침).
+      // 펫 먹이(lib/petCare.js) — 스위치(petFeedEnabled) · 주말에 쉬는가(petRestWeekend)는 참 · 거짓만, 배고파지지 않는
+      // 기간(petRests — 방학 · 시험 기간 · 기타)은 20줄까지의 목록만. 줄의 모양(날짜 · 종류)은 읽는 쪽이 다시 고릅니다
+      // (normalizeCareRests — 틀린 줄은 버림). **켠 때(petFeedFrom)는 서버 시각만** 받습니다(앱이 serverTimestamp()로 적음 —
+      // lib/data/classes.js의 featureWrite). 배부름은 켠 날부터 세는데, 한때 기기 시계(Date.now())로 적어 시계가 뒤로 틀린
+      // PC에서 켜면 그 앞의 날이 모두 세어져 펫이 켜자마자 한꺼번에 떠날 수 있었고, 요청을 꾸며 아주 이른 날(같은 일) ·
+      // 아주 큰 수(화면 · 서버의 날짜 셈이 멈춤)를 넣을 수도 있었습니다 — 읽는 쪽(lib/petCare.js의 msOf)도 범위 밖 값은 버립니다.
+      // 펫의 배부름 자체는 학생 프로필의 readingPet.care에 서버만 적습니다(아래 users 규칙 — 학생 · 교사 모두 readingPet을 못 고침).
+      // 이 모양 검사는 **만들 때(들어 있는 칸)와 고칠 때(바뀐 칸)가 같은 함수**입니다. 앱은 새 반을 만든 뒤 설정을 따로
+      // 고쳐 쓰지만(addClass), 요청을 꾸며 만들 때 끼워 넣어도 같은 모양만 받습니다(한때 만들 때는 아지트 · 독서 맵만 봄).
+      // 시험 tests/rules/readingPet.test.mjs('반을 만들 때도').
+      function classSettingsShapeOk(d, keys) {
+        return (!keys.hasAny(['readingEnabled']) || d.get('readingEnabled', null) is bool)
+               && (!keys.hasAny(['rankingEnabled']) || d.get('rankingEnabled', null) is bool)
+               && (!keys.hasAny(['characterEnabled']) || d.get('characterEnabled', null) is bool)
+               && (!keys.hasAny(['bookSearchEnabled']) || d.get('bookSearchEnabled', null) is bool)
+               && (!keys.hasAny(['fruitBasketEnabled']) || d.get('fruitBasketEnabled', null) is bool)
+               && (!keys.hasAny(['petEnabled']) || d.get('petEnabled', null) is bool)
+               && (!keys.hasAny(['petFeedEnabled']) || d.get('petFeedEnabled', null) is bool)
+               && (!keys.hasAny(['petRestWeekend']) || d.get('petRestWeekend', null) is bool)
+               && (!keys.hasAny(['petFeedFrom']) || d.get('petFeedFrom', null) == request.time)
+               && (!keys.hasAny(['petRests']) || (d.get('petRests', null) is list && d.petRests.size() <= 20))
+               && (!keys.hasAny(['readingTopEnabled']) || d.get('readingTopEnabled', null) is bool)
+               && (!keys.hasAny(['plazaEnabled']) || d.get('plazaEnabled', null) is bool)
+               && (!keys.hasAny(['classroomEnabled']) || d.get('classroomEnabled', null) is bool)
+               && (!keys.hasAny(['hideoutEnabled']) || d.get('hideoutEnabled', null) is bool)
+               && (!keys.hasAny(['classroomCallAt'])
+                   || (d.get('classroomCallAt', null) is number && d.classroomCallAt >= 0))
+               && (!keys.hasAny(['readingMapTheme']) || d.get('readingMapTheme', null) in ['continent', 'cloud-islands']);
+      }
       function readingSettingValid() {
         let changed = request.resource.data.diff(resource.data).affectedKeys();
-        return (!changed.hasAny(['readingEnabled']) || request.resource.data.get('readingEnabled', null) is bool)
-               && (!changed.hasAny(['rankingEnabled']) || request.resource.data.get('rankingEnabled', null) is bool)
-               && (!changed.hasAny(['characterEnabled']) || request.resource.data.get('characterEnabled', null) is bool)
-               && (!changed.hasAny(['bookSearchEnabled']) || request.resource.data.get('bookSearchEnabled', null) is bool)
-               && (!changed.hasAny(['fruitBasketEnabled']) || request.resource.data.get('fruitBasketEnabled', null) is bool)
-               && (!changed.hasAny(['petEnabled']) || request.resource.data.get('petEnabled', null) is bool)
-               && (!changed.hasAny(['petFeedEnabled']) || request.resource.data.get('petFeedEnabled', null) is bool)
-               && (!changed.hasAny(['petRestWeekend']) || request.resource.data.get('petRestWeekend', null) is bool)
-               && (!changed.hasAny(['petFeedFrom'])
-                   || (request.resource.data.get('petFeedFrom', null) is number && request.resource.data.petFeedFrom >= 0))
-               && (!changed.hasAny(['petRests'])
-                   || (request.resource.data.get('petRests', null) is list && request.resource.data.petRests.size() <= 20))
-               && (!changed.hasAny(['readingTopEnabled']) || request.resource.data.get('readingTopEnabled', null) is bool)
-               && (!changed.hasAny(['plazaEnabled']) || request.resource.data.get('plazaEnabled', null) is bool)
-               && (!changed.hasAny(['classroomEnabled']) || request.resource.data.get('classroomEnabled', null) is bool)
-               && (!changed.hasAny(['hideoutEnabled']) || request.resource.data.get('hideoutEnabled', null) is bool)
-               && (!changed.hasAny(['classroomCallAt'])
-                   || (request.resource.data.get('classroomCallAt', null) is number && request.resource.data.classroomCallAt >= 0))
-               && (!changed.hasAny(['readingMapTheme']) || request.resource.data.get('readingMapTheme', null) in ['continent', 'cloud-islands'])
+        return classSettingsShapeOk(request.resource.data, changed)
                && (!changed.hasAny(['readingEnabled', 'rankingEnabled', 'characterEnabled', 'bookSearchEnabled', 'fruitBasketEnabled', 'petEnabled', 'readingTopEnabled', 'plazaEnabled', 'classroomEnabled', 'hideoutEnabled', 'classroomCallAt', 'readingMapTheme',
                                     'petFeedEnabled', 'petFeedFrom', 'petRestWeekend', 'petRests'])
                    || (resource.data.get('archived', false) != true
@@ -617,10 +624,7 @@ service cloud.firestore {
       }
       allow create: if isTeacher() && request.resource.data.createdBy == uid()
                     && request.resource.data.get('readingEnabled', false) == false
-                    && (!request.resource.data.keys().hasAny(['hideoutEnabled'])
-                        || request.resource.data.hideoutEnabled is bool)
-                    && (!request.resource.data.keys().hasAny(['readingMapTheme'])
-                        || request.resource.data.readingMapTheme in ['continent', 'cloud-islands']);
+                    && classSettingsShapeOk(request.resource.data, request.resource.data.keys());
       allow update: if (isAdmin()
                     || (isTeacher() && resource.data.createdBy == uid()))
                     && readingSettingValid();
@@ -1168,22 +1172,22 @@ service cloud.firestore {
       //    (코드를 잘못 눌러 옆 반에 들어간 학생을 바로잡는 길). **자기가 개설한
       //    반에만**(ownsClassEditable) 넣을 수 있고, 보관된 반은 막힙니다.
       //  · 한 학생이 여러 반에 속할 수 있습니다(다른 반 코드로 또 들어오면 됨).
-      //  · **들어온 때(joinedAt)는 서버 시각만 받습니다**(학생이 스스로 만들 때). 펫 먹이가 '그 반에 들어온
-      //    날'부터 배부름을 세므로(lib/petCare.js의 careRulesFor), 학생이 먼 앞날을 적어 넣으면 그날까지
-      //    아무 날도 세지 않아 펫이 영영 배고파지지 않습니다. 적지 않은 것(옛 화면)은 그대로 받습니다 —
-      //    모르는 날로 보아 선생님이 펫 먹이를 켠 날부터 셉니다. 고치기(update)는 아무에게도 열지 않아
-      //    들어온 뒤에는 바꿀 수 없고, 학생은 스스로 나갈 수도 없습니다(아래 delete) — 나갔다 다시 들어와
-      //    날짜를 새로 적는 길도 없습니다. 서버도 내일보다 뒤인 값은 믿지 않습니다(같은 함수).
-      //    시험 tests/rules/memberships.test.mjs('들어온 때').
+      //  · **들어온 때(joinedAt)는 서버 시각만 받습니다**(누가 만들든 — 학생이 참여 코드로 · 담당 교사가 반
+      //    편성으로). 펫 먹이가 '그 반에 들어온 날'부터 배부름을 세므로(lib/petCare.js의 careRulesFor), 먼 앞날을
+      //    적어 넣으면 그날까지 아무 날도 세지 않아 펫이 영영 배고파지지 않습니다(아주 큰 수는 날짜 셈을 멈춤 —
+      //    읽는 쪽도 범위 밖 값은 버림). 적지 않은 것(옛 화면)은 그대로 받습니다 — 모르는 날로 보아 선생님이 펫 먹이를
+      //    켠 날부터 셉니다. 고치기(update)는 아무에게도 열지 않아 들어온 뒤에는 바꿀 수 없고, 학생은 스스로 나갈
+      //    수도 없습니다(아래 delete) — 나갔다 다시 들어와 날짜를 새로 적는 길도 없습니다. 서버도 내일보다 뒤인
+      //    값은 믿지 않습니다(같은 함수). 시험 tests/rules/memberships.test.mjs('들어온 때').
       allow create: if signedIn()
                     && request.resource.data.uid is string
                     && mId == (request.resource.data.uid + '_' + request.resource.data.classId)
+                    && request.resource.data.get('joinedAt', request.time) == request.time
                     && (
                       isAdmin() || ownsClassEditable(request.resource.data.classId)
                       || (request.resource.data.uid == uid()
                           && request.resource.data.get('code', '') is string
                           && request.resource.data.get('code', '') != ''
-                          && request.resource.data.get('joinedAt', request.time) == request.time
                           && exists(/databases/$(database)/documents/joinCodes/$(request.resource.data.code))
                           && get(/databases/$(database)/documents/joinCodes/$(request.resource.data.code)).data.classId == request.resource.data.classId
                           && get(/databases/$(database)/documents/joinCodes/$(request.resource.data.code)).data.expiresAt > request.time)

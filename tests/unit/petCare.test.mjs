@@ -411,3 +411,32 @@ test("꾸며 적은 '들어온 날' — 서버가 오늘을 넘기면 내일보�
   assert.equal(careRules({ petFeedFrom: at("2026-09-01") }, true, at("2026-11-10"), today).from, "2026-11-10");
   assert.equal(petCareRules({ readingEnabled: true, petFeedEnabled: true, petFeedFrom: at("2026-09-01") }, at("2099-01-01"), today).from, "2026-09-01");
 });
+
+test("켠 때의 모양 — 서버 시각(Timestamp)도 ms 수도 받고, 범위 밖 값은 '모르는 때'(멈추지 않음)", () => {
+  const ms = at("2026-11-01");
+  const fromOf = (petFeedFrom) => careRules({ petFeedFrom }, true).from;
+  // 실서비스(브라우저 · 서버의 Timestamp) · JSON으로 옮긴 Timestamp · Date · 체험반의 ms 수
+  assert.equal(fromOf({ toMillis: () => ms }), "2026-11-01");
+  assert.equal(fromOf({ seconds: ms / 1000, nanoseconds: 0 }), "2026-11-01");
+  assert.equal(fromOf({ _seconds: ms / 1000, _nanoseconds: 0 }), "2026-11-01");
+  assert.equal(fromOf(new Date(ms)), "2026-11-01");
+  assert.equal(fromOf(ms), "2026-11-01");
+  // 틀린 값은 켠 때가 없는 것 — 아무 날도 세지 않습니다(한때 true는 1970-01-01로 읽혀 켜자마자 펫이 떠날 수 있었음)
+  for (const bad of [true, "2026-11-01", "1794000000000", 0, -5, NaN, Infinity, null, undefined, {}]) {
+    assert.equal(fromOf(bad), null, String(bad));
+  }
+  // 아주 큰 수 — 한때 날짜로 바꾸다 오류가 나 그 반의 화면 · 서버가 멈췄습니다. 이제 모르는 때(아무 날도 세지 않음)
+  for (const huge of [1e20, Number.MAX_SAFE_INTEGER, 8.64e15, Date.UTC(2100, 0, 1)]) {
+    assert.doesNotThrow(() => careRules({ petFeedFrom: huge }, true));
+    assert.equal(fromOf(huge), null);
+    assert.equal(careStatus(pet(), careRules({ petFeedFrom: huge }, true), "2026-11-20").full, 100);
+  }
+  // 들어온 때도 같은 범위 — 아주 큰 수는 모르는 날(멈추지 않음 · 켠 날부터 셈)
+  const rules = careRules({ petFeedFrom: ms }, true);
+  for (const huge of [1e20, { toMillis: () => 1e20 }, { seconds: 1e17 }]) {
+    assert.doesNotThrow(() => careRulesFor(rules, huge, "2026-11-20"));
+    assert.equal(careRulesFor(rules, huge, "2026-11-20").from, "2026-11-01");
+    assert.equal(careRulesFor(rules, huge).from, "2026-11-01");
+  }
+  assert.equal(careSeed(pet(), 1e20).joined, null);
+});

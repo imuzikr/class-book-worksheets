@@ -226,10 +226,13 @@ describe("반 편성 고치기(교사)", () => {
       await assertFails(deleteDoc(ref)); // 스스로 나갔다 다시 들어오는 길도 없음
     });
 
-    it("담당 교사가 넣을 때는 지금까지처럼(서버 시각이든 아니든)", async () => {
+    it("담당 교사가 넣을 때도 들어온 때는 서버 시각만(적지 않으면 그대로)", async () => {
       const db = asTeacher(env, "teacherA").firestore();
       await assertSucceeds(setDoc(doc(db, "memberships", "stu2_classA"), { uid: "stu2", classId: "classA", joinedAt: serverTimestamp() }));
       await assertSucceeds(setDoc(doc(db, "memberships", "stu3_classA"), { uid: "stu3", classId: "classA" }));
+      for (const joinedAt of [new Date("2099-01-01T00:00:00Z"), new Date(), 4102444800000, 1e20, "2099-01-01", null]) {
+        await assertFails(setDoc(doc(db, "memberships", "stu4_classA"), { uid: "stu4", classId: "classA", joinedAt }));
+      }
     });
   });
 

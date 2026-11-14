@@ -9,10 +9,11 @@
 //  · 관리자 설정의 '학생 펫'(petEnabled)은 참 · 거짓만, 운영 중인 반에서만
 //  · 펫 먹이(lib/petCare.js) — 배부름(readingPet.care)도 서버만 적고(학생이 제 펫을 배부르게 고치지 못함),
 //    반 설정 네 칸(petFeedEnabled · petFeedFrom · petRestWeekend · petRests)은 모양이 맞을 때만 담당 교사가
+//    (켠 때 petFeedFrom은 서버 시각만 — 반을 만들 때 끼워 넣어도 같은 검사)
 // =============================================================
 import { describe, it, before, after, beforeEach } from "node:test";
 import { assertSucceeds, assertFails } from "@firebase/rules-unit-testing";
-import { deleteField, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { deleteField, doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { makeEnv, asStudent, asTeacher, seed } from "./helpers.mjs";
 
 const signupProfile = (extra = {}) => ({
@@ -92,13 +93,19 @@ describe("독서 펫 — 프로필의 펫과 비밀 문서", () => {
   it("관리자 설정 '펫 먹이' — 스위치 · 켠 때 · 주말 · 쉬는 기간은 모양이 맞을 때만, 운영 중인 반의 담당 교사가", async () => {
     const db = asTeacher(env, "teacherA").firestore();
     const c1 = doc(db, "classes", "c1");
-    // 켤 때 — 스위치와 켠 때를 한 번에(lib/data/classes.js의 featureWrite)
-    await assertSucceeds(updateDoc(c1, { petFeedEnabled: true, petFeedFrom: 1794000000000 }));
+    // 켤 때 — 스위치와 켠 때를 한 번에(lib/data/classes.js의 featureWrite). 켠 때는 서버 시각만
+    await assertSucceeds(updateDoc(c1, { petFeedEnabled: true, petFeedFrom: serverTimestamp() }));
     await assertSucceeds(updateDoc(c1, { petFeedEnabled: false }));
     await assertFails(updateDoc(c1, { petFeedEnabled: "true" }));
     await assertFails(updateDoc(c1, { petFeedEnabled: null }));
+    // 기기의 시각 · 아주 이른 날(켜자마자 펫이 한꺼번에 떠남) · 아주 큰 수(날짜 셈이 멈춤) · 글자 · 지우기는 거부
+    await assertFails(updateDoc(c1, { petFeedEnabled: true, petFeedFrom: Date.now() }));
+    await assertFails(updateDoc(c1, { petFeedFrom: new Date() }));
+    await assertFails(updateDoc(c1, { petFeedFrom: 1 }));
+    await assertFails(updateDoc(c1, { petFeedFrom: 1e20 }));
     await assertFails(updateDoc(c1, { petFeedFrom: "2026-11-14" }));
     await assertFails(updateDoc(c1, { petFeedFrom: -1 }));
+    await assertFails(updateDoc(c1, { petFeedFrom: deleteField() }));
     // 배고파지지 않는 날 — 주말(참 · 거짓) · 기간 목록(20줄까지)
     const rest = { kind: "vacation", from: "2026-12-24", to: "2027-02-01", note: "겨울 방학" };
     await assertSucceeds(updateDoc(c1, { petRestWeekend: false, petRests: [rest, { kind: "exam", from: "2026-12-08", to: "2026-12-11" }] }));
@@ -109,12 +116,39 @@ describe("독서 펫 — 프로필의 펫과 비밀 문서", () => {
     await assertFails(updateDoc(c1, { petRests: Array.from({ length: 21 }, () => rest) }));
     await assertSucceeds(updateDoc(c1, { petRests: Array.from({ length: 20 }, () => rest) }));
     // 보관된 반 · 학생 · 다른 선생님은 못 바꿈
-    await assertFails(updateDoc(doc(db, "classes", "old"), { petFeedEnabled: true, petFeedFrom: 1794000000000 }));
+    await assertFails(updateDoc(doc(db, "classes", "old"), { petFeedEnabled: true, petFeedFrom: serverTimestamp() }));
     await assertFails(updateDoc(doc(db, "classes", "old"), { petRests: [] }));
     await assertFails(updateDoc(doc(asStudent(env, "s2").firestore(), "classes", "c1"), { petFeedEnabled: true }));
     await assertFails(updateDoc(doc(asStudent(env, "s2").firestore(), "classes", "c1"), { petRests: [] }));
     await assertFails(updateDoc(doc(asTeacher(env, "teacherB").firestore(), "classes", "c1"), { petFeedEnabled: true }));
     // 학생은 반 문서의 설정을 읽는다(배부름을 스스로 셈)
     await assertSucceeds(getDoc(doc(asStudent(env, "s2").firestore(), "classes", "c1")));
+  });
+
+  it("반을 만들 때도 — 설정 칸은 고칠 때와 같은 모양만(켠 때는 서버 시각만)", async () => {
+    const db = asTeacher(env, "teacherA").firestore();
+    let n = 0;
+    const make = (extra) => setDoc(doc(db, "classes", `new${n += 1}`), { name: "새 반", createdBy: "teacherA", readingEnabled: false, ...extra });
+    const rest = { kind: "vacation", from: "2026-12-24", to: "2027-02-01" };
+    // 앱이 만드는 모양(설정 없이) · 맞는 모양은 그대로
+    await assertSucceeds(make({}));
+    await assertSucceeds(make({ petFeedEnabled: true, petFeedFrom: serverTimestamp(), petRestWeekend: false, petRests: [rest] }));
+    await assertSucceeds(make({ petRests: Array.from({ length: 20 }, () => rest) }));
+    await assertSucceeds(make({ plazaEnabled: false, classroomEnabled: false, hideoutEnabled: true, readingMapTheme: "continent" }));
+    // 펫 먹이 — 꾸민 켠 때 · 모양이 틀린 칸
+    for (const petFeedFrom of [-1, 0, 1, 1e20, Date.now(), true, "2026-11-14", new Date(), null]) {
+      await assertFails(make({ petFeedEnabled: true, petFeedFrom }));
+    }
+    await assertFails(make({ petRests: Array.from({ length: 21 }, () => rest) }));
+    await assertFails(make({ petRests: "2026-12-24" }));
+    await assertFails(make({ petFeedEnabled: "true" }));
+    await assertFails(make({ petRestWeekend: "no" }));
+    // 다른 스위치도 같은 검사(한때 만들 때는 아지트 · 독서 맵만 봄)
+    await assertFails(make({ plazaEnabled: "yes" }));
+    await assertFails(make({ rankingEnabled: 1 }));
+    await assertFails(make({ classroomCallAt: -1 }));
+    await assertFails(make({ readingMapTheme: "space" }));
+    // 새 반은 기본 꺼짐 — 책나눔을 켠 채로는 못 만듦(지금까지 그대로)
+    await assertFails(make({ readingEnabled: true }));
   });
 });

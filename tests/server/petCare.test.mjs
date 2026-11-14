@@ -32,8 +32,9 @@ const away = (days = [], fruit = 0) => ({ full: 0, day: dayBefore(1), kept: null
 before(async () => {
   const batch = db.batch();
   // 펫 먹이를 사흘 전에 켠 반 — 주말에도 줄게 해 요일과 상관없이 같은 값(켠 날은 안 세고 그제 · 어제 이틀 → 80)
+  // 켠 때는 실서비스처럼 서버 시각(Timestamp — 앱이 serverTimestamp()로 적음). 아래 OLD 반은 ms 수(체험반 · 옛 값)로 둡니다.
   batch.set(db.doc(`classes/${C}`), { createdBy: "care-teacher", readingEnabled: true, archived: false,
-    petFeedEnabled: true, petFeedFrom: Date.parse(`${dayBefore(3)}T12:00:00+09:00`), petRestWeekend: false });
+    petFeedEnabled: true, petFeedFrom: Timestamp.fromMillis(Date.parse(`${dayBefore(3)}T12:00:00+09:00`)), petRestWeekend: false });
   batch.set(db.doc(`classes/${OFF}`), { createdBy: "care-teacher", readingEnabled: true, archived: false });
   batch.set(db.doc("users/care-teacher"), { role: "teacher", realName: "선생님" });
   batch.set(db.doc("users/care-other-teacher"), { role: "teacher", realName: "다른 선생님" });
