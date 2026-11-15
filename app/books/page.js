@@ -1278,11 +1278,11 @@ function BooksPageInner() {
             </section>
           ) : (
             <>
-            {/* 선생님 — 책방을 끈 반(관리자 설정)이면 목록 위에 띠 한 줄. 선생님 화면은 그대로라(끈 동안에도 활동을 미리 준비)
-                학생에게 안 보인다는 것을 여기서 알립니다. */}
+            {/* 선생님 — 책방을 끈 반(관리자 설정 — 반마다 따로)이면 그 반의 목록 위에 띠 한 줄. 선생님 화면은 그대로라(끈 동안에도
+                활동을 미리 준비) 학생에게 안 보인다는 것을 여기서 알립니다. */}
             {admin && !booksOn && (
               <div className="books-closed-banner" role="status">
-                <span><strong>책방이 꺼져 있어요.</strong> 학생 화면에는 활동 목록과 활동이 보이지 않아요. 미리 준비해 두고, 관리자 설정에서 켜면 학생에게 다시 보여요.</span>
+                <span><strong>이 반은 책방이 꺼져 있어요.</strong> 이 반 학생 화면에는 활동 목록과 활동이 보이지 않아요. 미리 준비해 두고, 관리자 설정에서 이 반을 켜면 학생에게 다시 보여요.</span>
                 <button type="button" className="btn-ghost" onClick={() => router.push("/books?area=settings")}>관리자 설정 열기</button>
               </div>
             )}

@@ -8,7 +8,7 @@
    묶음마다 제 행입니다(선생님 요청 — 한때 세 묶음이 한 줄 2 : 2 : 1이었음). 행의 왼쪽이 묶음 이름 ·
    설명, 오른쪽이 카드이고, 카드 칸은 모든 행이 같은 두 칸 격자라 위아래 카드가 같은 폭 ·
    같은 세로선에 섭니다.
-   모든 반에 한 값이라 반 목록 표는 걷었습니다. */
+   모든 반에 한 값이라 반 목록 표는 걷었습니다 — 책방 하나만 카드 안에 반마다 스위치가 섭니다(아래 adm-class-switches). */
 .adm-groups { display: flex; flex-direction: column; gap: 12px; }
 .adm-group { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 16px; align-items: stretch; padding: 14px; border: 1px solid var(--border); border-radius: 16px; background: transparent; min-width: 0; }
 .adm-group-head { display: flex; flex-direction: column; gap: 4px; padding: 4px 2px 0; min-width: 0; }
@@ -40,6 +40,17 @@
 .adm-switch.on .adm-switch-track { background: var(--primary); }
 .adm-switch.on .adm-switch-knob { transform: translateX(18px); }
 .adm-switch.on .adm-switch-text { color: var(--primary-dark); font-weight: 600; }
+/* 반마다 따로인 스위치(책방 — lib/reading.js의 PER_CLASS_FEATURES · 선생님 요청 2026년 11월). 카드 안에 운영 중인 반마다 한 칸 —
+   반 이름과 스위치. 칸은 모두 같은 폭(auto-fill 격자)이라 반이 늘면 줄이 늘고, 좁으면 한 줄에 하나.
+   이름은 두 줄까지 접고 그래도 넘치면 말줄임(전체는 툴팁) — 한 줄로 자르면 1100px에서 '책나눔 체험…'처럼 반을 못 알아봄(실측).
+   스위치는 칸 가운데 높이에(카드의 스위치처럼 왼쪽 위로 당기지 않음 — .adm-feature .adm-switch를 이김). */
+.adm-feature-title { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; }
+.adm-feature-count { font-size: 12px; font-weight: 600; color: var(--text-sub); white-space: nowrap; }
+.adm-class-switches { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)); gap: 8px; }
+.adm-class-switch { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; padding: 6px 6px 6px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); }
+.adm-class-switch-name { min-width: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; word-break: keep-all; overflow-wrap: anywhere; line-height: 1.35; font-size: 13.5px; font-weight: 600; color: var(--dark); }
+.adm-class-switch:not(.is-on) .adm-class-switch-name { color: var(--text-sub); }
+.adm-feature .adm-class-switch .adm-switch { align-self: center; flex-shrink: 0; margin: 0; }
 
 /* 독서 맵 — 실제 지도를 보고 고르는 두 개의 라디오 선택지. */
 .adm-map-group { border: 0; border-top: 1px solid var(--border); border-radius: 0; padding-top: 18px; padding-bottom: 18px; }

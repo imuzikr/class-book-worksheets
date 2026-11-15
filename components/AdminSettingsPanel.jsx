@@ -5,8 +5,11 @@
 // 한 줄씩 따로였음). 값은 지금처럼 반 문서마다 적습니다 — 서버 API · 규칙 · 학생 화면이
 // 반 문서를 읽기 때문입니다(setTeacherFeature가 한 묶음으로 씀). 새 반은 만들 때
 // 같은 값을 따릅니다(addClass의 features · lib/reading.js featuresForNewClass).
-//   · 책방(bookActivitiesEnabled — **값이 없으면 켜짐** · 선생님 요청). 끄면 **학생 화면에서** 상단바의 '책방' · 활동 목록 ·
-//     활동(주소로 와도)이 사라지고, 책 봄이 켜져 있으면 그 자리에 책 봄이 섭니다. 선생님 화면은 그대로(목록 위에 '학생에게는
+// **책방 하나만은 반마다 따로**입니다(선생님 요청 · 2026년 11월 "이 옵션만 반별로 · 기본값은 모든 반이 활성" —
+// lib/reading.js의 PER_CLASS_FEATURES). 그 카드는 운영 중인 반마다 한 칸씩 스위치를 세우고, 누르면 그 반 문서 한 장에만
+// 씁니다(setPerClassFeature). 새 반은 다른 반의 값을 따르지 않고 켜진 채 시작합니다.
+//   · 책방(bookActivitiesEnabled — **값이 없으면 켜짐** · 선생님 요청). 끈 반은 **학생 화면에서** 상단바의 '책방' · 활동 목록 ·
+//     활동(주소로 와도)이 사라지고, 책 봄이 켜져 있으면 그 자리에 책 봄이 섭니다. 선생님 화면은 그대로(그 반 목록 위에 '학생에게는
 //     보이지 않아요' 띠 — 끈 동안에도 활동을 미리 만들고 지난 글을 봄). 글 · 기록은 지우지 않습니다(lib/reading.js의 bookActivitiesOn).
 //   · 책 봄 성장 기능(readingEnabled — 기본 꺼짐)
 //   · 도서 검색(bookSearchEnabled — 기본 꺼짐, 카카오 REST API 키가 있어야 씀. 끄면 책꽂이
@@ -39,8 +42,8 @@
 // =============================================================
 import { Fragment, useId, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { setTeacherFeature, setTeacherReadingMapTheme } from "@/lib/store";
-import { teacherFeatureSettings } from "@/lib/reading";
+import { setPerClassFeature, setTeacherFeature, setTeacherReadingMapTheme } from "@/lib/store";
+import { featureValue, isPerClassFeature, teacherFeatureSettings } from "@/lib/reading";
 import { READING_MAP_THEMES, readingMapThemeSettings } from "@/lib/readingMapCatalog";
 import ConfirmModal from "./ConfirmModal";
 import PetRestSettings from "./PetRestSettings";
@@ -61,11 +64,44 @@ function Switch({ on, disabled, busy, label, describedBy, onClick }) {
   );
 }
 
+// 반마다 따로인 스위치의 카드(책방 — lib/reading.js의 PER_CLASS_FEATURES). 이름 · 설명 아래에 운영 중인 반마다 한 칸씩
+// 반 이름과 스위치가 섭니다(같은 폭의 격자 — 44-admin-settings.css의 adm-class-switches). 이름 옆 '켜진 반 n / N'은 한눈에
+// 보는 요약입니다. 스위치마다 그 반 이름을 읽어 줍니다(aria-label — 여럿이 같은 '켜짐'이라 무엇을 켜는지 모름).
+function PerClassSwitches({ feature: f, rows, busy, onToggle }) {
+  const onCount = rows.filter((c) => featureValue(c, f.key)).length;
+  return (
+    <li className="adm-feature adm-feature--per-class">
+      <div className="adm-feature-text">
+        <span className="adm-feature-title">
+          <strong>{f.label}</strong>
+          <span className="adm-feature-count">켜진 반 {onCount} / {rows.length}</span>
+        </span>
+        <small id={`adm-hint-${f.key}`}>{f.hint}</small>
+      </div>
+      <ul className="adm-class-switches" aria-label={`반마다 ${f.label} 켜고 끄기`}>
+        {rows.map((c) => {
+          const on = featureValue(c, f.key);
+          return (
+            <li key={c.id} className={`adm-class-switch${on ? " is-on" : ""}`}>
+              <span className="adm-class-switch-name" title={c.name}>{c.name}</span>
+              <Switch on={on} disabled={!!busy} busy={busy === `${f.key}:${c.id}`} describedBy={`adm-hint-${f.key}`}
+                label={`${c.name} ${f.label}`} onClick={() => onToggle(f, c)} />
+            </li>
+          );
+        })}
+      </ul>
+    </li>
+  );
+}
+
 const FEATURES = [
-  // 책방 — 끌 때도 되묻지 않습니다(다른 스위치와 같게 · 학생이 쓰던 글은 화면을 떠날 때 저장되고, 다시 켜면 그대로 이어짐).
+  // 책방 — **반마다 따로** 켜고 끕니다(선생님 요청 · 2026년 11월 — lib/reading.js의 PER_CLASS_FEATURES). 카드 안에 반마다 한 칸씩
+  // 스위치가 서고(PerClassSwitches), 알림은 그 반의 이름으로(onFor · offFor). 끌 때도 되묻지 않습니다(다른 스위치와 같게 ·
+  // 학생이 쓰던 글은 화면을 떠날 때 저장되고, 다시 켜면 그대로 이어짐).
   { key: "bookActivitiesEnabled", label: "책방",
-    hint: "닿소리 채우기 · RAFT 글쓰기 · 낱말 빙고 같은 열한 가지 독서 활동을 하는 곳이에요. 끄면 학생 화면에서 책방(활동 목록 · 활동)이 사라지고, 책 봄을 켠 반은 그 자리에 책 봄이 보여요. 선생님 화면에는 그대로 남아 활동을 미리 준비할 수 있고, 학생이 쓴 글과 기록은 모두 보관돼요.",
-    on: "책방을 켰어요. 학생 화면에 활동 목록이 다시 보여요.", off: "책방을 껐어요. 학생 화면에서 책방이 사라지고, 쓴 글과 기록은 그대로 보관돼요." },
+    hint: "닿소리 채우기 · RAFT 글쓰기 · 낱말 빙고 같은 열한 가지 독서 활동을 하는 곳이에요. 반마다 따로 켜고 꺼요. 끈 반은 학생 화면에서 책방(활동 목록 · 활동)이 사라지고, 책 봄을 켠 반은 그 자리에 책 봄이 보여요. 선생님 화면에는 그대로 남아 활동을 미리 준비할 수 있고, 학생이 쓴 글과 기록은 모두 보관돼요.",
+    onFor: (name) => `‘${name}’의 책방을 켰어요. 이 반 학생 화면에 활동 목록이 다시 보여요.`,
+    offFor: (name) => `‘${name}’의 책방을 껐어요. 이 반 학생 화면에서 책방이 사라지고, 쓴 글과 기록은 그대로 보관돼요.` },
   { key: "readingEnabled", label: "책 봄 성장 기능", hint: "책꽂이 · 경험치 · 레벨업 · 뱃지 · 우리 반 랭킹이 함께 켜져요. 꺼도 독서 활동은 그대로예요.",
     on: "책 봄 성장 기능을 켰어요.", off: "책 봄 성장 기능을 껐어요. 기존 기록은 보관됩니다." },
   { key: "bookSearchEnabled", label: "도서 검색", needs: ["readingEnabled"], needsText: "책 봄 성장 기능을 먼저 켜 주세요",
@@ -122,7 +158,7 @@ const FEATURES = [
 // 한 칸이 줄을 다 씁니다(.adm-group--1 — 반쪽만 서면 옆이 빈 자리로 보임).
 const GROUPS = [
   // 책방(독서 활동) — 맨 위 한 칸(카드 하나가 줄을 다 씀 · 44-admin-settings.css의 adm-group--1)
-  { key: "books", title: "독서 활동", desc: "책방의 열한 가지 활동", keys: ["bookActivitiesEnabled"] },
+  { key: "books", title: "독서 활동", desc: "책방의 열한 가지 활동 · 반마다 따로", keys: ["bookActivitiesEnabled"] },
   { key: "reading", title: "독서 기록", desc: "학생의 책꽂이와 책 정보", keys: ["readingEnabled", "bookSearchEnabled"] },
   { key: "growth", title: "리더보드 · 꾸미기", desc: "반 친구와 함께 보는 성장 · 캐릭터와 펫", keys: ["rankingEnabled", "readingTopEnabled", "characterEnabled", "petEnabled", "petPreviewEnabled"] },
   { key: "share", title: "함께 읽기", desc: "책 광장 · 친구와 나누는 대화 · 함께 앉는 교실 · 나만의 아지트", keys: ["plazaEnabled", "plazaTalkEnabled", "classroomEnabled", "hideoutEnabled"] },
@@ -160,6 +196,23 @@ export default function AdminSettingsPanel({ classes = [], onToast }) {
     }
   }
 
+  // 반마다 따로인 스위치(책방) — 누른 반의 문서 한 장에만 씁니다(lib/data/classes.js의 setPerClassFeature).
+  // c — 쓰기 전의 그 반 문서(화면이 들고 있는 값).
+  async function toggleClass(f, c) {
+    if (busy) return;
+    const enabled = !featureValue(c, f.key);
+    setBusy(`${f.key}:${c.id}`);
+    setError("");
+    try {
+      await setPerClassFeature(c.id, f.key, enabled, c);
+      onToast?.(enabled ? f.onFor(c.name) : f.offFor(c.name));
+    } catch (e) {
+      setError(e?.message || "설정을 저장하지 못했어요.");
+    } finally {
+      setBusy("");
+    }
+  }
+
   async function chooseMap(theme) {
     if (busy || (!mapSetting.mixed && mapSetting.value === theme.id)) return;
     setBusy(`readingMapTheme:${theme.id}`);
@@ -177,7 +230,7 @@ export default function AdminSettingsPanel({ classes = [], onToast }) {
   return (
     <section className="adm-settings" aria-label="관리자 설정">
       <p className="adm-settings-lead">
-        선택한 설정은 선생님의 <strong>모든 반</strong>에 같이 적용되고, 학생 화면에 곧바로 반영돼요.
+        <strong>책방</strong>은 반마다 따로 켜고 끄고, 나머지 설정은 선생님의 <strong>모든 반</strong>에 같이 적용돼요. 학생 화면에 곧바로 반영돼요.
         {rows.length > 0 && <span className="adm-settings-classes"> 적용되는 반: {rows.map((c) => c.name).join(" · ")}</span>}
       </p>
       {error && <p className="form-error" role="alert">{error}</p>}
@@ -191,6 +244,9 @@ export default function AdminSettingsPanel({ classes = [], onToast }) {
               <header className="adm-group-head"><h3 id={`adm-group-${g.key}`}>{g.title}</h3><span>{g.desc}</span></header>
               <ul className="adm-features">
           {g.keys.map((k) => FEATURES.find((f) => f.key === k)).map((f) => {
+            if (isPerClassFeature(f.key)) {
+              return <PerClassSwitches key={f.key} feature={f} rows={rows} busy={busy} onToggle={toggleClass} />;
+            }
             const ready = (f.needs || []).every((k) => settings[k].on);
             const st = settings[f.key];
             return (
@@ -256,7 +312,7 @@ export default function AdminSettingsPanel({ classes = [], onToast }) {
           ))}
         </div>
       )}
-      <p className="adm-settings-foot">보관된 반은 바꿀 수 없어 빼고 적용해요. 새로 만드는 반도 지금 설정을 따라요.</p>
+      <p className="adm-settings-foot">보관된 반은 바꿀 수 없어 빼고 적용해요. 새로 만드는 반은 책방이 켜진 채 시작하고, 나머지는 지금 설정을 따라요.</p>
       {peek && <PetPreviewModal mode="teacher" onClose={() => setPeek(false)} />}
       {asking && (
         <ConfirmModal

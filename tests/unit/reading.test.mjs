@@ -330,7 +330,8 @@ test("관리자 설정은 선생님의 모든 반에 한 값 — 도서 검색 �
   assert.deepEqual(s.petPreviewEnabled, { on: false, mixed: false });
   // 책방은 값이 없으면 켜짐(선생님 요청 — 기본 활성화)
   assert.deepEqual(s.bookActivitiesEnabled, { on: true, mixed: false });
-  assert.deepEqual(featuresForNewClass(classes), { bookActivitiesEnabled: true, readingEnabled: true, bookSearchEnabled: false, rankingEnabled: false, readingTopEnabled: true, characterEnabled: true, fruitBasketEnabled: true, petEnabled: true, petPreviewEnabled: false, petFeedEnabled: false, plazaEnabled: false, plazaTalkEnabled: false, classroomEnabled: false, hideoutEnabled: false, readingMapTheme: "cloud-islands", petRests: [] });
+  // 책방은 반마다 따로라 새 반이 따를 값에 없습니다(새 반은 기본값 — 켜짐)
+  assert.deepEqual(featuresForNewClass(classes), { readingEnabled: true, bookSearchEnabled: false, rankingEnabled: false, readingTopEnabled: true, characterEnabled: true, fruitBasketEnabled: true, petEnabled: true, petPreviewEnabled: false, petFeedEnabled: false, plazaEnabled: false, plazaTalkEnabled: false, classroomEnabled: false, hideoutEnabled: false, readingMapTheme: "cloud-islands", petRests: [] });
   assert.equal(featuresForNewClass([{ archived: true }]), null);
   assert.equal(teacherFeatureSettings([]).readingEnabled.on, false);
 });
@@ -391,13 +392,29 @@ test("책방 스위치(bookActivitiesOn) — 값이 없으면 켜짐 · 끈 것�
   // 책 봄 성장 기능과는 따로
   assert.equal(bookActivitiesOn({ readingEnabled: false }), true);
   assert.equal(bookActivitiesOn({ readingEnabled: true, bookActivitiesEnabled: false }), false);
-  // 모든 반에 한 값 — 한 반이라도 끄면 켜짐이 아님(반마다 다르면 mixed) · 새 반도 따름
-  const mixed = [{ id: "a" }, { id: "b", bookActivitiesEnabled: false }];
-  assert.deepEqual(teacherFeatureSettings(mixed).bookActivitiesEnabled, { on: false, mixed: true });
-  assert.equal(featuresForNewClass(mixed).bookActivitiesEnabled, false);
-  const off = [{ id: "a", bookActivitiesEnabled: false }, { id: "old", archived: true }];
-  assert.deepEqual(teacherFeatureSettings(off).bookActivitiesEnabled, { on: false, mixed: false });
-  assert.equal(featuresForNewClass([{ id: "a" }]).bookActivitiesEnabled, true);
+});
+
+test("책방만 반마다 따로(선생님 요청 · 2026년 11월) — 새 반은 다른 반의 값과 상관없이 켜진 채 시작", async () => {
+  const { PER_CLASS_FEATURES, isPerClassFeature, featureValue, featuresForNewClass, TEACHER_FEATURES } = await import("@/lib/reading");
+  assert.deepEqual([...PER_CLASS_FEATURES], ["bookActivitiesEnabled"]);
+  assert.equal(isPerClassFeature("bookActivitiesEnabled"), true);
+  // 나머지 스위치는 그대로 선생님의 모든 반에 한 값(반마다가 아님)
+  for (const key of TEACHER_FEATURES.filter((k) => k !== "bookActivitiesEnabled")) assert.equal(isPerClassFeature(key), false, key);
+  assert.equal(isPerClassFeature("readingMapTheme"), false);
+  assert.equal(isPerClassFeature(""), false);
+  assert.throws(() => { PER_CLASS_FEATURES.push("readingEnabled"); }); // 목록은 얼어 있음
+  // 반마다 제 값 — 한 반을 꺼도 다른 반은 그대로 켜짐
+  const classes = [{ id: "a" }, { id: "b", bookActivitiesEnabled: false }, { id: "c", bookActivitiesEnabled: true }];
+  assert.deepEqual(classes.map((c) => featureValue(c, "bookActivitiesEnabled")), [true, false, true]);
+  // 새 반은 책방 칸을 받지 않아 기본값(켜짐)으로 시작 — 모든 반을 꺼 두었어도, 반마다 달라도
+  const allOff = [{ id: "a", bookActivitiesEnabled: false }, { id: "b", bookActivitiesEnabled: false }, { id: "old", archived: true }];
+  for (const list of [allOff, classes, [{ id: "a" }]]) {
+    const made = featuresForNewClass(list);
+    assert.equal("bookActivitiesEnabled" in made, false);
+    assert.equal(featureValue(made, "bookActivitiesEnabled"), true);
+  }
+  // 다른 스위치는 지금처럼 모든 반의 값을 따름(한 반이라도 꺼져 있으면 새 반도 꺼짐)
+  assert.equal(featuresForNewClass([{ id: "a", fruitBasketEnabled: false }, { id: "b" }]).fruitBasketEnabled, false);
 });
 
 test("독서 TOP 3 스위치(readingTopOn) — 책 봄이 켜지고 끄지 않았을 때만 · 리더보드 스위치와는 따로(선생님 요청)", async () => {
