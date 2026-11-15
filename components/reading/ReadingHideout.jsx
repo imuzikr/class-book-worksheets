@@ -136,8 +136,9 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
   useEffect(() => () => { if (!readOnly && draftSnapshot.current !== undefined) keepDraft(draftKey, draftSnapshot.current); }, [draftKey, readOnly]);
   const selectedSlot = HIDEOUT_SLOTS.find((slot) => slot.id === category) || HIDEOUT_SLOTS[0];
   const selectedGroup = ITEM_GROUPS.find((group) => group.slots.includes(category)) || ITEM_GROUPS[0];
-  const choices = HIDEOUT_ITEMS.filter((item) => item.slot === selectedSlot.id && unlockLevel(item) > 0);
-  const baselineChoice = HIDEOUT_ITEMS.find((item) => item.slot === selectedSlot.id && unlockLevel(item) === 0);
+  const choices = HIDEOUT_ITEMS.filter((item) => item.slot === selectedSlot.id);
+  const detailChoices = detail ? HIDEOUT_ITEMS.filter((item) => item.slot === detail.slot) : [];
+  const detailIndex = detailChoices.findIndex((item) => item.id === detail?.id);
   const myName = (readOnly ? student?.realName || student?.name : user?.realName || user?.name || user?.displayName) || "나";
   const appearance = characterOf({ uid: viewUid, character: characterOn ? character : null });
   const spriteSrc = plazaCharacterSheet(appearance);
@@ -181,6 +182,14 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
 
   function showDetail(item) {
     movement.stop(); setDetail(item); setNotice("");
+  }
+  function browseDetail(direction) {
+    if (saving) return;
+    setDetail((current) => {
+      const items = HIDEOUT_ITEMS.filter((item) => item.slot === current?.slot);
+      const index = items.findIndex((item) => item.id === current?.id);
+      return index < 0 ? current : items[(index + direction + items.length) % items.length];
+    });
   }
   function chooseCategory(id) {
     if (saving) return;
@@ -245,7 +254,6 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
         <span className="hideout-level">독서 레벨 <strong>{eligibility.level}</strong></span>
         {!readOnly && !editing && <button type="button" className="hideout-primary" onClick={() => { movement.stop(); setEditing(true); setNotice(""); }}>아지트 꾸미기</button>}
         {!readOnly && editing && <>
-          <span className={`hideout-editing-chip${dirty ? " is-dirty" : ""}`}>꾸미는 중{dirty ? " · 아직 저장 안 함" : ""}</span>
           <button type="button" onClick={() => setResetPending(true)} disabled={saving}>모든 소품 기본으로</button>
           <button type="button" onClick={cancelEditing} disabled={saving}>꾸미기 취소</button>
           <button type="button" className="hideout-primary" onClick={() => finish()} disabled={saving}>{saving ? "저장 중…" : "꾸미기 완료"}</button>
@@ -305,18 +313,14 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
         {!readOnly && editing && HIDEOUT_DEFAULT_LAYOUT[category] == null && <button type="button" className="hideout-clear-slot" onClick={clearSlot}
           disabled={saving || shownRoom.layout[category] == null}>이 자리 비우기</button>}
       </div>
-      {baselineChoice && <button type="button" className={`hideout-baseline-choice${shownRoom.layout[category] === baselineChoice.id ? " is-chosen" : ""}`} disabled={saving}
-        aria-label={`${baselineChoice.name} 크게 보기`} onClick={() => showDetail(baselineChoice)}>
-        <img src={baselineChoice.src} alt="" width={64} height={56} /><span><strong>{baselineChoice.name}</strong><small>처음부터 사용할 수 있는 기본 소품{shownRoom.layout[category] === baselineChoice.id ? " · 현재 배치" : ""}</small></span><span aria-hidden="true">살펴보기</span>
-      </button>}
       <div className="hideout-choices">{choices.map((item) => {
         const chosen = shownRoom.layout[item.slot] === item.id;
         const unlocked = isHideoutItemUnlocked(item, eligibility);
         return <button type="button" key={item.id} data-hideout-item={item.id} className={`hideout-choice${chosen ? " is-chosen" : ""}${!unlocked ? " is-locked" : ""}`}
-          aria-label={unlocked ? `${item.name} 크게 보기` : `${themeName(item)} ${selectedSlot.label} · 레벨 ${unlockLevel(item)}에 열리는 소품`} onClick={() => showDetail(item)} disabled={saving}>
-          {unlocked ? <img src={item.src} alt="" width={180} height={160} loading="lazy" draggable={false} /> : <span className="hideout-mystery" aria-hidden="true">?</span>}
-          <strong>{unlocked ? item.name : "아직 열리지 않은 소품"}</strong><span>{themeName(item)}{chosen ? " · 현재 배치" : ""}</span>
-          <small>{unlocked ? (unlockLevel(item) ? `레벨 ${unlockLevel(item)}부터 사용할 수 있어요` : "처음부터 사용할 수 있어요") : `레벨 ${unlockLevel(item)}에 열려요`}</small>
+          aria-haspopup="dialog" aria-label={`${unlocked ? `${item.name} 크게 보기` : `${themeName(item)} ${selectedSlot.label} · 레벨 ${unlockLevel(item)}에 열리는 소품`}${chosen ? " · 현재 배치" : ""}`} onClick={() => showDetail(item)} disabled={saving}>
+          {unlocked ? <img src={item.src} alt="" width={80} height={64} loading="lazy" draggable={false} /> : <span className="hideout-mystery" aria-hidden="true">?</span>}
+          <strong>{unlocked ? item.name : "미공개 소품"}</strong><span>{themeName(item)}</span>
+          <small>{chosen ? "현재 배치" : unlockLevel(item) ? `레벨 ${unlockLevel(item)}` : "기본 소품"}</small>
         </button>;
       })}</div>
       </div>
@@ -324,6 +328,7 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
     </div>
 
     {detail && <ItemDetail item={detail} unlocked={isHideoutItemUnlocked(detail, eligibility)} readOnly={readOnly} saving={saving} selected={shownRoom.layout[detail.slot] === detail.id}
+      categoryLabel={selectedSlot.label} position={detailIndex + 1} count={detailChoices.length} onBrowse={browseDetail}
       onClose={() => setDetail(null)} onApply={() => applyItem(detail)} />}
     {exitPending && <HideoutDialog title="꾸미던 아지트를 저장할까요?" onClose={() => { if (!saving) setExitPending(false); }} busy={saving} alert>
       <p>고른 소품을 저장하고 교실로 돌아갈 수 있어요.</p><div className="hideout-dialog-actions">
@@ -340,10 +345,19 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
   </section>;
 }
 
-function ItemDetail({ item, unlocked, readOnly, saving, selected, onApply, onClose }) {
+function ItemDetail({ item, unlocked, readOnly, saving, selected, categoryLabel, position, count, onBrowse, onApply, onClose }) {
   const [celebrate, setCelebrate] = useState(false);
+  function browse(direction) {
+    if (saving || count < 2) return;
+    setCelebrate(false); onBrowse(direction);
+  }
   return <HideoutDialog title={unlocked ? item.name : "아직 열리지 않은 소품"} onClose={onClose} busy={saving}>
     <p className="hideout-item-tag">{themeName(item)} · {unlockLevel(item) ? `독서 레벨 ${unlockLevel(item)}` : "기본 소품"}</p>
+    <nav className="hideout-detail-nav" aria-label={`${categoryLabel} 소품 둘러보기`}>
+      <button type="button" onClick={() => browse(-1)} disabled={saving || count < 2} aria-label={`이전 ${categoryLabel} 보기`}>이전</button>
+      <span role="status" aria-live="polite" aria-atomic="true">{categoryLabel} · {position} / {count}</span>
+      <button type="button" onClick={() => browse(1)} disabled={saving || count < 2} aria-label={`다음 ${categoryLabel} 보기`}>다음</button>
+    </nav>
     {unlocked ? <><img className="hideout-detail-image" src={item.src} alt={item.name} width={360} height={280} />
       <p>{item.description || "좋아하는 테마를 골라 나만의 독서방을 꾸며 보세요."}</p></>
       : <><div className="hideout-detail-mystery" aria-hidden="true">?</div>

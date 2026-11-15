@@ -63,24 +63,16 @@
 .hideout-preview-heading h4 { margin: 0 auto 0 0; font-size: 15px; }
 .hideout .hideout-clear-slot { min-height: 34px; padding: 4px 12px; border-radius: 999px; font-size: 12px; }
 .hideout-preview-heading > span { color: #78836f; font-size: 11px; }
-.hideout-choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 9px; }
-.hideout-baseline-choice { display: flex; width: 100%; gap: 12px; text-align: left; align-items: center; margin-bottom: 12px; }
-.hideout-baseline-choice img { flex: none; object-fit: contain; }
-.hideout-baseline-choice > span:nth-of-type(1) { display: grid; gap: 3px; flex: 1; min-width: 0; }
-.hideout-baseline-choice strong { font-size: 13px; }
-.hideout-baseline-choice small, .hideout-baseline-choice > span:last-child { font-size: 11px; color: #748367; }
-.hideout-baseline-choice.is-chosen { border-color: #648354; background: #edf2e4; }
-.hideout-choice { display: flex; flex-direction: column; align-items: center; text-align: center; min-width: 0; min-height: 202px; padding: 12px 8px !important; }
-.hideout-choice img { width: 100%; height: 108px; object-fit: contain; margin: 0 0 10px; }
-.hideout-choice strong { font-size: 13px; line-height: 1.5; }
+/* 기본형과 네 테마를 작은 썸네일 한 줄에 — 확대는 상세 창에서 합니다(선생님 요청). */
+.hideout-choices { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.hideout-choice { display: flex; flex-direction: column; align-items: center; text-align: center; min-width: 0; min-height: 148px; padding: 8px 4px !important; }
+.hideout-choice img { width: 100%; height: 64px; object-fit: contain; margin: 0 0 6px; }
+.hideout-choice strong { width: 100%; font-size: 12px; line-height: 1.4; word-break: keep-all; overflow-wrap: anywhere; }
 .hideout-choice > span { font-size: 11px; color: #748367; margin-top: 4px; }
-.hideout-choice > .hideout-mystery { display: grid; place-items: center; width: 100%; height: 108px; flex: none; border: 1px dashed #d7ddcc; border-radius: 9px; background: #f0f1e7; color: #8b9a7e; font-size: 60px; font-weight: 650; line-height: 1; margin: 0 0 10px; }
-.hideout-choice small { font-size: 11px; line-height: 1.55; color: #78816d; margin-top: 4px; }
-.hideout-choice.is-chosen { border: 2px solid #648354; background: #edf2e4; }
+.hideout-choice > .hideout-mystery { display: grid; place-items: center; width: 100%; height: 64px; flex: none; box-sizing: border-box; border: 1px dashed #d7ddcc; border-radius: 7px; background: #f0f1e7; color: #8b9a7e; font-size: 38px; font-weight: 650; line-height: 1; margin: 0 0 6px; }
+.hideout-choice small { font-size: 11px; line-height: 1.5; color: #78816d; margin-top: auto; padding-top: 4px; }
+.hideout-choice.is-chosen { border-color: #648354; box-shadow: inset 0 0 0 1px #648354; background: #edf2e4; }
 .hideout-choice.is-locked small { color: #8e744b; }
-/* 꾸미는 동안 머리줄의 '아지트 꾸미기' 자리에 서는 표시 — 그 옆에 모든 소품 기본으로 · 꾸미기 취소 · 꾸미기 완료(ReadingHideout) */
-.hideout-editing-chip { display: inline-flex; align-items: center; min-height: 32px; padding: 0 12px; border-radius: 20px; background: #e9efdf; color: #456b4c; font-size: 12px; font-weight: 650; white-space: nowrap; }
-.hideout-editing-chip.is-dirty { background: #fbecd2; color: #8a5a1c; }
 .hideout.is-editing .hideout-editor { border-color: #9fb58f; }
 .hideout-empty { padding: 24px; }
 .hideout-dialog { box-sizing: border-box; width: min(620px, calc(100vw - 30px)); max-height: calc(100dvh - 32px); margin: auto; overflow: auto; border: 1px solid #d3dbc9; border-radius: 17px; padding: 24px; background: #fffdf7; color: #35513e; box-shadow: 0 18px 70px #1f342c4d; }
@@ -92,6 +84,8 @@
 .hideout-detail-image { width: 100%; height: 280px; display: block; object-fit: contain; margin: 18px 0; }
 .hideout-detail-mystery { display: grid; place-items: center; height: 250px; margin: 18px 0; border: 1px dashed #d7ddcc; border-radius: 12px; background: #f0f1e7; color: #8b9a7e; font-size: 110px; font-weight: 650; }
 .hideout-item-tag { display: inline-block; border-radius: 20px; background: #e8eddf; padding: 4px 10px; margin: 12px 0 0; font-size: 12px !important; }
+.hideout-detail-nav { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; margin: 14px 0; }
+.hideout-detail-nav > span { text-align: center; color: #748367; font-size: 12px; }
 .hideout-locked-note { padding: 12px; background: #f6eddb; border-radius: 10px; }
 .hideout-dialog-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
 .hideout-reveal { border: 1px solid #d5dfc7; border-radius: 12px; background: #edf2e4; padding: 16px; text-align: center; margin-top: 18px; animation: hideout-reveal-once .55s ease-out; }
@@ -112,6 +106,7 @@
   .hideout-heading > .hideout-actions > button { flex: 1 1 auto; }
   .hideout-scene { border-radius: 10px; }
   .hideout-editor { padding: 14px; }
+  .hideout-choices { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .hideout-dialog { padding: 18px; }
   .hideout-dialog-heading h3 { font-size: 20px; }
   .hideout-detail-image { height: 220px; }
