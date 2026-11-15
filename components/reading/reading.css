@@ -59,33 +59,42 @@
   .reading-intro--teacher > .reading-intro-side { margin-left:0; justify-content:flex-start; }
 }
 /* 학생 머리말 — 제목 · 독서 요약 아래에 대표 뱃지 · 캐릭터 · 펫을 함께 표시합니다. */
-.reading-intro--student { display:grid; grid-template-columns:minmax(0,1fr) minmax(380px,1.3fr); grid-template-areas:"copy stats"; gap:16px; }
+.reading-intro--student { display:grid; grid-template-columns:minmax(0,1fr) minmax(380px,1.3fr); grid-template-areas:"copy stats"; gap:10px 16px; }
+.reading-intro.reading-intro--student { padding:16px 20px; }
 .reading-intro--student.has-profile { grid-template-areas:"copy stats" "profile profile"; }
 .reading-intro--student > .reading-intro-copy { grid-area:copy; }
-.reading-intro--student .reading-intro-copy h2 { font-size:clamp(19px,2.3vw,28px); }
+.reading-intro--student .reading-intro-copy h2 { font-size:clamp(18px,2.1vw,24px); }
+.reading-intro--student .reading-intro-heading { margin-bottom:8px; }
+.reading-intro--student .reading-intro-copy > p { margin-top:7px; font-size:12px; }
 .reading-intro--student > .reading-summary--compact,
 .reading-intro--student > .reading-intro-loading { grid-area:stats; }
-.reading-intro--student > .reading-intro-side { grid-area:profile; width:100%; min-width:0; align-items:stretch; justify-content:flex-end; }
+.reading-intro--student .reading-summary--compact > div { gap:5px; padding:6px 8px; }
+.reading-intro--student .reading-summary--compact strong { font-size:23px; }
+.reading-intro--student > .reading-intro-side { grid-area:profile; width:100%; min-width:0; align-items:stretch; justify-content:flex-end; gap:8px; }
 .reading-intro--student .reading-featured,
-.reading-intro--student .reading-character-summary { display:flex; align-items:center; flex:1 1 180px; min-width:0; max-width:280px; min-height:104px; gap:12px; padding:8px 12px; border:1px solid #d8e5db; border-radius:14px; background:#ffffff91; }
+.reading-intro--student .reading-character-summary { display:flex; align-items:center; flex:1 1 180px; min-width:0; max-width:280px; min-height:80px; gap:8px; padding:6px 10px; border:1px solid #d8e5db; border-radius:12px; background:#ffffff91; }
 .reading-intro--student .reading-featured > svg { flex-shrink:0; color:#99aa9d; }
 .reading-intro--student .reading-featured > span { min-width:0; overflow-wrap:anywhere; }
 .reading-intro--student .reading-featured em { color:#567066; font-size:11px; font-style:normal; }
 .reading-character-summary > img,
-.reading-character-placeholder { flex-shrink:0; width:60px; height:60px; object-fit:contain; }
+.reading-character-placeholder { flex-shrink:0; width:48px; height:48px; object-fit:contain; }
+.reading-character-summary { font:inherit; text-align:left; color:inherit; cursor:pointer; }
+.reading-intro--student .reading-character-summary:hover:not(:disabled) { border-color:#99b6a3; background:#f7faf4; }
+.reading-character-summary:disabled { cursor:default; }
 .reading-character-placeholder { border-radius:12px; background:#e9efe6; }
-.reading-character-info { display:flex; flex-direction:column; min-width:0; gap:4px; overflow-wrap:anywhere; }
+.reading-character-info { display:flex; flex-direction:column; min-width:0; gap:3px; overflow-wrap:anywhere; }
 .reading-character-info small { color:#688076; font-size:11px; }
 .reading-character-info strong { color:#294c42; font-size:13px; }
 .reading-character-info em { color:#567066; font-size:11.5px; font-style:normal; }
 .reading-intro--student .reading-pet-wrap,
 .reading-intro--student > .reading-intro-side > .reading-pet { flex:1.4 1 320px; min-width:0; max-width:400px; }
 .reading-intro--student .reading-pet-wrap { display:flex; flex-direction:column; }
-.reading-intro--student .reading-pet { min-width:0; min-height:104px; flex-wrap:wrap; }
+.reading-intro--student .reading-pet { min-width:0; min-height:80px; flex-wrap:wrap; gap:8px; border-radius:12px; }
 .reading-intro--student .pet-say { position:relative; left:auto; bottom:auto; flex:0 0 100%; max-width:100%; box-shadow:none; }
 .reading-intro--student .reading-pet-wrap > .reading-pet { flex:1; }
-.reading-intro--student .reading-pet-open { flex:1 1 200px; min-width:0; }
-.reading-intro--student .reading-pet-text { min-width:0; }
+.reading-intro--student .reading-pet-open { flex:1 1 200px; min-width:0; gap:8px; }
+.reading-intro--student .reading-pet-open > .pet-figure { width:48px !important; height:48px !important; }
+.reading-intro--student .reading-pet-text { min-width:0; gap:3px; }
 .reading-intro--student .reading-pet-care { flex-wrap:wrap; }
 .reading-intro--student .reading-pet-care b { white-space:normal; }
 @media (max-width:700px) {
@@ -104,6 +113,41 @@
   .reading-intro--teacher .reading-summary--compact { flex-basis:100%; grid-template-columns:repeat(2,minmax(0,1fr)); }
   .reading-summary--compact > div { padding:12px; border-left:0; border-top:1px solid #d9e3d8; }
   .reading-summary--compact > div:nth-child(even) { border-left:1px solid #d9e3d8; }
+}
+/* 캐릭터 정보는 이미 받은 프로필과 독서 요약만 크게 보여 줍니다. */
+.reading-character-dialog,
+.reading-character-dialog * { box-sizing:border-box; }
+.reading-character-dialog { width:min(520px,calc(100vw - 32px)); max-height:calc(100dvh - 32px); overflow-y:auto; overscroll-behavior:contain; margin:auto; padding:22px; border:1px solid #d4e0d4; border-radius:18px; background:#fffefa; color:#29473c; box-shadow:0 18px 70px #203b3140; }
+.reading-character-dialog::backdrop { background:#203b317d; }
+.reading-character-dialog button { min-height:44px; padding:8px 16px; border:1px solid #ccdccc; border-radius:10px; background:#f3f7ee; color:#315b44; font:inherit; font-size:13px; font-weight:650; cursor:pointer; }
+.reading-character-dialog button:hover { background:#e7f0e1; }
+.reading-character-dialog button:focus-visible { outline:3px solid #478fbd; outline-offset:2px; }
+.reading-character-dialog-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.reading-character-dialog-head h2 { margin:0; font-size:20px; line-height:1.4; }
+.reading-character-dialog-head button { flex-shrink:0; width:44px; padding:0; border-color:transparent; background:transparent; font-size:26px; font-weight:400; }
+.reading-character-dialog-figure { display:flex; flex-direction:column; align-items:center; gap:8px; margin:8px 0 18px; }
+.reading-character-dialog-figure img { display:block; width:min(220px,100%); height:auto; aspect-ratio:1; object-fit:contain; }
+.reading-character-dialog-figure figcaption { font-size:17px; font-weight:750; text-align:center; }
+.reading-character-dialog-facts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:0; }
+.reading-character-dialog-facts > div { min-width:0; padding:10px; border-radius:10px; background:#f1f5ed; }
+.reading-character-dialog dt { margin:0 0 5px; font-size:11px; color:#708371; }
+.reading-character-dialog dd { margin:0; font-size:13px; font-weight:650; overflow-wrap:anywhere; }
+.reading-character-dialog .reading-character-dialog-note { margin:14px 0; color:#6b7f70; font-size:12px; line-height:1.75; word-break:keep-all; overflow-wrap:anywhere; }
+.reading-character-dialog-stats { margin-top:16px; padding:14px; border:1px solid #dce6d5; border-radius:12px; }
+.reading-character-dialog-stats h3 { margin:0 0 12px; font-size:13px; }
+.reading-character-dialog-stats dl { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:0; }
+.reading-character-dialog-stats dd { font-size:18px; }
+.reading-character-dialog-progress { margin-top:14px; }
+.reading-character-dialog-progress p { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0 0 7px; font-size:11px; color:#627c69; }
+.reading-character-progress-track { height:6px; overflow:hidden; border-radius:999px; background:#e4ebdf; }
+.reading-character-progress-track i { display:block; height:100%; border-radius:inherit; background:#6d9b7d; }
+.reading-character-dialog-foot { display:flex; justify-content:flex-end; margin-top:18px; }
+@media (max-width:420px) {
+  .reading-character-dialog { padding:16px; }
+  .reading-character-dialog-facts { grid-template-columns:minmax(0,1fr); gap:6px; }
+  .reading-character-dialog-facts > div { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 10px; }
+  .reading-character-dialog-facts dt { margin:0; }
+  .reading-character-dialog-facts dd { text-align:right; }
 }
 .reading-level strong { color:#2d6252; }
 .reading-progress { height:5px; border-radius:999px; background:#e4e9e1; overflow:hidden; }
