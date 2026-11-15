@@ -384,10 +384,10 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
       {(ownStudent || hasStudentInfo) && <div className="reading-intro-side">
         {readOnly && featured?.earned && <div className="reading-featured"><ReadingBadge badge={featured} size={54} /><span>대표 뱃지<strong>{featured.name}</strong></span></div>}
         {ownStudent && <div className="reading-featured" role="group" aria-label="대표 뱃지">
-          {featuredReady && featured?.earned ? <ReadingBadge badge={featured} size={54} /> : <IconTrophy size={54} />}
+          {featuredReady && featured?.earned ? <ReadingBadge badge={featured} size={44} /> : <IconTrophy size={44} />}
           <span>대표 뱃지<strong>{featuredReady ? (featured?.earned ? featured.name : "아직 선택하지 않았어요") : loading ? "불러오는 중…" : "확인할 수 없어요"}</strong>{featuredReady && featured?.earned && <em>{tierName(featured.tier)}</em>}</span>
         </div>}
-        {showCharacter && <ReadingCharacterSummary uid={user.uid} />}
+        {showCharacter && <ReadingCharacterSummary uid={user.uid} summary={raw ? stats : null} active={tab === "library" || tab === "ranking"} />}
         {showStudentPet && <StudentPetSummary mirror={student.pet} growthXp={raw ? petGrowthOfSummary(stats) : null} feed={petFeed} today={day} />}
         {/* 나의 펫 — 단계는 이미 받은 서재로 셉니다(lib/readingPet.js). 서재를 받기 전에는 카드도 기다립니다. */}
         {showPet && <PetCard classId={classId} uid={user.uid} growthXp={raw ? petGrowthOfSummary(stats) : null} level={raw ? stats.level : null} onLevelCheer={markPetLevel}
