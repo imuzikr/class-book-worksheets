@@ -68,9 +68,9 @@ export default function TeacherReadingView({ classId, user, roster = [], student
   const feedOn = petOn && !!petFeed?.on;
   const [pets, setPets] = useState(() => new Map());
   useEffect(() => {
-    if (!feedOn) { setPets(new Map()); return undefined; }
+    if (!petOn) { setPets(new Map()); return undefined; }
     return subscribeRosterPets(roster, setPets);
-  }, [feedOn, roster]);
+  }, [petOn, roster]);
   const today = kstToday();
   const careOf = useMemo(() => {
     const map = new Map();
@@ -193,7 +193,7 @@ export default function TeacherReadingView({ classId, user, roster = [], student
           </div>
         )}
         {galleryActive ? <TeacherHideoutBrowser key={`${classId}:${user?.uid}`} classId={classId} user={user} roster={roster} characterOn={hubProps.characterOn} petOn={petOn} petFeed={petFeed} onClose={closeGallery} />
-          : student ? <ReadingHub key={`${classId}:${student.uid}`} classId={classId} user={user} isTeacher student={{ uid: student.uid, name: student.name }} plazaOn={plazaOn} petOn={petOn} petFeed={studentFeed} initialTab={hubTab} {...hubProps}
+          : student ? <ReadingHub key={`${classId}:${student.uid}`} classId={classId} user={user} isTeacher student={{ uid: student.uid, name: student.name, pet: pets.get(student.uid) ?? null }} plazaOn={plazaOn} petOn={petOn} petFeed={studentFeed} initialTab={hubTab} {...hubProps}
           onOpenHideoutGallery={() => { setHistoryFor(null); setGalleryOpen(true); }}
           onOpenOwnHideout={(origin) => { setStartInHideoutRoom(origin === "plaza" ? "plaza" : "classroom"); setStartInHideout(true); setPlazaOpen(true); }}
           teacherTools={(

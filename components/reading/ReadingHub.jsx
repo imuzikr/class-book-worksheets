@@ -11,7 +11,7 @@ import ReadingBadge from "./ReadingBadge";
 import BookSearch from "./BookSearch";
 import { hasModalAbove } from "@/lib/modal";
 import { PLAZA_STAGE_MIN_H, plazaRoom, plazaScroller } from "@/lib/plazaStageRoom";
-import PetCard from "./PetCard";
+import PetCard, { StudentPetSummary } from "./PetCard";
 import "./reading.css";
 import "./plaza.css";
 
@@ -163,7 +163,7 @@ function Modal({ title, onClose, children, wide = false, busy = false }) {
   </div>;
 }
 
-// petOn — 관리자 설정의 '학생 펫'(lib/readingPet.js의 petEnabled). 학생 본인 화면에만 '나의 펫' 카드가 섭니다.
+// petOn — 관리자 설정의 '학생 펫'(lib/readingPet.js의 petEnabled). 본인은 '나의 펫', 교사는 고른 학생의 펫 정보를 봅니다.
 // plazaOn — 관리자 설정의 '책 광장'(lib/reading.js의 plazaOn). 켠 반은 셋째 탭이 '우리 반 랭킹' 대신 '책 광장'입니다.
 // characterOn — 관리자 설정의 '학생 캐릭터'(끄면 광장에서도 기본 캐릭터).
 // classroom — 교실(관리자 설정의 '교실' — 책 광장의 둘째 방)에 넘길 묶음. 책방 페이지가 만들어 그대로 무대에 건넵니다
@@ -330,6 +330,8 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
   const selected = dialog?.bookId ? books.find((b) => b.id === dialog.bookId) : null;
   const featured = (stats.badges || []).find((b) => b.id === (stats.featuredBadge?.id || stats.featuredBadge));
   const showPet = petOn && !readOnly && !isTeacher && !!user?.uid;
+  const showStudentPet = petOn && readOnly && !!student.pet;
+  const hasStudentInfo = readOnly && (featured?.earned || showStudentPet);
   // 펫 먹이를 켠 반의 학생 — 발자국 창이 '오늘의 읽기'(쪽 · 글자 수)를 보여 줍니다(lib/petCare.js의 readingDayProof)
   const feedOn = showPet && !!petFeed?.on;
   const readToday = useMemo(() => (feedOn && raw ? readingDayProof(stats, day) : null), [feedOn, raw, stats, day]);
@@ -353,10 +355,12 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
   });
 
   return <ReadingErrorContext.Provider value={error}><section className={`reading-hub${tab === "plaza" || tab === "hideout" ? " reading-hub--plaza" : ""}`} aria-label="책 봄 성장 기능" aria-busy={tab === "hideout" ? false : loading || busy}>
-    <div className={`reading-intro${readOnly ? " reading-intro--teacher" : ""}`}>
-      {readOnly ? <div className="reading-intro-copy"><h2>{student.name || "학생"}의 독서 여정</h2><p>학생이 남긴 책꽂이 · 독서 발자국 · 한 권의 책을 읽기만 합니다.</p></div> : <div><p className="reading-eyebrow">MY READING JOURNEY</p><h2>한 페이지씩, 나의 가능성을 넓히다.</h2><p>읽은 순간을 기록하고 나만의 독서 컬렉션을 완성해 보세요.</p></div>}
-      {readOnly ? (raw && !loading ? <ReadingSummary stats={stats} compact /> : <p className="reading-intro-loading" role="status">{loading ? "독서 기록을 불러오고 있어요." : "독서 정보를 불러오지 못했어요."}</p>) : (featured?.earned || showPet) && <div className="reading-intro-side">
-        {featured?.earned && <div className="reading-featured"><ReadingBadge badge={featured} size={70} /><span>{readOnly ? "대표 뱃지" : "나의 대표 뱃지"}<strong>{featured.name}</strong></span></div>}
+    <div className={`reading-intro ${readOnly ? "reading-intro--teacher" : "reading-intro--student"}${showPet ? " has-pet" : ""}`}>
+      {readOnly ? <div className="reading-intro-copy"><h2>{student.name || "학생"}의 독서 여정</h2><p>학생이 남긴 책꽂이 · 독서 발자국 · 한 권의 책을 읽기만 합니다.</p></div> : <div className="reading-intro-copy"><h2>한 페이지씩, 나의 가능성을 넓히다.</h2><p>읽은 순간을 기록하고 나만의 독서 컬렉션을 완성해 보세요.</p></div>}
+      {raw && !loading ? <ReadingSummary stats={stats} compact /> : <p className="reading-intro-loading" role="status">{loading ? "독서 기록을 불러오고 있어요." : "독서 정보를 불러오지 못했어요."}</p>}
+      {(showPet || hasStudentInfo) && <div className="reading-intro-side">
+        {readOnly && featured?.earned && <div className="reading-featured"><ReadingBadge badge={featured} size={54} /><span>대표 뱃지<strong>{featured.name}</strong></span></div>}
+        {showStudentPet && <StudentPetSummary mirror={student.pet} growthXp={raw ? petGrowthOfSummary(stats) : null} feed={petFeed} today={day} />}
         {/* 나의 펫 — 단계는 이미 받은 서재로 셉니다(lib/readingPet.js). 서재를 받기 전에는 카드도 기다립니다. */}
         {showPet && <PetCard classId={classId} uid={user.uid} growthXp={raw ? petGrowthOfSummary(stats) : null} level={raw ? stats.level : null} onLevelCheer={markPetLevel}
           feed={petFeed} fruits={myFruit} today={day} preview={petPreview} />}
@@ -371,7 +375,6 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
     {tab === "plaza" ? <PlazaExitContext.Provider value={leavePlaza}><ReadingPlaza key={plazaJump?.key ?? plazaReturn?.key ?? "plaza"} classId={classId} user={user} isTeacher={isTeacher} characterOn={characterOn} petOn={showPet} petFeed={petFeed} growthXp={raw ? petGrowthOfSummary(stats) : null} initialBook={plazaJump} initialRoom={plazaJump ? null : plazaReturn?.room} onExit={leavePlaza} classroom={classroom} hideoutOn={canHideout && (!readOnly || typeof onOpenOwnHideout === "function")} onEnterHideout={enterHideout} talkOn={plazaOn && talkOn} /></PlazaExitContext.Provider>
     : tab === "hideout" && canHideout ? <PlazaExitContext.Provider value={leaveHideout}><ReadingHideout key={`${classId}:${viewUid}`} classId={classId} user={user} student={student} summary={stats} readOnly={readOnly} characterOn={characterOn} petOn={petOn} petFeed={petFeed} returnRoom={hideoutOrigin} onDisabled={leaveHideout} onExit={leaveHideout} /></PlazaExitContext.Provider>
     : loading ? <div className="reading-loading" role="status"><span className="reading-loader" />독서 기록을 불러오고 있어요.</div> : !raw ? <div className="reading-empty"><BookIcon size={40} /><h3>독서 정보를 불러오지 못했어요.</h3><button type="button" className="btn-primary" onClick={() => setRevision((r) => r + 1)}>다시 불러오기</button></div> : <>
-      {!readOnly && <ReadingSummary stats={stats} />}
       {tab === "library" && <>
         <div className="reading-section-head"><div><h3>책꽂이 <span>{books.filter((b) => !b.archived).length}</span></h3><p>책의 마지막 페이지까지, 나의 속도로.</p></div>{readOnly ? teacherTools : <button type="button" className="btn-primary" onClick={() => setDialog({ type: "book" })}>＋ 책 등록</button>}</div>
         <div className="reading-filters" aria-label="도서 상태 필터">{FILTERS.map(([key, label]) => <button type="button" key={key} className={filter === key ? "active" : ""} aria-pressed={filter === key} onClick={() => setFilter(key)}>{label}</button>)}</div>

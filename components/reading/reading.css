@@ -23,12 +23,45 @@
 .reading-intro--teacher { flex-wrap:wrap; gap:16px; }
 .reading-intro-copy { flex:1 1 240px; min-width:0; }
 .reading-intro-copy h2 { font-size:clamp(19px,2vw,25px); overflow-wrap:anywhere; }
-.reading-intro--teacher .reading-summary--compact { flex:2 1 460px; min-width:0; margin:0; border:0; border-radius:0; gap:0; grid-template-columns:1.25fr 1fr 1fr 1fr; background:transparent; }
+.reading-intro .reading-summary--compact { flex:2 1 460px; min-width:0; margin:0; border:0; border-radius:0; gap:0; grid-template-columns:1.25fr 1fr 1fr 1fr; background:transparent; }
 .reading-summary--compact > div { min-width:0; gap:7px; padding:10px; border-left:1px solid #d9e3d8; background:transparent; }
 .reading-summary--compact .reading-level { background:transparent; }
 .reading-summary--compact > div > span { overflow-wrap:anywhere; }
 .reading-summary--compact strong { font-size:27px; }
 .reading-intro-loading { flex:2 1 460px; color:#657d70; }
+/* 교사는 실제 본문 너비에 따라 기존 줄을 접어 제목이 지나치게 좁아지지 않게 합니다. */
+.reading-intro--teacher > .reading-intro-side { width:auto; max-width:100%; min-width:0; margin-left:auto; }
+.reading-intro--teacher .reading-featured { display:flex; min-width:0; max-width:100%; }
+.reading-intro--teacher .reading-featured span { min-width:0; overflow-wrap:anywhere; }
+.reading-intro--teacher .reading-pet { min-width:0; max-width:100%; }
+.reading-intro--teacher .reading-pet-text { min-width:0; }
+.reading-intro--teacher .reading-pet-care { flex-wrap:wrap; }
+.reading-intro--teacher .reading-pet-care b { white-space:normal; }
+@media (max-width:1100px) {
+  .reading-intro--teacher .reading-summary--compact { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:700px) {
+  .reading-intro--teacher > .reading-intro-side { margin-left:0; justify-content:flex-start; }
+}
+/* 학생 머리말 — 제목과 독서 요약 사이의 여백을 쓰고 펫은 기존 카드 그대로 오른쪽에 둡니다. */
+.reading-intro--student { display:grid; grid-template-columns:minmax(0,1fr) minmax(380px,1.3fr); grid-template-areas:"copy stats"; gap:16px; }
+.reading-intro--student.has-pet { grid-template-columns:minmax(0,1fr) minmax(380px,1.3fr) max-content; grid-template-areas:"copy stats pet"; }
+.reading-intro--student > .reading-intro-copy { grid-area:copy; }
+.reading-intro--student .reading-intro-copy h2 { font-size:clamp(19px,2.3vw,28px); }
+.reading-intro--student > .reading-summary--compact,
+.reading-intro--student > .reading-intro-loading { grid-area:stats; }
+.reading-intro--student > .reading-intro-side { grid-area:pet; width:auto; justify-self:end; justify-content:flex-end; }
+@media (max-width:1280px) {
+  .reading-intro--student.has-pet { grid-template-columns:minmax(0,1fr) max-content; grid-template-areas:"copy pet" "stats stats"; }
+}
+@media (max-width:700px) {
+  .reading-intro--student { grid-template-columns:minmax(0,1fr); grid-template-areas:"copy" "stats"; }
+  .reading-intro--student.has-pet { grid-template-columns:minmax(0,1fr); grid-template-areas:"copy" "stats" "pet"; }
+  .reading-intro--student > .reading-intro-side { min-width:0; justify-self:stretch; justify-content:flex-start; }
+  .reading-intro--student .reading-summary--compact { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .reading-intro--student .reading-summary--compact > div { border-left:0; border-top:1px solid #d9e3d8; }
+  .reading-intro--student .reading-summary--compact > div:nth-child(even) { border-left:1px solid #d9e3d8; }
+}
 @media (max-width:600px) {
   .reading-intro--teacher .reading-summary--compact { flex-basis:100%; grid-template-columns:repeat(2,minmax(0,1fr)); }
   .reading-summary--compact > div { padding:12px; border-left:0; border-top:1px solid #d9e3d8; }
