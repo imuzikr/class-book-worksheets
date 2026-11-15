@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 import { initializeApp, deleteApp } from "firebase-admin/app";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
 import { mutateReading, plazaAction } from "../../lib/server/readingService.js";
+import { PLAZA_SHARE_RULE, plazaEntryForPlace, plazaItems } from "../../lib/readingPlaza.js";
 
 const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID || "demo-reading-api";
 if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST || !projectId.startsWith("demo-")) {
@@ -81,11 +82,11 @@ test("광장을 켜면 켜기 전에 쓴 글도 모두 공개된다 — 반의 �
   const results = await Promise.all([act("a", { action: "sync" }), act("teacher", { action: "sync" }), act("b", { action: "sync" })]);
   assert.equal(results.filter((r) => r.ran).length, 1, "한 요청만 맞춘다");
   assert.deepEqual(results.find((r) => r.ran), { synced: true, ran: true, members: 3 });
-  assert.equal((await classDoc()).plazaSynced, 2);
+  assert.equal((await classDoc()).plazaSynced, PLAZA_SHARE_RULE);
   const mark = (await db.doc(`classes/${CLASS}/readingRank/plaza`).get()).data();
-  assert.deepEqual([mark.rule, mark.members, "leaseUntil" in mark], [2, 3, false]);
+  assert.deepEqual([mark.rule, mark.members, "leaseUntil" in mark], [PLAZA_SHARE_RULE, 3, false]);
   const s = await shelf("a");
-  assert.deepEqual([s.uid, s.name, s.studentId, s.rule, s.books.length], [ids.a, "김하나", "30101", 2, 1]);
+  assert.deepEqual([s.uid, s.name, s.studentId, s.rule, s.books.length], [ids.a, "김하나", "30101", PLAZA_SHARE_RULE, 1]);
   assert.deepEqual([s.books[0].id, s.books[0].place, s.books[0].logs, s.books[0].title, s.books[0].excerpt], ["plz-book-0001", "stall", 1, "바람의 도서관", "광장 전에 쓴 발자국"]);
   const b = await bookDoc("a", "plz-book-0001");
   assert.deepEqual([b.place, b.name, notesOf(b)], ["stall", "김하나", ["광장 전에 쓴 발자국"]]);
@@ -130,20 +131,24 @@ test("저장할 때마다 사본이 따라간다 — 고치기 · 지우기, 광
   assert.deepEqual(await act("teacher", { action: "sync" }), { synced: true, ran: false });
 });
 
-test("완독한 책은 책꽂이에 선다 — 한 권의 책을 쓰기 전에도(꽂는 단추가 없음), 쓰면 그 글이 함께", async () => {
+test("공유 사본은 완독 상태를 보관하고, 발자국과 완독 감상은 각각 목록에 선다", async () => {
   await send("a", "plz-log-00004", { type: "addLog", bookId: "plz-book-0001", date: today, startPage: 26, endPage: 40, notes: "마지막 장" });
   // 앞에서 지운 11~20쪽이 비어 아직 완독이 아니다 — 읽는 중인 책으로 가판대에 선다
   assert.equal((await shelf("a")).books[0].place, "stall");
   await send("a", "plz-log-00006", { type: "addLog", bookId: "plz-book-0001", date: today, startPage: 11, endPage: 20, notes: "빠진 쪽을 채움" });
-  // 완독 — 한 권의 책을 아직 안 썼어도 책꽂이로 옮겨 가고 발자국이 그대로 보인다
+  // 완독 — 원본 place는 호환 유지하지만 새 책꽂이 목록은 감상을 썼을 때만 표시한다.
   let s = await shelf("a");
   assert.deepEqual([s.books[0].place, s.books[0].rating, s.books[0].excerpt, s.books[0].logs], ["shelf", null, "빠진 쪽을 채움", 4]);
   assert.equal((await bookDoc("a", "plz-book-0001")).review, null);
+  assert.equal(plazaEntryForPlace(s.books[0], "shelf"), null);
+  assert.equal(plazaEntryForPlace(s.books[0], "stall").excerpt, "빠진 쪽을 채움");
   // 한 권의 책을 쓰면 곧바로 보인다(옛 화면이 함께 보내는 shelved: false는 읽지 않음)
   const saved = await send("a", "plz-review-01", { type: "saveReview", bookId: "plz-book-0001", text: "끝까지 읽은 한 권의 책", rating: 5, shelved: false });
   assert.equal("shelved" in saved.state.reviews[0], false);
   s = await shelf("a");
   assert.deepEqual([s.books[0].place, s.books[0].rating, s.books[0].excerpt], ["shelf", 5, "끝까지 읽은 한 권의 책"]);
+  assert.equal(plazaEntryForPlace(s.books[0], "stall").excerpt, "빠진 쪽을 채움");
+  assert.equal(plazaEntryForPlace(s.books[0], "shelf").excerpt, "끝까지 읽은 한 권의 책");
   const b = await bookDoc("a", "plz-book-0001");
   assert.equal(b.review.text, "끝까지 읽은 한 권의 책");
   assert.deepEqual(notesOf(b), ["빠진 쪽을 채움", "마지막 장", "꺼 둔 동안 쓴 글", "광장 전에 쓴 발자국"]);
@@ -176,6 +181,32 @@ test("댓글 — 같은 반 학생과 담당 교사만, 이름표는 서버가 �
   await assert.rejects(() => act("b", { action: "comment", ownerUid: ids.a, bookId: "no-such-book", text: "어디", requestId: "plz-cmt-00006" }), (e) => e.code === "reading/plaza-gone");
   // 다른 학생의 요청 식별자를 가로채 쓸 수 없다
   await assert.rejects(() => act("a", { action: "comment", ...target, text: "가로채기", requestId: "plz-cmt-00001" }), (e) => e.status === 409);
+});
+
+test("2번 사본을 기록 종류별 목록으로 한 번 맞추고, 책 원문과 기존 댓글을 보존한다", async () => {
+  const old = await shelf("a");
+  const legacy = old.books.map((entry) => {
+    const copy = { ...entry };
+    delete copy.previews;
+    return copy;
+  });
+  await db.doc(`classes/${CLASS}/plazaShelves/${ids.a}`).set({ ...old, rule: 2, books: legacy });
+  await db.doc(`classes/${CLASS}`).update({ plazaSynced: 2 });
+  assert.ok((await act("teacher", { action: "sync" })).ran);
+  const restored = await shelf("a");
+  assert.equal(restored.rule, PLAZA_SHARE_RULE);
+  assert.equal((await classDoc()).plazaSynced, PLAZA_SHARE_RULE);
+  assert.equal(restored.books.length, old.books.length, "동일 책의 목록 사본을 두 장으로 늘리지 않는다");
+  const stall = plazaItems([restored], { place: "stall" });
+  const completed = plazaItems([restored], { place: "shelf" });
+  assert.equal([...stall.week, ...stall.earlier].find((b) => b.id === "plz-book-0001").excerpt, "빠진 쪽을 채움");
+  assert.equal([...completed.week, ...completed.earlier].find((b) => b.id === "plz-book-0001").excerpt, "고쳐 쓴 한 권의 책");
+  const content = await bookDoc("a", "plz-book-0001");
+  assert.equal(content.review.text, "고쳐 쓴 한 권의 책");
+  assert.deepEqual(notesOf(content), ["빠진 쪽을 채움", "마지막 장", "꺼 둔 동안 쓴 글", "광장 전에 쓴 발자국"]);
+  assert.equal(content.comments, 2);
+  assert.equal(restored.counts["plz-book-0001"], 2);
+  assert.deepEqual(await act("b", { action: "sync" }), { synced: true, ran: false });
 });
 
 test("댓글 지우기 — 쓴 사람과 선생님만(책 주인은 못 지움)", async () => {
@@ -245,7 +276,7 @@ test("광장을 한 번도 켜지 않은 반 — 저장해도 사본을 만들�
   await db.doc(`classes/${NEVER}/plazaBooks/${ids.a}_plz-never-bk01`).set({ uid: ids.a, bookId: "plz-never-bk01", place: "stall", logs: [{ id: "x", notes: "옛 글" }], logCount: 1, review: null, comments: 3 });
   await send("a", "plz-never-ed01", { type: "updateLog", logId: "plz-never-lg01", notes: "고쳐 쓴 발자국" }, NEVER);
   const s = await shelf("a", NEVER);
-  assert.deepEqual([s.rule, s.books[0].excerpt], [2, "고쳐 쓴 발자국"]);
+  assert.deepEqual([s.rule, s.books[0].excerpt], [PLAZA_SHARE_RULE, "고쳐 쓴 발자국"]);
   const b = await bookDoc("a", "plz-never-bk01", NEVER);
   assert.deepEqual([notesOf(b), b.comments], [["고쳐 쓴 발자국"], 3]);
   // 지우면 사본도 비워진다(지운 글이 남지 않게)
@@ -279,6 +310,6 @@ test("반 전체 맞추기 — 다른 요청이 맞추는 중이면 맡기고, �
   // 계정이 지워진 소속 — 이름 없는 글을 새로 내걸지 않는다
   assert.equal(await shelf("ghost", LEASE), undefined);
   assert.equal(await bookDoc("ghost", "plz-ghost-bk01", LEASE), undefined);
-  assert.equal((await classDoc(LEASE)).plazaSynced, 2);
+  assert.equal((await classDoc(LEASE)).plazaSynced, PLAZA_SHARE_RULE);
   assert.equal("leaseUntil" in (await mark.get()).data(), false);
 });

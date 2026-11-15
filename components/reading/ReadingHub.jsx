@@ -316,6 +316,8 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
     blocked: Array.isArray(myShelf?.blocked) && myShelf.blocked.includes(bookId),
     comments: Math.max(0, Number(myShelf?.counts?.[bookId]) || 0),
     entry: (Array.isArray(myShelf?.books) ? myShelf.books : []).find((b) => b?.id === bookId) ?? null,
+    hasLogs: stats.logs.some((log) => log.bookId === bookId && log.classId === classId),
+    hasReview: stats.reviews.some((review) => review.bookId === bookId && review.classId === classId),
   });
 
   return <ReadingErrorContext.Provider value={error}><section className={`reading-hub${tab === "plaza" || tab === "hideout" ? " reading-hub--plaza" : ""}`} aria-label="책나눔 성장 기능" aria-busy={tab === "hideout" ? false : loading || busy}>
@@ -514,16 +516,15 @@ function ReviewForm({ book, review, busy, plaza = null, onSave, onClose }) {
 // **학생이 고르는 칸은 없습니다**(선생님 결정 — "학생이 선택할 수 있는 옵션을 제거하고 모두 공개"). 한때 여기에
 // '광장 책꽂이에 꽂기' · '발자국 보이기' 두 스위치가 있었습니다 — 걷었습니다(되살리지 마세요).
 // info — { blocked(선생님이 내림), comments(달린 댓글 수), entry(지금 광장에 올라가 있는 모습) }
-function PlazaOwn({ book, info, busy, onOpen }) {
+function PlazaOwn({ info, busy, onOpen }) {
   if (info.blocked) return <div className="plaza-own"><div className="plaza-own-text"><strong>책 광장</strong><span>선생님이 이 책을 광장에서 내렸어요. 이 책의 글은 나와 선생님만 봐요.</span></div></div>;
-  const completed = book.status === "completed";
-  const text = completed
-    ? "이 책의 ‘한 권의 책’과 독서 발자국을 반 친구들이 광장 책꽂이에서 함께 읽고 댓글을 남길 수 있어요."
-    : "이 책에 남기는 독서 발자국을 반 친구들이 광장 가판대에서 함께 읽고 댓글을 남길 수 있어요.";
+  const text = "독서 발자국은 광장 가판대에서, 완독 감상 ‘한 권의 책’은 광장 책꽂이에서 반 친구들과 함께 읽어요. 완독해도 발자국은 가판대에 남아요.";
   return <div className="plaza-own">
     <div className="plaza-own-text"><strong>책 광장</strong><span>{text}</span></div>
     {info.entry && <div className="plaza-own-actions">
-      <button type="button" className="btn-ghost" disabled={busy} onClick={() => onOpen(info.entry.place)}>광장에서 보기{info.comments ? ` · 댓글 ${number(info.comments)}` : ""}</button>
+      {info.hasLogs && <button type="button" className="btn-ghost" disabled={busy} onClick={() => onOpen("stall")}>가판대에서 발자국 보기</button>}
+      {info.hasReview && <button type="button" className="btn-ghost" disabled={busy} onClick={() => onOpen("shelf")}>책꽂이에서 감상 보기</button>}
+      {info.comments > 0 && <span className="reading-muted">댓글 {number(info.comments)}</span>}
     </div>}
   </div>;
 }
@@ -534,7 +535,7 @@ function BookDetail({ book, classId, readOnly = false, activity, onOpenActivity,
     <div className="reading-detail-overview"><BookCover book={book} /><div className="reading-detail-meta"><span>{book.author}</span>{book.publisher && <span>{book.publisher}</span>}{book.isbn && <span>ISBN {book.isbn}</span>}<span>{number(book.pagesRead ?? book.currentPage)} / {number(book.totalPages)}쪽 읽음</span><span>{book.status === "completed" ? "완독" : book.status === "paused" ? "잠시 멈춤" : "읽는 중"}</span>{book.bookLink && <a href={book.bookLink} target="_blank" rel="noopener noreferrer">도서 정보 보기 ↗</a>}</div></div>
     {!readOnly && <div className="reading-detail-tools"><button type="button" className="btn-ghost" disabled={busy} onClick={onEdit}>책 정보 고치기</button><button type="button" className="btn-ghost" disabled={busy} onClick={onArchive}>{book.archived ? "책꽂이로 복원" : "보관함으로"}</button></div>}
     {activity && onOpenActivity && !readOnly && <div className="reading-linked-activity"><div><span>함께 연결한 독서 활동</span><strong>{activity.title}</strong></div><button type="button" className="btn-ghost" disabled={busy} onClick={() => onOpenActivity(activity)}>활동 열기 →</button></div>}
-    {plaza && !readOnly && !book.archived && <PlazaOwn book={book} info={plaza} busy={busy} onOpen={onOpenPlaza} />}
+    {plaza && !readOnly && !book.archived && <PlazaOwn info={plaza} busy={busy} onOpen={onOpenPlaza} />}
     <section className="reading-detail-section"><header><h3>한 권의 책</h3>{!book.archived && !readOnly && <div className="reading-detail-section-actions">{book.status === "completed" && <button type="button" className="btn-ghost" disabled={busy || (review && review.classId !== classId)} onClick={onReview}>{review ? "한 권의 책 고치기" : "한 권의 책"}</button>}<button type="button" className="btn-primary" disabled={busy} onClick={() => onLog(null)}>독서 발자국</button></div>}</header>{review ? <article className="reading-review"><p className="reading-review-rating">{readOnly ? "별점" : "나의 별점"} {review.rating} / 5</p><p>{review.text}</p>{!readOnly && review.classId !== classId && <p className="reading-help">다른 반에서 작성한 ‘한 권의 책’이에요. 작성한 반에서 고치거나 삭제할 수 있어요.</p>}{!readOnly && <button type="button" className="reading-text-danger" disabled={busy || review.classId !== classId} onClick={onDeleteReview}>한 권의 책 삭제</button>}</article> : readOnly ? <p className="reading-muted">아직 ‘한 권의 책’을 남기지 않았어요.</p> : <p className="reading-muted">{book.status === "completed" ? "다 읽은 책에 대한 나의 총평을 ‘한 권의 책’으로 남겨 보세요." : "책을 끝까지 읽으면 총평 ‘한 권의 책’을 쓸 수 있어요. 읽은 날마다 ‘독서 발자국’을 남겨 보세요."}</p>}</section>
     <section className="reading-detail-section"><header><h3>독서의 발자취 <small>{logs.length}</small></h3></header>{sorted.length ? <ol className="reading-log-list">{sorted.map((log) => <li key={log.id}><div className="reading-log-date"><strong>{shortDate(log.date)}</strong><span>{log.startPage}–{log.endPage}쪽 · {number(log.endPage - log.startPage + 1)}쪽</span></div><p>{log.notes}</p>{!readOnly && log.classId !== classId && <p className="reading-help">다른 반에서 작성한 기록 · 작성한 반에서만 수정 가능</p>}{!readOnly && <div className="reading-log-tools"><button type="button" className="btn-ghost" disabled={busy || log.classId !== classId} onClick={() => onLog(log)}>고치기</button><button type="button" className="reading-text-danger" disabled={busy || log.classId !== classId} onClick={() => onDeleteLog(log)}>삭제</button></div>}</li>)}</ol> : <p className="reading-muted">{readOnly ? "아직 독서 기록이 없어요." : "아직 독서 기록이 없어요. 첫 페이지의 생각부터 남겨 보세요."}</p>}</section>
   </Modal>;
