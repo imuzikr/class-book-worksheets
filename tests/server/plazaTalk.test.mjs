@@ -12,6 +12,7 @@ import { initializeApp as initClient, deleteApp as deleteClient } from "firebase
 import { connectDatabaseEmulator, get, getDatabase, onValue, orderByChild, push, query, ref, remove, serverTimestamp, set, startAt, update } from "firebase/database";
 import { plazaAction, resetReadingRankings } from "../../lib/server/readingService.js";
 import { TALK_MAX, plazaTalkHistory, talkNewId } from "../../lib/readingPlazaTalk.js";
+import { openPlazaTalk } from "../../lib/plazaTalkChannel.js";
 
 const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID || "demo-reading-api";
 if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST || !process.env.FIREBASE_DATABASE_EMULATOR_HOST || !projectId.startsWith("demo-")) {
@@ -208,6 +209,33 @@ test("나가기 — 나간다는 한 줄과 함께 내 자리만 지움 · 남�
   await assert.rejects(get(ref(database, talkPath(talk, "m"))), "나간 사람은 더 못 읽음");
   const heard = await hear("a", talk);
   assert.equal(heard.at(-1).s, "leave");
+});
+
+test("통로(lib/plazaTalkChannel.js) — 내 대화 되찾기 · 따라가며 사람과 말 듣기 · 말하기", async () => {
+  const heard = { talk: null, lines: [] };
+  const channel = openPlazaTalk(clientDb("a"), {
+    classId: CLASS, uid: ids.a,
+    onTalk: (id, state) => { heard.talk = state; },
+    onLine: (id, lineId, line) => heard.lines.push(line),
+  });
+  try {
+    const found = await channel.restore();
+    assert.equal(found.id, talk, "마지막으로 들어간 대화(아직 든 것)");
+    assert.ok(found.lastAt >= found.j);
+    channel.follow(talk);
+    const until = async (check, label) => {
+      for (let n = 0; n < 160 && !check(); n += 1) await sleep(25);
+      assert.ok(check(), label);
+    };
+    await until(() => heard.talk && Object.keys(heard.talk.members).length === 3, "지금 든 세 사람");
+    assert.equal(heard.talk.names[ids.d], "라온", "나간 사람의 이름도(그 사람의 지난 말에 쓰려고)");
+    await until(() => heard.lines.some((l) => l.s === "leave"), "지난 말부터 차례로");
+    await sleep(600);
+    await channel.say(talk, "통로로 한 마디");
+    await until(() => heard.lines.some((l) => l.x === "통로로 한 마디"), "내 말도 들음");
+  } finally {
+    channel.close();
+  }
 });
 
 test("선생님 기록 — 담당 교사만 · 한 학생이 든 대화의 말 전부(들어오기 전의 말도)", async () => {
