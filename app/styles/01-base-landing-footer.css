@@ -132,8 +132,8 @@ select:focus {
 
    display:none이 아니라 visibility:hidden인 이유: 자리는 그대로 두어야
    레이아웃이 잡히고, 로그아웃 상태로 판명돼 표시가 지워질 때 화면이 튀지
-   않습니다. 배경은 그대로 보이므로 흰 화면이 아니라 배경만 있는 상태입니다. */
-html[data-auth-pending] .landing-top,
+   않습니다. 배경은 그대로 보이므로 흰 화면이 아니라 배경만 있는 상태입니다.
+   상단 바(.landing-top)는 대문을 넷으로 나누며 1분면(.landing 안)으로 들어갔습니다. */
 html[data-auth-pending] .landing,
 html[data-auth-pending] .site-footer {
   visibility: hidden;
@@ -179,22 +179,48 @@ html[data-auth-pending] .site-footer {
 
 .landing {
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  /* 옅은 세이지 바탕 — 일러스트의 초록 책 · 책장과 어울리게. 그림은
-     배경이 아니라 가운데 흰 카드 안에 크게 섭니다(public/landing-reading.webp). */
-  background:
-    radial-gradient(1200px 520px at 50% -120px, #ffffff 0%, rgba(255, 255, 255, 0) 70%),
-    #f1f3ee;
+  /* 넷으로 나눈 칸 사이로 비치는 바탕 — 1분면의 옅은 세이지(#f1f3ee)보다 한 단계 짙게 해 칸이 갈려 보이게 */
+  background: #e3e8de;
 }
 
-/* 상단 바: 로고(왼쪽) + 로그인/회원가입(오른쪽) — 글래스 바 */
-/* 배경 일러스트 바깥의 독립된 상단 바 — 로그인한 페이지의 .topbar와 같은 톤 */
+/* 대문 — 화면을 넷으로(선생님 요청): 1분면(오른쪽 위) = 지금까지의 대문을 줄인 칸(.landing-main),
+   2분면(왼쪽 위) 책 광장 · 3분면(왼쪽 아래) 교실 · 4분면(오른쪽 아래) 개인 아지트(.landing-scene).
+   기본(좁거나 세로로 긴 화면)은 1분면이 맨 위이고 장면이 그 아래에 섭니다 — 넷으로 나누는 것은 아래
+   @media(가로 900px 이상 · 가로가 세로의 1.25배 이상)뿐입니다. 세로로 긴 태블릿까지 넷으로 나누면 칸이 세로로
+   길어져, 가로로 긴 장면의 가운데 3분의 1만 남습니다. */
+.landing-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px;
+}
+/* 가운데 폭(태블릿): 1분면 · 책 광장은 한 줄을 다 쓰고, 교실 · 아지트가 그 아래 나란히 */
+@media (min-width: 600px) {
+  .landing-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .landing-main,
+  .landing-scene--plaza { grid-column: 1 / -1; }
+}
+
+/* 1분면 — 지금까지의 대문(흰 상단 바 · 옅은 세이지 바탕 · 머리 제목 · 흰 카드)을 그대로 줄여 담은 칸 */
+.landing-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 18px;
+  background:
+    radial-gradient(900px 320px at 50% -80px, #ffffff 0%, rgba(255, 255, 255, 0) 70%),
+    #f1f3ee;
+  box-shadow: 0 1px 3px rgba(46, 36, 26, 0.06), 0 8px 24px rgba(46, 36, 26, 0.06);
+}
+
+/* 상단 바: 로고(왼쪽) + 로그인/회원가입(오른쪽) — 1분면의 맨 위. 로그인한 페이지의 .topbar와 같은 흰 바탕 */
 .landing-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 28px;
+  gap: 12px;
+  padding: 10px 16px;
   background: #fff;
   border-bottom: 1px solid var(--border);
 }
@@ -202,34 +228,36 @@ html[data-auth-pending] .site-footer {
 .landing-logo {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   font-family: var(--font-serif);
   font-weight: 700;
-  font-size: 21px;
+  font-size: 19px;
   color: var(--dark);
+  white-space: nowrap;
 }
 
-/* 두 단추는 같은 크기(격자 두 칸) · 연한 초록 — 가운데 카드의 '생각 적어보기'와
+/* 두 단추는 같은 크기(격자 두 칸) · 연한 초록 — 카드의 '생각 적어보기'와
    같은 세이지 톤. 회원가입만 한 단계 짙게 채워 먼저 눈에 들어오게 합니다. */
 .landing-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .landing-actions button {
-  min-width: 92px;
-  height: 40px;
+  min-width: 84px;
+  height: 36px;
   min-height: 0; /* 768px 아래 .btn-primary의 44px 터치 규칙이 한쪽만 키우지 않게 */
-  padding: 0 18px;
+  padding: 0 14px;
   border-radius: var(--radius-btn);
   border: 1px solid #c9d3c8;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   color: #2f4a37;
   background: var(--bg-deep);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
+  white-space: nowrap;
 }
 .landing-actions button:hover {
   background: #eef8f1;
@@ -263,55 +291,66 @@ html[data-auth-pending] .site-footer {
   background: rgba(248, 236, 229, 0.85);
 }
 
-/* 가운데: 디자인 시안 그대로 — 머리 제목 + 흰 카드 */
+/* 머리 제목 + 흰 카드(제목 · 그림 · 단추) — 지금까지의 대문 그대로, 크기만 줄였습니다 */
 .hero {
-  flex: 1;
-  width: min(1240px, 100%);
-  margin: 0 auto;
-  padding: 40px 28px 64px;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 18px 18px;
 }
 
 /* 시안의 탭 줄 자리에 남긴 가는 선 하나로 머리와 카드를 가릅니다 */
 .hero-title {
-  font-size: clamp(22px, 2.6vw, 28px);
+  font-size: 22px;
+  line-height: 1.3;
   font-weight: 700;
   color: #2f3a31;
   letter-spacing: -0.5px;
-  padding-bottom: 22px;
+  padding-bottom: 12px;
   border-bottom: 1px solid #dde2da;
 }
 
 .hero-card {
-  margin-top: 24px;
-  padding: 30px 30px 32px;
+  display: flex;
+  flex-direction: column;
+  margin-top: 14px;
+  padding: 16px 18px 18px;
   background: #fff;
-  border-radius: 22px;
-  box-shadow: 0 1px 3px rgba(46, 36, 26, 0.06), 0 10px 32px rgba(46, 36, 26, 0.06);
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(46, 36, 26, 0.06), 0 8px 24px rgba(46, 36, 26, 0.06);
 }
 
 .hero-card-title {
-  font-size: clamp(19px, 2vw, 23px);
+  font-size: 18px;
+  line-height: 1.35;
   font-weight: 700;
   color: #2f3a31;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
 }
 
-/* 그림은 카드 폭을 다 씁니다 — 넓은 화면일수록 크게(원본 비율 1654×725 그대로) */
+/* 그림 칸 — 기본은 원본 비율(1654×725) 그대로. 넷으로 나눈 화면에서는 카드에 남는 높이를 다 받고, 그림은 그 안에
+   비율대로 맞춰 줄어듭니다(object-fit: contain — 그림 바탕이 흰색이라 카드와 이어져 보임). */
+.hero-art-box {
+  position: relative;
+  aspect-ratio: 1654 / 725;
+}
 .hero-art {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
-  height: auto;
-  border-radius: 18px;
+  height: 100%;
+  object-fit: contain;
 }
 
 .hero-cta {
-  margin-top: 26px;
-  padding: 13px 22px;
-  border-radius: 14px;
+  align-self: flex-start;
+  margin-top: 12px;
+  padding: 10px 18px;
+  border-radius: 12px;
   border: 1px solid #c9d3c8;
   background: var(--bg-deep);
   color: #2f4a37;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
 }
 .hero-cta:hover {
@@ -320,10 +359,122 @@ html[data-auth-pending] .site-footer {
 }
 
 @media (max-width: 640px) {
-  .hero { padding: 24px 14px 40px; }
-  .hero-card { padding: 18px 14px 20px; border-radius: 18px; }
-  .hero-art { border-radius: 12px; }
-  .hero-cta { width: 100%; }
+  .landing-top { padding: 10px 14px; }
+  .hero { padding: 14px 14px 16px; }
+  .hero-title { font-size: 20px; }
+  .hero-card { padding: 14px 14px 16px; border-radius: 14px; }
+  .hero-card-title { font-size: 16px; }
+  .hero-cta { align-self: stretch; padding: 12px 18px; }
+}
+
+/* 2 · 3 · 4분면 — 체험반에서 찍은 활동 장면(public/landing/). 그림은 칸을 빈틈없이 덮고(cover) 왼쪽 위에
+   이름 · 한 줄 설명을 얹습니다. 누르는 곳은 없습니다.
+   이름표가 왼쪽 위인 까닭: 세 장면 모두 그 자리가 배경(나무 · 창문)이라 — 왼쪽 아래에 두었을 때는 1280 × 720
+   화면에서 아지트의 캐릭터를 가렸습니다(실측). */
+.landing-scene {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #d7ddd0; /* 그림이 오기 전 자리 */
+  aspect-ratio: 16 / 9;
+  /* 칸의 폭 · 높이를 재는 기준(아래 @container) — 높이는 격자나 aspect-ratio가 정해 안의 그림과 무관합니다 */
+  container-type: size;
+}
+.landing-scene img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* 아지트 그림은 3:2라 위아래가 잘립니다 — 천장보다 바닥(캐릭터 · 펫 · 가구)을 남깁니다 */
+.landing-scene--hideout img { object-position: 50% 62%; }
+
+.landing-scene-label {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  max-width: min(calc(100% - 24px), 300px); /* 설명은 두 줄로 접어 장면 위쪽(책꽂이 · 칠판)을 덜 가리게 */
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px 9px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.93);
+  box-shadow: 0 2px 10px rgba(46, 36, 26, 0.16);
+  color: #2f3a31;
+  line-height: 1.35;
+}
+.landing-scene-label strong {
+  font-size: 15px;
+  font-weight: 700;
+}
+.landing-scene-label span {
+  font-size: 12.5px;
+  color: #56645a;
+  word-break: keep-all; /* 낱말 가운데서 줄이 갈리지 않게(한글은 기본이 글자마다 갈림) */
+}
+/* 칸이 좁거나 낮으면 이름만 — 설명이 두세 줄로 접혀 장면을 가리지 않게(낮은 노트북 화면 · 폰) */
+@container (max-width: 440px) {
+  .landing-scene-label { top: 10px; left: 10px; padding: 6px 10px; }
+  .landing-scene-label span { display: none; }
+}
+@container (max-height: 340px) {
+  .landing-scene-label { top: 10px; left: 10px; padding: 6px 10px; }
+  .landing-scene-label span { display: none; }
+}
+
+/* ── 넷으로 나눈 화면(가로 900px 이상 · 가로로 긴 화면) — 한 화면에 네 칸이 꼭 맞게 섭니다 ──
+   1분면은 칸의 높이에 맞춰 줄어듭니다: 글자 · 여백은 칸 높이의 비율(cqh)로, 그림은 남는 높이를 다 받습니다.
+   높이 600px 아래 화면에서는 네 칸이 600px을 지키고 페이지가 조금 구릅니다(1분면 단추가 잘리지 않게 —
+   칸이 288px이어도 그림 말고 1분면에 드는 것은 다 들어감). */
+@media (min-width: 900px) and (min-aspect-ratio: 5/4) {
+  .landing-grid {
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "plaza main"
+      "classroom hideout";
+    height: 100vh;
+    height: 100dvh;
+    min-height: 600px;
+  }
+  .landing-main { grid-area: main; min-height: 0; container-type: size; }
+  .landing-scene--plaza { grid-area: plaza; }
+  .landing-scene--classroom { grid-area: classroom; }
+  .landing-scene--hideout { grid-area: hideout; }
+  .landing-scene { aspect-ratio: auto; min-height: 0; }
+
+  .landing-top { padding: clamp(6px, 2.2cqh, 12px) clamp(12px, 2.4cqw, 20px); }
+  .landing-logo { font-size: clamp(16px, 4.4cqh, 21px); }
+  .landing-actions button {
+    height: clamp(30px, 8cqh, 40px);
+    font-size: clamp(12.5px, 3.2cqh, 15px);
+  }
+  .hero {
+    flex: 1;
+    min-height: 0;
+    padding: clamp(8px, 3cqh, 18px) clamp(14px, 3cqw, 26px);
+  }
+  .hero-title {
+    font-size: clamp(15px, 4.6cqh, 26px);
+    padding-bottom: clamp(6px, 2.4cqh, 14px);
+  }
+  .hero-card {
+    flex: 1;
+    min-height: 0;
+    margin-top: clamp(6px, 2.4cqh, 16px);
+    padding: clamp(8px, 3cqh, 18px) clamp(12px, 2.6cqw, 22px);
+  }
+  .hero-card-title {
+    font-size: clamp(13px, 3.8cqh, 20px);
+    margin-bottom: clamp(4px, 1.8cqh, 10px);
+  }
+  .hero-art-box { flex: 1 1 0; min-height: 0; aspect-ratio: auto; }
+  .hero-cta {
+    margin-top: clamp(6px, 2.4cqh, 12px);
+    padding: clamp(6px, 1.8cqh, 11px) clamp(12px, 2.4cqw, 20px);
+    font-size: clamp(12.5px, 3.3cqh, 15px);
+  }
 }
 
 /* 로그인/회원가입 모달도 글래스 스타일 */
@@ -461,12 +612,6 @@ html[data-auth-pending] .site-footer {
 .btn-google:disabled {
   opacity: 0.6;
   cursor: default;
-}
-
-@media (max-width: 720px) {
-  .landing-top {
-    padding: 16px;
-  }
 }
 
 /* ===================== 사이트 푸터 (랜딩·약관 페이지) ===================== */

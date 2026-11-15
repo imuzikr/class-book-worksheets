@@ -1,16 +1,20 @@
 "use client";
 
 // =============================================================
-// 메인 랜딩 페이지
-//   - 가운데: 디자인 시안 그대로 — 머리 제목 + 흰 카드(함께 책 읽는 일러스트
+// 메인 랜딩 페이지(대문) — 화면을 넷으로 나눕니다(선생님 요청)
+//   - 1분면(오른쪽 위): 지금까지의 대문을 줄여 담은 칸 — 상단 바(로고 · 로그인 ·
+//     회원가입 → 모달) · 머리 제목 · 흰 카드(함께 책 읽는 일러스트
 //     public/landing-reading.webp + '생각 적어보기' → 회원가입 창)
-//   - 오른쪽 상단: 로그인 / 회원가입 버튼 (클릭 시 모달)
+//   - 2분면(왼쪽 위) 책 광장 · 3분면(왼쪽 아래) 교실 · 4분면(오른쪽 아래) 개인 아지트:
+//     체험반에서 찍은 활동 장면과 이름 · 한 줄 설명(목록 lib/landingScenes.js · 그림 public/landing/ —
+//     만들기 scripts/prepare-landing-art.mjs · 찍는 법 public/landing/README.md)
+//   - 좁거나 세로로 긴 화면에서는 1분면이 맨 위, 세 장면이 그 아래(app/styles/01-base-landing-footer.css)
 // -------------------------------------------------------------
 // 실서비스 모드: 구글 계정 하나로 로그인/회원가입합니다(lib/auth.js).
 // 학교 도메인 제한도 등록 코드도 없습니다 — 반에 들어가는 관문은 로그인 뒤
 // 교사가 미리 만든 **참여 코드**입니다(components/ClassEntry.jsx).
-// 회원가입은 학생/선생님을 먼저 고르며, 선생님은 관리자 승인 후 권한이
-// 부여됩니다(승인 전에는 학생 화면).
+// 회원가입은 학생/선생님을 먼저 고르며, 선생님은 교사 가입 코드를 넣어
+// 가입하면 곧바로 선생님이 됩니다(becomeTeacherWithCode — 틀리면 학생으로 남음).
 // 데모 모드(Firebase 미설정)에서는 임시 사용자로 곧바로 입장합니다.
 // =============================================================
 import { useEffect, useRef, useState } from "react";
@@ -23,6 +27,7 @@ import { becomeTeacherWithCode } from "@/lib/store";
 import { isInAppBrowser } from "@/lib/browser";
 import SiteFooter from "@/components/SiteFooter";
 import { IconLogo } from "@/components/StatusIcons";
+import { LANDING_SCENES, LANDING_SCENE_SIZES, landingSceneImage } from "@/lib/landingScenes";
 
 // Firebase 인증 오류 코드를 한국어 메시지로
 function authErrorMessage(code) {
@@ -166,44 +171,75 @@ export default function LandingPage() {
 
   return (
     <>
-    {/* ── 상단 바: 로고(왼쪽) + 로그인/회원가입(오른쪽) — 배경 일러스트 바깥 ── */}
-    <header className="landing-top">
-      <span className="landing-logo">
-        <IconLogo size={26} /> 책나눔
-      </span>
-      <div className="landing-actions">
-        <button className="btn-outline" onClick={() => switchMode("login")}>
-          로그인
-        </button>
-        <button className="btn-primary" onClick={() => switchMode("signup")}>
-          회원가입
-        </button>
-      </div>
-    </header>
-
     <main className="landing">
-      {/* ── 디자인 시안 그대로: 머리 제목 → 흰 카드(제목 · 그림 · 단추) ── */}
-      <section className="hero">
-        <h1 className="hero-title">책나눔, 함께 읽고 생각을 나누다</h1>
+      <div className="landing-grid">
+        {/* ── 1분면(오른쪽 위): 지금까지의 대문을 줄여 담은 칸 — 상단 바(로고 · 로그인/회원가입) →
+            머리 제목 → 흰 카드(제목 · 그림 · 단추). 화면을 읽는 차례로는 맨 앞입니다. ── */}
+        <section className="landing-main" aria-labelledby="landing-title">
+          <header className="landing-top">
+            <span className="landing-logo">
+              <IconLogo size={22} /> 책나눔
+            </span>
+            <div className="landing-actions">
+              <button className="btn-outline" onClick={() => switchMode("login")}>
+                로그인
+              </button>
+              <button className="btn-primary" onClick={() => switchMode("signup")}>
+                회원가입
+              </button>
+            </div>
+          </header>
 
-        <div className="hero-card">
-          <h2 className="hero-card-title">함께 읽고 생각을 나누는 공간</h2>
-          <img
-            className="hero-art"
-            src="/landing-reading.webp"
-            width={1654}
-            height={725}
-            alt="도서관 책상에 둘러앉은 네 친구가 책을 펼쳐 들고 이야기하고, 뒤에서 두 친구가 책장의 책을 고르는 그림"
-          />
-          <button
-            type="button"
-            className="hero-cta"
-            onClick={() => switchMode("signup")}
-          >
-            생각 적어보기 →
-          </button>
-        </div>
-      </section>
+          <div className="hero">
+            <h1 id="landing-title" className="hero-title">책나눔, 함께 읽고 생각을 나누다</h1>
+
+            <div className="hero-card">
+              <h2 className="hero-card-title">함께 읽고 생각을 나누는 공간</h2>
+              <div className="hero-art-box">
+                <img
+                  className="hero-art"
+                  src="/landing-reading.webp"
+                  width={1654}
+                  height={725}
+                  alt="도서관 책상에 둘러앉은 네 친구가 책을 펼쳐 들고 이야기하고, 뒤에서 두 친구가 책장의 책을 고르는 그림"
+                />
+              </div>
+              <button
+                type="button"
+                className="hero-cta"
+                onClick={() => switchMode("signup")}
+              >
+                생각 적어보기 →
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* ── 2 · 3 · 4분면: 책 광장 · 교실 · 개인 아지트의 활동 장면(누르는 곳 없음) ── */}
+        {/* loading · sizes · srcSet을 src보다 먼저 적습니다 — 화면에서 새로 만들 때(다른 페이지에서 돌아올 때) 브라우저가
+            src를 먼저 받고 나서야 srcset을 알아 큰 그림을 한 번 더 받지 않게 */}
+        {LANDING_SCENES.map((scene) => {
+          const image = landingSceneImage(scene.key);
+          return (
+            <figure key={scene.key} className={`landing-scene landing-scene--${scene.key}`}>
+              <img
+                loading="lazy"
+                decoding="async"
+                sizes={LANDING_SCENE_SIZES}
+                srcSet={image.srcSet}
+                src={image.src}
+                width={scene.width}
+                height={scene.height}
+                alt={scene.alt}
+              />
+              <figcaption className="landing-scene-label">
+                <strong>{scene.name}</strong>
+                <span>{scene.desc}</span>
+              </figcaption>
+            </figure>
+          );
+        })}
+      </div>
     </main>
 
       {/* ── 푸터: 브랜드 · 정책 및 약관 · 문의 (배경 이미지 영역 밖) ── */}

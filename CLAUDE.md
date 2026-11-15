@@ -405,7 +405,7 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
 
 | 경로 | 설명 |
 |------|------|
-| `/` | 랜딩 — 로그인 · 회원가입 (로그인되어 있으면 `/books`로) |
+| `/` | 대문 — 화면 4분할(선생님 요청): 1분면(오른쪽 위)은 지금까지의 대문을 줄인 칸(로그인 · 회원가입 · '생각 적어보기'), 2 · 3 · 4분면은 책 광장 · 교실 · 개인 아지트의 체험반 장면(목록 `lib/landingScenes.js` · 그림 `public/landing/` — 다시 찍는 법은 그 폴더의 README). 좁거나 세로로 긴 화면은 1분면이 맨 위 · 장면이 그 아래 (로그인되어 있으면 `/books`로) |
 | `/books` | 책방 — 활동 목록 → 활동(`?activity=`) · 책 봄(`?area=reading`) · 리더보드(`?area=leaderboard`) · 관리자 설정(`?area=settings`) · 반 관리 · 출석 · 과일 바구니 |
 | `/dashboard` | 분석 리포트(교사 화면 이름은 관리자 대시보드) — `DASHBOARD.md` |
 | `/privacy` · `/terms` | 개인정보처리방침 · 이용약관 |

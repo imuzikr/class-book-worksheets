@@ -1,0 +1,22 @@
+# 책나눔 대문 그림
+
+대문(첫 화면 `/`)은 화면을 넷으로 나눕니다(선생님 요청 · 2026년 11월). **1분면(오른쪽 위)** 은 지금까지의 대문(상단 바 · 머리 제목 · 흰 카드 — `public/landing-reading.webp`)을 줄여 담은 칸이고, 나머지 세 칸에 이 폴더의 활동 장면이 섭니다 — **2분면(왼쪽 위) 책 광장 · 3분면(왼쪽 아래) 교실 · 4분면(오른쪽 아래) 개인 아지트**. 목록(이름 · 한 줄 설명 · 대체 글 · 크기)은 `lib/landingScenes.js`, 배치는 `app/styles/01-base-landing-footer.css`의 '대문'입니다.
+
+- `plaza.webp` · `plaza-800.webp` — 책 광장(1440 × 810 · 800 × 450). 분수 둘레에서 가상 친구 일곱이 펫과 거닐고, 둘은 이야기 중(머리 위 말풍선)이며, 가판대 · 책꽂이에 친구들의 책이 놓인 장면.
+- `classroom.webp` · `classroom-800.webp` — 교실(1440 × 810 · 800 × 450). 선생님이 칠판 앞에 서고, 학생 열다섯이 펫을 곁에 두고 제자리에 앉은 장면.
+- `hideout.webp` · `hideout-800.webp` — 개인 아지트(1440 × 954 · 800 × 530). 숲속 소품으로 꾸민 방에 학생 캐릭터가 서고 펫이 방석에서 쉬는 장면.
+- 그림마다 **두 벌**입니다 — 화면이 칸 폭에 맞는 쪽만 내려받습니다(`srcset` · 1440 × 900 화면의 한 칸은 800px 쪽). 큰 그림 약 80~160KiB, 작은 그림 약 40~70KiB(WebP 품질 80).
+- **실제 학생의 기록이 아닙니다** — 모두 체험반(데모 모드)의 가상 학생이고, 캐릭터 위 이름표 · 책상 이름표는 가리고 찍었습니다.
+
+## 다시 찍는 법
+
+광장 · 교실 · 아지트 · 캐릭터 · 펫의 그림이 바뀌면 대문의 장면이 옛 모습으로 남으니 다시 찍으세요. `tests/unit/landingArt.test.mjs`가 목록의 크기와 그림 파일 · 용량을 견줍니다.
+
+1. 체험반으로 개발 서버를 띄웁니다 — `NEXT_PUBLIC_FIREBASE_API_KEY=YOUR_API_KEY npx next dev`.
+2. 선생님으로 '관리자 설정'에서 **책 봄 성장 기능 → 책 광장(되묻는 창의 '켜기') → 교실 → 개인 아지트** 차례로 켭니다(선생님의 모든 반에 한 값이라 이 차례가 아니면 스위치가 잠겨 있습니다).
+3. 무대의 이름표 · 머리말 · 단추 · 안내를 가리는 CSS를 얹고 **무대 요소만** 찍습니다(Playwright `locator.screenshot`).
+   가린 것: `.plaza-hud` · `.plaza-hint` · `.plaza-live` · `.plaza-act` · `.plaza-roll` · `.plaza-avatar-name` · `.plaza-desk-name` · `.plaza-talk-ring` · `.plaza-marker` · `.plaza-mark` · `.hub-root` · `.class-move-banner` · `.hideout-walk-help` · `.hideout-walk-marker` · `.hideout-resident-name` · `nextjs-portal`.
+   - **책 광장** — 학생(30101 김민준)으로 책 광장 탭을 엽니다. 창은 무대가 지도와 같은 크기(1672 × 941)가 되게 상단바 높이만큼 더해 1672 × 1022로 열고 `.plaza-stage`를 찍습니다. 가상 친구가 계속 걸어 다니므로 몇 장 찍어 고르세요.
+   - **교실** — 선생님으로 책 광장을 열고 **'모두 교실로'** → 10초 카운트다운 뒤 학생 모두가 제자리에 앉은 교실을 같은 크기로 찍습니다.
+   - **개인 아지트** — 김민준(체험반에서 레벨이 가장 높은 6)의 방을 브라우저 저장소 `bookbom.reading.hideout.v2:bookbom_demo_student_01`에 `{ version: 2, revision: 1, layout }`(레벨 6까지 열리는 18가지 칸을 숲속 `-forest` 소품으로)으로 넣고, 교실의 **'나의 아지트로'** 포털로 들어가 `.hideout-scene`을 1.28배(원본 1536px 폭)로 찍습니다.
+4. 굽기 — `node scripts/prepare-landing-art.mjs <광장 PNG> <교실 PNG> <아지트 PNG>`(아지트는 무대의 둥근 모서리 · 테두리까지 찍혀 가장자리 12px을 걷습니다 — 다른 배율로 찍었으면 스크립트의 `trim`을 고치세요). 크기가 달라졌으면 `lib/landingScenes.js`의 `width` · `height`도 맞춥니다.
