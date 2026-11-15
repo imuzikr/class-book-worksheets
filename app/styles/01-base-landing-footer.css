@@ -415,8 +415,9 @@ html[data-auth-pending] .site-footer {
 /* 사진마다: 기울기(--tilt) · 겹침 차례(--z) · 마우스 따라 움직이는 깊이(--depth) · 들어올 때 도는 각(--spin) ·
    둥실의 빠르기(--bob) · 붙인 테이프의 색과 기울기. 자리(--x · --y · --w)는 무대 한 판일 때만(700px 이상) */
 /* 겹침 차례(--z): 겹친 자리에서 위쪽 사진이 앞 — 아래 사진의 윗가장자리(벽 · 천장)가 가려지고, 위 사진의 이름표와
-   교실 오른쪽의 '나의 아지트로' 포털은 늘 보이게(한때 차례대로 쌓았더니 교실이 책 광장의 이름표를 가렸음 · 실측) */
-.lp-shot--reading   { --tilt: -2.5deg; --z: 1; --depth: 0.5; --spin: -8deg; --bob: 7.5s; --tape: rgba(162, 205, 214, 0.75); --tape-tilt: 3deg; }
+   교실 오른쪽의 '나의 아지트로' 포털은 늘 보이게(한때 차례대로 쌓았더니 교실이 책 광장의 이름표를 가렸음 · 실측).
+   함께 책 읽는 일러스트는 맨 앞 — 선생님 요청으로 키워 책 광장의 왼쪽 끝을 살짝 덮습니다(친구들이 가리지 않게). */
+.lp-shot--reading   { --tilt: -2.5deg; --z: 5; --depth: 0.5; --spin: -8deg; --bob: 7.5s; --tape: rgba(162, 205, 214, 0.75); --tape-tilt: 3deg; }
 .lp-shot--plaza     { --tilt: 1.8deg;  --z: 4; --depth: 1;   --spin: 7deg;  --bob: 8.5s; --tape: rgba(242, 183, 140, 0.75); --tape-tilt: -4deg; }
 .lp-shot--classroom { --tilt: -1.8deg; --z: 3; --depth: 1.5; --spin: -6deg; --bob: 7s;   --tape: rgba(178, 212, 168, 0.8);  --tape-tilt: 2deg; }
 .lp-shot--hideout   { --tilt: 2.4deg;  --z: 2; --depth: 2;   --spin: 8deg;  --bob: 9s;   --tape: rgba(239, 203, 126, 0.72); --tape-tilt: -3deg; }
@@ -552,7 +553,7 @@ html[data-auth-pending] .site-footer {
   transform: translateY(-50%) scaleY(0.5) rotate(0deg);
   animation: lp-swirl 7s linear infinite;
 }
-.lp-portal--a { --px: 21%; --py: 29%; --pw: 17%; }
+.lp-portal--a { --px: 26%; --py: 31.5%; --pw: 16%; }
 .lp-portal--b { --px: 9%; --py: 89%; --pw: 18%; }
 
 /* ── 무대 한 판(700px 이상): 사진을 무대의 %로 놓고 겹칩니다. 글은 그 위(좁은 화면) 또는 왼쪽(넓은 화면) ── */
@@ -574,10 +575,10 @@ html[data-auth-pending] .site-footer {
     translate: calc(var(--mx, 0) * var(--depth, 1) * 12px) calc(var(--my, 0) * var(--depth, 1) * 9px);
     transition: translate 0.6s cubic-bezier(0.2, 0.7, 0.3, 1);
   }
-  .lp-shot--reading   { --x: 0%;  --y: 4%;  --w: 42%; --tilt: -4deg; }
-  .lp-shot--plaza     { --x: 41%; --y: 1%;  --w: 59%; --tilt: 2.2deg; }
+  .lp-shot--reading   { --x: 0%;  --y: 3%;  --w: 48%; --tilt: -3.5deg; }
+  .lp-shot--plaza     { --x: 46%; --y: 2%;  --w: 54%; --tilt: 2.2deg; }
   .lp-shot--classroom { --x: 3%;  --y: 41%; --w: 53%; --tilt: -2.4deg; }
-  .lp-shot--hideout   { --x: 51%; --y: 56%; --w: 45%; --tilt: 3deg; }
+  .lp-shot--hideout   { --x: 51%; --y: 53%; --w: 45%; --tilt: 3deg; }
   .lp-portal {
     display: block;
     translate: calc(var(--mx, 0) * 4px) calc(var(--my, 0) * 3px);
