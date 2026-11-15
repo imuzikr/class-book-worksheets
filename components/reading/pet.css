@@ -225,12 +225,68 @@
   .petpv-line { grid-template-columns:repeat(5, minmax(0, 1fr)); }
 }
 @media (max-width:480px) { .petpv-foot { bottom:-32px; margin:0 -14px -32px; padding:12px 14px 22px; } }
+/* 첫 만남(welcome)의 두 단추 — '신비한 알 받기' · '○○의 알 받기'. 이어 놓인 두 단추는 같은 크기(격자 두 칸),
+   768px 아래 .btn-primary의 min-height(44px)에 한쪽만 커지지 않게 높이를 함께 정합니다. */
+.petpv-actions { flex:0 1 400px; display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
+.petpv-actions > button { min-width:0; width:100%; height:42px; min-height:0; padding:0 12px; display:inline-flex; align-items:center;
+  justify-content:center; box-sizing:border-box; font-size:14px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.petpv-actions > .petpv-skip { color:var(--text); background:var(--neutral); border-color:transparent; }
+.petpv-actions > .petpv-skip:hover:not(:disabled) { background:var(--border); }
 @media (max-width:560px) {
   .petpv-hero { flex-direction:column; text-align:center; }
   .petpv-hero h4 { justify-content:center; }
   .petpv-kind { padding:6px 2px 5px; }
   .petpv-kind small { display:none; }
   .petpv-choose { flex:1 1 100%; }
+  .petpv-actions { flex:1 1 100%; }
+}
+/* ── 첫 만남의 큰 알(StudentWelcome.jsx — 참여 코드로 반에 막 들어온 학생 · 선생님 요청) ──
+   가운데 커다란 알(카드 쪽의 예전 알 egg.webp)이 처음에 톡 튀어나와 천천히 흔들리고, 뒤에 따뜻한 빛 · 반짝이.
+   알의 흔들림은 '애니메이션 줄이기' 기기에서도 그대로입니다(알의 몸짓 — 책 광장의 알 통통 뛰기와 같은 약속).
+   빛 · 반짝이(꾸밈)만 그 설정을 따릅니다. 받는 중에는 알이 옅게 숨 쉬고, 받으면 반짝이가 켜집니다. */
+.modal.pet-modal.pet-welcome { width:min(460px, 100%); max-width:460px; align-items:center; text-align:center; gap:10px; }
+.pet-welcome-stage { position:relative; width:min(270px, 100%); height:244px; display:flex; align-items:flex-end; justify-content:center; margin:4px 0 2px; }
+.pet-welcome-glow { position:absolute; left:50%; bottom:6px; width:240px; height:240px; margin-left:-120px; border-radius:50%;
+  background:radial-gradient(closest-side, #fff4dc 0%, #fde6c6 48%, rgba(253, 230, 198, 0) 100%); animation:pet-welcome-glow 3.4s ease-in-out infinite; }
+.pet-welcome-egg { position:relative; display:inline-flex; transform-origin:50% 92%;
+  animation:pet-welcome-pop .62s cubic-bezier(.2, 1.45, .4, 1) both, pet-welcome-wobble 3s ease-in-out 1s infinite; }
+.pet-welcome-stage:not(.is-ready) .pet-welcome-egg { animation:pet-welcome-pop .62s cubic-bezier(.2, 1.45, .4, 1) both, pet-welcome-breathe 1.6s ease-in-out .7s infinite; }
+.pet-welcome-stage.is-failed .pet-welcome-egg { animation:none; opacity:.55; filter:grayscale(.5); }
+.pet-welcome-spark { position:absolute; color:#efae5f; line-height:1; opacity:0; pointer-events:none; }
+.pet-welcome-spark.s1 { top:22px; left:20px; font-size:20px; }
+.pet-welcome-spark.s2 { top:52px; right:18px; font-size:14px; }
+.pet-welcome-spark.s3 { bottom:70px; left:8px; font-size:13px; }
+.pet-welcome-spark.s4 { bottom:104px; right:4px; font-size:22px; }
+.pet-welcome-stage.is-ready .pet-welcome-spark { animation:pet-welcome-twinkle 2.6s ease-in-out infinite; }
+.pet-welcome-stage.is-ready .pet-welcome-spark.s2 { animation-delay:.7s; }
+.pet-welcome-stage.is-ready .pet-welcome-spark.s3 { animation-delay:1.3s; }
+.pet-welcome-stage.is-ready .pet-welcome-spark.s4 { animation-delay:1.9s; }
+.pet-welcome h3 { margin:0; font-size:23px; color:var(--dark); text-wrap:balance; }
+.pet-welcome-lead { margin:0; font-size:15px; font-weight:600; color:var(--dark); line-height:1.6; word-break:keep-all; text-wrap:balance; }
+.pet-welcome-friend { margin:2px 0 0; padding:9px 13px; border-radius:12px; background:#fff3e8; color:#8a4f2a; font-size:12.5px; line-height:1.55; word-break:keep-all; }
+.pet-welcome-friend b { color:#7a3f1c; }
+.pet-welcome-how { margin:0; font-size:13px; color:var(--text-sub); line-height:1.6; word-break:keep-all; }
+.pet-welcome-note { margin:0; font-size:12px; color:var(--text-faint); line-height:1.55; word-break:keep-all; }
+.pet-welcome .modal-actions { width:100%; margin-top:10px; }
+.pet-welcome .modal-actions > button:disabled { opacity:.55; cursor:default; }
+@keyframes pet-welcome-pop { from { opacity:0; transform:translateY(18px) scale(.6); } to { opacity:1; transform:none; } }
+@keyframes pet-welcome-wobble {
+  0%, 62%, 100% { transform:rotate(0); }
+  68% { transform:rotate(-7deg); } 74% { transform:rotate(6deg); } 80% { transform:rotate(-4deg); } 86% { transform:rotate(2.5deg); } 92% { transform:rotate(-1deg); }
+}
+@keyframes pet-welcome-breathe { 0%, 100% { transform:scale(1); } 50% { transform:scale(1.035); } }
+@keyframes pet-welcome-glow { 0%, 100% { opacity:.75; transform:scale(.96); } 50% { opacity:1; transform:scale(1.04); } }
+@keyframes pet-welcome-twinkle { 0%, 100% { opacity:0; transform:scale(.6) rotate(0); } 45% { opacity:1; transform:scale(1.1) rotate(20deg); } 70% { opacity:.6; } }
+@media (prefers-reduced-motion: reduce) {
+  .pet-welcome-glow { animation:none; }
+  .pet-welcome-stage.is-ready .pet-welcome-spark { animation:none; opacity:.85; }
+}
+@media (max-width:480px) {
+  .pet-welcome-stage { height:204px; }
+  .pet-welcome-glow { width:200px; height:200px; margin-left:-100px; }
+  /* PetFigure는 크기를 인라인으로 적어, 좁은 화면에서는 그 상자만 줄입니다(그림은 상자를 따라감) */
+  .pet-welcome-egg .pet-figure { width:172px !important; height:172px !important; }
+  .pet-welcome h3 { font-size:21px; }
 }
 /* 책나눔 '나의 펫' 카드 옆의 '펫 고르기'(펫 미리보기를 켠 반) · 자세히 보기의 미리보기 칸 */
 .reading-pet-pick { padding:7px 11px; font-size:12.5px; white-space:nowrap; }

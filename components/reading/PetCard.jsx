@@ -35,6 +35,7 @@ import { getExpForReadingLevel, kstToday } from "@/lib/reading";
 import { PET_HATCH_XP, PET_STAGES, petCheerKind, petProgress, petSpecies } from "@/lib/readingPet";
 import { CARE_DAY_DROP, CARE_FRUIT, CARE_MAX, CARE_READ_CHARS, CARE_READ_PAGES, CARE_RETURN, CARE_STEP_FRUIT, careStatus } from "@/lib/petCare";
 import { iGa } from "@/lib/korean";
+import { welcomePending } from "@/lib/readingWelcome";
 import { backdropClose } from "@/lib/modal";
 import RewardCelebration from "@/components/RewardCelebration";
 import { flyFruits } from "@/components/fruitFly";
@@ -154,10 +155,12 @@ export default function PetCard({ classId, uid, growthXp, level = null, onLevelC
     return subscribeMyReadingPet(uid, setState);
   }, [uid]);
 
-  // 알이 아직 없으면 받습니다(서버에서 확인된 답일 때만 — 기기에 남은 옛 값으로 보내지 않게)
+  // 알이 아직 없으면 받습니다(서버에서 확인된 답일 때만 — 기기에 남은 옛 값으로 보내지 않게).
+  // 참여 코드로 막 들어온 학생의 첫 만남이 진행 중이면 그쪽이 줍니다(펫 미리보기를 켠 반은 고른 친구의 알 — lib/readingWelcome.js).
   const needsEgg = state.loaded && !state.failed && !state.fromCache && !state.mirror;
   useEffect(() => {
     if (!needsEgg || !classId || !uid) return;
+    if (welcomePending(uid, classId)) return;
     let live = true;
     setAdoptFailed(false);
     ensureReadingPet(classId, uid).catch(() => { if (live) setAdoptFailed(true); });

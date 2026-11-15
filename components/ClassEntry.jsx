@@ -5,12 +5,15 @@
 // -------------------------------------------------------------
 // 교사가 미리 만들어 둔 반의 참여 코드를 입력하면 그 반에 소속됩니다.
 // 코드가 맞는지는 보안 규칙이 서버에서 다시 확인합니다(joinClassWithCode).
+// 들어오면 이 기기에 '첫 만남' 표시를 남깁니다 — 상단바가 캐릭터 고르기 → 책 친구 알 → 큰 알 화면을 차례로 띄웁니다
+// (lib/readingWelcome.js · components/reading/StudentWelcome.jsx · 선생님 요청). 반이 쓰지 않는 것은 건너뜁니다.
 // =============================================================
 import { useEffect, useState } from "react";
 import { becomeTeacherWithCode, joinClassWithCode } from "@/lib/store";
 import { setSelectedClassId } from "@/lib/classroom";
 import { getCurrentUser } from "@/lib/user";
 import { isFirebaseConfigured } from "@/lib/firebase";
+import { clearWelcome, startWelcome } from "@/lib/readingWelcome";
 
 function messageOf(res) {
   switch (res.reason) {
@@ -87,12 +90,18 @@ export default function ClassEntry() {
     setChecking(true);
     setError("");
     try {
-      const res = await joinClassWithCode(code, getCurrentUser());
+      const me = getCurrentUser();
+      let started = false;
+      // 소속을 쓰기 바로 앞에 첫 만남 표시를 남깁니다(그 뒤 곧바로 상단바가 반을 알게 되므로)
+      const res = await joinClassWithCode(code, me, {
+        beforeJoin: (classId) => { started = startWelcome(me?.uid, classId); },
+      });
       if (res.ok) {
         // 소속은 서버에 기록됐습니다 — 기기를 바꿔도 로그인하면 그대로 입장.
         setSelectedClassId(res.classId);
         return;
       }
+      if (started) clearWelcome(me?.uid);
       setError(messageOf(res));
     } finally {
       setChecking(false);
