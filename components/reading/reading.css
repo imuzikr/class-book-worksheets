@@ -253,6 +253,8 @@
 .reading-selected-book>div:last-child { display:flex; flex-direction:column; align-items:flex-start; justify-content:center; min-width:0; gap:5px; }
 .reading-selected-book strong { font-size:12px; color:#4f6a45; }
 .reading-selected-book span { font-size:10px; color:#88977b; overflow-wrap:anywhere; }
+/* 검색으로 고른 뒤 제목이 다른 책 제목이 되었을 때 — 검색 정보는 지우지 않고 '해제'를 권합니다(BookForm의 titleDrift) */
+.reading-selected-drift { margin:0; font-size:11px; line-height:1.5; color:#9a6a2f; word-break:keep-all; }
 .reading-search-pages-help { margin:0; padding:10px 12px; border:1px solid #e1d6b7; border-radius:8px; color:#897347; background:#fffbf0; font-size:12px; line-height:1.65; }
 .reading-book-cover.reading-book-cover--image { padding:0; overflow:hidden; background:#eef0e9; }
 .reading-book-cover--image>img { display:block; width:100%; height:100%; object-fit:cover; }

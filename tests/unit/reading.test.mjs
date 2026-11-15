@@ -366,6 +366,19 @@ test("새 반은 운영 중인 반의 독서 맵을 따르고 보관된 반·혼
   assert.equal(featuresForNewClass([{ archived: true, readingMapTheme: "continent" }]), null);
 });
 
+test("책 등록 창 — 제목이 검색한 책과 다른 책이 되었나(bookTitleDrifted): 띄어쓰기 · 문장 부호 · 대소문자만 다르면 같은 책", async () => {
+  const { bookTitleDrifted } = await import("@/lib/reading");
+  const picked = "뱅크시, 아무 데나 낙서해도 돼?";
+  assert.equal(bookTitleDrifted(picked, picked), false);
+  assert.equal(bookTitleDrifted("뱅크시 아무데나 낙서해도 돼", picked), false); // 쉼표 · 물음표 · 띄어쓰기만 다름
+  assert.equal(bookTitleDrifted("  뱅크시, 아무 데나 낙서해도 돼?  ", picked), false);
+  assert.equal(bookTitleDrifted("Harry Potter", "harry potter!"), false); // 대소문자
+  assert.equal(bookTitleDrifted("어린 왕자", picked), true); // 다른 책
+  assert.equal(bookTitleDrifted("", picked), true); // 지우고 새로 적는 중
+  assert.equal(bookTitleDrifted("어린 왕자", ""), false); // 검색 정보가 없으면 늘 거짓
+  assert.equal(bookTitleDrifted("어린 왕자", null), false);
+});
+
 test("책방 스위치(bookActivitiesOn) — 값이 없으면 켜짐 · 끈 것만 꺼짐 · 책 봄과 무관(선생님 요청)", async () => {
   const { bookActivitiesOn, teacherFeatureSettings, featuresForNewClass, TEACHER_FEATURES } = await import("@/lib/reading");
   assert.equal(TEACHER_FEATURES[0], "bookActivitiesEnabled"); // 관리자 설정의 맨 앞 스위치

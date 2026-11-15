@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { deriveReading, initialReadingState, kstToday, READING_BADGES } from "@/lib/reading";
+import { bookTitleDrifted, deriveReading, initialReadingState, kstToday, READING_BADGES } from "@/lib/reading";
 import { subscribeReadingState, mutateReading, fetchReadingRankings } from "@/lib/data/reading";
 import { rankingAsOf, rankingsForPeriod } from "@/lib/readingJourney";
 import { petGrowthOfSummary } from "@/lib/readingPet";
@@ -456,20 +456,29 @@ function BookForm({ book, searchOn = false, activityPick = true, pagesLocked, ac
   const [searching, setSearching] = useState(false);
   const [form, setForm] = useState({ title: book?.title || "", author: book?.author || "", totalPages: book?.totalPages || "", status: book?.status === "paused" ? "paused" : "reading", activityId: book?.activityId || "", publisher: book?.publisher || "", isbn: book?.isbn || "", coverImage: book?.coverImage || "", bookLink: book?.bookLink || "" });
   const [selectedSearch, setSelectedSearch] = useState(false);
+  // 표지 · ISBN과 함께 온 제목(검색에서 고른 책 · 이미 저장된 책) — 지금 제목이 다른 책 제목이 되면 '검색 정보 해제' 안내
+  // (lib/reading.js의 bookTitleDrifted). 고른 검색 결과에 지은이가 없었는가 — 카카오가 지은이를 주지 않는 책은 직접 적습니다.
+  const [metaTitle, setMetaTitle] = useState(book?.title || "");
+  const [searchNoAuthor, setSearchNoAuthor] = useState(false);
   const titleRef = useRef(null);
+  const authorRef = useRef(null);
   const pagesRef = useRef(null);
   const hasMetadata = !!(form.publisher || form.isbn || form.coverImage || form.bookLink);
+  const titleDrift = hasMetadata && bookTitleDrifted(form.title, metaTitle);
+  // 제목 · 지은이를 고쳐도 검색 정보(출판사 · ISBN · 표지 · 링크)는 그대로 둡니다(선생님 신고 — 한때 한 글자만 고쳐도 모두 지워져,
+  // 지은이 없이 온 책은 지은이를 적는 순간 표지가 사라졌습니다). 다른 책이면 '검색 정보 해제'로 지웁니다(제목이 달라지면 안내).
   function change(key, value) {
-    if (key === "title" || key === "author") {
-      setSelectedSearch(false);
-      setForm((p) => ({ ...p, [key]: value, publisher: "", isbn: "", coverImage: "", bookLink: "" }));
-    } else setForm((p) => ({ ...p, [key]: value }));
+    setForm((p) => ({ ...p, [key]: value }));
   }
   function selectSearch(result) {
     setForm((p) => ({ ...p, title: result.title || "", author: result.author || "", totalPages: "",
       publisher: result.publisher || "", isbn: result.isbn || "", coverImage: result.coverImage || "", bookLink: result.link || "" }));
     setSelectedSearch(true);
-    requestAnimationFrame(() => pagesRef.current?.focus());
+    setMetaTitle(result.title || "");
+    const noAuthor = !String(result.author || "").trim();
+    setSearchNoAuthor(noAuthor);
+    // 지은이가 비어 왔으면 지은이 칸으로(채워야 담을 수 있음), 아니면 쪽수 칸으로
+    requestAnimationFrame(() => (noAuthor ? authorRef : pagesRef).current?.focus());
   }
   return <Modal title={book ? "책 정보 고치기" : "새 책 등록"} onClose={onClose} busy={busy}>
     {!book && searchOn && (searching
@@ -481,14 +490,15 @@ function BookForm({ book, searchOn = false, activityPick = true, pagesLocked, ac
     {hasMetadata && <div className="reading-selected-book">
       <BookCover book={form} />
       <div><strong>{selectedSearch ? "검색에서 선택한 책" : "도서 정보"}</strong>{form.publisher && <span>{form.publisher}</span>}{form.isbn && <span>ISBN {form.isbn}</span>}
-        <button type="button" className="reading-search-manual" disabled={busy} onClick={() => { setForm((p) => ({ ...p, publisher: "", isbn: "", coverImage: "", bookLink: "" })); setSelectedSearch(false); }}>검색 정보 해제</button>
+        {titleDrift && <p className="reading-selected-drift" role="status">제목이 바뀌었어요. 다른 책이면 ‘검색 정보 해제’를 눌러 표지와 ISBN을 지워 주세요.</p>}
+        <button type="button" className="reading-search-manual" disabled={busy} onClick={() => { setForm((p) => ({ ...p, publisher: "", isbn: "", coverImage: "", bookLink: "" })); setSelectedSearch(false); setSearchNoAuthor(false); }}>검색 정보 해제</button>
       </div>
     </div>}
     <form className="reading-form" onSubmit={(e) => { e.preventDefault(); onSave({ ...form, title: form.title.trim(), author: form.author.trim(), totalPages: Number(form.totalPages) }); }}>
       <label>책 제목<input ref={titleRef} data-initial-focus={book ? true : undefined} required maxLength={150} value={form.title} onChange={(e) => change("title", e.target.value)} placeholder="책 제목을 적어 주세요" disabled={busy} /></label>
-      <label>지은이<input required maxLength={100} value={form.author} onChange={(e) => change("author", e.target.value)} placeholder="저자 이름" disabled={busy} /></label>
+      <label>지은이<input ref={authorRef} required maxLength={100} value={form.author} onChange={(e) => change("author", e.target.value)} placeholder="저자 이름" disabled={busy} /></label>
       <div className="reading-form-row"><label>전체 쪽수<input ref={pagesRef} required type="number" min={1} max={100000} step={1} disabled={pagesLocked || busy} value={form.totalPages} onChange={(e) => change("totalPages", e.target.value)} inputMode="numeric" /></label>{book && <label>읽기 상태<select value={form.status} onChange={(e) => change("status", e.target.value)} disabled={busy}><option value="reading">읽는 중</option><option value="paused">잠시 멈춤</option></select></label>}</div>
-      {selectedSearch && <p className="reading-search-pages-help" role="status">검색 결과에 쪽수가 없어 직접 입력해 주세요.</p>}
+      {selectedSearch && <p className="reading-search-pages-help" role="status">{searchNoAuthor ? "검색 결과에 지은이와 쪽수가 없어 직접 입력해 주세요." : "검색 결과에 쪽수가 없어 직접 입력해 주세요."}</p>}
       {pagesLocked && <p className="reading-help">독서 발자국이나 ‘한 권의 책’이 있는 책의 전체 쪽수는 고정돼요. 잘못 입력한 기록은 먼저 정정해 주세요.</p>}
       {activityPick && <label>함께할 독서 활동 <span className="reading-optional">선택</span><select value={form.activityId} onChange={(e) => change("activityId", e.target.value)} disabled={busy}><option value="">연결하지 않음</option>{form.activityId && !activities.some((a) => a.id === form.activityId) && <option value={form.activityId}>이전에 연결한 활동</option>}{activities.filter((a) => !a.deleted).map((a) => <option key={a.id} value={a.id}>{a.title}</option>)}</select></label>}
       <p className="reading-help">완독 여부는 읽은 페이지 기록으로 확인해요. 같은 책은 중복으로 등록할 수 없어요.</p>
