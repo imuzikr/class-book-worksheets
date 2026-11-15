@@ -205,8 +205,16 @@
 .reading-log-date { display:flex; align-items:center; justify-content:space-between; gap:12px; color:#7b8e70; font-size:11px; }
 .reading-log-date strong { color:#47603f; font-weight:700; }
 .reading-log-list li>p { margin:10px 0; color:#59704f; font-size:13px; line-height:1.85; white-space:pre-wrap; overflow-wrap:anywhere; }
-.reading-log-tools { display:flex; justify-content:flex-end; gap:6px; }
-.reading-log-tools .btn-ghost { font-size:11px; padding:6px 8px; }
+/* 한 기록 아래 '고쳐쓰기 · 삭제'(선생님 요청 · 2026년 11월 — 한때 '고치기'(테두리만) · '삭제'(흰 바탕에 붉은 테두리)였음).
+   두 단추는 같은 크기(격자 두 칸 · 높이 38px · 테두리 1px)이고 바탕색으로만 가릅니다 — 고쳐쓰기는 연한 초록,
+   삭제는 연한 살구(--primary-light · 글자 진한 살구). 앱 공용 단추(.btn-ghost)의 마우스 올림 색에 안 섞이게 제 이름을 씁니다. */
+.reading-log-tools { display:grid; grid-template-columns:repeat(2, 96px); justify-content:end; gap:8px; margin-top:6px; }
+.reading-log-tools > button { height:38px; min-height:0; padding:0 12px; border:1px solid; border-radius:var(--radius-btn); font:inherit; font-size:13.5px; font-weight:600; line-height:1; display:inline-flex; align-items:center; justify-content:center; white-space:nowrap; box-sizing:border-box; cursor:pointer; }
+.reading-log-tools .reading-log-edit { background:#e4f1dc; border-color:#c6dcb9; color:#35603e; }
+.reading-log-tools .reading-log-edit:hover:not(:disabled) { background:#d7eacc; }
+.reading-log-tools .reading-log-delete { background:var(--primary-light); border-color:#efd3c5; color:var(--primary-dark); }
+.reading-log-tools .reading-log-delete:hover:not(:disabled) { background:#f4dfd3; }
+.reading-log-tools > button:disabled { opacity:.5; cursor:not-allowed; }
 .reading-tier-guide { display:flex; flex-wrap:wrap; gap:12px 24px; padding:14px 18px; background:#f1f4ee; border:1px solid #e0e7db; border-radius:10px; margin-bottom:20px; }
 .reading-tier-guide>span { display:flex; align-items:center; gap:8px; color:#889281; font-size:10px; }
 .reading-tier-guide strong { font-size:11px; color:#607357; }
@@ -415,18 +423,13 @@
    앱의 다른 단추처럼 글자 13.5px · 높이 38px로 맞춥니다. 위 규칙들보다 뒤에 와야 이깁니다. */
 .reading-detail-tools .btn-ghost, .reading-detail-tools .btn-primary, .reading-linked-activity button,
 .reading-detail-section>header button,
-.reading-log-tools .btn-ghost, .reading-log-tools .reading-text-danger,
 .reading-review .reading-text-danger {
   height:38px; min-height:0; padding:0 16px; font-size:13.5px; font-weight:600;
   display:inline-flex; align-items:center; justify-content:center; white-space:nowrap; box-sizing:border-box;
 }
-/* '삭제'는 글자만 있어 누를 자리로 안 보였습니다 — 옅은 붉은 테두리 단추로 */
-.reading-log-tools .reading-text-danger,
+/* '삭제'는 글자만 있어 누를 자리로 안 보였습니다 — 옅은 붉은 테두리 단추로(독서의 발자취의 두 단추는 위 '.reading-log-tools'가 따로 정함) */
 .reading-review .reading-text-danger { border:1px solid #e8cbc1; border-radius:var(--radius-btn); background:#fff; }
-.reading-log-tools .reading-text-danger:hover:not(:disabled),
 .reading-review .reading-text-danger:hover:not(:disabled) { background:#fbf1ed; }
-.reading-log-tools { gap:8px; margin-top:6px; }
-.reading-log-tools > button { width:80px; flex:0 0 80px; }
 .reading-review .reading-text-danger { margin-top:10px; }
 .reading-detail-tools { gap:8px; }
 
