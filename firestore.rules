@@ -580,8 +580,10 @@ service cloud.firestore {
       // 설정까지 받았습니다. 시험 tests/rules/classesRead.test.mjs.
       allow list: if isAdmin() || (isTeacher() && resource.data.createdBy == uid());
       // 새 반은 기본 꺼짐. 켜기는 운영 중인 반의 담당 교사/관리자만 합니다.
-      // 관리자 설정 화면의 스위치(책 봄 성장 · 도서 검색 · 리더보드(rankingEnabled) · 독서 TOP 3 ·
+      // 관리자 설정 화면의 스위치(책방 · 책 봄 성장 · 도서 검색 · 리더보드(rankingEnabled) · 독서 TOP 3 ·
       // 학생 캐릭터 · 과일 바구니 · 학생 펫 · 펫 미리보기 · 펫 먹이 · 책 광장 · 교실 · 광장 대화 · 개인 아지트)도 같은 판정 — 참·거짓만, 운영 중인 반에서만 바꿉니다.
+      // 책방(bookActivitiesEnabled — 값이 없으면 켜짐)을 끈 반에서 학생의 활동 목록 · 활동을 가리는 것은 화면입니다(lib/reading.js의
+      // bookActivitiesOn · app/books/page.js — 과일 바구니와 같음). 여기서는 스위치의 모양만 보고, 활동의 읽기 · 쓰기 규칙은 그대로입니다.
       // 광장 대화(plazaTalkEnabled)의 요청 · 말은 Firestore가 아니라 Realtime Database에 있습니다(database.rules.json —
       // 대화에 사람을 넣는 일과 선생님의 기록 읽기는 서버만 · /api/reading/plaza). 여기서는 스위치의 모양만 봅니다.
       // 펫 미리보기(petPreviewEnabled)를 켠 반의 학생이 고르는 펫은 서버만 적습니다(/api/reading/pet — 프로필의 readingPet ·
@@ -609,6 +611,7 @@ service cloud.firestore {
       // 못 바꿈'의 목록에 넣지 않습니다(값은 서버 시각 · 저장된 값뿐이라 보관된 반에서 고쳐도 셈이 꾸며지지 않음).
       function classSettingsShapeOk(d, keys) {
         return (!keys.hasAny(['readingEnabled']) || d.get('readingEnabled', null) is bool)
+               && (!keys.hasAny(['bookActivitiesEnabled']) || d.get('bookActivitiesEnabled', null) is bool)
                && (!keys.hasAny(['rankingEnabled']) || d.get('rankingEnabled', null) is bool)
                && (!keys.hasAny(['characterEnabled']) || d.get('characterEnabled', null) is bool)
                && (!keys.hasAny(['bookSearchEnabled']) || d.get('bookSearchEnabled', null) is bool)
@@ -662,7 +665,7 @@ service cloud.firestore {
         let changed = request.resource.data.diff(resource.data).affectedKeys();
         return classSettingsShapeOk(request.resource.data, changed)
                && petFeedPauseFlowOk(changed)
-               && (!changed.hasAny(['readingEnabled', 'rankingEnabled', 'characterEnabled', 'bookSearchEnabled', 'fruitBasketEnabled', 'petEnabled', 'readingTopEnabled', 'plazaEnabled', 'plazaTalkEnabled', 'classroomEnabled', 'hideoutEnabled', 'classroomCallAt', 'readingMapTheme',
+               && (!changed.hasAny(['bookActivitiesEnabled', 'readingEnabled', 'rankingEnabled', 'characterEnabled', 'bookSearchEnabled', 'fruitBasketEnabled', 'petEnabled', 'readingTopEnabled', 'plazaEnabled', 'plazaTalkEnabled', 'classroomEnabled', 'hideoutEnabled', 'classroomCallAt', 'readingMapTheme',
                                     'petFeedEnabled', 'petRestWeekend', 'petRests', 'petPreviewEnabled'])
                    || (resource.data.get('archived', false) != true
                        && request.resource.data.get('archived', false) != true));

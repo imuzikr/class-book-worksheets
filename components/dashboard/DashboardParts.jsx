@@ -98,20 +98,22 @@ export function ReflectionAnswers({ answers }) {
   return <dl className="bb-dash-kwls-answers">{kwlsLabels.map(([key, letter, label]) => <div key={key}><dt><b>{letter}</b>{label}</dt><dd>{answers?.[key] || <span className="bb-dash-muted">아직 기록하지 않았어요.</span>}</dd></div>)}</dl>;
 }
 
-export function Reflections({ data, teacher, countUnit = teacher ? "명" : "건" }) {
+// openable — 그 반의 책방이 학생에게 열려 있는가(관리자 설정 · lib/reading.js의 bookActivitiesOn). 꺼 둔 반의 학생 리포트에서는
+// 활동으로 가는 링크('원래 활동 열기' · '활동에서 보기' · '활동 열기')를 걷습니다 — 기록은 그대로 보입니다(책방 화면이 활동을 열지 않음).
+export function Reflections({ data, teacher, countUnit = teacher ? "명" : "건", openable = true }) {
   const records = asArray(data?.records);
   return <Section title={teacher ? "생각의 기록 · KWLS" : "나의 생각 모음 · KWLS"} note="처음 기록한 날짜로 기간을 나누며, 내용은 현재 저장된 기록을 보여줍니다.">
     <div className="bb-dash-kwls-counts">{kwlsLabels.map(([key, letter, label]) => <div key={key}><b>{letter}</b><span>{label}</span><strong>{fmt(data?.counts?.[key])}<small>{countUnit}</small></strong></div>)}</div>
     {records.length ? <div className="bb-dash-record-list">{records.map((record) => <details className="bb-dash-record" key={record.id}><summary><span>{teacher && <b>{record.studentId} {record.name}</b>}<strong>{record.activityTitle || "KWLS로 성찰하기"}</strong><small>{fullDate(record.date)}</small></span><span className="bb-dash-record-caret" aria-hidden="true">⌄</span></summary>
-      <ReflectionAnswers answers={record.answers} /><Link className="bb-dash-text-link" href={record.href}>원래 활동 열기 →</Link></details>)}</div> : <Empty>이 기간에 처음 작성한 KWLS 기록이 없습니다.</Empty>}
+      <ReflectionAnswers answers={record.answers} />{openable && <Link className="bb-dash-text-link" href={record.href}>원래 활동 열기 →</Link>}</details>)}</div> : <Empty>이 기간에 처음 작성한 KWLS 기록이 없습니다.</Empty>}
     {records.some((record) => !record.date) && <p className="bb-dash-footnote">작성일을 알 수 없는 이전 기록은 날짜별 집계에 포함하지 않습니다.</p>}
   </Section>;
 }
 
-export function Feedback({ rows, teacher, note }) {
-  return <Section title={teacher ? "함께 나눈 피드백" : "내가 받은 피드백"} note={note || (teacher ? "선택한 활동에서 실제로 주고받은 답글과 동료평가입니다." : "선생님과 친구가 남긴 말을 원래 활동에서 다시 살펴보세요.")}>
+export function Feedback({ rows, teacher, note, openable = true }) {
+  return <Section title={teacher ? "함께 나눈 피드백" : "내가 받은 피드백"} note={note || (teacher ? "선택한 활동에서 실제로 주고받은 답글과 동료평가입니다." : openable ? "선생님과 친구가 남긴 말을 원래 활동에서 다시 살펴보세요." : "선생님과 친구가 남긴 말이에요.")}>
     {rows.length ? <div className="bb-dash-feedback-list">{rows.map((item) => <article key={item.id} className="bb-dash-feedback"><div><span className={"bb-dash-feedback-kind" + (item.kind === "teacher" ? " is-teacher" : "")}>{item.kind === "teacher" ? "선생님 한마디" : "친구의 피드백"}</span><time>{shortDate(item.date)}</time></div>
-      <h3>{teacher && item.name ? item.name + " · " : ""}{item.activityTitle}</h3><p>{item.text}</p><Link className="bb-dash-text-link" href={item.href}>활동에서 보기 →</Link></article>)}</div> : <Empty>아직 표시할 피드백이 없습니다.</Empty>}
+      <h3>{teacher && item.name ? item.name + " · " : ""}{item.activityTitle}</h3><p>{item.text}</p>{openable && <Link className="bb-dash-text-link" href={item.href}>활동에서 보기 →</Link>}</article>)}</div> : <Empty>아직 표시할 피드백이 없습니다.</Empty>}
   </Section>;
 }
 
@@ -174,9 +176,9 @@ export function PersonalGrowth({ personal }) {
   </Section>;
 }
 
-export function StudentPortfolio({ activities, title = "나의 독서 활동 모음" }) {
+export function StudentPortfolio({ activities, title = "나의 독서 활동 모음", openable = true }) {
   return <Section title={title} note="진행 상태는 현재 저장된 내용을 기준으로 합니다.">
-    {activities.length ? <div className="bb-dash-portfolio">{activities.map((activity) => <article key={activity.id}><div><span className="bb-dash-type">{activity.label}</span><span className={"bb-dash-state is-" + activity.state}>{activity.labelStatus || stateLabels[activity.state]}</span></div><h3>{activity.title}</h3>{activity.preview && <p>{activity.preview}</p>}<Link className="bb-dash-text-link" href={activity.href}>활동 열기 →</Link></article>)}</div> : <Empty>아직 이 반에 독서 활동이 없습니다.</Empty>}
+    {activities.length ? <div className="bb-dash-portfolio">{activities.map((activity) => <article key={activity.id}><div><span className="bb-dash-type">{activity.label}</span><span className={"bb-dash-state is-" + activity.state}>{activity.labelStatus || stateLabels[activity.state]}</span></div><h3>{activity.title}</h3>{activity.preview && <p>{activity.preview}</p>}{openable && <Link className="bb-dash-text-link" href={activity.href}>활동 열기 →</Link>}</article>)}</div> : <Empty>아직 이 반에 독서 활동이 없습니다.</Empty>}
   </Section>;
 }
 

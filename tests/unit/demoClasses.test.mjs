@@ -190,6 +190,22 @@ test("관리자 설정 — 독서 TOP 3 · 학생 펫을 끈 값도 새로고침
   assert.equal(readDemoClasses(afterReload), null);
 });
 
+test("관리자 설정 — 책방을 끈 값도 새로고침 뒤 그대로(값이 없으면 켜짐이라 끈 것만 남김)", () => {
+  const storage = memoryStorage();
+  writeDemoClasses([
+    classroom("class1", { bookActivitiesEnabled: false }),
+    classroom("class2", { bookActivitiesEnabled: true, order: 1 }),
+  ], storage);
+  const afterReload = memoryStorage();
+  afterReload.setItem(DEMO_CLASSES_KEY, storage.getItem(DEMO_CLASSES_KEY));
+  const [one, two] = readDemoClasses(afterReload);
+  assert.equal(one.bookActivitiesEnabled, false);
+  assert.equal(Object.hasOwn(two, "bookActivitiesEnabled"), false); // 켠 것(기본값)은 적지 않음
+  // 참 · 거짓이 아닌 값은 그 반을 통째로 버림(다른 스위치와 같음)
+  seed(afterReload, [classroom("class3", { bookActivitiesEnabled: "false" })]);
+  assert.equal(readDemoClasses(afterReload), null);
+});
+
 test("독서 맵 선택은 두 지도 모두 직렬화·새로고침 후 유지하고 다른 반 설정을 바꾸지 않음", () => {
   const storage = memoryStorage();
   writeDemoClasses([

@@ -10,7 +10,7 @@ import SuspendedScreen, { isSuspendedUser } from "@/components/SuspendedScreen";
 import { isFirebaseConfigured } from "@/lib/firebase";
 import { subscribeClasses, subscribeMyMemberships } from "@/lib/store";
 import { getSelectedClassId, setSelectedClassId } from "@/lib/classroom";
-import { kstToday } from "@/lib/reading";
+import { bookActivitiesOn, kstToday } from "@/lib/reading";
 import { fetchDashboard } from "@/lib/data/dashboard";
 import TeacherReportShell from "./TeacherReportShell";
 import StudentProfileDialog from "./StudentProfileDialog";
@@ -116,6 +116,9 @@ function DashboardSession({ user }) {
   const classroom = allowedClasses.find((item) => item.id === classId) || null;
   const semesterReady = !!(classroom?.dashboardSemesterStart && classroom?.dashboardSemesterEnd);
   const readingEnabled = classroom?.readingEnabled === true;
+  // 책방(관리자 설정 — 값이 없으면 켜짐) — 끈 반의 학생에게는 상단바 '책방'과 리포트 속 활동 링크 · '이어서 해 볼 일'의 활동을
+  // 세우지 않습니다(책방 화면이 활동을 열지 않음 · 기록은 그대로 보임). 선생님 화면은 그대로입니다(lib/reading.js의 bookActivitiesOn).
+  const booksOpen = bookActivitiesOn(classroom);
   const selectedActivity = activityChoice?.classId === classId ? activityChoice.id : "";
   const customReady = period !== "custom" || !!(start && end && start <= end && end <= today);
   const semesterMissing = period === "semester" && !semesterReady;
@@ -194,18 +197,19 @@ function DashboardSession({ user }) {
       <Feedback rows={asArray(data.feedback)} teacher />
     </> : <>
       {reading && <div className="bb-dash-metrics is-four"><Metric label="읽은 쪽수" value={readingSummary?.pages} unit="쪽" previous={reading.previous?.pages} /><Metric label="독서한 날짜" value={readingSummary?.days} unit="일" previous={reading.previous?.days} /><Metric label="완독 기록" value={readingSummary?.completed} unit="건" previous={reading.previous?.completed} /><Metric label="감상문" value={readingSummary?.reviews} unit="건" previous={reading.previous?.reviews} /></div>}
-      <NextActions activities={asArray(data.studentActivities)} personal={reading?.personal} />
+      <NextActions activities={booksOpen ? asArray(data.studentActivities) : []} personal={reading?.personal} />
       {reading && <Calendar days={asArray(reading.daily)} onSelectDay={(day) => setDayChoice({ key: report.key, date: day.date })} />}
       {reading?.personal && <PersonalGrowth personal={reading.personal} />}
-      <div className="bb-dash-two-columns bb-dash-align-start"><Reflections data={reflections} /><Feedback rows={asArray(data.feedback)} /></div>
-      <StudentPortfolio activities={asArray(data.studentActivities)} />
+      <div className="bb-dash-two-columns bb-dash-align-start"><Reflections data={reflections} openable={booksOpen} /><Feedback rows={asArray(data.feedback)} openable={booksOpen} /></div>
+      <StudentPortfolio activities={asArray(data.studentActivities)} openable={booksOpen} />
     </>}
     {(!teacher || tab === "class") && !readingEnabled && <p className="bb-dash-feature-off">이 반은 책 봄을 사용하지 않아 책방의 독서 활동 기록을 보여줍니다.</p>}
     <footer className="bb-dash-footer"><span>독서 기록을 고치면 집계도 함께 달라집니다.</span>{data.generatedAt && <span>최근 조회 {new Date(data.generatedAt).toLocaleTimeString("ko-KR", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit" })}</span>}</footer>
   </>;
 
   return <div className="bb-dashboard-shell">
-    <TopNav key={user.uid} active="dashboard" growthEnabled={readingEnabled} />
+    {/* 반을 받기 전(ready 전)에는 학생의 '책방' 단추를 세우지 않습니다 — 꺼 둔 반에서 섰다 사라지지 않게 */}
+    <TopNav key={user.uid} active="dashboard" growthEnabled={readingEnabled} booksOn={teacher || (ready && booksOpen)} />
     <main className="bb-dashboard-main">
       <header className="bb-dashboard-heading"><div><h1>{teacher ? "관리자 대시보드" : "나의 독서 기록"}</h1><p>{teacher ? "학생·학급·전체의 독서 활동을 함께 살펴봅니다." : user.realName + "의 독서 활동과 읽어 온 시간을 살펴봅니다."}</p></div><button type="button" className="bb-dash-secondary" onClick={() => setRefresh((value) => value + 1)} disabled={!ready || report.loading || (!teacher && !classId)}>새로고침</button></header>
       {notice && <p className="bb-dash-notice bb-dash-withdraw-notice" role="status">{notice}</p>}

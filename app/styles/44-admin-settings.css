@@ -16,6 +16,8 @@
 /* keep-all — '캐릭터와 펫'이 '캐 / 릭터와 펫'처럼 낱말 가운데서 쪼개지지 않게 */
 .adm-group-head span { font-size: 12px; color: var(--text-faint); line-height: 1.45; word-break: keep-all; }
 .adm-features { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+/* 카드가 하나뿐인 묶음(맨 위 '독서 활동' — 책방)은 그 카드가 줄을 다 씁니다(반쪽만 서면 옆이 빈 자리로 보임) */
+.adm-group--1 .adm-features { grid-template-columns: minmax(0, 1fr); }
 /* 접는 기준은 창이 아니라 설정 칸의 폭(오른쪽 '멋진 순간' 패널이 서면 창보다 훨씬 좁음) */
 @container admset (max-width: 640px) { .adm-group { grid-template-columns: minmax(0, 1fr); gap: 10px; } .adm-group-head { flex-direction: row; align-items: baseline; gap: 8px; flex-wrap: wrap; } }
 @container admset (max-width: 420px) { .adm-group .adm-features { grid-template-columns: minmax(0, 1fr); } }

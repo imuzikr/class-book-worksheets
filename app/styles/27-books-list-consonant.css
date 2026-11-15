@@ -61,6 +61,45 @@
   grid-template-columns: minmax(0, 1fr) auto;
 }
 .book-activity-top > .empty-note { margin: 0; }
+/* 책방을 끈 반(관리자 설정 — lib/reading.js의 bookActivitiesOn)
+   · 학생: 활동 목록 · 활동 자리에 한 장(.books-closed — 활동 주소로 왔을 때 · 책 봄도 꺼진 반)
+   · 선생님: 목록 위 띠 한 줄(.books-closed-banner — 선생님 화면은 그대로라 학생에게 안 보인다는 것을 알림) */
+.books-closed {
+  max-width: 520px;
+  margin: 28px auto 0;
+  padding: 28px 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card-bg);
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  color: var(--primary-dark);
+}
+.books-closed h2 { margin: 0; font-size: 18px; color: var(--text); text-wrap: balance; }
+.books-closed p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--text-sub); word-break: keep-all; }
+.books-closed .btn-primary { margin-top: 6px; }
+.books-closed-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  border: 1px solid var(--apricot-300);
+  border-radius: 12px;
+  background: var(--primary-light);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.books-closed-banner span { min-width: 0; flex: 1 1 320px; word-break: keep-all; }
+.books-closed-banner strong { color: var(--primary-dark); }
+.books-closed-banner .btn-ghost { flex-shrink: 0; height: 32px; padding: 0 12px; font-size: 13px; background: var(--card-bg); }
 .book-activity-make {
   height: 38px;
   padding: 0 14px;

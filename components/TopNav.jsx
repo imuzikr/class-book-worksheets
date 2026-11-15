@@ -3,7 +3,7 @@
 // =============================================================
 // 공통 상단 내비게이션
 // -------------------------------------------------------------
-// 왼쪽: 책나눔 로고 ｜ 책방 · 책 봄(관리자 설정에서 켰을 때)
+// 왼쪽: 책나눔 로고 ｜ 책방(관리자 설정에서 끈 반의 학생에게는 안 섬 — booksOn) · 책 봄(관리자 설정에서 켰을 때)
 // 오른쪽: 역할 전환(개발용) ｜ 돌발 퀴즈 ｜ 손들기 ｜ 공지 ｜ 알림 ｜ 사용자 프로필(로그아웃은 그 메뉴 안)
 // =============================================================
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -58,7 +58,9 @@ const StudentWelcome = dynamic(() => import("./reading/StudentWelcome"), { ssr: 
 // 펫 먹이 알림을 이미 띄운 날(이 탭이 떠 있는 동안) — 상단바는 화면을 옮길 때마다 새로 서므로 모듈에 둡니다
 const petCareTold = new Map();
 
-export default function TopNav({ active, growthEnabled = false, rankingOn = true, readingOpen = false, leaderboardOpen = false, settingsOpen = false, onStudyExport = null }) {
+// booksOn — 이 반의 책방(lib/reading.js의 bookActivitiesOn)을 학생에게 보이는가. 화면이 반 문서를 받은 뒤의 값을 넘깁니다
+// (책방 · 분석 리포트 — 반을 아직 모르는 동안은 거짓을 넘겨, 꺼 둔 반에서 단추가 섰다 사라지지 않게). 선생님에게는 늘 섭니다.
+export default function TopNav({ active, growthEnabled = false, rankingOn = true, readingOpen = false, leaderboardOpen = false, settingsOpen = false, booksOn = true, onStudyExport = null }) {
   const router = useRouter();
   const user = useCurrentUser();
   const admin = user ? isTeacher(user) : false;      // 교사+관리자 (대시보드 접근)
@@ -372,12 +374,13 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
         </button>
         <span className="topbar-divider" aria-hidden="true" />
         <nav className="topnav-menu" aria-label="주요 메뉴">
-          <button type="button"
+          {/* 책방 — 관리자 설정에서 끈 반의 학생에게는 서지 않습니다(선생님에게는 늘 — 끈 동안에도 활동을 준비) */}
+          {(admin || booksOn) && <button type="button"
             className={`btn-ghost ${active === "books" && !readingOpen && !leaderboardOpen && !settingsOpen ? "nav-active" : ""}`}
             aria-current={active === "books" && !readingOpen && !leaderboardOpen && !settingsOpen ? "page" : undefined}
             onClick={() => go("/books")} title="책방">
             <IconBook size={20} /> <span className="nav-label">책방</span>
-          </button>
+          </button>}
           {growthEnabled && <button type="button"
             className={`btn-ghost ${readingOpen ? "nav-active" : ""}`}
             aria-current={readingOpen ? "page" : undefined}

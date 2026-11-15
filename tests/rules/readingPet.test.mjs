@@ -228,6 +228,8 @@ describe("독서 펫 — 프로필의 펫과 비밀 문서", () => {
     await assertSucceeds(make({ petFeedEnabled: true, petFeedFrom: serverTimestamp(), petRestWeekend: false, petRests: [rest] }));
     await assertSucceeds(make({ petRests: Array.from({ length: 20 }, () => rest) }));
     await assertSucceeds(make({ plazaEnabled: false, plazaTalkEnabled: true, classroomEnabled: false, hideoutEnabled: true, readingMapTheme: "continent" }));
+    // 책방을 끈 선생님의 새 반도 그 값을 따름(관리자 설정은 모든 반에 한 값)
+    await assertSucceeds(make({ bookActivitiesEnabled: false }));
     // 펫 먹이 — 꾸민 켠 때 · 모양이 틀린 칸
     for (const petFeedFrom of [-1, 0, 1, 1e20, Date.now(), true, "2026-11-14", new Date(), null]) {
       await assertFails(make({ petFeedEnabled: true, petFeedFrom }));
@@ -240,6 +242,7 @@ describe("독서 펫 — 프로필의 펫과 비밀 문서", () => {
     await assertFails(make({ plazaEnabled: "yes" }));
     await assertFails(make({ plazaTalkEnabled: "yes" }));
     await assertFails(make({ rankingEnabled: 1 }));
+    await assertFails(make({ bookActivitiesEnabled: "false" }));
     await assertFails(make({ classroomCallAt: -1 }));
     await assertFails(make({ readingMapTheme: "space" }));
     // 새 반은 기본 꺼짐 — 책 봄을 켠 채로는 못 만듦(지금까지 그대로)

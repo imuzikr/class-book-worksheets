@@ -5,6 +5,9 @@
 // 한 줄씩 따로였음). 값은 지금처럼 반 문서마다 적습니다 — 서버 API · 규칙 · 학생 화면이
 // 반 문서를 읽기 때문입니다(setTeacherFeature가 한 묶음으로 씀). 새 반은 만들 때
 // 같은 값을 따릅니다(addClass의 features · lib/reading.js featuresForNewClass).
+//   · 책방(bookActivitiesEnabled — **값이 없으면 켜짐** · 선생님 요청). 끄면 **학생 화면에서** 상단바의 '책방' · 활동 목록 ·
+//     활동(주소로 와도)이 사라지고, 책 봄이 켜져 있으면 그 자리에 책 봄이 섭니다. 선생님 화면은 그대로(목록 위에 '학생에게는
+//     보이지 않아요' 띠 — 끈 동안에도 활동을 미리 만들고 지난 글을 봄). 글 · 기록은 지우지 않습니다(lib/reading.js의 bookActivitiesOn).
 //   · 책 봄 성장 기능(readingEnabled — 기본 꺼짐)
 //   · 도서 검색(bookSearchEnabled — 기본 꺼짐, 카카오 REST API 키가 있어야 씀. 끄면 책꽂이
 //     새 책 등록이 직접 입력만, 켜면 '도서 검색' 단추가 섬)
@@ -59,6 +62,10 @@ function Switch({ on, disabled, busy, label, describedBy, onClick }) {
 }
 
 const FEATURES = [
+  // 책방 — 끌 때도 되묻지 않습니다(다른 스위치와 같게 · 학생이 쓰던 글은 화면을 떠날 때 저장되고, 다시 켜면 그대로 이어짐).
+  { key: "bookActivitiesEnabled", label: "책방",
+    hint: "닿소리 채우기 · RAFT 글쓰기 · 낱말 빙고 같은 열한 가지 독서 활동을 하는 곳이에요. 끄면 학생 화면에서 책방(활동 목록 · 활동)이 사라지고, 책 봄을 켠 반은 그 자리에 책 봄이 보여요. 선생님 화면에는 그대로 남아 활동을 미리 준비할 수 있고, 학생이 쓴 글과 기록은 모두 보관돼요.",
+    on: "책방을 켰어요. 학생 화면에 활동 목록이 다시 보여요.", off: "책방을 껐어요. 학생 화면에서 책방이 사라지고, 쓴 글과 기록은 그대로 보관돼요." },
   { key: "readingEnabled", label: "책 봄 성장 기능", hint: "책꽂이 · 경험치 · 레벨업 · 뱃지 · 우리 반 랭킹이 함께 켜져요. 꺼도 독서 활동은 그대로예요.",
     on: "책 봄 성장 기능을 켰어요.", off: "책 봄 성장 기능을 껐어요. 기존 기록은 보관됩니다." },
   { key: "bookSearchEnabled", label: "도서 검색", needs: ["readingEnabled"], needsText: "책 봄 성장 기능을 먼저 켜 주세요",
@@ -111,8 +118,11 @@ const FEATURES = [
 // 성격이 같은 것끼리 묶습니다(선생님 요청 — 2 · 4 · 1, 2026년 11월 '함께 읽기'(책 광장) 한 묶음을 더함). 리더보드 옆에 독서 TOP 3(보이는 화면 둘), 그 아래 줄에
 // 학생 캐릭터 · 학생 펫(꾸미기 둘)이 섭니다. 학생 펫은 캐릭터 옆에 함께 서는 꾸미기라
 // '리더보드 · 꾸미기'(한때 '랭킹 · 꾸미기')에 둡니다(선생님 요청 — 한때 과일 바구니 옆 '교실 보상'에 두어 2 · 2 · 2였음).
-// 카드 칸은 늘 두 칸 격자라 이 묶음만 카드가 두 줄로 섭니다.
+// 카드 칸은 늘 두 칸 격자라 이 묶음만 카드가 두 줄로 섭니다. 맨 위 '독서 활동'(책방 — 2026년 11월 · 선생님 요청)은 카드가 하나라
+// 한 칸이 줄을 다 씁니다(.adm-group--1 — 반쪽만 서면 옆이 빈 자리로 보임).
 const GROUPS = [
+  // 책방(독서 활동) — 맨 위 한 칸(카드 하나가 줄을 다 씀 · 44-admin-settings.css의 adm-group--1)
+  { key: "books", title: "독서 활동", desc: "책방의 열한 가지 활동", keys: ["bookActivitiesEnabled"] },
   { key: "reading", title: "독서 기록", desc: "학생의 책꽂이와 책 정보", keys: ["readingEnabled", "bookSearchEnabled"] },
   { key: "growth", title: "리더보드 · 꾸미기", desc: "반 친구와 함께 보는 성장 · 캐릭터와 펫", keys: ["rankingEnabled", "readingTopEnabled", "characterEnabled", "petEnabled", "petPreviewEnabled"] },
   { key: "share", title: "함께 읽기", desc: "책 광장 · 친구와 나누는 대화 · 함께 앉는 교실 · 나만의 아지트", keys: ["plazaEnabled", "plazaTalkEnabled", "classroomEnabled", "hideoutEnabled"] },

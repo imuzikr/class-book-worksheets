@@ -172,7 +172,10 @@ function Modal({ title, onClose, children, wide = false, busy = false }) {
 //   이 값이 **이 화면이 떠 있는 동안 바뀌면** 책 광장 탭으로 넘어갑니다(아래).
 // petFeed — 그 반의 펫 먹이 규칙(lib/readingPet.js의 petCareRules — 끈 반이면 on이 거짓) · myFruit — 내가 가진 과일 수(먹이).
 // petPreview — 관리자 설정의 '펫 미리보기'(lib/readingPet.js의 petPreviewOn) — 켠 반이면 '나의 펫'에서 키울 펫을 고릅니다.
-export default function ReadingHub({ classId, user, isTeacher = false, bookSearchOn = false, petOn = false, plazaOn = false, hideoutOn = false, talkOn = false, characterOn = true, onDisabled, activities = [], onOpenActivity, initialBookId = null, initialTab = "library", student = null, classroom = null, plazaCall = 0, petFeed = null, myFruit = 0, petPreview = false, teacherTools = null, onOpenOwnHideout = null, onOpenHideoutGallery = null }) {
+// activitiesOn — 이 반의 책방이 학생에게 열려 있는가(관리자 설정 · lib/reading.js의 bookActivitiesOn). 끈 반의 학생에게는 책 등록 창의
+// '함께할 독서 활동' 칸을 세우지 않습니다(책 상세의 '활동 열기'는 부르는 쪽이 onOpenActivity를 넘기지 않아 사라짐). 이미 이어 둔
+// 활동은 지우지 않습니다 — 칸만 감추고 값은 그대로 저장됩니다(다시 켜면 그대로).
+export default function ReadingHub({ classId, user, isTeacher = false, bookSearchOn = false, petOn = false, plazaOn = false, hideoutOn = false, talkOn = false, characterOn = true, onDisabled, activities = [], onOpenActivity, activitiesOn = true, initialBookId = null, initialTab = "library", student = null, classroom = null, plazaCall = 0, petFeed = null, myFruit = 0, petPreview = false, teacherTools = null, onOpenOwnHideout = null, onOpenHideoutGallery = null }) {
   // student가 있으면 교사가 그 학생의 책 봄을 보는 읽기 전용 화면입니다(선생님 결정 — 감상·발자국까지 전부 보임).
   const readOnly = !!student?.uid;
   const viewUid = readOnly ? student.uid : user?.uid;
@@ -381,7 +384,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
       {tab === "ranking" && <Rankings key={classId} classId={classId} uid={viewUid} isTeacher={isTeacher} onDisabled={onDisabled} />}
     </>}
 
-    {dialog?.type === "book" && <BookForm key={selected?.id || "new"} book={selected} searchOn={bookSearchOn} pagesLocked={!!selected && [...(raw?.logs || []), ...(raw?.reviews || [])].some((r) => r.bookId === selected.id)} activities={activities} busy={busy} onClose={() => setDialog(null)} onSave={async (values) => { const ok = await run({ type: selected ? "updateBook" : "addBook", ...(selected ? { bookId: selected.id } : {}), ...values }, selected ? "책 정보를 고쳤어요." : "새 책을 책꽂이에 놓았어요."); if (ok) setDialog(null); }} />}
+    {dialog?.type === "book" && <BookForm key={selected?.id || "new"} book={selected} searchOn={bookSearchOn} activityPick={activitiesOn} pagesLocked={!!selected && [...(raw?.logs || []), ...(raw?.reviews || [])].some((r) => r.bookId === selected.id)} activities={activities} busy={busy} onClose={() => setDialog(null)} onSave={async (values) => { const ok = await run({ type: selected ? "updateBook" : "addBook", ...(selected ? { bookId: selected.id } : {}), ...values }, selected ? "책 정보를 고쳤어요." : "새 책을 책꽂이에 놓았어요."); if (ok) setDialog(null); }} />}
     {dialog?.type === "detail" && selected && <BookDetail book={selected} classId={classId} readOnly={readOnly} activity={activities.find((a) => a.id === selected.activityId)} onOpenActivity={onOpenActivity} logs={(stats.logs || raw?.logs || []).filter((l) => l.bookId === selected.id)} review={(stats.reviews || raw?.reviews || []).find((r) => r.bookId === selected.id)} busy={busy} onClose={() => setDialog(null)} onEdit={() => setDialog({ type: "book", bookId: selected.id })} onLog={(log) => setDialog({ type: "log", bookId: selected.id, log })} onReview={() => setDialog({ type: "review", bookId: selected.id })} onDeleteLog={(log) => ask("이 독서 기록을 삭제할까요? 경험치와 달성 기록도 다시 계산해요.", { type: "deleteLog", logId: log.id })} onDeleteReview={() => ask("이 ‘한 권의 책’을 삭제할까요? 받은 보상도 함께 정정해요.", { type: "deleteReview", bookId: selected.id })} onArchive={() => ask(selected.archived ? "이 책을 책꽂이로 돌려놓을까요?" : "이 책을 보관함으로 옮길까요? 독서 기록은 그대로 남아요.", { type: "archiveBook", bookId: selected.id, archived: !selected.archived })}
       plaza={ownPlaza ? plazaInfo(selected.id) : null}
       onOpenPlaza={(place) => { setDialog(null); setError(""); setPlazaJump({ uid: viewUid, bookId: selected.id, place, key: `jump-${Date.now()}` }); setTab("plaza"); }} />}
@@ -449,7 +452,7 @@ function BookCover({ book }) {
 
 // 새 책 등록 — 관리자 설정의 '도서 검색'이 켜져 있으면 맨 위에 '도서 검색' 단추가 서고,
 // 누르면 카카오 책 검색 칸이 펼쳐집니다(직접 입력하기로 접힘). 꺼져 있으면 직접 입력만.
-function BookForm({ book, searchOn = false, pagesLocked, activities, busy, onSave, onClose }) {
+function BookForm({ book, searchOn = false, activityPick = true, pagesLocked, activities, busy, onSave, onClose }) {
   const [searching, setSearching] = useState(false);
   const [form, setForm] = useState({ title: book?.title || "", author: book?.author || "", totalPages: book?.totalPages || "", status: book?.status === "paused" ? "paused" : "reading", activityId: book?.activityId || "", publisher: book?.publisher || "", isbn: book?.isbn || "", coverImage: book?.coverImage || "", bookLink: book?.bookLink || "" });
   const [selectedSearch, setSelectedSearch] = useState(false);
@@ -487,7 +490,7 @@ function BookForm({ book, searchOn = false, pagesLocked, activities, busy, onSav
       <div className="reading-form-row"><label>전체 쪽수<input ref={pagesRef} required type="number" min={1} max={100000} step={1} disabled={pagesLocked || busy} value={form.totalPages} onChange={(e) => change("totalPages", e.target.value)} inputMode="numeric" /></label>{book && <label>읽기 상태<select value={form.status} onChange={(e) => change("status", e.target.value)} disabled={busy}><option value="reading">읽는 중</option><option value="paused">잠시 멈춤</option></select></label>}</div>
       {selectedSearch && <p className="reading-search-pages-help" role="status">검색 결과에 쪽수가 없어 직접 입력해 주세요.</p>}
       {pagesLocked && <p className="reading-help">독서 발자국이나 ‘한 권의 책’이 있는 책의 전체 쪽수는 고정돼요. 잘못 입력한 기록은 먼저 정정해 주세요.</p>}
-      <label>함께할 독서 활동 <span className="reading-optional">선택</span><select value={form.activityId} onChange={(e) => change("activityId", e.target.value)} disabled={busy}><option value="">연결하지 않음</option>{form.activityId && !activities.some((a) => a.id === form.activityId) && <option value={form.activityId}>이전에 연결한 활동</option>}{activities.filter((a) => !a.deleted).map((a) => <option key={a.id} value={a.id}>{a.title}</option>)}</select></label>
+      {activityPick && <label>함께할 독서 활동 <span className="reading-optional">선택</span><select value={form.activityId} onChange={(e) => change("activityId", e.target.value)} disabled={busy}><option value="">연결하지 않음</option>{form.activityId && !activities.some((a) => a.id === form.activityId) && <option value={form.activityId}>이전에 연결한 활동</option>}{activities.filter((a) => !a.deleted).map((a) => <option key={a.id} value={a.id}>{a.title}</option>)}</select></label>}
       <p className="reading-help">완독 여부는 읽은 페이지 기록으로 확인해요. 같은 책은 중복으로 등록할 수 없어요.</p>
       <div className="reading-form-actions"><button type="button" className="btn-ghost" onClick={onClose} disabled={busy}>취소</button><button type="submit" className="btn-primary" disabled={busy || !form.title.trim() || !form.author.trim()}>{busy ? "저장 중…" : book ? "변경 저장" : "책꽂이에 담기"}</button></div>
     </form>

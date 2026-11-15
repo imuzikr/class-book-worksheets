@@ -13,6 +13,10 @@
 //     모둠원이 넣은 낱말이 사람마다 다른 색으로 표시됩니다.
 // · 학생 화면: 활동을 누르면 곧바로 자기 판으로 들어가 낱말을 넣습니다.
 //     (아직 모둠이 없으면 모둠 목록을 보여 줘 고르거나 기다리게 합니다)
+// · 관리자 설정에서 책방을 끈 반(bookActivitiesEnabled — lib/reading.js의 bookActivitiesOn)은 **학생 화면에서**
+//     활동 목록 · 활동(주소 ?activity= 로 와도)을 그리지 않고, 책 봄이 켜져 있으면 그 자리에 책 봄을 세웁니다
+//     (주소는 ?area=reading으로 바꿔 둠 — 다시 켜도 쓰던 창이 닫히지 않게). 선생님 화면은 그대로이고 목록 위에
+//     '학생에게는 보이지 않아요' 띠가 섭니다.
 // =============================================================
 import { enterSampleClass, canUseSampleClass, sampleMode, SAMPLE_CLASS_ID } from "@/lib/sampleClass";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
@@ -21,7 +25,7 @@ import ReadingHub from "@/components/reading/ReadingHub";
 import TeacherReadingView from "@/components/reading/TeacherReadingView";
 import ReadingLeaderboard from "@/components/reading/ReadingLeaderboard";
 import AdminSettingsPanel from "@/components/AdminSettingsPanel";
-import { readingEnabled, rankingEnabled, bookSearchEnabled, fruitBasketOn, plazaOn, plazaNeedsSync, classroomOn, classroomRollToday, hideoutOn, plazaTalkOn } from "@/lib/reading";
+import { readingEnabled, rankingEnabled, bookSearchEnabled, bookActivitiesOn, fruitBasketOn, plazaOn, plazaNeedsSync, classroomOn, classroomRollToday, hideoutOn, plazaTalkOn } from "@/lib/reading";
 import { abandonClassroomMove, feedClassroomMove, useClassroomMove, watchClassroomMove } from "@/lib/classroomMoveStore";
 import { classroomMoveShown } from "@/lib/classroomMove";
 import { characterChoiceEnabled } from "@/lib/readingCharacter";
@@ -211,6 +215,9 @@ function BooksPageInner() {
   }
 
   const [classes, setClasses] = useState([]);
+  // 반 목록 구독의 첫 답이 왔는가 — 학생은 반 문서를 받기 전에는 그 반이 책방을 껐는지 모릅니다(아래 booksHidden).
+  // 그 전에 그리면 꺼 둔 반에서 활동 목록이 번쩍 스쳤다 사라집니다(소속의 '아직 모름'과 같은 함정 — 문서 '첫 화면').
+  const [classesLoaded, setClassesLoaded] = useState(false);
   const [memberships, setMemberships] = useState([]);
   // 소속 구독의 첫 답이 왔는가 — []가 '소속 없음'인지 '아직 모름'인지 가릅니다
   const [membershipsLoaded, setMembershipsLoaded] = useState(false);
@@ -290,8 +297,13 @@ function BooksPageInner() {
   // 보이는 반만 — 관리자 전체 · 교사 내가 만든 반 · 학생 내가 든 반(lib/data/classes.js).
   const myRole = user?.role ?? null;
   useEffect(() => {
-    if (!myUid) { setClasses([]); return undefined; }
-    return subscribeClasses({ uid: myUid, role: myRole }, setClasses);
+    setClassesLoaded(false);
+    if (!myUid) { setClasses([]); setClassesLoaded(true); return undefined; }
+    // 학생의 반 목록은 소속을 따라 반 문서를 모두 받은 뒤(읽지 못한 반은 빼고) 한 번에 알립니다 — 첫 답이 늘 옵니다.
+    return subscribeClasses({ uid: myUid, role: myRole }, (list) => {
+      setClasses(list);
+      setClassesLoaded(true);
+    });
   }, [myUid, myRole]);
 
   // 학생: 서버 소속 구독
@@ -359,9 +371,31 @@ function BooksPageInner() {
   // 이 값이 바뀌는 것을 보고 책 광장 탭으로 넘어갑니다(ReadingHub · TeacherReadingView).
   const plazaCall = moveShown?.pull ? moveShown.at : 0;
   const growthEnabled = readingEnabled(currentClass);
-  const readingOpen = growthEnabled && !openActivityId && searchParams.get("area") === "reading";
+  // 책방(관리자 설정 — 값이 없으면 켜짐) — 끈 반에서는 **학생 화면에서만** 활동 목록 · 활동을 가립니다(선생님은 그대로 —
+  // 끈 동안에도 활동을 미리 만들고 지난 글을 봄 · 목록 위 띠가 알림). 글 · 기록은 그대로입니다(lib/reading.js의 bookActivitiesOn).
+  const booksOn = bookActivitiesOn(currentClass);
+  const booksHidden = !admin && !booksOn;
+  const areaParam = searchParams.get("area");
   // 리더보드 — 책 봄의 경험치 · 뱃지를 '독서 여정'으로(상단바 '리더보드')
   const rankingOn = rankingEnabled(currentClass);
+  const leaderboardOpen = rankingOn && !openActivityId && areaParam === "leaderboard";
+  // 관리자 설정 — 교사에게만(학생이 주소로 와도 책방 목록이 섭니다)
+  const settingsOpen = admin && !openActivityId && areaParam === "settings";
+  // 책 봄 — 주소가 ?area=reading일 때. 책방을 끈 반의 학생은 활동 목록이 설 자리(주소 /books · 다른 영역이 아닐 때)에도
+  // 책 봄이 섭니다(책 봄이 켜진 반 — 꺼져 있으면 '책방이 쉬는 중' 안내). 활동 주소(?activity=)로 온 것은 책 봄으로 바꾸지 않고
+  // 그 활동을 지금 열 수 없다고 알립니다(알림 벨 · 분석 리포트의 링크로 온 학생이 까닭을 알게).
+  const readingOpen = growthEnabled && !openActivityId
+    && (areaParam === "reading" || (booksHidden && !leaderboardOpen && !settingsOpen));
+  // 그렇게 활동 목록 자리에 책 봄이 섰으면 주소도 ?area=reading으로 바꿔 둡니다(뒤로 가기 기록 없이). 선생님이 책방을 다시 켜는
+  // 순간 그 자리가 활동 목록으로 바뀌면, 쓰던 독서 발자국 창이 닫히며 글이 날아갑니다 — 주소가 책 봄이면 그대로 남고
+  // 상단바에 '책방'이 다시 섭니다.
+  const readingFallback = readingOpen && areaParam !== "reading";
+  useEffect(() => {
+    if (!readingFallback) return;
+    const p = new URLSearchParams(searchParams.toString());
+    p.set("area", "reading");
+    router.replace(`/books?${p.toString()}`, { scroll: false });
+  }, [readingFallback, searchParams, router]);
   // 학생 캐릭터 고르기(관리자 설정) — 값이 없으면 켜짐
   const characterOn = characterChoiceEnabled(currentClass);
   // 학생 펫(관리자 설정 — 값이 없으면 켜짐, lib/readingPet.js) — 책 봄의 '나의 펫' · 리더보드의 펫
@@ -375,11 +409,12 @@ function BooksPageInner() {
   const myJoinedAt = admin ? null : memberships.find((m) => m.classId === classId)?.joinedAt ?? null;
   const petFeedKey = JSON.stringify(petCareRules(currentClass, myJoinedAt));
   const petFeed = useMemo(() => JSON.parse(petFeedKey), [petFeedKey]);
-  const leaderboardOpen = rankingOn && !openActivityId && searchParams.get("area") === "leaderboard";
-  // 관리자 설정 — 교사에게만(학생이 주소로 와도 책방 목록이 섭니다)
-  const settingsOpen = admin && !openActivityId && searchParams.get("area") === "settings";
 
-  useEffect(() => subscribeBookActivities(classId, setActivities), [classId]);
+  // 활동 목록 — 책방을 끈 반의 학생은 받지 않습니다(그릴 자리가 없음 · 반 문서를 받기 전에는 켜진 것으로 보고 받기 시작함).
+  useEffect(() => {
+    if (booksHidden) { setActivities([]); return undefined; }
+    return subscribeBookActivities(classId, setActivities);
+  }, [classId, booksHidden]);
 
   // 책 광장의 '모두 공개'(선생님 결정 — 광장을 켠 반에서는 그 반에서 쓴 독서 발자국 · 한 권의 책이 모두 반 친구에게 보임).
   // 공유 사본은 학생이 저장할 때마다 맞춰지므로, **광장을 켜기 전에 쓴 글**은 그대로 두면 그 학생이 다시 저장할 때까지
@@ -663,7 +698,8 @@ function BooksPageInner() {
   // 활동을 열어둔 채 목록이 갱신되면 최신 문서로 맞춰줍니다(주제 수정·잠금 반영).
   // 지운 활동은 열려 있어도 더 보여 주지 않습니다 — 다른 기기에서 지웠거나
   // 휴지통에 있는 것을 주소로 바로 열었을 때도 마찬가지입니다.
-  const activeActivity = openActivityId
+  // 책방을 끈 반의 학생에게는 활동을 열지 않습니다(주소로 와도 — 아래 목록 자리의 안내가 까닭을 말함).
+  const activeActivity = openActivityId && !booksHidden
     ? activities.find((a) => a.id === openActivityId && !a.deleted) ?? null
     : null;
   const activeClassId = activeActivity?.classId ?? classId;
@@ -835,10 +871,12 @@ function BooksPageInner() {
   // ── 학생 소속을 아직 확인하는 중 — 입장 화면도 본문도 아직 그리지 않습니다.
   //    (AuthGate의 로그인 대기 화면과 같은 모습이라, 학생 눈에는 스피너
   //     하나가 이어지다 제 화면이 뜨는 것으로 보입니다) ──
-  if (!admin && user && !membershipsLoaded) {
+  // 학생은 반 문서의 첫 답도 기다립니다 — 책방을 끈 반인지 알아야 활동 목록 · 책 봄 가운데 무엇을 세울지 정합니다.
+  if (!admin && user && (!membershipsLoaded || !classesLoaded)) {
     return (
       <div className="board-shell">
-        <TopNav key={myUid} active="books" />
+        {/* 반을 아직 모르는 동안은 '책방' 단추를 세우지 않습니다 — 꺼 둔 반에서 섰다 사라지지 않게(책 봄 단추와 같이 반을 받은 뒤 섬) */}
+        <TopNav key={myUid} active="books" booksOn={false} />
         <div className="auth-gate auth-gate--inline" role="status" aria-live="polite">
           <span className="auth-gate-spinner" aria-hidden="true" />
           <span className="sr-only">반 정보를 불러오는 중</span>
@@ -860,7 +898,7 @@ function BooksPageInner() {
 
   return (
     <div className="board-shell">
-      <TopNav key={myUid} active="books" growthEnabled={growthEnabled} rankingOn={rankingOn} readingOpen={readingOpen} leaderboardOpen={leaderboardOpen} settingsOpen={settingsOpen} />
+      <TopNav key={myUid} active="books" growthEnabled={growthEnabled} rankingOn={rankingOn} readingOpen={readingOpen} leaderboardOpen={leaderboardOpen} settingsOpen={settingsOpen} booksOn={booksOn} />
       {showSampleEntry && !activeActivity && (
         <aside className="sample-class-entry" aria-label="체험용 샘플 반">
           <span>가상의 학생 15명과 활동이 준비된 <strong>체험용 샘플 반</strong>에서 기능을 마음껏 시험해 보세요. 여기서 한 일은 저장되지 않아요.</span>
@@ -1211,7 +1249,7 @@ function BooksPageInner() {
               petFeed={petFeed} myFruit={myFruit} petPreview={petPreview}
               plazaOn={plazaOn(currentClass)} hideoutOn={hideoutOn(currentClass)} talkOn={plazaTalkOn(currentClass)} characterOn={characterOn} classroom={classroomProps}
               plazaCall={plazaCall}
-              activities={liveActivities} onOpenActivity={goToActivity}
+              activities={booksHidden ? [] : liveActivities} onOpenActivity={booksHidden ? undefined : goToActivity} activitiesOn={!booksHidden}
               initialBookId={searchParams.get("book")} initialTab={searchParams.get("tab") || "library"}
               onDisabled={() => patchBooksQuery({ area: null }, { replace: true })} />
           ) : admin && myClassesAll.length === 0 ? (
@@ -1221,7 +1259,33 @@ function BooksPageInner() {
                 ＋ 반 만들기
               </button>
             </div>
+          ) : booksHidden ? (
+            /* 책방을 끈 반의 학생 — 활동 목록 · 활동 대신 한 장. 책 봄이 켜진 반은 활동 목록 자리에 책 봄이 서므로(위 readingOpen)
+               여기에 오는 것은 활동 주소로 왔을 때 · 책 봄도 꺼진 반입니다. 출석하기는 위 머리말에 그대로 섭니다. */
+            <section className="books-closed" aria-labelledby="books-closed-title">
+              <IconBook size={34} />
+              <h2 id="books-closed-title">{openActivityId ? "이 활동은 지금 열 수 없어요" : "지금은 책방이 쉬고 있어요"}</h2>
+              <p>
+                {openActivityId
+                  ? "선생님이 책방을 닫아 두셨어요. 다시 열리면 이어서 할 수 있어요 — 쓴 글은 그대로 남아 있어요."
+                  : "선생님이 책방을 다시 열면 이곳에 독서 활동이 보여요."}
+              </p>
+              {growthEnabled && (
+                <button type="button" className="btn-primary" onClick={() => router.push("/books?area=reading")}>
+                  책 봄으로 가기
+                </button>
+              )}
+            </section>
           ) : (
+            <>
+            {/* 선생님 — 책방을 끈 반(관리자 설정)이면 목록 위에 띠 한 줄. 선생님 화면은 그대로라(끈 동안에도 활동을 미리 준비)
+                학생에게 안 보인다는 것을 여기서 알립니다. */}
+            {admin && !booksOn && (
+              <div className="books-closed-banner" role="status">
+                <span><strong>책방이 꺼져 있어요.</strong> 학생 화면에는 활동 목록과 활동이 보이지 않아요. 미리 준비해 두고, 관리자 설정에서 켜면 학생에게 다시 보여요.</span>
+                <button type="button" className="btn-ghost" onClick={() => router.push("/books?area=settings")}>관리자 설정 열기</button>
+              </div>
+            )}
             <ActivityList
               /* 만들기 단추는 제목 줄이 아니라 목록 오른쪽, 첫 카드와 같은
                  높이에 섭니다 — 공부방의 '＋ 프로젝트 가져오기'와 같은
@@ -1257,6 +1321,7 @@ function BooksPageInner() {
                 updateBookActivity(activity.id, { locked: !activity.locked })
               }
             />
+            </>
           )}
         </main>
       )}
