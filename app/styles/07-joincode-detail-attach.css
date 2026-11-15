@@ -41,6 +41,69 @@
   margin: 0;
   min-width: 0;
 }
+/* 코드 바로 옆의 '수정' — 머리줄의 단추들(.class-mgr-actions .btn-ghost)과 같은 작은 크기 */
+.class-joincode .joincode-edit {
+  flex-shrink: 0;
+  align-self: center;
+  padding: 5px 9px;
+  font-size: 12.5px;
+}
+/* 고치는 중 — 코드 자리가 입력칸이 되고 '취소 · 저장'이 옆에, 아래 한 줄(.joincode-edit-note)이 규칙과
+   결과를 말합니다. 입력칸은 코드와 같은 글꼴(고정폭 · 굵게 · 살구)이라 저장하면 어떻게 보일지가 그대로 보입니다. */
+.class-joincode.is-editing {
+  align-items: center;
+}
+.class-joincode .joincode-input {
+  flex: 1 1 150px;
+  min-width: 0;
+  max-width: 260px;
+  padding: 6px 10px;
+  color: var(--primary);
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+.class-joincode .joincode-input::placeholder {
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: normal;
+}
+/* 두 단추는 같은 크기(이어 놓인 단추) · 높이를 못 박은 .btn-primary는 위아래 여백을 걷고 가운데에 */
+.joincode-edit-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  flex-shrink: 0;
+}
+/* min-height를 함께 둡니다 — 768px 아래의 '.btn-primary { min-height: 44px }'(26-…mobile768.css)가 저장만 키워
+   두 단추의 높이가 갈렸습니다(실측 32 · 44px) */
+.joincode-edit-actions button {
+  height: 32px;
+  min-height: 0;
+  padding: 0 14px;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+.joincode-edit-note {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--text-sub);
+  font-size: 12.5px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.joincode-edit-note.is-error {
+  color: var(--danger);
+  font-weight: 600;
+}
+.joincode-edit-note.is-warn {
+  color: var(--primary-dark);
+}
 .joincode-label {
   margin: 0 0 6px;
   color: var(--text-sub);
@@ -139,6 +202,10 @@
   .class-joincode { padding: 8px 10px; }
   .class-joincode .joincode-expiry { flex-basis: 100%; }
   .class-mgr-regen-label { display: none; }
+  /* 좁으면 입력칸이 줄을 다 쓰고 '취소 · 저장'은 그 아래에 반씩 */
+  .class-joincode .joincode-input { flex-basis: calc(100% - 70px); max-width: none; }
+  .joincode-edit-actions { flex-basis: 100%; }
+  .joincode-edit-actions button { height: 36px; }
 }
 
 /* ===================== 한 줄 정리(인사이트) 모달 ===================== */

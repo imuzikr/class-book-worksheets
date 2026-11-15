@@ -20,7 +20,9 @@ import {
   unarchiveClass,
   reorderClasses,
   regenerateJoinCode,
+  setJoinCode,
 } from "@/lib/store";
+import { joinCodeSaveError } from "@/lib/joinCode";
 import ClassJoinCode from "./ClassJoinCode";
 import ClassPurgeModal from "./ClassPurgeModal";
 import { isAdmin } from "@/lib/user";
@@ -44,6 +46,9 @@ export default function ClassManagerModal({
   const [renameDraft, setRenameDraft] = useState("");
   const [busyId, setBusyId] = useState(null);
   const [regeneratingCodeIds, setRegeneratingCodeIds] = useState([]);
+  // 참여 코드 직접 정하기 — 고치는 카드(한 번에 하나)와 저장 중인 반
+  const [codeEditId, setCodeEditId] = useState(null);
+  const [savingCodeIds, setSavingCodeIds] = useState([]);
   const [error, setError] = useState("");
   const [purging, setPurging] = useState(null);
 
@@ -119,15 +124,19 @@ export default function ClassManagerModal({
     }
   }
 
+  // 코드를 바꾸는 중인 반 — 보관 · 재발급 · 직접 정하기가 서로를 기다립니다(도중에 겹치면 코드가 어긋납니다)
+  const codeBusy = (id) => busyId === id || regeneratingCodeIds.includes(id) || savingCodeIds.includes(id);
+
   // 코드 재발급 — 단추가 카드 머리줄(편집 옆)과 전체 화면 둘에 있어서,
   // 상태를 여기서 들고 두 곳에 같은 것을 내려 줍니다. 보관 단추도 이 값을
   // 보고 잠깁니다(재발급 도중에 반을 보관하면 코드가 어긋납니다).
+  // 새 코드는 반 주인 이름으로 적습니다(c.createdBy — 관리자가 바꿔도 그 선생님의 화면에 보이게).
   async function handleRegenerateCode(c) {
-    if (busyId === c.id || regeneratingCodeIds.includes(c.id)) return;
+    if (codeBusy(c.id)) return;
     setRegeneratingCodeIds((ids) => [...ids, c.id]);
     setError("");
     try {
-      await regenerateJoinCode(c.id, user);
+      await regenerateJoinCode(c.id, user, c.createdBy);
     } catch {
       setError("코드를 재발급하지 못했어요. 잠시 후 다시 시도해 주세요.");
     } finally {
@@ -135,8 +144,33 @@ export default function ClassManagerModal({
     }
   }
 
+  // 코드 직접 정하기 — 돌려주는 한 줄이 비어 있으면 바뀐 것이고, 아니면 입력칸 아래에 그 까닭이 섭니다
+  // (그 칸의 일이라 창 위쪽 오류 줄이 아니라 그 자리에). 바뀌면 고치기를 닫고 알림 한 줄.
+  async function handleSaveCode(c, code) {
+    if (codeBusy(c.id)) return "지금은 코드를 바꿀 수 없어요. 잠시 후 다시 눌러 주세요.";
+    setSavingCodeIds((ids) => [...ids, c.id]);
+    setError("");
+    try {
+      const { joinCode } = await setJoinCode(c.id, code, user, c.createdBy);
+      setCodeEditId((id) => (id === c.id ? null : id));
+      onToast?.(`'${c.name}' 반의 참여 코드를 바꿨어요. 새 코드: ${joinCode}`);
+      return "";
+    } catch (err) {
+      // 이미 이 반의 코드(다른 화면에서 먼저 바꿈)면 바꿀 것이 없으니 그대로 닫습니다
+      if (err?.reason === "same") {
+        setCodeEditId((id) => (id === c.id ? null : id));
+        return "";
+      }
+      if (!err?.reason) console.error("[참여 코드] 바꾸기 실패:", err?.code, err?.message);
+      return joinCodeSaveError(err);
+    } finally {
+      setSavingCodeIds((ids) => ids.filter((id) => id !== c.id));
+    }
+  }
+
   async function handleArchive(c) {
-    if (busyId || regeneratingCodeIds.includes(c.id)) return;
+    if (busyId || codeBusy(c.id)) return;
+    if (codeEditId === c.id) setCodeEditId(null);
     setBusyId(c.id);
     setError("");
     try {
@@ -211,7 +245,7 @@ export default function ClassManagerModal({
                 <li
                   key={c.id}
                   className={`class-mgr-row class-mgr-row--with-code${draggingId === c.id ? " dragging" : ""}`}
-                  draggable
+                  draggable={renamingId !== c.id && codeEditId !== c.id}
                   onDragStart={() => handleDragStart(c.id)}
                   onDragOver={(e) => handleDragOver(e, c.id)}
                   onDrop={(e) => e.preventDefault()}
@@ -250,7 +284,7 @@ export default function ClassManagerModal({
                         type="button"
                         className="btn-ghost class-mgr-regen"
                         onClick={() => handleRegenerateCode(c)}
-                        disabled={busyId === c.id || regeneratingCodeIds.includes(c.id)}
+                        disabled={codeBusy(c.id)}
                         title="새 참여 코드를 발급해요. 지금 코드는 더 이상 쓸 수 없어요"
                         aria-label="참여 코드 재발급"
                       >
@@ -264,7 +298,7 @@ export default function ClassManagerModal({
                         type="button"
                         className="btn-ghost"
                         onClick={() => handleArchive(c)}
-                        disabled={busyId === c.id || regeneratingCodeIds.includes(c.id)}
+                        disabled={codeBusy(c.id)}
                         title="보관하면 학생 접근이 막히고 목록에서 숨겨져요"
                       >
                         <IconArchive size={15} /> 보관
@@ -274,9 +308,14 @@ export default function ClassManagerModal({
                   <ClassJoinCode
                     classroom={c}
                     codeInfo={joinCodesMap[c.id]}
-                    disabled={busyId === c.id}
+                    disabled={busyId === c.id || savingCodeIds.includes(c.id)}
                     regenerating={regeneratingCodeIds.includes(c.id)}
                     onRegenerate={() => handleRegenerateCode(c)}
+                    editing={codeEditId === c.id}
+                    saving={savingCodeIds.includes(c.id)}
+                    onEditStart={() => setCodeEditId(c.id)}
+                    onEditCancel={() => setCodeEditId((id) => (id === c.id ? null : id))}
+                    onSave={(code) => handleSaveCode(c, code)}
                   />
                 </li>
               ))}
