@@ -174,7 +174,7 @@ test("한 번에 완독이 아니면(나눠 읽기) '한 권의 책'을 저절�
   assert.equal(written.reviews.length, 1);
 });
 
-test("함께 남긴 '한 권의 책'은 발자국을 따라감 — 감상을 고치면 같은 글로, 한 번에 완독이 아니게 고치거나 지우면 함께 걷힘", () => {
+test("함께 남긴 '한 권의 책'은 발자국을 따라감 — 감상을 고치면 같은 글로, 한 번에 완독이 아니게 고치거나 지우면 글은 그대로 두고 따로", () => {
   let state = log(book(initialReadingState(), "book1", 40), "whole", 1, 40, "2026-10-29", { notes: "처음 감상", rating: 3 });
   // 감상을 고치면 함께 남긴 글도 같은 글로(별점은 그대로)
   state = applyReadingAction(state, { type: "updateLog", logId: "whole", notes: "고친 감상" }, context("e1"));
@@ -182,20 +182,24 @@ test("함께 남긴 '한 권의 책'은 발자국을 따라감 — 감상을 고
   // 날짜만 고치면 글은 그대로
   state = applyReadingAction(state, { type: "updateLog", logId: "whole", date: "2026-10-28" }, context("e2"));
   assert.equal(state.reviews[0].text, "고친 감상");
-  // 마지막 쪽을 잘못 적었던 것 — 줄이면 완독이 아니고 함께 남긴 글도 걷힘(경험치도 정정)
+  // 마지막 쪽을 줄여 완독이 아니게 되어도 '한 권의 책'은 지우지 않음 — 이음만 풀림(지울 수 없고 고쳐쓰기만 · 선생님 요청)
   const shrunk = applyReadingAction(state, { type: "updateLog", logId: "whole", endPage: 14 }, context("e3"));
-  assert.equal(shrunk.reviews.length, 0);
+  assert.deepEqual([shrunk.reviews.length, shrunk.reviews[0].text, shrunk.reviews[0].rating, "fromLogId" in shrunk.reviews[0]], [1, "고친 감상", 3, false]);
   assert.equal(deriveReading(shrunk, NOW).books[0].status, "reading");
-  assert.equal(deriveReading(shrunk, NOW).reviewCount, 0);
-  // 다시 처음으로 1쪽~마지막 쪽이 되면 새로 남김(고친 창에서 고른 별점)
-  const again = applyReadingAction(shrunk, { type: "updateLog", logId: "whole", endPage: 40, rating: 2 }, context("e4"));
-  assert.deepEqual([again.reviews.length, again.reviews[0].text, again.reviews[0].rating], [1, "고친 감상", 2]);
-  // 발자국을 지우면 함께 남긴 글도
-  const removed = applyReadingAction(again, { type: "deleteLog", logId: "whole" }, context("e5"));
-  assert.deepEqual([removed.logs.length, removed.reviews.length, deriveReading(removed, NOW).xp], [0, 0, 0]);
+  assert.equal(deriveReading(shrunk, NOW).reviewCount, 1);
+  // 따로 남은 뒤에는 발자국 감상을 고쳐도 그대로 · 다시 끝까지가 되어도 새로 만들거나 덮어쓰지 않음(이미 있음)
+  let after = applyReadingAction(shrunk, { type: "updateLog", logId: "whole", notes: "또 고친 감상" }, context("e4"));
+  after = applyReadingAction(after, { type: "updateLog", logId: "whole", endPage: 40, rating: 2 }, context("e5"));
+  assert.deepEqual(after.reviews.map((r) => [r.text, r.rating, "fromLogId" in r]), [["고친 감상", 3, false]]);
+  // 이어진 채로 발자국을 지워도 '한 권의 책'은 남음(이음만 풀림)
+  const linked = log(book(initialReadingState(), "book1", 40), "w2", 1, 40, "2026-10-29", { notes: "지울 발자국" });
+  const removed = applyReadingAction(linked, { type: "deleteLog", logId: "w2" }, context("e6"));
+  assert.deepEqual([removed.logs.length, removed.reviews.length, removed.reviews[0].text, "fromLogId" in removed.reviews[0]], [0, 1, "지울 발자국", false]);
+  assert.equal(deriveReading(removed, NOW).reviewCount, 1);
 });
 
-test("학생이 '한 권의 책'을 직접 고치면 이음이 풀려 따로 — 발자국을 고치거나 지워도 그대로, 지운 뒤에는 다시 만들지 않음", () => {
+test("학생이 '한 권의 책'을 직접 고치면 이음이 풀려 따로 — 발자국을 고치거나 지워도 그대로", async () => {
+  const { wholeBookReviewPlan } = await import("@/lib/reading");
   let state = log(book(initialReadingState(), "book1", 40), "whole", 1, 40, "2026-10-29", { notes: "발자국 감상" });
   state = review(state, "book1", { text: "따로 다듬은 한 권의 책", rating: 5 });
   assert.equal(state.reviews[0].fromLogId, undefined);
@@ -203,23 +207,40 @@ test("학생이 '한 권의 책'을 직접 고치면 이음이 풀려 따로 —
   state = applyReadingAction(state, { type: "updateLog", logId: "whole", notes: "발자국만 고침" }, context("e1"));
   assert.equal(state.reviews[0].text, "따로 다듬은 한 권의 책");
   state = applyReadingAction(state, { type: "updateLog", logId: "whole", endPage: 20 }, context("e2"));
-  assert.equal(state.reviews.length, 1); // 학생이 쓴 글은 걷지 않음
-  // 학생이 함께 남긴 글을 지운 뒤 — 한 번에 완독인 채로 발자국을 고쳐도 다시 만들지 않음
-  let deleted = log(book(initialReadingState(), "book1", 40), "whole", 1, 40);
-  deleted = applyReadingAction(deleted, { type: "deleteReview", bookId: "book1" }, context("dr"));
-  deleted = applyReadingAction(deleted, { type: "updateLog", logId: "whole", notes: "감상만 고침" }, context("e3"));
-  assert.equal(deleted.reviews.length, 0);
+  assert.equal(state.reviews.length, 1);
+  state = applyReadingAction(state, { type: "deleteLog", logId: "whole" }, context("e3"));
+  assert.deepEqual(state.reviews.map((r) => r.text), ["따로 다듬은 한 권의 책"]);
+  // 계획 셈 — 이어진 글: 끝까지면 sync, 아니면 detach(지우기 없음)
+  const linkedReviews = [{ bookId: "b", fromLogId: "l1" }];
+  const b = { id: "b", totalPages: 10 };
+  assert.equal(wholeBookReviewPlan({ book: b, before: { id: "l1", startPage: 1, endPage: 10 }, after: { startPage: 1, endPage: 10 }, reviews: linkedReviews }), "sync");
+  assert.equal(wholeBookReviewPlan({ book: b, before: { id: "l1", startPage: 1, endPage: 10 }, after: { startPage: 1, endPage: 9 }, reviews: linkedReviews }), "detach");
+  assert.equal(wholeBookReviewPlan({ book: b, before: { id: "l1", startPage: 1, endPage: 10 }, after: null, reviews: linkedReviews }), "detach");
+});
+
+test("'한 권의 책'은 지울 수 없고 고쳐쓰기만 — 지우기 요청은 어느 반에서 와도 거절(선생님 요청)", () => {
+  let state = review(log(book(initialReadingState(), "book1", 10), "a", 1, 5));
+  for (const action of [{ type: "deleteReview", bookId: "book1" }, { type: "deleteReview", reviewId: state.reviews[0].id }, { type: "deleteReview", bookId: "none" }]) {
+    assert.throws(() => applyReadingAction(state, action, context("del")), /지울 수 없어요/);
+    assert.throws(() => applyReadingAction(state, action, context("del", { classId: "classB" })), /지울 수 없어요/);
+  }
+  state = review(state, "book1", { text: "고쳐 쓴 생각", rating: 3 });
+  assert.deepEqual([state.reviews.length, state.reviews[0].text, state.reviews[0].rating], [1, "고쳐 쓴 생각", 3]);
 });
 
 test("기록 수정·삭제는 XP와 진행률·완독·대표 뱃지까지 함께 정정", () => {
-  let state = log(book(initialReadingState(), "book1", 10), "log1", 1, 10);
+  // 두 번에 나눠 읽어 완독 — 한 번에 완독한 발자국이면 지울 수 없는 '한 권의 책'이 함께 남아(위 시험) 경험치가 0으로 돌아가지 않음
+  let state = log(book(initialReadingState(), "book1", 10), "log1", 1, 5);
+  state = log(state, "log2", 6, 10);
+  assert.equal(state.reviews.length, 0);
   state = applyReadingAction(state, { type: "setFeaturedBadge", badgeId: "completion_1" }, context("featured"));
   assert.equal(state.featuredBadge, "completion_1");
-  const corrected = applyReadingAction(state, { type: "updateLog", logId: "log1", endPage: 5 }, context("edit"));
+  const corrected = applyReadingAction(state, { type: "updateLog", logId: "log2", endPage: 8 }, context("edit"));
   assert.equal(corrected.featuredBadge, null);
   assert.equal(deriveReading(corrected, NOW).totalBooks, 0);
-  assert.equal(deriveReading(corrected, NOW).totalPages, 5);
-  const removed = applyReadingAction(corrected, { type: "deleteLog", logId: "log1" }, context("delete"));
+  assert.equal(deriveReading(corrected, NOW).totalPages, 8);
+  let removed = applyReadingAction(corrected, { type: "deleteLog", logId: "log1" }, context("delete"));
+  removed = applyReadingAction(removed, { type: "deleteLog", logId: "log2" }, context("delete2"));
   assert.equal(deriveReading(removed, NOW).xp, 0); assert.equal(removed.logs.length, 0);
 });
 
@@ -237,8 +258,9 @@ test("책당 첫 감상문 보상만 인정하고 수정해도 중복 지급하�
   state = review(state, "book1", { text: "수정한 생각" });
   assert.equal(state.reviews.length, 1); assert.equal(deriveReading(state, NOW).xp, firstXp);
   assert.equal(firstXp, 70 + 20); // review + review beginner badge
-  state = applyReadingAction(state, { type: "deleteReview", bookId: "book1" }, context("delete"));
-  assert.equal(deriveReading(state, NOW).xp, 0);
+  // '한 권의 책'은 지울 수 없음 — 받은 보상도 그대로(고쳐쓰기만)
+  assert.throws(() => applyReadingAction(state, { type: "deleteReview", bookId: "book1" }, context("delete")), /지울 수 없어요/);
+  assert.equal(deriveReading(state, NOW).xp, firstXp);
 });
 
 test("다른 반에서 쓴 기록·감상문을 우회 수정할 수 없음", () => {
@@ -247,7 +269,6 @@ test("다른 반에서 쓴 기록·감상문을 우회 수정할 수 없음", ()
     { type: "updateLog", logId: "a", notes: "바꿈" },
     { type: "deleteLog", logId: "a" },
     { type: "saveReview", bookId: "book1", text: "바꿈", rating: 4 },
-    { type: "deleteReview", bookId: "book1" },
   ]) assert.throws(() => applyReadingAction(state, action, context("x", { classId: "classB" })), /작성한 반/);
 });
 

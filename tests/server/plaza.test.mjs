@@ -154,7 +154,7 @@ test("공유 사본은 완독 상태를 보관하고, 발자국과 완독 감상
   assert.deepEqual(notesOf(b), ["빠진 쪽을 채움", "마지막 장", "꺼 둔 동안 쓴 글", "광장 전에 쓴 발자국"]);
 });
 
-test("한 번에 완독한 발자국 — 저장 한 번에 완독 · 같은 감상의 '한 권의 책'이 함께 광장 책꽂이에 서고, 지우면 함께 내려간다", async () => {
+test("한 번에 완독한 발자국 — 저장 한 번에 완독 · 같은 감상의 '한 권의 책'이 함께 광장 책꽂이에 서고, 발자국을 지워도 '한 권의 책'은 남는다", async () => {
   const BOOK = "plz-bookc-whl1"; // 서버는 요청 번호를 새 기록의 id로 씁니다
   const entry = async () => (await shelf("c")).books.find((x) => x.id === BOOK);
   await send("c", BOOK, { type: "addBook", title: "한숨에 읽은 책", author: "지은이", totalPages: 60 });
@@ -174,13 +174,17 @@ test("한 번에 완독한 발자국 — 저장 한 번에 완독 · 같은 감�
   await send("c", "plz-logc-whl02", { type: "updateLog", logId: "plz-logc-whl01", notes: "다시 읽어도 좋을 책" });
   b = await bookDoc("c", BOOK);
   assert.deepEqual([b.review.text, notesOf(b)], ["다시 읽어도 좋을 책", ["다시 읽어도 좋을 책"]]);
-  // 발자국을 지우면 함께 남긴 '한 권의 책'도 내려간다(광장에서 사라짐 · 다른 책은 그대로)
+  // 발자국을 지워도 '한 권의 책'은 남는다(지울 수 없고 고쳐쓰기만 · 선생님 요청) — 가판대의 발자국만 내려가고 이음은 풀림
   const removed = await send("c", "plz-logc-whl03", { type: "deleteLog", logId: "plz-logc-whl01" });
   assert.equal(removed.state.logs.some((l) => l.bookId === BOOK), false);
-  assert.equal(removed.state.reviews.some((r) => r.bookId === BOOK), false);
+  assert.deepEqual(removed.state.reviews.filter((r) => r.bookId === BOOK).map((r) => [r.text, "fromLogId" in r]), [["다시 읽어도 좋을 책", false]]);
   b = await bookDoc("c", BOOK);
-  assert.deepEqual([b.review, b.logs], [null, []]);
-  assert.equal(await entry(), undefined);
+  assert.deepEqual([b.review.text, b.logs], ["다시 읽어도 좋을 책", []]);
+  e = await entry();
+  assert.equal(plazaEntryForPlace(e, "shelf").excerpt, "다시 읽어도 좋을 책");
+  assert.equal(plazaEntryForPlace(e, "stall"), null);
+  // '한 권의 책' 지우기 요청은 서버가 거절한다
+  await assert.rejects(() => send("c", "plz-revc-del01", { type: "deleteReview", bookId: BOOK }), /지울 수 없어요/);
   assert.equal((await shelf("c")).books.some((x) => x.id === "plz-bookc-001"), true);
 });
 

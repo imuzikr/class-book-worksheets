@@ -122,8 +122,8 @@ test("공유 사본은 책 상태를 호환 유지하고, 화면 목록은 발�
   assert.equal(p.entries[0].last, "2026-11-12T04:00:00.000Z");
   assert.equal(plazaEntryForPlace(p.entries[0], "stall").excerpt, "발자국 log00002");
   assert.equal(plazaEntryForPlace(p.entries[0], "shelf").excerpt, "끝까지 읽었다");
-  // 한 권의 책만 지우면 가판대의 발자국은 남고 책꽂이의 감상만 빠진다.
-  s = run(s, { type: "deleteReview", bookId: "book1" }, ctx("x0000001"));
+  // 한 권의 책이 없는 책이면(옛 자료 — 이제 '한 권의 책'은 지울 수 없고 고쳐쓰기만) 가판대의 발자국은 남고 책꽂이의 감상만 빠진다.
+  s = { ...s, reviews: s.reviews.filter((r) => r.bookId !== "book1") };
   assert.deepEqual([project(s).entries[0].place, project(s).books.book1.review], ["shelf", null]);
   assert.ok(plazaEntryForPlace(project(s).entries[0], "stall"));
   assert.equal(plazaEntryForPlace(project(s).entries[0], "shelf"), null);
