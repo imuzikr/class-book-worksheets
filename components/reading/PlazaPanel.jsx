@@ -8,15 +8,17 @@
 //   · 광장을 켠 반에서는 그 반에서 쓴 글이 모두 보입니다(학생이 고르는 것이 없음 — lib/readingPlaza.js). 완독한 책은
 //     '한 권의 책'을 아직 안 썼어도 책꽂이에 서고(별점 자리에 '완독'), 쓰면 그 글이 맨 위에 섭니다.
 // 목록은 광장이 이미 구독해 둔 것(shelves)을 받아 쓰고, 책 한 권 · 댓글은 그 책을 연 동안만 구독합니다.
-// 댓글: 실명(학번 이름 · 선생님은 '선생님') · 고치기 없음 · 지우기는 쓴 사람과 선생님만(책 주인은 못 지움).
-// Enter는 줄바꿈, Ctrl/⌘+Enter가 보내기(앱의 다른 채팅 칸과 같음).
+// 댓글: 실명(학번 이름 · 선생님은 '선생님') · 고치기는 쓴 사람만('수정' → 저장 · 취소, 고친 댓글에는 '수정됨') ·
+// 지우기는 쓴 사람과 선생님만(책 주인은 못 지움). 고치기 전 글과 지운 글은 담당 선생님만 읽는 이력에 남고
+// (선생님 요청 — 교사 책나눔의 '댓글 이력'), 학생 화면의 입력칸 아래에 '모든 댓글은 선생님이 확인할 수 있습니다.'가 섭니다.
+// Enter는 줄바꿈, Ctrl/⌘+Enter가 보내기 · 저장(앱의 다른 채팅 칸과 같음). 고치는 칸의 Esc는 고치기만 접습니다.
 // Esc · 배경 누르기로 닫힙니다 — 쓰던 댓글이 있으면 Esc로는 안 닫힙니다(lib/modal.js).
 // =============================================================
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { backdropClose } from "@/lib/modal";
 import { formatTime } from "@/lib/dates";
-import { addPlazaComment, deletePlazaComment, setPlazaBlocked, subscribePlazaBook, subscribePlazaComments } from "@/lib/data/plaza";
-import { PLAZA_COMMENT_MAX, plazaDayLabel, plazaFriends, plazaItems, plazaLogsNewestFirst, plazaNameLabel } from "@/lib/readingPlaza";
+import { addPlazaComment, deletePlazaComment, editPlazaComment, setPlazaBlocked, subscribePlazaBook, subscribePlazaComments } from "@/lib/data/plaza";
+import { PLAZA_COMMENT_MAX, plazaCommentEdited, plazaDayLabel, plazaFriends, plazaItems, plazaLogsNewestFirst, plazaNameLabel } from "@/lib/readingPlaza";
 
 const PLACES = [["stall", "가판대", "지금 읽는 책"], ["shelf", "책꽂이", "완독한 책"]];
 const number = (v) => Number(v || 0).toLocaleString("ko-KR");
@@ -113,11 +115,17 @@ function Comments({ classId, owner, bookId, myUid, isTeacher }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [confirmId, setConfirmId] = useState(null);
+  const [editing, setEditing] = useState(null);   // 고치는 중인 내 댓글 { id, text }
+  const [saving, setSaving] = useState(false);
   const inputId = useId();
   useEffect(() => {
-    setRows(null);
+    setRows(null); setEditing(null);
     return subscribePlazaComments(classId, owner, bookId, setRows, () => setRows([]));
   }, [classId, owner, bookId]);
+  // 고치던 댓글이 지워지면(다른 화면 · 선생님) 고치기를 접습니다
+  useEffect(() => {
+    if (editing && rows && !rows.some((c) => c.id === editing.id)) setEditing(null);
+  }, [rows, editing]);
   useEffect(() => {
     if (!confirmId) return undefined;
     const timer = setTimeout(() => setConfirmId(null), 4000);
@@ -140,6 +148,22 @@ function Comments({ classId, owner, bookId, myUid, isTeacher }) {
     setConfirmId(null); setError("");
     try { await deletePlazaComment(classId, id); } catch (e) { setError(e?.message || "댓글을 지우지 못했어요."); }
   }
+  function startEdit(c) {
+    setConfirmId(null); setError("");
+    setEditing({ id: c.id, text: c.text });
+  }
+  async function saveEdit() {
+    if (!editing || saving) return;
+    const clean = editing.text.trim();
+    if (!clean) { setError("댓글을 적어 주세요. 지우려면 ‘지우기’를 눌러 주세요."); return; }
+    setSaving(true); setError("");
+    try {
+      await editPlazaComment(classId, editing.id, clean);
+      setEditing(null);
+    } catch (e) {
+      setError(e?.message || "댓글을 고치지 못했어요.");
+    } finally { setSaving(false); }
+  }
   return (
     <section className="plaza-comments" aria-label="댓글">
       <h4>댓글 <span>{rows?.length ?? 0}</span></h4>
@@ -147,18 +171,47 @@ function Comments({ classId, owner, bookId, myUid, isTeacher }) {
         : rows.length === 0 ? <p className="reading-muted">아직 댓글이 없어요. 첫 댓글을 남겨 보세요.</p>
           : (
             <ol className="plaza-comment-list">
-              {rows.map((c) => (
-                <li key={c.id} className={c.byTeacher ? "by-teacher" : c.uid === myUid ? "by-me" : ""}>
-                  <div className="plaza-comment-head">
-                    <strong>{plazaNameLabel(c)}</strong>
-                    <span>{c.at ? formatTime(c.at) : "방금 전"}</span>
-                    {(isTeacher || c.uid === myUid) && (
-                      <button type="button" className="reading-text-danger" onClick={() => remove(c.id)}>{confirmId === c.id ? "한 번 더 누르면 지워요" : "지우기"}</button>
-                    )}
-                  </div>
-                  <p>{c.text}</p>
-                </li>
-              ))}
+              {rows.map((c) => {
+                const mine = c.uid === myUid;
+                const editingThis = editing?.id === c.id;
+                return (
+                  <li key={c.id} className={c.byTeacher ? "by-teacher" : mine ? "by-me" : ""}>
+                    <div className="plaza-comment-head">
+                      <strong>{plazaNameLabel(c)}</strong>
+                      <span>{c.at ? formatTime(c.at) : "방금 전"}</span>
+                      {plazaCommentEdited(c) && <span className="plaza-comment-edited" title={c.editedAt ? `${formatTime(c.editedAt)} 고침` : "고친 댓글"}>수정됨</span>}
+                      {(isTeacher || mine) && !editingThis && (
+                        <span className="plaza-comment-tools">
+                          {/* 고치기는 쓴 사람만(선생님도 학생 댓글은 지우기만) */}
+                          {mine && <button type="button" className="plaza-comment-edit-btn" onClick={() => startEdit(c)}>수정</button>}
+                          <button type="button" className="reading-text-danger" onClick={() => remove(c.id)}>{confirmId === c.id ? "한 번 더 누르면 지워요" : "지우기"}</button>
+                        </span>
+                      )}
+                    </div>
+                    {editingThis ? (
+                      <div className="plaza-comment-edit">
+                        <label className="reading-sr-only" htmlFor={`${inputId}-edit`}>댓글 고치기</label>
+                        {/* autoFocus — '수정'을 누른 그 칸에서 곧바로 고쳐 쓰게(누른 사람이 연 칸이라 초점을 옮겨도 놀라지 않음) */}
+                        <textarea id={`${inputId}-edit`} rows={2} maxLength={PLAZA_COMMENT_MAX} value={editing.text} disabled={saving} autoFocus
+                          onChange={(e) => setEditing({ id: c.id, text: e.target.value })}
+                          onKeyDown={(e) => {
+                            if (e.nativeEvent.isComposing) return;
+                            // Esc는 고치기만 접습니다(창은 그대로 — lib/modal.js가 preventDefault를 보고 비켜 감)
+                            if (e.key === "Escape") { e.preventDefault(); setEditing(null); }
+                            else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveEdit(); }
+                          }} />
+                        <div className="plaza-comment-send">
+                          <span className="reading-field-count">{editing.text.length} / {PLAZA_COMMENT_MAX} · Ctrl+Enter로 저장</span>
+                          <span className="plaza-comment-edit-actions">
+                            <button type="button" className="btn-ghost" disabled={saving} onClick={() => setEditing(null)}>취소</button>
+                            <button type="button" className="btn-primary" disabled={saving || !editing.text.trim() || editing.text.trim() === c.text} onClick={saveEdit}>{saving ? "저장 중…" : "저장"}</button>
+                          </span>
+                        </div>
+                      </div>
+                    ) : <p>{c.text}</p>}
+                  </li>
+                );
+              })}
             </ol>
           )}
       {error && <div className="reading-error" role="alert">{error}</div>}
@@ -168,6 +221,8 @@ function Comments({ classId, owner, bookId, myUid, isTeacher }) {
           placeholder="읽고 든 생각이나 궁금한 점을 남겨 보세요."
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !e.nativeEvent.isComposing) { e.preventDefault(); submit(); } }} />
+        {/* 학생에게 — 고치거나 지운 댓글도 선생님이 볼 수 있다는 것을 미리 알립니다(선생님이 정한 말) */}
+        {!isTeacher && <p className="plaza-comment-notice">모든 댓글은 선생님이 확인할 수 있습니다.</p>}
         <div className="plaza-comment-send">
           <span className="reading-field-count">{text.length} / {PLAZA_COMMENT_MAX} · Ctrl+Enter로 보내기</span>
           <button type="button" className="btn-primary" disabled={busy || !text.trim()} onClick={submit}>{busy ? "보내는 중…" : "댓글 남기기"}</button>

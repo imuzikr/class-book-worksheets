@@ -369,6 +369,11 @@
 .reading-teacher-chip.is-hungry { background: #fdeed9; color: #a85a22; }
 .reading-teacher-chip.is-low { background: #fde3df; color: #b3392f; }
 .reading-teacher-chip.is-away { background: #ebe8e1; color: #6f675c; }
+/* 고른 학생의 '○○의 독서 여정' 머리 — 댓글 이력 단추(선생님 요청 · components/reading/PlazaCommentHistory.jsx) */
+.reading-teacher-history { display: inline-flex; align-items: center; gap: 7px; margin-top: 10px; padding: 7px 14px 7px 11px; border: 1px solid #cfdccf; border-radius: 999px; background: #fff; color: #2c4c3f; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.reading-teacher-history:hover { border-color: #9fbfa6; background: #f6faf3; }
+.reading-teacher-history:focus-visible { outline: 3px solid #478fbd; outline-offset: 2px; }
+.reading-teacher-history small { color: #6f8276; font-size: 11.5px; font-weight: 600; }
 .reading-teacher-recall { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; padding: 12px 14px; border: 1px solid #d9d4c8; border-radius: 14px; background: #f7f5f0; }
 .reading-teacher-recall span { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1 1 280px; }
 .reading-teacher-recall strong { font-size: 14px; color: var(--dark); }

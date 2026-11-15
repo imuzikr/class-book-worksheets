@@ -2,8 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { applyReadingAction, deriveReading, featureValue, initialReadingState, plazaNeedsSync, plazaOn, teacherFeatureSettings } from "../../lib/reading.js";
 import {
-  PLAZA_BOOK_CAP, PLAZA_COMMENT_MAX, PLAZA_LOG_CAP, PLAZA_SHARE_RULE,
-  plazaCommentText, plazaFriends, plazaHasContent, plazaItems, plazaNameLabel,
+  PLAZA_BOOK_CAP, PLAZA_COMMENT_EDIT_MAX, PLAZA_COMMENT_MAX, PLAZA_LOG_CAP, PLAZA_SHARE_RULE,
+  plazaCommentEdited, plazaCommentHistory, plazaCommentText, plazaFriends, plazaHasContent, plazaItems, plazaNameLabel,
   plazaProjection, plazaStable, plazaThisWeek, plazaWeekStart,
 } from "../../lib/readingPlaza.js";
 import {
@@ -624,4 +624,56 @@ test("펫 한 마리의 걸음 — 주인이 걸으면 지나온 길을 따라�
   const far = plazaPetStart({ x: 700, y: 330 }, "down");
   const wait = plazaPetFollow(far, { x: 760, y: 330, facing: "right" }, 0, { active: false, moved: 0 });
   assert.deepEqual(wait, { walking: false, busy: true });
+});
+
+test("댓글 이력 — 지금 댓글과 고치기 · 지우기 기록을 댓글마다 묶어 처음 글 → 고친 글 → 지움으로, 쓴 댓글 · 받은 댓글로 가른다", () => {
+  const comments = [
+    { id: "c1", uid: "s2", name: "이두리", studentId: "30102", byTeacher: false, ownerUid: "s1", bookId: "b1", book: "s1_b1", text: "고친 글", at: 1000, edits: 1, editedAt: 2000 },
+    { id: "c2", uid: "s1", name: "김하나", studentId: "30101", byTeacher: false, ownerUid: "s2", bookId: "b2", book: "s2_b2", text: "그대로", at: 3000, edits: 0 },
+    { id: "c3", uid: "t1", name: "선생님", studentId: "", byTeacher: true, ownerUid: "s1", bookId: "b1", book: "s1_b1", text: "선생님 글", at: 4000 },
+    { id: "c5", uid: "s1", name: "김하나", studentId: "30101", byTeacher: false, ownerUid: "s1", bookId: "b1", book: "s1_b1", text: "제 책에 단 글", at: 500 },
+  ];
+  const who = { uid: "s2", name: "이두리", studentId: "30102", byTeacher: false, ownerUid: "s1", bookId: "b1", book: "s1_b1", title: "옛 제목" };
+  const logs = [
+    { id: "g1", commentId: "c1", kind: "edit", ...who, text: "처음 글", after: "고친 글", at: 1000, doneAt: 2000, doneBy: "s2", doneByTeacher: false },
+    { id: "g2", commentId: "c4", kind: "delete", ...who, text: "지운 글", at: 1500, doneAt: 2500, doneBy: "t1", doneByTeacher: true },
+    { id: "g3", commentId: "c4", kind: "edit", ...who, text: "더 처음 글", after: "지운 글", at: 1500, doneAt: 1800, doneBy: "s2", doneByTeacher: false },
+    { id: "g9", commentId: "c7", kind: "nonsense", ...who, text: "모르는 기록" },
+  ];
+  const titles = new Map([["s1_b1", "새 제목"], ["s2_b2", "두리의 책"]]);
+  const mine = plazaCommentHistory({ uid: "s1", comments, logs, titles });
+  // 쓴 댓글 — 남의 책에 단 것과 제 책에 단 것(처음 쓴 때가 최근인 것이 위)
+  assert.deepEqual(mine.written.map((t) => t.id), ["c2", "c5"]);
+  // 받은 댓글 — 제 책에 친구 · 선생님이 단 것(제가 단 것은 빼고) · 지운 댓글도
+  assert.deepEqual(mine.received.map((t) => t.id), ["c3", "c4", "c1"]);
+  const c1 = mine.received.find((t) => t.id === "c1");
+  assert.deepEqual(c1.versions.map((v) => [v.text, v.kind, v.at]), [["처음 글", "first", 1000], ["고친 글", "edit", 2000]]);
+  assert.deepEqual([c1.current, c1.edits, c1.gap, c1.deleted, c1.title, c1.name], ["고친 글", 1, false, null, "새 제목", "이두리"]);
+  // 고쳤다가 선생님이 지운 댓글 — 처음 글 → 고친 글 → 지움
+  const c4 = mine.received.find((t) => t.id === "c4");
+  assert.deepEqual(c4.versions.map((v) => [v.text, v.kind]), [["더 처음 글", "first"], ["지운 글", "edit"]]);
+  assert.deepEqual([c4.current, c4.edits, c4.gap, c4.at], [null, 1, false, 1500]);
+  assert.deepEqual(c4.deleted, { text: "지운 글", at: 2500, by: "t1", byTeacher: true });
+  // 지금 광장에 없는 책은 그때의 제목
+  assert.equal(plazaCommentHistory({ uid: "s1", comments: [], logs, titles: new Map() }).received[0].title, "옛 제목");
+  // 쓴 학생 쪽에서 보면 거꾸로
+  const theirs = plazaCommentHistory({ uid: "s2", comments, logs, titles });
+  assert.deepEqual(theirs.written.map((t) => t.id), ["c4", "c1"]);
+  assert.deepEqual(theirs.received.map((t) => t.id), ["c2"]);
+  // 이력을 읽지 못했을 때 — 고친 횟수는 아는데 기록이 없으면 gap, 지금 글 하나('latest')
+  const gap = plazaCommentHistory({ uid: "s1", comments, logs: [], titles }).received.find((t) => t.id === "c1");
+  assert.deepEqual([gap.gap, gap.edits, gap.versions.map((v) => [v.text, v.kind, v.at])], [true, 1, [["고친 글", "latest", 2000]]]);
+  // 서버 시각이 아직 안 온 방금 것(at null)은 맨 위
+  const fresh = plazaCommentHistory({ uid: "s1", comments: [...comments, { id: "c9", uid: "s1", ownerUid: "s2", book: "s2_b2", text: "방금", at: null }], logs, titles });
+  assert.equal(fresh.written[0].id, "c9");
+  // 빈 값
+  assert.deepEqual(plazaCommentHistory(), { written: [], received: [] });
+});
+
+test("댓글 고치기 — 고친 적이 있는가('수정됨') · 한 댓글에 고칠 수 있는 횟수", () => {
+  assert.equal(plazaCommentEdited({ edits: 1 }), true);
+  assert.equal(plazaCommentEdited({ edits: 0 }), false);
+  assert.equal(plazaCommentEdited({}), false);
+  assert.equal(plazaCommentEdited(null), false);
+  assert.equal(PLAZA_COMMENT_EDIT_MAX, 20);
 });

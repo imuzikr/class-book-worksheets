@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 import { initializeApp, deleteApp } from "firebase-admin/app";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
 import { mutateReading, plazaAction } from "../../lib/server/readingService.js";
+import { PLAZA_COMMENT_EDIT_MAX } from "../../lib/readingPlaza.js";
 
 const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID || "demo-reading-api";
 if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST || !projectId.startsWith("demo-")) {
@@ -191,6 +192,88 @@ test("댓글 지우기 — 쓴 사람과 선생님만(책 주인은 못 지움)"
   assert.equal((await bookDoc("a", "plz-book-0001")).comments, 1);
 });
 
+const logsOf = async (commentId) => (await db.collection(`classes/${CLASS}/plazaCommentLog`).where("commentId", "==", commentId).get()).docs
+  .map((d) => d.data()).sort((x, y) => x.doneAt.toMillis() - y.doneAt.toMillis());
+
+test("댓글 이력 — 지우면 지운 글 · 지운 사람이 선생님만 읽는 기록에 남는다", async () => {
+  // 앞 시험에서 쓴 사람(이두리)이 지운 댓글과 선생님이 지운 댓글
+  const [mine] = await logsOf("plz-cmt-00001");
+  assert.deepEqual([mine.kind, mine.text, mine.uid, mine.name, mine.studentId, mine.ownerUid, mine.bookId, mine.doneBy, mine.doneByTeacher, mine.title],
+    ["delete", "나도 읽어 보고 싶어요", ids.b, "이두리", "30102", ids.a, "plz-book-0001", ids.b, false, "바람의 도서관"]);
+  assert.ok(mine.at && mine.doneAt);
+  assert.equal("after" in mine, false);
+  const [byTeacher] = await logsOf("plz-cmt-00007");
+  assert.deepEqual([byTeacher.kind, byTeacher.text, byTeacher.uid, byTeacher.doneBy, byTeacher.doneByTeacher], ["delete", "지워질 댓글", ids.b, ids.teacher, true]);
+  // 이미 지운 것을 다시 지우면 기록이 늘지 않는다
+  await act("b", { action: "deleteComment", commentId: "plz-cmt-00001" });
+  assert.equal((await logsOf("plz-cmt-00001")).length, 1);
+});
+
+test("댓글 고치기 — 쓴 사람만 · 같은 글이면 그대로 · 고칠 때마다 '수정됨'과 이력이 남고, 옛 글은 반 친구가 읽는 문서에 없다", async () => {
+  const target = { ownerUid: ids.a, bookId: "plz-book-0001" };
+  await act("c", { action: "comment", ...target, text: "처음 쓴 댓글이에여", requestId: "plz-cmt-edit-01" });
+  assert.equal((await bookDoc("a", "plz-book-0001")).comments, 2);
+  // 책 주인 · 다른 학생 · 선생님도 남의 댓글은 못 고친다(선생님은 지우기만)
+  for (const kind of ["a", "b", "teacher"]) {
+    await assert.rejects(() => act(kind, { action: "editComment", commentId: "plz-cmt-edit-01", text: "가로채기" }), (e) => e.status === 403);
+  }
+  // 같은 글이면(앞뒤 빈칸만 다르면) 아무것도 안 바뀐다
+  const same = await act("c", { action: "editComment", commentId: "plz-cmt-edit-01", text: "  처음 쓴 댓글이에여 " });
+  assert.deepEqual([same.edited, same.comment.edits], [false, 0]);
+  assert.equal((await logsOf("plz-cmt-edit-01")).length, 0);
+  // 고치기 — 글 · 고친 횟수 · 고친 때
+  const edited = await act("c", { action: "editComment", commentId: "plz-cmt-edit-01", text: "처음 쓴 댓글이에요" });
+  assert.deepEqual([edited.edited, edited.comment.text, edited.comment.edits], [true, "처음 쓴 댓글이에요", 1]);
+  await act("c", { action: "editComment", commentId: "plz-cmt-edit-01", text: "한 번 더 고친 댓글이에요" });
+  const saved = (await db.doc(`classes/${CLASS}/plazaComments/plz-cmt-edit-01`).get()).data();
+  assert.deepEqual([saved.text, saved.edits, saved.name, saved.studentId], ["한 번 더 고친 댓글이에요", 2, "박세찬", "30103"]);
+  assert.ok(saved.editedAt && saved.at);
+  // 반 친구가 읽는 댓글 문서에는 옛 글이 남지 않는다
+  assert.equal(JSON.stringify(saved).includes("처음 쓴"), false);
+  // 고쳐도 댓글 수는 그대로
+  assert.equal((await bookDoc("a", "plz-book-0001")).comments, 2);
+  assert.equal((await shelf("a")).counts["plz-book-0001"], 2);
+  // 이력 — 고칠 때마다 한 장(고치기 전 글 → 고친 글), 처음 쓴 때와 책 제목
+  const logs = await logsOf("plz-cmt-edit-01");
+  assert.deepEqual(logs.map((l) => [l.kind, l.text, l.after, l.doneBy, l.doneByTeacher]), [
+    ["edit", "처음 쓴 댓글이에여", "처음 쓴 댓글이에요", ids.c, false],
+    ["edit", "처음 쓴 댓글이에요", "한 번 더 고친 댓글이에요", ids.c, false],
+  ]);
+  assert.ok(logs.every((l) => l.uid === ids.c && l.ownerUid === ids.a && l.title === "바람의 도서관" && l.at.isEqual(saved.at)));
+  // 빈 글 · 너무 긴 글 · 없는 댓글 · 틀린 식별자
+  await assert.rejects(() => act("c", { action: "editComment", commentId: "plz-cmt-edit-01", text: "   " }), (e) => e.status === 400);
+  await assert.rejects(() => act("c", { action: "editComment", commentId: "plz-cmt-edit-01", text: "가".repeat(501) }), (e) => e.status === 400);
+  await assert.rejects(() => act("c", { action: "editComment", commentId: "no-such-comment", text: "어디" }), (e) => e.code === "reading/plaza-comment-gone");
+  await assert.rejects(() => act("c", { action: "editComment", commentId: "../bad id", text: "어디" }), (e) => e.status === 400);
+  // 반 밖 학생 · 다른 반 교사는 들어오지도 못한다
+  await assert.rejects(() => act("out", { action: "editComment", commentId: "plz-cmt-edit-01", text: "끼어들기" }), (e) => e.status === 403);
+  await assert.rejects(() => act("other", { action: "editComment", commentId: "plz-cmt-edit-01", text: "끼어들기" }), (e) => e.status === 403);
+  // 지우면 마지막 글이 이력에 남는다(선생님이 지움)
+  assert.deepEqual(await act("teacher", { action: "deleteComment", commentId: "plz-cmt-edit-01" }), { deleted: true });
+  const all = await logsOf("plz-cmt-edit-01");
+  assert.deepEqual(all.map((l) => [l.kind, l.text]), [
+    ["edit", "처음 쓴 댓글이에여"], ["edit", "처음 쓴 댓글이에요"], ["delete", "한 번 더 고친 댓글이에요"],
+  ]);
+  assert.deepEqual([all[2].doneBy, all[2].doneByTeacher], [ids.teacher, true]);
+  assert.equal((await bookDoc("a", "plz-book-0001")).comments, 1);
+  // 지운 댓글은 고칠 수 없다
+  await assert.rejects(() => act("c", { action: "editComment", commentId: "plz-cmt-edit-01", text: "되살리기" }), (e) => e.code === "reading/plaza-comment-gone");
+});
+
+test(`댓글 고치기는 한 댓글에 ${PLAZA_COMMENT_EDIT_MAX}번까지 — 넘으면 지우고 다시 남긴다`, async () => {
+  const target = { ownerUid: ids.a, bookId: "plz-book-0001" };
+  await act("b", { action: "comment", ...target, text: "고칠 댓글 0", requestId: "plz-cmt-edit-02" });
+  for (let i = 1; i <= PLAZA_COMMENT_EDIT_MAX; i += 1) {
+    await act("b", { action: "editComment", commentId: "plz-cmt-edit-02", text: `고칠 댓글 ${i}` });
+  }
+  await assert.rejects(() => act("b", { action: "editComment", commentId: "plz-cmt-edit-02", text: "한 번 더" }), (e) => e.code === "reading/plaza-edit-limit" && e.status === 409);
+  assert.equal((await logsOf("plz-cmt-edit-02")).length, PLAZA_COMMENT_EDIT_MAX);
+  // 같은 글로 다시 보내는 것은 한도와 상관없이 조용히 그대로
+  assert.equal((await act("b", { action: "editComment", commentId: "plz-cmt-edit-02", text: `고칠 댓글 ${PLAZA_COMMENT_EDIT_MAX}` })).edited, false);
+  assert.deepEqual(await act("b", { action: "deleteComment", commentId: "plz-cmt-edit-02" }), { deleted: true });
+  assert.equal((await bookDoc("a", "plz-book-0001")).comments, 1);
+});
+
 test("[교사] 책을 광장에서 내리면 비워지고, 학생이 다시 써도 안 올라온다 — 다시 올리면 돌아온다", async () => {
   await assert.rejects(() => act("b", { action: "block", ownerUid: ids.a, bookId: "plz-book-0001", blocked: true }), (e) => e.status === 403);
   assert.deepEqual(await act("teacher", { action: "block", ownerUid: ids.a, bookId: "plz-book-0001", blocked: true }), { blocked: ["plz-book-0001"] });
@@ -200,6 +283,8 @@ test("[교사] 책을 광장에서 내리면 비워지고, 학생이 다시 써�
   assert.deepEqual([b.place, b.logs, b.review, b.comments], [null, [], null, 1]);
   // 내려간 책에는 댓글을 달 수 없다
   await assert.rejects(() => act("b", { action: "comment", ownerUid: ids.a, bookId: "plz-book-0001", text: "아직 있나요", requestId: "plz-cmt-00008" }), (e) => e.code === "reading/plaza-gone");
+  // 이미 단 댓글도 고칠 수 없다(선생님이 단 댓글 — 쓴 사람이라도)
+  await assert.rejects(() => act("teacher", { action: "editComment", commentId: "plz-cmt-00002", text: "내린 책의 댓글" }), (e) => e.code === "reading/plaza-gone");
   // 학생이 고쳐 써도 내린 책은 그대로 내려가 있다
   await send("a", "plz-review-03", { type: "saveReview", bookId: "plz-book-0001", text: "또 고친 글", rating: 4 });
   s = await shelf("a");
@@ -217,6 +302,8 @@ test("[교사] 책을 광장에서 내리면 비워지고, 학생이 다시 써�
 test("사용 중지된 친구의 책에는 댓글을 달 수 없고, 사용 중지된 학생은 댓글을 못 단다", async () => {
   await db.doc("users/plz-a").update({ suspended: true });
   await assert.rejects(() => act("b", { action: "comment", ownerUid: ids.a, bookId: "plz-book-0001", text: "잘 지내?", requestId: "plz-cmt-00009" }), (e) => e.code === "reading/plaza-suspended");
+  // 사용 중지된 친구의 책에 단 댓글도 고칠 수 없다(댓글 달기와 같은 약속 — 지우기는 됨)
+  await assert.rejects(() => act("teacher", { action: "editComment", commentId: "plz-cmt-00002", text: "잘 지내요?" }), (e) => e.code === "reading/plaza-suspended");
   await assert.rejects(() => act("a", { action: "comment", ownerUid: ids.a, bookId: "plz-book-0001", text: "내 글", requestId: "plz-cmt-00010" }), (e) => e.code === "reading/suspended");
   await db.doc("users/plz-a").update({ suspended: false });
 });

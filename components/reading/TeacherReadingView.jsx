@@ -17,14 +17,40 @@
 // 떠난 펫의 학생을 고르면 그 화면 위에 **'불러 주기'**가 섭니다 — 긴 병결 같은 예외에 선생님이 걸음과 상관없이
 // 곧바로 불러 줍니다(서버가 담당 교사인지 확인 · recallReadingPet). 배부름은 명단이 이미 받아 둔 학생 프로필의
 // 펫으로 셉니다(읽기 0 — lib/roster.js의 pet · 학생마다 이 반에 들어온 날 joinedAt부터).
+//
+// **댓글 이력**(선생님 요청): 고른 학생의 '○○의 독서 여정' 머리에 '댓글 이력' — 그 학생이 책 광장에 쓴 댓글 · 받은 댓글을
+// 고친 글 · 지운 글까지 봅니다(PlazaCommentHistory · 담당 교사만 읽는 classes/{c}/plazaCommentLog). 광장을 꺼 둔 반에서도
+// 섭니다 — 일이 생긴 뒤 광장을 꺼도 지난 이력은 봐야 하므로.
+// 그 창은 **누를 때만 내려받습니다**(아래 dynamic) — 책 광장의 자료 함수(lib/data/plaza.js)를 함께 끌어와, 곧바로 import하면
+// 책방 첫 화면 묶음이 그만큼 커집니다(광장의 코드는 쓸 때만 — CLAUDE.md). 내려받는 동안에도 같은 자리에 창이 서고 닫힙니다.
 // =============================================================
-import { useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import ReadingHub, { TeacherPlaza } from "./ReadingHub";
+import { IconAnswer } from "@/components/StatusIcons";
+import { backdropClose } from "@/lib/modal";
 import { recallReadingPet, subscribeRosterPets } from "@/lib/data/reading";
 import { careRulesFor, careStatus } from "@/lib/petCare";
 import { petSpecies } from "@/lib/readingPet";
 import { kstToday } from "@/lib/reading";
 import { iGa } from "@/lib/korean";
+
+// 내려받는 동안의 창 — 닫기는 context로 받습니다(dynamic의 loading은 props를 받지 못함 · ReadingHub의 PlazaLoading과 같은 길)
+const HistoryCloseContext = createContext(() => {});
+function HistoryLoading() {
+  const onClose = useContext(HistoryCloseContext);
+  return (
+    <div className="modal-backdrop plaza-history-backdrop" {...backdropClose(onClose)}>
+      <div className="modal plaza-history" role="dialog" aria-modal="true" aria-label="댓글 이력">
+        <div className="plaza-history-head">
+          <div><h3>댓글 이력</h3><p role="status">댓글 이력 창을 여는 중이에요.</p></div>
+          <button type="button" className="btn-close" aria-label="닫기" onClick={onClose}>×</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+const PlazaCommentHistory = dynamic(() => import("./PlazaCommentHistory"), { ssr: false, loading: HistoryLoading });
 
 // 고른 학생은 주소(?student=)가 듭니다 — 리더보드의 '책꽂이로 이동'이 그 학생을 짚어 열고,
 // 새로고침해도 그 학생입니다. 명단을 누르면 주소만 바꿉니다(replace).
@@ -52,6 +78,8 @@ export default function TeacherReadingView({ classId, user, roster = [], student
   }, [feedOn, pets, petFeed, today, roster]);
   const hungryCount = [...careOf.values()].filter((c) => c.status?.hungry).length;
   const awayCount = [...careOf.values()].filter((c) => c.status?.away).length;
+  const [historyFor, setHistoryFor] = useState(null);   // 댓글 이력 창을 연 학생
+  const closeHistory = () => setHistoryFor(null);
   const [recalling, setRecalling] = useState(false);
   const [recallError, setRecallError] = useState("");
   useEffect(() => { setRecallError(""); }, [student?.uid]);
@@ -129,9 +157,19 @@ export default function TeacherReadingView({ classId, user, roster = [], student
             <button type="button" className="btn-primary" disabled={recalling} onClick={() => recall(student)}>{recalling ? "불러 주는 중…" : "불러 주기"}</button>
           </div>
         )}
-        {student ? <ReadingHub key={`${classId}:${student.uid}`} classId={classId} user={user} isTeacher student={{ uid: student.uid, name: student.name }} plazaOn={plazaOn} petOn={petOn} petFeed={studentFeed} initialTab={hubTab} {...hubProps} />
+        {student ? <ReadingHub key={`${classId}:${student.uid}`} classId={classId} user={user} isTeacher student={{ uid: student.uid, name: student.name }} plazaOn={plazaOn} petOn={petOn} petFeed={studentFeed} initialTab={hubTab} {...hubProps}
+          teacherTools={(
+            <button type="button" className="reading-teacher-history" onClick={() => setHistoryFor(student)}>
+              <IconAnswer size={17} /><span>댓글 이력</span><small>책 광장 · 고친 글 · 지운 글까지</small>
+            </button>
+          )} />
           : <div className="reading-empty"><h3>학생을 기다리고 있어요.</h3><p>학생이 참여 코드로 들어오면 이곳에서 학생마다의 책나눔을 볼 수 있어요.{plazaOn ? " 책 광장은 지금도 ‘책 광장 들어가기’로 둘러볼 수 있어요." : ""}</p></div>}
       </div>
+      {historyFor && (
+        <HistoryCloseContext.Provider value={closeHistory}>
+          <PlazaCommentHistory classId={classId} student={historyFor} roster={roster} onClose={closeHistory} />
+        </HistoryCloseContext.Provider>
+      )}
     </div>
   );
 }

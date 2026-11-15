@@ -711,6 +711,15 @@ service cloud.firestore {
         allow read: if plazaReader();
         allow create, update, delete: if false;
       }
+      // 댓글 이력 — 댓글을 고치거나 지울 때마다 서버가 한 장(고치기 전 글 · 고친 글 · 지운 글 · 누가 · 언제 · 어느 책).
+      // **담당 교사 · 관리자만 읽습니다** — 반 친구에게는 옛 글이 가지 않습니다(선생님 요청 · 친구에게 상처 주는 댓글을
+      // 고치거나 지워도 확인할 수 있게). 쓰기는 서버만(lib/server/readingService.js의 plazaLogRow). 학생 탈퇴(그 학생이
+      // 쓴 · 받은 기록 — uid · ownerUid) · 이름 맞추기 · 반 완전 삭제는 아래 와일드카드 규칙이 그대로 받습니다.
+      // 시험 tests/rules/plaza.test.mjs('댓글 이력').
+      match /plazaCommentLog/{logId} {
+        allow read: if signedIn() && (isAdmin() || ownsClass(cId));
+        allow create, update, delete: if false;
+      }
 
       // 반 완전 삭제 · 학생 탈퇴 — 반 아래 모든 기록(앞으로 더할 하위 컬렉션까지).
       //  · 반 완전 삭제: 보관된 반의 담당 교사가 읽고 지웁니다.

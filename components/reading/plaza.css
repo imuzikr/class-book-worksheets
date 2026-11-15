@@ -472,6 +472,20 @@
 .plaza-panel .reading-field-count { color: #8b9984; font-size: 11px; }
 .plaza-panel .reading-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .plaza-comment-form { position: relative; }
+/* 댓글 고치기 — 쓴 사람의 '수정' · 고친 댓글의 '수정됨' · 고치는 칸(저장 · 취소). 고치기 전 글은 반 친구에게 가지 않고
+   담당 선생님의 '댓글 이력'에만 남습니다(lib/readingPlaza.js의 plazaCommentHistory). */
+.plaza-comment-tools { margin-left: auto; display: inline-flex; align-items: center; gap: 2px; }
+.plaza-comment-head .plaza-comment-tools button { margin-left: 0; }
+.plaza-comment-edit-btn { background: transparent; border: 0; padding: 6px 8px; color: #3f6e57; cursor: pointer; font: inherit; font-size: 11px; font-weight: 650; }
+.plaza-comment-edit-btn:hover { text-decoration: underline; }
+.plaza-comment-head .plaza-comment-edited { padding: 1px 7px; border-radius: 999px; background: #eceee6; color: #6f7c6c; font-size: 10.5px; font-weight: 650; }
+.plaza-comment-edit { margin-top: 6px; }
+.plaza-comment-edit textarea { width: 100%; min-height: 64px; padding: 9px 11px; border: 1px solid #c9d8c8; border-radius: 10px; background: #fff; color: inherit; font: inherit; font-size: 13.5px; line-height: 1.6; resize: vertical; }
+.plaza-comment-edit textarea:focus-visible { outline: 3px solid #478fbd; outline-offset: 2px; }
+.plaza-comment-edit-actions { display: inline-flex; gap: 8px; }
+.plaza-comment-edit-actions .btn-ghost, .plaza-comment-edit-actions .btn-primary { padding: 7px 16px; font-size: 12.5px; }
+/* 학생 화면 — 입력칸 바로 아래 한 줄(선생님이 정한 말: '모든 댓글은 선생님이 확인할 수 있습니다.') */
+.plaza-comment-notice { margin: 6px 2px 0; color: #5f7365; font-size: 11.5px; line-height: 1.5; }
 
 /* 서재 쪽 — 책 상세의 '책 광장' 칸과 발자국 · 한 권의 책 창의 안내.
    학생이 고르는 스위치('광장 책꽂이에 꽂기' · '발자국 보이기')와 그 CSS는 걷었습니다(선생님 결정 — 광장을 켠 반에서는 모두 공개). */
@@ -488,6 +502,8 @@
   .plaza-book-top .plaza-cover { width: 72px; height: 104px; }
   .plaza-place-tabs button small { display: none; }
   .plaza-comment-send { flex-direction: column; align-items: stretch; }
+  /* 고치는 칸의 '취소 · 저장'도 좁은 창에서는 같은 크기 두 칸(이어 놓인 단추는 같은 크기) */
+  .plaza-comment-edit-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 600px) {
   .plaza-panel-backdrop { padding: 0; align-items: stretch; }
@@ -495,3 +511,46 @@
   .plaza-panel-head { margin: 0 -16px 14px; padding: 14px 16px 12px; }
   .plaza-stage { border-radius: 12px; }
 }
+
+/* =============================================================
+   [교사] 댓글 이력 창 — 학생 한 명이 쓴 댓글 · 받은 댓글(고친 글 · 지운 글까지 · PlazaCommentHistory.jsx)
+   창 크기는 못 박습니다(탭을 오가도 창이 늘었다 줄었다 하지 않게) — 넘치면 목록만 구릅니다.
+   ============================================================= */
+.modal.plaza-history { width: min(780px, 100%); max-width: 780px; height: min(820px, 92vh); max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; padding: 20px 22px 14px; }
+.plaza-history-head { display: flex; align-items: flex-start; gap: 12px; }
+.plaza-history-head h3 { margin: 0; font-size: 18px; color: #2c4c3f; }
+.plaza-history-head p { margin: 4px 0 0; font-size: 12.5px; line-height: 1.5; color: #6f8276; }
+.plaza-history-head .btn-close { margin-left: auto; flex: 0 0 auto; }
+.plaza-history-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: 14px; }
+.plaza-history-tabs button { height: 40px; border: 1px solid #d6e0d4; border-radius: 10px; background: #f6f8f2; color: #4c6457; font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+.plaza-history-tabs button.on { background: #2f5e4a; border-color: #2f5e4a; color: #fff; }
+.plaza-history-tabs button:focus-visible { outline: 3px solid #478fbd; outline-offset: 2px; }
+.plaza-history-tabs button span { margin-left: 4px; font-variant-numeric: tabular-nums; opacity: .85; }
+.plaza-history-tools { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 10px 0 8px; color: #6f8276; font-size: 12.5px; }
+.plaza-history-tools b { color: #2c4c3f; font-variant-numeric: tabular-nums; }
+.plaza-history-tools .btn-ghost { padding: 6px 12px; font-size: 12px; }
+.plaza-history-alert { margin: 0 0 8px; padding: 8px 12px; border-radius: 9px; background: #fbefe6; color: #8a4f35; font-size: 12px; line-height: 1.55; }
+.plaza-history-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: 2px; }
+.plaza-history-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.plaza-history-item { padding: 12px 14px; border: 1px solid #e3eae0; border-radius: 12px; background: #fbfcf8; }
+.plaza-history-item.is-deleted { border-color: #efd9cf; background: #fdf6f3; }
+.plaza-history-item-head { display: flex; align-items: flex-start; gap: 8px; flex-wrap: wrap; }
+.plaza-history-where { flex: 1 1 260px; min-width: 0; color: #5f7365; font-size: 12.5px; line-height: 1.5; overflow-wrap: anywhere; }
+.plaza-history-where strong { color: #2c4c3f; font-weight: 750; }
+.plaza-history-tags { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.plaza-history-tag { padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.plaza-history-tag.is-edited { background: #fff1d6; color: #8a5a12; }
+.plaza-history-tag.is-deleted { background: #fbe1da; color: #9c3d26; }
+.plaza-history-versions { list-style: none; margin: 8px 0 0; padding: 0 0 0 12px; border-left: 2px solid #dfe7dc; display: grid; gap: 8px; }
+.plaza-history-when { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; color: #7c8b79; font-size: 11.5px; }
+.plaza-history-when em { padding: 1px 7px; border-radius: 999px; background: #e3f1e5; color: #2f6a47; font-size: 10.5px; font-style: normal; font-weight: 700; }
+.plaza-history-versions p { margin: 2px 0 0; color: #2f3a33; font-size: 13.5px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+.plaza-history-versions li:not(.is-current):not(.is-gone) p { color: #5d6a61; }
+.plaza-history-versions li.is-gone p { color: #9c3d26; font-size: 12px; }
+.plaza-history-gap { margin: 6px 0 0; color: #8a5a12; font-size: 11.5px; }
+.plaza-history-foot { margin: 10px 0 0; color: #8f9a8d; font-size: 11px; line-height: 1.5; }
+@media (max-width: 600px) {
+  .plaza-history-backdrop { padding: 0; align-items: stretch; }
+  .modal.plaza-history { width: 100%; height: 100dvh; max-height: none; border-radius: 0; padding: 16px; }
+}
+

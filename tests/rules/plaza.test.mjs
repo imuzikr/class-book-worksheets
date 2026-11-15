@@ -1,6 +1,6 @@
 // =============================================================
 // 책 광장 — 공유 사본과 댓글
-//   classes/{cId}/plazaShelves/{학생 uid} · plazaBooks/{학생uid_책id} · plazaComments/{id}
+//   classes/{cId}/plazaShelves/{학생 uid} · plazaBooks/{학생uid_책id} · plazaComments/{id} · plazaCommentLog/{id}(댓글 이력)
 // -------------------------------------------------------------
 // 셋 다 서버(Next API · Admin SDK)만 씁니다(lib/server/readingService.js). 규칙은 읽기만 엽니다.
 //
@@ -12,6 +12,7 @@
 //  · 다만 이미 있는 길은 그대로: 이름 맞추기(이름표만 · 지금 프로필 값으로), 탈퇴 중인 학생의 기록 지우기,
 //    보관된 반의 완전 삭제
 //  · 반 설정 plazaEnabled는 담당 교사가 참 · 거짓으로만, 운영 중인 반에서만 바꾼다
+//  · 댓글 이력(고치기 전 글 · 지운 글)은 **담당 교사 · 관리자만** 읽는다 — 쓴 학생 · 책 주인 · 반 친구도 못 읽는다
 // =============================================================
 import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
@@ -22,6 +23,7 @@ import { makeEnv, asStudent, asTeacher, asAdmin, seed } from "./helpers.mjs";
 const shelf = (db, cId, uid) => doc(db, "classes", cId, "plazaShelves", uid);
 const book = (db, cId, key) => doc(db, "classes", cId, "plazaBooks", key);
 const comment = (db, cId, id) => doc(db, "classes", cId, "plazaComments", id);
+const commentLog = (db, cId, id) => doc(db, "classes", cId, "plazaCommentLog", id);
 
 describe("책 광장 규칙", () => {
   let env;
@@ -47,6 +49,12 @@ describe("책 광장 규칙", () => {
         await setDoc(shelf(db, cId, "s1"), { uid: "s1", name: "김하나", studentId: "30101", rule: 1, books: [{ id: "b1", title: "책", place: "stall" }], blocked: [], counts: { b1: 1 } });
         await setDoc(book(db, cId, "s1_b1"), { uid: "s1", name: "김하나", studentId: "30101", bookId: "b1", title: "책", place: "stall", logs: [{ id: "l1", notes: "발자국" }], review: null, comments: 1 });
         await setDoc(comment(db, cId, "c1"), { book: "s1_b1", ownerUid: "s1", bookId: "b1", uid: "s2", name: "이두리", studentId: "30102", byTeacher: false, text: "잘 읽었어요" });
+        // 서버가 남긴 댓글 이력 — s2가 s1의 책에 단 댓글을 고친 기록
+        await setDoc(commentLog(db, cId, "g1"), {
+          commentId: "c1", kind: "edit", uid: "s2", name: "이두리", studentId: "30102", byTeacher: false,
+          book: "s1_b1", ownerUid: "s1", bookId: "b1", title: "책", text: "잘 읽었어여", after: "잘 읽었어요",
+          at: new Date(), doneAt: new Date(), doneBy: "s2", doneByTeacher: false,
+        });
       }
     });
   });
@@ -149,6 +157,55 @@ describe("책 광장 규칙", () => {
     await assertSucceeds(deleteDoc(book(teacher, "cOld", "s1_b1")));
     await assertSucceeds(deleteDoc(comment(teacher, "cOld", "c1")));
     await assertFails(deleteDoc(book(asTeacher(env, "teacherB").firestore(), "cOld", "s1_b1")));
+  });
+
+  it("댓글 이력 — 담당 교사 · 관리자만 읽는다(꺼 둔 반에서도) · 쓴 학생 · 책 주인 · 반 친구 · 남의 반 교사는 못 읽는다", async () => {
+    const teacher = asTeacher(env, "teacherA").firestore();
+    await assertSucceeds(getDoc(commentLog(teacher, "cOn", "g1")));
+    await assertSucceeds(getDoc(commentLog(teacher, "cOff", "g1")));
+    // 선생님의 '댓글 이력' 창이 쓰는 질의 — 그 학생이 쓴 것 · 그 학생의 책에 달린 것
+    await assertSucceeds(getDocs(query(collection(teacher, "classes", "cOn", "plazaCommentLog"), where("uid", "==", "s2"))));
+    await assertSucceeds(getDocs(query(collection(teacher, "classes", "cOn", "plazaCommentLog"), where("ownerUid", "==", "s1"))));
+    await assertSucceeds(getDocs(query(collection(teacher, "classes", "cOn", "plazaComments"), where("uid", "==", "s2"))));
+    await assertSucceeds(getDoc(commentLog(asAdmin(env, "admin1").firestore(), "cOn", "g1")));
+    for (const uid of ["s2", "s1"]) {
+      const db = asStudent(env, uid).firestore();
+      await assertFails(getDoc(commentLog(db, "cOn", "g1")));
+      await assertFails(getDocs(query(collection(db, "classes", "cOn", "plazaCommentLog"), where("uid", "==", "s2"))));
+      await assertFails(getDocs(collection(db, "classes", "cOn", "plazaCommentLog")));
+    }
+    await assertFails(getDoc(commentLog(asTeacher(env, "teacherB").firestore(), "cOn", "g1")));
+    await assertFails(getDoc(commentLog(env.unauthenticatedContext().firestore(), "cOn", "g1")));
+  });
+
+  it("댓글 이력 — 아무도 앱에서 직접 쓰거나 고치거나 지우지 못한다(담당 교사도 — 서버만 씀)", async () => {
+    const author = asStudent(env, "s2").firestore();
+    await assertFails(setDoc(commentLog(author, "cOn", "g2"), { commentId: "c1", kind: "edit", uid: "s2", text: "꾸민 기록" }));
+    await assertFails(updateDoc(commentLog(author, "cOn", "g1"), { text: "지우고 싶은 옛 글" }));
+    await assertFails(deleteDoc(commentLog(author, "cOn", "g1")));
+    const teacher = asTeacher(env, "teacherA").firestore();
+    await assertFails(setDoc(commentLog(teacher, "cOn", "g3"), { commentId: "c1", kind: "delete", uid: "s2", text: "꾸민 기록" }));
+    await assertFails(updateDoc(commentLog(teacher, "cOn", "g1"), { text: "고친 기록" }));
+    await assertFails(deleteDoc(commentLog(teacher, "cOn", "g1")));
+  });
+
+  it("댓글 이력 — 이름 맞추기 · 학생 탈퇴(쓴 학생 · 책 주인) · 반 완전 삭제는 지금까지의 길 그대로", async () => {
+    const teacher = asTeacher(env, "teacherA").firestore();
+    // 이름 맞추기 — 이름표만, 그 학생의 지금 프로필 값으로
+    await seed(env, (db) => updateDoc(doc(db, "users", "s2"), { realName: "이두루" }));
+    await assertSucceeds(updateDoc(commentLog(teacher, "cOn", "g1"), { name: "이두루" }));
+    await assertFails(updateDoc(commentLog(teacher, "cOn", "g1"), { name: "이두루", text: "고친 기록" }));
+    // 학생 탈퇴 — 책 주인(s1)을 탈퇴 중으로 표시하면 그 책에 달린 기록(ownerUid)을 지운다
+    await assertFails(deleteDoc(commentLog(teacher, "cOff", "g1")));
+    await seed(env, (db) => updateDoc(doc(db, "users", "s1"), { withdrawingBy: "teacherA" }));
+    await assertSucceeds(deleteDoc(commentLog(teacher, "cOff", "g1")));
+    // 다른 학생이 쓰고 다른 학생이 받은 기록은 그대로
+    await seed(env, (db) => setDoc(commentLog(db, "cOn", "g4"), { commentId: "c4", kind: "delete", uid: "s2", ownerUid: "s3", bookId: "b4", text: "다른 기록" }));
+    await assertFails(deleteDoc(commentLog(teacher, "cOn", "g4")));
+    // 반 완전 삭제 — 보관된 반의 담당 교사가 읽고 지운다
+    await assertSucceeds(getDocs(collection(teacher, "classes", "cOld", "plazaCommentLog")));
+    await assertSucceeds(deleteDoc(commentLog(teacher, "cOld", "g1")));
+    await assertFails(deleteDoc(commentLog(asTeacher(env, "teacherB").firestore(), "cOld", "g1")));
   });
 
   it("반 설정 plazaEnabled — 담당 교사가 참 · 거짓으로만, 운영 중인 반에서만", async () => {
