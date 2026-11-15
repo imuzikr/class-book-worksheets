@@ -11,6 +11,15 @@
 .reading-tabs button { background:transparent; border:0; border-bottom:3px solid transparent; padding:11px 18px 13px; color:#718177; font:inherit; font-size:14px; font-weight:650; cursor:pointer; }
 .reading-tabs button.active { color:#254f44; border-color:#4c846c; }
 .reading-tabs button:hover { color:#254f44; background:#f0f4ed; border-radius:8px 8px 0 0; }
+/* 뱃지는 책꽂이 왼쪽에 둡니다. 반 명단·옆 패널을 뺀 실제 본문 너비로 접습니다. */
+.reading-workspace { min-width:0; container:readingworkspace / inline-size; }
+.reading-workspace-layout { display:grid; grid-template-columns:240px minmax(0,1fr); align-items:start; gap:20px; }
+.reading-workspace-main { min-width:0; }
+.reading-workspace-main .reading-section-head { margin-top:0; }
+.reading-workspace-main .reading-library-grid { grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr)); }
+@container readingworkspace (max-width:679px) {
+  .reading-workspace-layout { grid-template-columns:minmax(0,1fr); gap:16px; }
+}
 .reading-hub button:focus-visible,.reading-modal button:focus-visible,.reading-form input:focus-visible,.reading-form textarea:focus-visible,.reading-form select:focus-visible { outline:3px solid #478fbd; outline-offset:3px; }
 .reading-summary { display:grid; grid-template-columns:1.25fr 1fr 1fr 1fr; gap:1px; border:1px solid var(--reading-line); border-radius:14px; overflow:hidden; background:var(--reading-line); margin-bottom:28px; }
 .reading-summary>div { display:flex; flex-direction:column; justify-content:center; gap:8px; background:var(--reading-paper); padding:19px 24px; }
@@ -23,6 +32,11 @@
 .reading-intro--teacher { flex-wrap:wrap; gap:16px; }
 .reading-intro-copy { flex:1 1 240px; min-width:0; }
 .reading-intro-copy h2 { font-size:clamp(19px,2vw,25px); overflow-wrap:anywhere; }
+.reading-intro-heading { margin-bottom:16px; }
+.reading-intro-heading .books-head-main { flex-wrap:wrap; gap:8px 12px; }
+.reading-intro-heading .books-head-main > .study-class-select { min-width:0; max-width:100%; }
+.reading-intro-heading .books-attend-btn { flex-shrink:0; white-space:nowrap; }
+.reading-intro-heading .books-class-name { min-width:0; max-width:100%; overflow-wrap:anywhere; }
 .reading-intro .reading-summary--compact { flex:2 1 460px; min-width:0; margin:0; border:0; border-radius:0; gap:0; grid-template-columns:1.25fr 1fr 1fr 1fr; background:transparent; }
 .reading-summary--compact > div { min-width:0; gap:7px; padding:10px; border-left:1px solid #d9e3d8; background:transparent; }
 .reading-summary--compact .reading-level { background:transparent; }
@@ -30,7 +44,7 @@
 .reading-summary--compact strong { font-size:27px; }
 .reading-intro-loading { flex:2 1 460px; color:#657d70; }
 /* 교사는 실제 본문 너비에 따라 기존 줄을 접어 제목이 지나치게 좁아지지 않게 합니다. */
-.reading-intro--teacher > .reading-intro-side { width:auto; max-width:100%; min-width:0; margin-left:auto; }
+.reading-intro--teacher > .reading-intro-side { width:auto; max-width:100%; min-width:0; margin-left:auto; align-items:stretch; }
 .reading-intro--teacher .reading-featured { display:flex; min-width:0; max-width:100%; }
 .reading-intro--teacher .reading-featured span { min-width:0; overflow-wrap:anywhere; }
 .reading-intro--teacher .reading-pet { min-width:0; max-width:100%; }
@@ -79,10 +93,10 @@
 .reading-filters button { font:inherit; font-size:12px; border:1px solid transparent; border-radius:8px; background:transparent; padding:8px 13px; color:#748274; cursor:pointer; }
 .reading-filters button.active { border-color:#cedbce; background:#eef4e9; color:#315b44; font-weight:750; }
 .reading-filters button:hover { background:#eff3e9; }
-.reading-library-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:16px; }
-.reading-book-card { display:flex; flex-direction:column; border:1px solid var(--reading-line); border-radius:14px; background:var(--reading-paper); overflow:hidden; transition:border-color .2s,box-shadow .2s; }
+.reading-library-grid { --reading-completion-size:50px; display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:32px; padding:calc(var(--reading-completion-size) / 2) calc(var(--reading-completion-size) / 2) 0 0; }
+.reading-book-card { position:relative; display:flex; flex-direction:column; border:1px solid var(--reading-line); border-radius:14px; background:var(--reading-paper); overflow:visible; transition:border-color .2s,box-shadow .2s; }
 .reading-book-card:hover { border-color:#b7cbbd; box-shadow:0 5px 20px #29452f08; }
-.reading-book-open { display:flex; flex:1; align-items:flex-start; gap:18px; width:100%; background:none; border:0; text-align:left; padding:22px; color:inherit; font:inherit; cursor:pointer; }
+.reading-book-open { display:flex; flex:1; align-items:flex-start; gap:18px; width:100%; background:none; border:0; border-radius:13px 13px 0 0; text-align:left; padding:22px; color:inherit; font:inherit; cursor:pointer; }
 .reading-book-cover { position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; color:#dbe8dd; background:linear-gradient(130deg,#345e58,#1c4441); border-radius:2px 7px 7px 2px; width:96px; height:140px; flex-shrink:0; box-shadow:3px 4px 0 #bbc6b867, inset 4px 0 0 #ffffff19; padding:14px 12px 12px 17px; }
 .reading-book-cover-line { position:absolute; left:9px; top:0; bottom:0; width:1px; background:#d2dcb633; }
 .reading-book-cover-title { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; font-size:12px; font-weight:650; text-align:center; line-height:1.45; }
@@ -98,17 +112,18 @@
 .reading-book-meta { display:flex; flex:1; align-items:stretch; gap:10px; min-height:50px; }
 .reading-book-byline { display:flex; flex:1; min-width:0; flex-direction:column; gap:10px; }
 .reading-book-info p { margin:0; color:#7b877e; font-size:11px; overflow-wrap:anywhere; }
-.reading-completion-badge { display:block; align-self:center; flex-shrink:0; width:50px; height:50px; object-fit:contain; }
+.reading-completion-badge { position:absolute; top:-1px; right:-1px; z-index:1; display:block; width:var(--reading-completion-size,50px); height:var(--reading-completion-size,50px); transform:translate(50%,-50%); object-fit:contain; pointer-events:none; }
 .reading-book-pages { margin-top:auto; font-size:10px; color:#879083; }
 .reading-book-pages strong { color:#3d6854; font-size:13px; font-weight:750; }
 .reading-book-info .reading-progress { margin:7px 0 5px; }
 .reading-book-percent { color:#7d8d7c; font-size:9px; }
 @media (max-width:600px) {
+  .reading-library-grid { --reading-completion-size:42px; gap:28px; }
+  .reading-library-grid .reading-book-actions button { padding:0 3px; font-size:11px; }
   .reading-book-meta { min-height:42px; gap:8px; }
-  .reading-completion-badge { width:42px; height:42px; }
 }
 /* 카드 아래 단추 — 같은 크기 세 칸(가운데 '한 권의 책'은 완독한 책에만, 없으면 빈 칸) */
-.reading-book-actions { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); align-items:center; gap:8px; padding:10px 14px; border-top:1px solid #e7ece2; background:#fafbf6; }
+.reading-book-actions { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); align-items:center; gap:8px; padding:10px 14px; border-top:1px solid #e7ece2; border-radius:0 0 13px 13px; background:#fafbf6; }
 .reading-book-actions button { height:36px; min-height:0; padding:0 6px; font-size:12.5px; font-weight:700; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; box-sizing:border-box; width:100%; }
 .reading-book-actions .btn-ghost { font-size:12.5px; padding:0 6px; }
 .reading-small-review { background:#fff4e8; border:1px solid #efcfae; border-radius:7px; color:#9a5a2c; font:inherit; cursor:pointer; }

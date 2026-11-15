@@ -38,6 +38,7 @@ import RewardCelebration from "./RewardCelebration";
 import FloatingHub from "./FloatingHub";
 import ClassTopReaders from "./ClassTopReaders";
 import ClassMoveBanner from "./reading/ClassMoveBanner";
+import PageTagline from "./PageTagline";
 import { feedClassroomMove, watchClassroomMove } from "@/lib/classroomMoveStore";
 import { useRewardCelebration } from "@/lib/useRewardCelebration";
 import { useClassMembers } from "@/lib/useClassRoster";
@@ -354,16 +355,10 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
 
   return (
     <>
-    {/* 상단바는 넓은 화면(1180px 이상)에서 **한 줄**입니다 —
-          로고 · 이동 메뉴 …… 전광판 …… 돌발 퀴즈·손들기·알림·프로필
-        그보다 좁으면 이동 메뉴만 2행으로 내려갑니다(app/styles/02-board-layout-notes.css의 1179px
-        규칙이 order로 옮김). 768px 이하는 따로(모바일 블록).
-        **여기 적힌 차례가 곧 넓은 화면의 보이는 차례이자 탭 이동 차례**입니다
-        (CSS의 order는 자리만 바꾸고 탭 순서는 안 바꿉니다). 요소를 더할 때는
-        app/styles/02-board-layout-notes.css의 order 값도 함께 맞추세요.
-        '작은 변화로 시작하는 성장의 기록' 문구는 상단바에서 빠져 각 화면의
-        제목 곁으로 갔습니다(`PageTagline` — 공부방·책방 제목 위, 질문방
-        '전체 질문 n개' 왼쪽). */}
+    {/* 넓은 화면은 로고 · 이동 메뉴 · 문구 …… 독서 TOP 3 …… 사용자 메뉴 순입니다.
+        문구는 학생의 리더보드 뒤, 교사의 관리자 설정 뒤에 섭니다.
+        좁은 화면에서는 문구만 다음 줄로 내려 메뉴와 프로필을 밀지 않습니다.
+        최종 배치는 app/styles/42b-brainwrite-comments-sample.css에서 맞춥니다. */}
     <header className="topbar topbar-book-navigation">
       {/* ① 로고 — 좁은 화면에서도 항상 첫 줄에 남습니다 */}
       <div className="topbar-left">
@@ -403,6 +398,7 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
           </button>}
         </nav>
       </div>
+      <PageTagline className="topbar-tagline" />
 
       {roleMgrOpen && (
         <RoleManagerModal

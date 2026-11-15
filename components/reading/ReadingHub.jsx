@@ -8,6 +8,7 @@ import { rankingAsOf, rankingsForPeriod } from "@/lib/readingJourney";
 import { petGrowthOfSummary } from "@/lib/readingPet";
 import { CARE_READ_CHARS, CARE_READ_PAGES, readingDayProof } from "@/lib/petCare";
 import ReadingBadge from "./ReadingBadge";
+import ReadingGrowthSidebar from "./ReadingGrowthSidebar";
 import BookSearch from "./BookSearch";
 import { hasModalAbove } from "@/lib/modal";
 import { PLAZA_STAGE_MIN_H, plazaRoom, plazaScroller } from "@/lib/plazaStageRoom";
@@ -103,7 +104,6 @@ const PERIODS = [["daily", "오늘"], ["weekly", "이번 주"], ["monthly", "이
 const number = (v) => Number(v || 0).toLocaleString("ko-KR");
 const tierName = (v) => TIER_NAMES[v] || String(v ?? "");
 const shortDate = (v) => String(v || "").slice(0, 10).replaceAll("-", ".");
-const badgeTier = (b) => Number(b.tier) || ({ beginner: 1, intermediate: 2, advanced: 3 }[b.tier]) || 1;
 const displayName = (u) => [u?.studentId, u?.realName || u?.name || "이름 미설정"].filter(Boolean).join(" ");
 
 function BookIcon({ size = 24 }) {
@@ -175,7 +175,8 @@ function Modal({ title, onClose, children, wide = false, busy = false }) {
 // activitiesOn — 이 반의 책방이 학생에게 열려 있는가(관리자 설정 · lib/reading.js의 bookActivitiesOn). 끈 반의 학생에게는 책 등록 창의
 // '함께할 독서 활동' 칸을 세우지 않습니다(책 상세의 '활동 열기'는 부르는 쪽이 onOpenActivity를 넘기지 않아 사라짐). 이미 이어 둔
 // 활동은 지우지 않습니다 — 칸만 감추고 값은 그대로 저장됩니다(다시 켜면 그대로).
-export default function ReadingHub({ classId, user, isTeacher = false, bookSearchOn = false, petOn = false, plazaOn = false, hideoutOn = false, talkOn = false, characterOn = true, onDisabled, activities = [], onOpenActivity, activitiesOn = true, initialBookId = null, initialTab = "library", student = null, classroom = null, plazaCall = 0, petFeed = null, myFruit = 0, petPreview = false, teacherTools = null, onOpenOwnHideout = null, onOpenHideoutGallery = null }) {
+// introHeading — 학생의 '책 봄' 제목 · 반 표시(고르개) · 출석 버튼. 페이지가 쓰던 내용을 카드 안에서 한 번만 표시합니다.
+export default function ReadingHub({ classId, user, isTeacher = false, bookSearchOn = false, petOn = false, plazaOn = false, hideoutOn = false, talkOn = false, characterOn = true, onDisabled, activities = [], onOpenActivity, activitiesOn = true, initialBookId = null, initialTab = "library", student = null, classroom = null, plazaCall = 0, petFeed = null, myFruit = 0, petPreview = false, teacherTools = null, onOpenOwnHideout = null, onOpenHideoutGallery = null, introHeading = null }) {
   // student가 있으면 교사가 그 학생의 책 봄을 보는 읽기 전용 화면입니다(선생님 결정 — 감상·발자국까지 전부 보임).
   const readOnly = !!student?.uid;
   const viewUid = readOnly ? student.uid : user?.uid;
@@ -188,7 +189,8 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
   // 책 광장을 켠 반은 그 자리에 '책 광장'이 섭니다(선생님 요청 — 순위는 상단바 리더보드에서 봄). 끈 반은 지금처럼 '우리 반 랭킹'.
   const thirdTab = plazaOn ? "plaza" : "ranking";
   const canHideout = hideoutOn && (readOnly || (!isTeacher && !!user?.uid));
-  const [tab, setTab] = useState(() => (initialTab === "plaza" || initialTab === "ranking" ? thirdTab : initialTab === "hideout" && canHideout && readOnly ? "hideout" : ["library", "growth"].includes(initialTab) ? initialTab : "library"));
+  // 옛 ?tab=growth 주소도 책꽂이와 왼쪽 성장 패널을 함께 엽니다.
+  const [tab, setTab] = useState(() => (initialTab === "plaza" || initialTab === "ranking" ? thirdTab : initialTab === "hideout" && canHideout && readOnly ? "hideout" : "library"));
   // 선생님이 설정을 바꿔 셋째 탭이 달라지면(광장 ↔ 랭킹) 보던 탭도 따라갑니다.
   useEffect(() => { setTab((current) => (current === "plaza" || current === "ranking" ? thirdTab : current)); }, [thirdTab]);
   // 책꽂이(첫 탭)에서 '광장에서 보기'로 넘어갈 때 곧바로 열 책({ uid, bookId, place, key })
@@ -250,7 +252,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
     setPlazaJump(null);
     setPlazaReturn(null);
     setError("");
-    setDialog((current) => (current?.type === "detail" ? null : current));
+    setDialog((current) => (current?.type === "detail" || current?.type === "badge" ? null : current));
     setTab("plaza");
   }, [plazaCall, plazaOn, readOnly]);
   const [notice, setNotice] = useState("");
@@ -328,6 +330,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
   const books = stats.books || [];
   const visibleBooks = books.filter((b) => filter === "archived" ? b.archived : !b.archived && (filter === "all" || b.status === filter));
   const selected = dialog?.bookId ? books.find((b) => b.id === dialog.bookId) : null;
+  const inspectedBadge = dialog?.type === "badge" ? stats.badges.find((b) => b.id === dialog.badgeId) : null;
   const featured = (stats.badges || []).find((b) => b.id === (stats.featuredBadge?.id || stats.featuredBadge));
   const showPet = petOn && !readOnly && !isTeacher && !!user?.uid;
   const showStudentPet = petOn && readOnly && !!student.pet;
@@ -356,7 +359,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
 
   return <ReadingErrorContext.Provider value={error}><section className={`reading-hub${tab === "plaza" || tab === "hideout" ? " reading-hub--plaza" : ""}`} aria-label="책 봄 성장 기능" aria-busy={tab === "hideout" ? false : loading || busy}>
     <div className={`reading-intro ${readOnly ? "reading-intro--teacher" : "reading-intro--student"}${showPet ? " has-pet" : ""}`}>
-      {readOnly ? <div className="reading-intro-copy"><h2>{student.name || "학생"}의 독서 여정</h2><p>학생이 남긴 책꽂이 · 독서 발자국 · 한 권의 책을 읽기만 합니다.</p></div> : <div className="reading-intro-copy"><h2>한 페이지씩, 나의 가능성을 넓히다.</h2><p>읽은 순간을 기록하고 나만의 독서 컬렉션을 완성해 보세요.</p></div>}
+      {readOnly ? <div className="reading-intro-copy"><h2>{student.name || "학생"}의 독서 여정</h2><p>학생이 남긴 책꽂이 · 독서 발자국 · 한 권의 책을 읽기만 합니다.</p></div> : <div className="reading-intro-copy">{introHeading && <div className="reading-intro-heading">{introHeading}</div>}<h2>한 페이지씩, 나의 가능성을 넓히다.</h2><p>읽은 순간을 기록하고 나만의 독서 컬렉션을 완성해 보세요.</p></div>}
       {raw && !loading ? <ReadingSummary stats={stats} compact /> : <p className="reading-intro-loading" role="status">{loading ? "독서 기록을 불러오고 있어요." : "독서 정보를 불러오지 못했어요."}</p>}
       {(showPet || hasStudentInfo) && <div className="reading-intro-side">
         {readOnly && featured?.earned && <div className="reading-featured"><ReadingBadge badge={featured} size={54} /><span>대표 뱃지<strong>{featured.name}</strong></span></div>}
@@ -367,26 +370,29 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
       </div>}
     </div>
     <nav className="reading-tabs" aria-label="책 봄 메뉴" ref={tabsRef}>
-      {[["library", "책꽂이"], ["growth", "성장·뱃지"], ...(!readOnly || !plazaOn ? [[thirdTab, plazaOn ? "책 광장" : "우리 반 랭킹"]] : []), ...(readOnly && canHideout ? [["hideout", "아지트 보기"]] : [])].map(([key, label]) => <button type="button" key={key} className={tab === key ? "active" : ""} aria-current={tab === key ? "page" : undefined} data-reading-hideout-gallery={key === "hideout" && onOpenHideoutGallery ? "true" : undefined} onClick={() => { if (key === "hideout" && readOnly && onOpenHideoutGallery) { onOpenHideoutGallery(); return; } setTab(key); setDialog(null); setError(""); setPlazaJump(null); setPlazaReturn(null); }}>{label}</button>)}
+      {[["library", "책꽂이"], ...(!readOnly || !plazaOn ? [[thirdTab, plazaOn ? "책 광장" : "우리 반 랭킹"]] : []), ...(readOnly && canHideout ? [["hideout", "아지트 보기"]] : [])].map(([key, label]) => <button type="button" key={key} className={tab === key ? "active" : ""} aria-current={tab === key ? "page" : undefined} data-reading-hideout-gallery={key === "hideout" && onOpenHideoutGallery ? "true" : undefined} onClick={() => { if (key === "hideout" && readOnly && onOpenHideoutGallery) { onOpenHideoutGallery(); return; } setTab(key); setDialog(null); setError(""); setPlazaJump(null); setPlazaReturn(null); }}>{label}</button>)}
     </nav>
     {error && !dialog && !confirm && <div className="reading-error" role="alert">{error}<button type="button" onClick={() => setError("")} aria-label="오류 안내 닫기">×</button></div>}
     {notice && <div className="reading-notice" role="status">{notice}</div>}
     {/* 책 광장은 서재(정본)를 기다리지 않습니다 — 반의 공유 사본을 제 손으로 구독합니다. 펫의 단계만 서재에서 받습니다. */}
     {tab === "plaza" ? <PlazaExitContext.Provider value={leavePlaza}><ReadingPlaza key={plazaJump?.key ?? plazaReturn?.key ?? "plaza"} classId={classId} user={user} isTeacher={isTeacher} characterOn={characterOn} petOn={showPet} petFeed={petFeed} growthXp={raw ? petGrowthOfSummary(stats) : null} initialBook={plazaJump} initialRoom={plazaJump ? null : plazaReturn?.room} onExit={leavePlaza} classroom={classroom} hideoutOn={canHideout && (!readOnly || typeof onOpenOwnHideout === "function")} onEnterHideout={enterHideout} talkOn={plazaOn && talkOn} /></PlazaExitContext.Provider>
     : tab === "hideout" && canHideout ? <PlazaExitContext.Provider value={leaveHideout}><ReadingHideout key={`${classId}:${viewUid}`} classId={classId} user={user} student={student} summary={stats} readOnly={readOnly} characterOn={characterOn} petOn={petOn} petFeed={petFeed} returnRoom={hideoutOrigin} onDisabled={leaveHideout} onExit={leaveHideout} /></PlazaExitContext.Provider>
-    : loading ? <div className="reading-loading" role="status"><span className="reading-loader" />독서 기록을 불러오고 있어요.</div> : !raw ? <div className="reading-empty"><BookIcon size={40} /><h3>독서 정보를 불러오지 못했어요.</h3><button type="button" className="btn-primary" onClick={() => setRevision((r) => r + 1)}>다시 불러오기</button></div> : <>
+    : loading ? <div className="reading-loading" role="status"><span className="reading-loader" />독서 기록을 불러오고 있어요.</div> : !raw ? <div className="reading-empty"><BookIcon size={40} /><h3>독서 정보를 불러오지 못했어요.</h3><button type="button" className="btn-primary" onClick={() => setRevision((r) => r + 1)}>다시 불러오기</button></div> : <div className="reading-workspace"><div className="reading-workspace-layout">
+      <ReadingGrowthSidebar stats={stats} onInspect={(badgeId) => setDialog({ type: "badge", badgeId })} />
+      <div className="reading-workspace-main">
       {tab === "library" && <>
         <div className="reading-section-head"><div><h3>책꽂이 <span>{books.filter((b) => !b.archived).length}</span></h3><p>책의 마지막 페이지까지, 나의 속도로.</p></div>{readOnly ? teacherTools : <button type="button" className="btn-primary" onClick={() => setDialog({ type: "book" })}>＋ 책 등록</button>}</div>
         <div className="reading-filters" aria-label="도서 상태 필터">{FILTERS.map(([key, label]) => <button type="button" key={key} className={filter === key ? "active" : ""} aria-pressed={filter === key} onClick={() => setFilter(key)}>{label}</button>)}</div>
         {visibleBooks.length ? <div className="reading-library-grid">{visibleBooks.map((b, i) => <BookCard key={b.id} book={b} index={i} busy={busy} readOnly={readOnly} onOpen={() => setDialog({ type: "detail", bookId: b.id })} onReview={() => setDialog({ type: "review", bookId: b.id })} onLog={() => setDialog({ type: "log", bookId: b.id })} onRestore={() => run({ type: "archiveBook", bookId: b.id, archived: false }, "책을 책꽂이로 돌려놓았어요.")} />)}</div> : <div className="reading-empty"><BookIcon size={44} /><h3>{readOnly ? "아직 이곳에 놓인 책이 없어요." : filter === "all" ? "나의 첫 책을 기다리고 있어요." : "아직 이곳에 놓인 책이 없어요."}</h3>{!readOnly && <p>{filter === "all" ? "읽고 싶은 책을 등록하고 오늘 읽은 순간을 남겨 보세요." : "책을 읽고 기록하면 책꽂이의 풍경도 달라져요."}</p>}{filter === "all" && !readOnly && <button type="button" className="btn-primary" onClick={() => setDialog({ type: "book" })}>첫 책 등록하기</button>}</div>}
       </>}
-      {tab === "growth" && <Growth stats={stats} busy={busy} readOnly={readOnly} onSelect={(badgeId) => run({ type: "setFeaturedBadge", badgeId }, "대표 뱃지를 바꿨어요.")} />}
       {/* 순위는 탭을 열 때 · 기간을 바꿀 때 · 새로고침을 누를 때만 받습니다(한 번에 반 전체를 읽음).
           한때 독서 자료 전체(raw)를 신호로 넘겨, 상태를 다시 물을 때마다(10초) 순위를 다시 받았습니다 —
           저장은 다른 탭에서만 하므로, 저장한 뒤 이 탭을 열면 새로 받습니다. */}
       {tab === "ranking" && <Rankings key={classId} classId={classId} uid={viewUid} isTeacher={isTeacher} onDisabled={onDisabled} />}
-    </>}
+      </div>
+    </div></div>}
 
+    {inspectedBadge && <BadgeDetail badge={inspectedBadge} featured={featured?.id === inspectedBadge.id} busy={busy} readOnly={readOnly} onClose={() => setDialog(null)} onSelect={() => run({ type: "setFeaturedBadge", badgeId: inspectedBadge.id }, "대표 뱃지를 바꿨어요.")} />}
     {dialog?.type === "book" && <BookForm key={selected?.id || "new"} book={selected} searchOn={bookSearchOn} activityPick={activitiesOn} pagesLocked={!!selected && [...(raw?.logs || []), ...(raw?.reviews || [])].some((r) => r.bookId === selected.id)} activities={activities} busy={busy} onClose={() => setDialog(null)} onSave={async (values) => { const ok = await run({ type: selected ? "updateBook" : "addBook", ...(selected ? { bookId: selected.id } : {}), ...values }, selected ? "책 정보를 고쳤어요." : "새 책을 책꽂이에 놓았어요."); if (ok) setDialog(null); }} />}
     {dialog?.type === "detail" && selected && <BookDetail book={selected} classId={classId} readOnly={readOnly} activity={activities.find((a) => a.id === selected.activityId)} onOpenActivity={onOpenActivity} logs={(stats.logs || raw?.logs || []).filter((l) => l.bookId === selected.id)} review={(stats.reviews || raw?.reviews || []).find((r) => r.bookId === selected.id)} busy={busy} onClose={() => setDialog(null)} onEdit={() => setDialog({ type: "book", bookId: selected.id })} onLog={(log) => setDialog({ type: "log", bookId: selected.id, log })} onReview={() => setDialog({ type: "review", bookId: selected.id })} onDeleteLog={(log) => ask("이 독서 기록을 삭제할까요? 경험치와 달성 기록도 다시 계산해요.", { type: "deleteLog", logId: log.id })} onDeleteReview={() => ask("이 ‘한 권의 책’을 삭제할까요? 받은 보상도 함께 정정해요.", { type: "deleteReview", bookId: selected.id })} onArchive={() => ask(selected.archived ? "이 책을 책꽂이로 돌려놓을까요?" : "이 책을 보관함으로 옮길까요? 독서 기록은 그대로 남아요.", { type: "archiveBook", bookId: selected.id, archived: !selected.archived })}
       plaza={ownPlaza ? plazaInfo(selected.id) : null}
@@ -424,6 +430,7 @@ function isDisabledError(e) {
 function BookCard({ book, index, busy, readOnly = false, onOpen, onLog, onReview, onRestore }) {
   const status = book.status === "completed" ? "완독" : book.status === "paused" ? "잠시 멈춤" : "읽는 중";
   return <article className={`reading-book-card reading-book-color-${index % 4}`}>
+    {book.status === "completed" && <img className="reading-completion-badge" src="/reading-badges/book-completion.webp" alt="완독 축하 배지" width={50} height={50} />}
     <button type="button" className="reading-book-open" onClick={onOpen} aria-label={`${book.title} 상세 보기`}>
       <BookCover book={book} />
       <div className="reading-book-info">
@@ -434,7 +441,6 @@ function BookCard({ book, index, busy, readOnly = false, onOpen, onLog, onReview
             <p>{book.author}</p>
             <div className="reading-book-pages"><strong>{number(book.pagesRead ?? book.currentPage)}</strong> / {number(book.totalPages)}쪽</div>
           </div>
-          {book.status === "completed" && <img className="reading-completion-badge" src="/reading-badges/book-completion.webp" alt="완독 축하 배지" width={50} height={50} />}
         </div>
         <div className="reading-progress"><i style={{ width: `${book.progress || 0}%` }} /></div>
         <span className="reading-book-percent">{Math.round(book.progress || 0)}% 읽었어요</span>
@@ -590,37 +596,22 @@ function BookDetail({ book, classId, readOnly = false, activity, onOpenActivity,
   </Modal>;
 }
 
-function Growth({ stats, busy, readOnly = false, onSelect }) {
-  const [preview, setPreview] = useState(null);
-  const series = useMemo(() => {
-    const grouped = new Map();
-    for (const badge of stats.badges || []) { const group = grouped.get(badge.series) || []; group.push(badge); grouped.set(badge.series, group); }
-    return [...grouped.entries()].map(([key, badges]) => ({ key, badges: badges.sort((a, b) => badgeTier(a) - badgeTier(b)) }));
-  }, [stats.badges]);
-  const earned = (stats.badges || []).filter((b) => b.earned);
-  const featuredId = stats.featuredBadge?.id || stats.featuredBadge;
-  return <div className="reading-growth">
-    <div className="reading-section-head"><div><h3>{readOnly ? "성취 컬렉션" : "나의 성취 컬렉션"} <span>{earned.length} / {(stats.badges || []).length}</span></h3><p>같은 뱃지의 다음 모습까지. 초급에서 고급으로 한 단계씩 모아 보세요.</p></div></div>
-    <div className="reading-tier-guide">{[[1, "초급", "첫 발걸음"], [2, "중급", "깊어지는 독서"], [3, "고급", "나만의 성취"]].map(([tier, name, text]) => <span key={tier}><i className={`reading-tier-dot reading-tier-dot-${tier}`} /><strong>{name}</strong>{text}</span>)}</div>
-    {series.map(({ key, badges }) => { const next = badges.find((b) => !b.earned); return <section key={key} className="reading-badge-series"><header><div><h4>{badges[0]?.seriesName || badges[0]?.name?.replace(/\s*(초급|중급|고급)$/, "") || key}</h4><p>{next ? `${next.description} · ${number(next.current)} / ${number(next.threshold)}` : "세 단계의 성취를 모두 모았어요."}</p></div>{next && <span className="reading-next-goal">다음 목표 · {tierName(next.tier)}</span>}</header><div className="reading-badge-grid">{badges.map((badge) => <article key={badge.id} className={`reading-badge-card${badge.earned ? " is-earned" : ""}${featuredId === badge.id ? " is-featured" : ""}`}>
-      <div className="reading-badge-visual"><ReadingBadge badge={badge} size={100} earned={badge.earned} />{badge.earned && <span className="reading-earned-label">획득</span>}</div>
-      <span className={`reading-tier-label reading-tier-label-${badgeTier(badge)}`}>{tierName(badge.tier)}</span><h5>{badge.name}</h5><p>{badge.description}</p><span className="reading-badge-exp">＋{badge.expReward} EXP</span>
-      {badge.earned ? <><span className="reading-earned-date">{badge.earnedAt ? `${shortDate(badge.earnedAt)} 달성` : "달성한 성취"}</span>{readOnly ? (featuredId === badge.id && <span className="reading-feature-button" aria-disabled="true">대표 뱃지</span>) : <button type="button" className="reading-feature-button" disabled={busy || featuredId === badge.id} onClick={() => onSelect(badge.id)}>{featuredId === badge.id ? "나의 대표 뱃지" : "대표 뱃지로 선택"}</button>}</> : <><div className="reading-progress" role="progressbar" aria-label={`${badge.name} 달성 진행`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100, Math.round(badge.progress || 0))}><i style={{ width: `${Math.min(100, badge.progress || 0)}%` }} /></div><span className="reading-unearned">{number(badge.current)} / {number(badge.threshold)}</span><button type="button" className="reading-preview-button" onClick={() => setPreview(badge)}>디자인 미리보기</button></>}
-    </article>)}</div></section>; })}
-    <p className="reading-help">모든 단계는 한 번씩 받을 수 있어요. 기록을 고치거나 삭제하면 경험치와 성취 조건도 함께 다시 계산해요.</p>
-    {preview && <Modal title={`${preview.name} · ${tierName(preview.tier)}`} onClose={() => setPreview(null)}>
-      <div className="reading-badge-preview">
-        <span className="reading-preview-status">미획득 · 디자인 미리보기</span>
-        <ReadingBadge badge={preview} size={180} earned={true} />
-        <h3>{preview.label || `${preview.name} · ${tierName(preview.tier)}`}</h3>
-        <p>{preview.description}</p>
-        <span className="reading-preview-reward">달성 보상 ＋{preview.expReward} EXP</span>
-        <div className="reading-preview-progress"><div className="reading-progress" role="progressbar" aria-label={`${preview.name} 달성 진행`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100, Math.round(preview.progress || 0))}><i style={{ width: `${Math.min(100, preview.progress || 0)}%` }} /></div><span>현재 {number(preview.current)} / {number(preview.threshold)}</span></div>
-        <p className="reading-help">앞으로 모을 뱃지의 모습을 미리 보는 화면이에요. 조건을 달성하면 내 컬렉션에 추가돼요.</p>
-      </div>
-      <div className="reading-form-actions"><button type="button" className="btn-primary" onClick={() => setPreview(null)}>확인</button></div>
-    </Modal>}
-  </div>;
+function BadgeDetail({ badge, featured, busy, readOnly, onClose, onSelect }) {
+  return <Modal title={`${badge.name} · ${tierName(badge.tier)}`} busy={busy} onClose={onClose}>
+    <div className="reading-badge-preview">
+      <span className="reading-preview-status">{badge.earned ? (featured ? "획득 · 대표 뱃지" : "획득한 뱃지") : "미획득 · 디자인 미리보기"}</span>
+      <ReadingBadge badge={badge} size={144} earned={true} />
+      <h3>{badge.label || `${badge.name} · ${tierName(badge.tier)}`}</h3>
+      <p>{badge.description}</p>
+      <span className="reading-preview-reward">달성 보상 ＋{badge.expReward} EXP</span>
+      <div className="reading-preview-progress"><div className="reading-progress" role="progressbar" aria-label={`${badge.name} 달성 진행`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100, Math.round(badge.progress || 0))}><i style={{ width: `${Math.min(100, badge.progress || 0)}%` }} /></div><span>현재 {number(badge.current)} / {number(badge.threshold)}</span></div>
+      {badge.earned ? <p className="reading-help">{badge.earnedAt ? `${shortDate(badge.earnedAt)} 달성` : "달성한 성취"}</p> : <p className="reading-help">앞으로 모을 뱃지의 모습을 미리 보는 화면이에요. 조건을 달성하면 내 컬렉션에 추가돼요.</p>}
+    </div>
+    <div className="reading-form-actions">
+      {!readOnly && badge.earned && <button type="button" className="btn-primary" disabled={busy || featured} onClick={onSelect}>{featured ? "나의 대표 뱃지" : "대표 뱃지로 선택"}</button>}
+      <button type="button" className="btn-ghost" disabled={busy} onClick={onClose}>닫기</button>
+    </div>
+  </Modal>;
 }
 
 function Rankings({ classId, uid, isTeacher, onDisabled }) {

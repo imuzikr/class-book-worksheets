@@ -25,9 +25,6 @@
   gap: 16px;
   flex-wrap: wrap;
 }
-/* 제목 위 문구 — .books-head가 세로 flex(gap 8px)라, 그대로 두면 공부방
-   (문구 아래 4px)보다 제목이 8px 더 떨어집니다. 두 화면의 간격을 맞춥니다. */
-.books-head > .page-tagline { margin-bottom: -4px; }
 .books-head-main {
   display: flex;
   align-items: center;
