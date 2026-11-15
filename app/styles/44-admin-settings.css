@@ -12,7 +12,8 @@
 .adm-groups { display: flex; flex-direction: column; gap: 12px; }
 .adm-group { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 16px; align-items: stretch; padding: 14px; border: 1px solid var(--border); border-radius: 16px; background: transparent; min-width: 0; }
 .adm-group-head { display: flex; flex-direction: column; gap: 4px; padding: 4px 2px 0; min-width: 0; }
-.adm-group-head h3 { margin: 0; font-size: 15px; color: var(--dark); }
+/* keep-all — 긴 제목('배부름이 줄지 않는 독서량')이 낱말 가운데서 '독서 / 량'처럼 쪼개지지 않게 */
+.adm-group-head h3 { margin: 0; font-size: 15px; color: var(--dark); word-break: keep-all; }
 /* keep-all — '캐릭터와 펫'이 '캐 / 릭터와 펫'처럼 낱말 가운데서 쪼개지지 않게 */
 .adm-group-head span { font-size: 12px; color: var(--text-faint); line-height: 1.45; word-break: keep-all; }
 .adm-features { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
@@ -51,6 +52,17 @@
 .adm-class-switch-name { min-width: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; word-break: keep-all; overflow-wrap: anywhere; line-height: 1.35; font-size: 13.5px; font-weight: 600; color: var(--dark); }
 .adm-class-switch:not(.is-on) .adm-class-switch-name { color: var(--text-sub); }
 .adm-feature .adm-class-switch .adm-switch { align-self: center; flex-shrink: 0; margin: 0; }
+
+/* ── 펫 먹이의 '읽은 날' 기준(components/PetReadSettings.jsx) — 쪽수 · 글자 수(선생님이 정함 · 처음 5쪽 · 250자).
+   두 칸은 같은 폭(이어 놓인 칸은 같은 크기)이고, 설정 칸이 좁으면 한 줄에 하나. 껍데기 · 안내 · 단추 줄은 '배고파지지 않는 날'과 같은 것. ── */
+.adm-read-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.adm-read-field { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: #fff; cursor: text; }
+.adm-read-field.is-bad { border-color: #e2a39b; }
+.adm-read-label { font-size: 13px; font-weight: 600; color: var(--dark); white-space: nowrap; }
+.adm-read-input { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-sub); white-space: nowrap; }
+.adm-read-input input { width: 88px; height: 36px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px; background: #fff; font-size: 14px; font-variant-numeric: tabular-nums; text-align: right; color: var(--text); }
+.adm-read-group p.adm-rest-problem { margin: 0; }
+@container admset (max-width: 520px) { .adm-read-fields { grid-template-columns: minmax(0, 1fr); } }
 
 /* 독서 맵 — 실제 지도를 보고 고르는 두 개의 라디오 선택지. */
 .adm-map-group { border: 0; border-top: 1px solid var(--border); border-radius: 0; padding-top: 18px; padding-bottom: 18px; }

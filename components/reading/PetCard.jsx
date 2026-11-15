@@ -16,7 +16,8 @@
 //
 // **펫 먹이**(관리자 설정의 '펫 먹이'를 켠 반 — lib/petCare.js · 선생님 요청)
 // · 배부름(0~100)은 프로필의 펫(care)과 반 설정 · 오늘 날짜로 이 화면이 스스로 셉니다(읽기 0). 날마다 10씩 줄고,
-//   과일 1개에 +10(자세히 보기의 '먹이 주기' — 과일이 펫에게 날아감), 오늘 발자국을 5쪽 · 250자 이상 남기면 유지.
+//   과일 1개에 +10(자세히 보기의 '먹이 주기' — 과일이 펫에게 날아감), 오늘 발자국을 선생님이 정한 쪽수 · 글자 수(처음 5쪽 · 250자)
+//   이상 남기면 유지(관리자 설정의 '배부름이 줄지 않는 독서량' — feed.read).
 // · 30 이하면 펫이 말풍선으로 배고프다고 말합니다. 0이 되면 먹이를 찾아 떠나고, 카드가 '다시 부르기'가 됩니다 —
 //   읽은 날마다 한 걸음 · 과일 2개로도 한 걸음, 다 채우면 **같은 펫**이 돌아와 폭죽이 한 번 터집니다.
 // · 알은 과일을 먹지 않습니다(책을 읽어 지킴).
@@ -28,12 +29,12 @@
 //   고른 종은 서버만 읽는 자리에 있어, 미리보기를 켠 반의 알이면 카드를 열 때 한 번 묻습니다(fetchMyReadingPet의 chosen).
 // · **깨어난 펫은 바꾸지 않습니다**(선생님 결정) — 미리보기 창은 고르는 단추 없이 보기만 합니다.
 // =============================================================
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { callReadingPet, chooseReadingPet, ensureReadingPet, feedReadingPet, fetchMyReadingPet, hatchReadingPet, subscribeMyReadingPet } from "@/lib/data/reading";
 import { getExpForReadingLevel, kstToday } from "@/lib/reading";
 import { PET_HATCH_XP, PET_STAGES, petCheerKind, petProgress, petSpecies } from "@/lib/readingPet";
-import { CARE_DAY_DROP, CARE_FRUIT, CARE_MAX, CARE_READ_CHARS, CARE_READ_PAGES, CARE_RETURN, CARE_STEP_FRUIT, careStatus } from "@/lib/petCare";
+import { CARE_DAY_DROP, CARE_FRUIT, CARE_MAX, CARE_RETURN, CARE_STEP_FRUIT, careReadLabel, careStatus } from "@/lib/petCare";
 import { iGa } from "@/lib/korean";
 import { welcomePending } from "@/lib/readingWelcome";
 import { backdropClose } from "@/lib/modal";
@@ -125,6 +126,33 @@ function Steps({ steps }) {
 // level · onLevelCheer — 책 봄의 캐릭터 레벨. 같은 저장에서 펫이 자라며 레벨도 오르면(알을 경험치 0에서
 // 받은 학생은 둘의 기준표가 같아 늘 함께 오름) 축하 한 번에 함께 알리고, 책 봄에 그 레벨을 알려
 // 알림 줄이 같은 말('레벨 n 달성!')을 또 띄우지 않게 합니다.
+/**
+ * 먹이 주기 · 과일로 한 걸음 — 저장이 끝난 뒤에 과일을 날립니다(실패했는데 먹는 그림을 보여 주지 않게).
+ * '나의 펫' 카드와 책 광장 · 교실 · 아지트의 펫 정보 창(PetInfoModal)이 같은 길을 씁니다. 두 번 눌러도 한 번만(busyRef).
+ */
+export function usePetCareActions(classId) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const busyRef = useRef(false);
+  const act = useCallback(async (kind, count, fly) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setBusy(true);
+    setError("");
+    try {
+      const result = kind === "feed" ? await feedReadingPet(classId, count) : await callReadingPet(classId);
+      fly?.(result?.used ?? 0);
+    } catch (e) {
+      setError(e?.message || (kind === "feed" ? "먹이를 주지 못했어요. 잠시 뒤 다시 해 볼까요?" : "걸음을 내지 못했어요. 잠시 뒤 다시 해 볼까요?"));
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
+    }
+  }, [classId]);
+  const clearError = useCallback(() => setError(""), []);
+  return { busy, error, act, clearError };
+}
+
 // feed — 그 반의 먹이 규칙(lib/readingPet.js의 petCareRules — 펫 먹이를 끈 반이면 on이 거짓) · fruits — 내가 가진 과일 수 ·
 // today — 서울 날짜(책 봄이 1분마다 다시 봄 — 자정을 넘기면 배부름이 따라 줄어듦).
 // preview — 관리자 설정의 '펫 미리보기'(lib/readingPet.js의 petPreviewOn) — 켠 반이면 키울 펫을 고르는 창을 엽니다.
@@ -203,8 +231,7 @@ export default function PetCard({ classId, uid, growthXp, level = null, onLevelC
   const day = today || kstToday();
   const stage = progress?.stage ?? 1;
   const care = useMemo(() => (progress && feed?.on ? careStatus(state.mirror, feed, day, stage) : null), [state.mirror, feed, day, stage, progress]);
-  const [careBusy, setCareBusy] = useState(false);
-  const [careError, setCareError] = useState("");
+  const { busy: careBusy, error: careError, act: careAct, clearError: clearCareError } = usePetCareActions(classId);
   // 떠났던 펫이 돌아오면 한 번 축하합니다(이 화면이 떠 있는 동안 '떠남 → 곁에'로 바뀔 때만 — 처음 본 값은 기준)
   const away = care ? care.away : null;
   const wasAway = useRef(null);
@@ -220,21 +247,6 @@ export default function PetCard({ classId, uid, growthXp, level = null, onLevelC
       setCheer({ id: cheerSeq.current, kind: "return", progress: now, level: null });
     }
   }, [away]);
-
-  // 먹이 주기 · 과일로 한 걸음 — 저장이 끝난 뒤에 과일을 날립니다(실패했는데 먹는 그림을 보여 주지 않게)
-  async function careAct(kind, count, fly) {
-    if (careBusy) return;
-    setCareBusy(true);
-    setCareError("");
-    try {
-      const result = kind === "feed" ? await feedReadingPet(classId, count) : await callReadingPet(classId);
-      fly?.(result?.used ?? 0);
-    } catch (e) {
-      setCareError(e?.message || (kind === "feed" ? "먹이를 주지 못했어요. 잠시 뒤 다시 해 볼까요?" : "걸음을 내지 못했어요. 잠시 뒤 다시 해 볼까요?"));
-    } finally {
-      setCareBusy(false);
-    }
-  }
 
   // 단계가 오르면 한 번 축하합니다 — 이 기기에서 본 단계와 견줌(처음이면 적어 두기만 — petCheerKind)
   // 이 효과는 책 봄(부모)의 레벨 알림 효과보다 먼저 돕니다(React는 자식의 효과부터) — 그래서
@@ -328,8 +340,8 @@ export default function PetCard({ classId, uid, growthXp, level = null, onLevelC
     {error && !open && <p className="reading-pet-error" role="alert">{error}</p>}
     {notice && <p className="reading-pet-notice" role="status">{notice}</p>}
     </div>
-    {open && <PetDetailModal progress={shown} busy={busy} error={error} onHatch={hatch} onClose={() => { setOpen(false); setCareError(""); }}
-      care={shownCare} fruits={fruits} careBusy={careBusy} careError={careError} onFeed={(count, fly) => careAct("feed", count, fly)} onCall={(fly) => careAct("call", 0, fly)}
+    {open && <PetDetailModal progress={shown} busy={busy} error={error} onHatch={hatch} onClose={() => { setOpen(false); clearCareError(); }}
+      care={shownCare} fruits={fruits} careBusy={careBusy} careError={careError} onFeed={(count, fly) => careAct("feed", count, fly)} onCall={(fly) => careAct("call", 0, fly)} read={feed?.read}
       chosen={chosenSp?.key ?? null} onPreview={preview && !frozen ? openPreview : null} />}
     {previewOpen && preview && <PetPreviewModal
       current={{ species: shown.hatched ? shown.species : chosenSp?.key ?? null, hatched: shown.hatched, stage: shown.stage, away: gone }}
@@ -339,16 +351,20 @@ export default function PetCard({ classId, uid, growthXp, level = null, onLevelC
 }
 
 // 자세히 보기의 '펫 먹이' 칸 — 배부름 · 먹이 주기 / 떠났으면 다시 부르기. figureRef: 과일이 날아갈 펫 그림.
-function PetCareSection({ progress, care, fruits, busy, error, onFeed, onCall, figureRef }) {
+// read — 그 반의 '읽은 날' 기준 { pages, chars }(선생님이 정함 — 없으면 처음 값 5쪽 · 250자).
+// onFeed · onCall이 없으면 읽기만 합니다(선생님이 학생의 아지트에서 그 학생의 펫을 볼 때 — 단추 · 가진 과일 없이).
+function PetCareSection({ progress, care, fruits, busy, error, onFeed, onCall, figureRef, read = null }) {
   const fruitRef = useRef(null);
+  const canFeed = typeof onFeed === "function";
+  const canCall = typeof onCall === "function";
   const who = petCallName(progress);
   const have = Math.max(0, Math.floor(Number(fruits) || 0));
   const fly = (n) => flyFruits({ from: fruitRef.current, basket: figureRef.current, n, dir: "in" });
-  const readRule = `독서 발자국을 ${CARE_READ_PAGES}쪽 이상 · ${CARE_READ_CHARS}자 이상`;
+  const readRule = `독서 발자국을 ${careReadLabel(read)} 이상`;
   if (care.away) {
     const left = care.steps.need - care.steps.done;
     return <section className="pet-care is-away" aria-label="떠난 펫 다시 부르기">
-      <div className="pet-care-head"><strong>{progress.hatched ? `${iGa(who)} 먹이를 찾아 떠났어요` : "알이 따뜻한 곳을 찾아 떠났어요"}</strong><span ref={fruitRef} className="pet-care-fruit">가진 과일 🍊 {number(have)}</span></div>
+      <div className="pet-care-head"><strong>{progress.hatched ? `${iGa(who)} 먹이를 찾아 떠났어요` : "알이 따뜻한 곳을 찾아 떠났어요"}</strong>{canCall && <span ref={fruitRef} className="pet-care-fruit">가진 과일 🍊 {number(have)}</span>}</div>
       <div className="pet-care-steps"><Steps steps={care.steps} /><b>다시 부르기 {care.steps.done} / {care.steps.need}걸음</b></div>
       <ul className="pet-care-how">
         <li>오늘 날짜로 {readRule} 남긴 날마다 <b>한 걸음</b>(하루에 한 걸음)</li>
@@ -356,10 +372,10 @@ function PetCareSection({ progress, care, fruits, busy, error, onFeed, onCall, f
       </ul>
       <p className="pet-care-note">{left}걸음을 더 채우면 {progress.hatched ? iGa(who) : "알이"} 배부름 {CARE_RETURN}으로 돌아와요. 새 {progress.hatched ? "펫" : "알"}이 아니라 같은 {progress.hatched ? "펫" : "알"}이에요.</p>
       {error && <p className="form-error" role="alert">{error}</p>}
-      <div className="pet-care-actions pet-care-actions--one">
+      {canCall && <div className="pet-care-actions pet-care-actions--one">
         <button type="button" className="btn-primary" disabled={busy || have < CARE_STEP_FRUIT} onClick={() => onCall(fly)}
           title={have < CARE_STEP_FRUIT ? `과일 ${CARE_STEP_FRUIT}개가 있어야 해요` : undefined}>{busy ? "걸음을 내는 중…" : `🍊 과일 ${CARE_STEP_FRUIT}개로 한 걸음`}</button>
-      </div>
+      </div>}
     </section>;
   }
   const today = care.keptToday ? "오늘은 ‘읽은 날’이라 배부름이 줄지 않아요 ✓"
@@ -369,11 +385,11 @@ function PetCareSection({ progress, care, fruits, busy, error, onFeed, onCall, f
   const why = !progress.hatched ? "" : care.room < 1 ? "지금은 배가 불러요." : have < 1 ? "줄 과일이 없어요. 수업 활동으로 과일을 모아 보세요." : "";
   const say = petSay(care, progress.hatched);
   return <section className={`pet-care${care.hungry ? " is-hungry" : ""}`} aria-label="펫 먹이">
-    <div className="pet-care-head"><strong>배부름 {care.full} <small>/ {CARE_MAX}</small></strong>{progress.hatched && <span ref={fruitRef} className="pet-care-fruit">가진 과일 🍊 {number(have)}</span>}</div>
+    <div className="pet-care-head"><strong>배부름 {care.full} <small>/ {CARE_MAX}</small></strong>{progress.hatched && canFeed && <span ref={fruitRef} className="pet-care-fruit">가진 과일 🍊 {number(have)}</span>}</div>
     <Fullness care={care} />
     {say && <p className="pet-care-say">“{say}”</p>}
     <p className="pet-care-note">날마다 {CARE_DAY_DROP}씩 줄어요{care.daysLeft > 0 ? ` — 지금대로면 ${care.daysLeft}일 버텨요` : ""}. {today}</p>
-    {progress.hatched ? <>
+    {!canFeed ? null : progress.hatched ? <>
       {error && <p className="form-error" role="alert">{error}</p>}
       <div className={`pet-care-actions${fill > 1 ? "" : " pet-care-actions--one"}`}>
         <button type="button" className="btn-primary" disabled={busy || care.room < 1 || have < 1} onClick={() => onFeed(1, fly)} title={why || undefined}>{busy ? "먹이는 중…" : `🍊 과일 1개 주기 (+${CARE_FRUIT})`}</button>
@@ -387,21 +403,30 @@ function PetCareSection({ progress, care, fruits, busy, error, onFeed, onCall, f
 /** 펫 자세히 보기 — 큰 그림 · 소개 · 열 단계 · 다음 단계까지. */
 // care — 펫 먹이의 지금 배부름(없으면 그 칸을 그리지 않음 · 펫 먹이를 끈 반) · fruits · onFeed · onCall은 그 칸의 것.
 // chosen — 펫 미리보기를 켠 반에서 학생이 고른 알의 친구(본인에게만) · onPreview — 미리보기 창을 여는 칸(켠 반에서만).
+// 친구의 펫(책 광장 · 교실의 펫 정보 창 — lib/readingPet.js의 publicPetProgress)은 경험치를 모릅니다(progress.xp가 null) —
+// 그때는 경험치 막대 대신 단계만 보여 줍니다. takeFocus — 열 때 창으로 초점을 옮김(광장 · 아지트처럼 방향키로 걷는
+// 무대 위에서 열면, 초점이 무대에 남아 창이 떠 있는 동안 캐릭터가 걸었습니다). 닫기 단추가 아니라 창 자체로 옮겨
+// 마우스로 연 사람에게 초점 테가 보이지 않게 합니다(Tab을 누르면 창 안의 단추로 갑니다).
+// mine — 보는 사람의 펫인가(선생님이 학생의 아지트에서 그 학생의 펫을 볼 때 거짓 — 알을 깨우라는 말을 학생에게 하듯 하지 않게).
 export function PetDetailModal({ progress, busy = false, error = "", onHatch = null, onClose, ownerLabel = "나의 펫",
-  care = null, fruits = 0, careBusy = false, careError = "", onFeed = null, onCall = null, chosen = null, onPreview = null }) {
+  care = null, fruits = 0, careBusy = false, careError = "", onFeed = null, onCall = null, chosen = null, onPreview = null, read = null, takeFocus = false, mine = true }) {
   const titleId = useId();
   const figureRef = useRef(null);
+  const dialogRef = useRef(null);
+  useEffect(() => { if (takeFocus) dialogRef.current?.focus({ preventScroll: true }); }, [takeFocus]);
   const gone = !!care?.away;
   const sp = progress.hatched ? petSpecies(progress.species) : null;
   const picked = !progress.hatched ? petSpecies(chosen) : null;
+  const known = progress.xp != null;
   const note = progress.complete ? "독서 여행을 완성했어요! 가장 든든한 길동무가 되었어요."
-    : progress.ready ? "알이 깨어나려 해요! 아래 단추를 눌러 깨워 주세요."
-      : progress.hatched ? `다음 단계까지 ${number(progress.toNext)} EXP`
-        : `알이 깨어나기까지 ${number(progress.toNext)} EXP`;
+    : !known ? (progress.hatched ? "책을 읽을수록 함께 자라요." : "깨어나기 전까지는 어떤 친구인지 비밀이에요.")
+      : progress.ready ? (onHatch ? "알이 깨어나려 해요! 아래 단추를 눌러 깨워 주세요." : mine ? "알이 깨어나려 해요! 책 봄 책꽂이 탭의 ‘나의 펫’에서 깨워 주세요." : "알이 깨어나려 해요! 학생이 책 봄의 ‘나의 펫’에서 깨울 수 있어요.")
+        : progress.hatched ? `다음 단계까지 ${number(progress.toNext)} EXP`
+          : `알이 깨어나기까지 ${number(progress.toNext)} EXP`;
   if (typeof document === "undefined") return null;
   return createPortal(
     <div className="modal-backdrop pet-layer" {...backdropClose(onClose)}>
-      <div className="modal pet-modal" role="dialog" aria-modal="true" aria-labelledby={titleId} onClick={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} className="modal pet-modal" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={takeFocus ? -1 : undefined} onClick={(e) => e.stopPropagation()}>
         <button type="button" className="btn-close modal-close-float" onClick={onClose} aria-label="닫기">×</button>
         <div className="pet-modal-hero">
           <span ref={figureRef} className="pet-modal-figure"><PetFigure species={progress.species} stage={progress.stage} ready={progress.ready && !gone} size={132} className={gone ? "is-away" : ""} /></span>
@@ -411,10 +436,10 @@ export function PetDetailModal({ progress, busy = false, error = "", onHatch = n
             <p>{sp ? sp.intro : picked ? `고른 친구 ${picked.name} · ${picked.animal}의 알이에요. 책을 읽으면 알이 조금씩 따뜻해지고, 깨어나면 ${iGa(picked.name)} 나와요.` : "어떤 친구가 들어 있을까요? 책을 읽으면 알이 조금씩 따뜻해져요."}</p>
           </div>
         </div>
-        {care && <PetCareSection progress={progress} care={care} fruits={fruits} busy={careBusy} error={careError} onFeed={onFeed} onCall={onCall} figureRef={figureRef} />}
+        {care && <PetCareSection progress={progress} care={care} fruits={fruits} busy={careBusy} error={careError} onFeed={onFeed} onCall={onCall} figureRef={figureRef} read={read} />}
         <div className="pet-modal-progress">
-          <div className="pet-modal-progress-head"><strong>{progress.stage}단계 · {progress.stageName}</strong><span>펫 경험치 {number(progress.xp)}</span></div>
-          <Bar percent={progress.percent} label={progress.hatched ? "다음 단계까지" : "알이 깨어나기까지"} />
+          <div className="pet-modal-progress-head"><strong>{progress.stage}단계 · {progress.stageName}</strong>{known && <span>펫 경험치 {number(progress.xp)}</span>}</div>
+          {known && <Bar percent={progress.percent} label={progress.hatched ? "다음 단계까지" : "알이 깨어나기까지"} />}
           <p>{note}</p>
         </div>
         <ol className="pet-stages" aria-label="펫의 열 단계">

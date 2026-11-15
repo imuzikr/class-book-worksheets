@@ -439,6 +439,10 @@ test("관리자 설정은 선생님의 모든 반에 한 값 — 도서 검색 �
   assert.deepEqual(featuresForNewClass(classes), { readingEnabled: true, bookSearchEnabled: false, rankingEnabled: false, readingTopEnabled: true, characterEnabled: true, fruitBasketEnabled: true, petEnabled: true, petPreviewEnabled: false, petFeedEnabled: false, plazaEnabled: false, plazaTalkEnabled: false, classroomEnabled: false, hideoutEnabled: false, readingMapTheme: "cloud-islands", petRests: [] });
   assert.equal(featuresForNewClass([{ archived: true }]), null);
   assert.equal(teacherFeatureSettings([]).readingEnabled.on, false);
+  // 펫 먹이의 '읽은 날' 기준(선생님이 정한 쪽수 · 글자 수)도 새 반이 따름 — 정한 적이 없으면 넘기지 않음(처음 값 5쪽 · 250자)
+  const ruled = featuresForNewClass([{ id: "a", readingEnabled: true, petReadPages: 12, petReadChars: 0 }]);
+  assert.deepEqual([ruled.petReadPages, ruled.petReadChars], [12, 0]);
+  assert.equal("petReadPages" in featuresForNewClass([{ id: "a", readingEnabled: true }]), false);
 });
 
 test("펫 먹이의 '배고파지지 않는 날'은 선생님의 모든 반에 한 값 — 운영 중인 첫 반의 값, 다르면 mixed", async () => {

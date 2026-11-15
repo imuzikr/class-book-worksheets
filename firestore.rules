@@ -593,7 +593,9 @@ service cloud.firestore {
       // 0 이상의 수만 받습니다(앉아 있던 학생의 화면이 이 값이 바뀌는 것을 보고 출석을 남깁니다).
       // 펫 먹이(lib/petCare.js) — 스위치(petFeedEnabled) · 주말에 쉬는가(petRestWeekend)는 참 · 거짓만, 배고파지지 않는
       // 기간(petRests — 방학 · 시험 기간 · 기타)은 20줄까지의 목록만. 줄의 모양(날짜 · 종류)은 읽는 쪽이 다시 고릅니다
-      // (normalizeCareRests — 틀린 줄은 버림). **켠 때(petFeedFrom)는 서버 시각만** 받습니다(앱이 serverTimestamp()로 적음 —
+      // (normalizeCareRests — 틀린 줄은 버림). '읽은 날'의 기준(그날 독서 발자국이 이만큼이면 배부름이 줄지 않음 — 선생님이
+      // 정함)은 정수만 — 쪽수(petReadPages) 1~100 · 글자 수(petReadChars) 0~2000(lib/petCare.js의 CARE_READ_* 와 같은 범위).
+      // **켠 때(petFeedFrom)는 서버 시각만** 받습니다(앱이 serverTimestamp()로 적음 —
       // lib/data/classes.js의 featureWrite). 배부름은 켠 날부터 세는데, 한때 기기 시계(Date.now())로 적어 시계가 뒤로 틀린
       // PC에서 켜면 그 앞의 날이 모두 세어져 펫이 켜자마자 한꺼번에 떠날 수 있었고, 요청을 꾸며 아주 이른 날(같은 일) ·
       // 아주 큰 수(화면 · 서버의 날짜 셈이 멈춤)를 넣을 수도 있었습니다 — 읽는 쪽(lib/petCare.js의 msOf)도 범위 밖 값은 버립니다.
@@ -625,6 +627,10 @@ service cloud.firestore {
                && (!keys.hasAny(['petFeedOnAt']) || d.get('petFeedOnAt', null) == request.time || !d.keys().hasAny(['petFeedOnAt']))
                && (!keys.hasAny(['petFeedPauses']) || (d.get('petFeedPauses', null) is list && d.petFeedPauses.size() <= 40))
                && (!keys.hasAny(['petRests']) || (d.get('petRests', null) is list && d.petRests.size() <= 20))
+               && (!keys.hasAny(['petReadPages'])
+                   || (d.get('petReadPages', null) is int && d.petReadPages >= 1 && d.petReadPages <= 100))
+               && (!keys.hasAny(['petReadChars'])
+                   || (d.get('petReadChars', null) is int && d.petReadChars >= 0 && d.petReadChars <= 2000))
                && (!keys.hasAny(['readingTopEnabled']) || d.get('readingTopEnabled', null) is bool)
                && (!keys.hasAny(['plazaEnabled']) || d.get('plazaEnabled', null) is bool)
                && (!keys.hasAny(['plazaTalkEnabled']) || d.get('plazaTalkEnabled', null) is bool)
@@ -666,7 +672,7 @@ service cloud.firestore {
         return classSettingsShapeOk(request.resource.data, changed)
                && petFeedPauseFlowOk(changed)
                && (!changed.hasAny(['bookActivitiesEnabled', 'readingEnabled', 'rankingEnabled', 'characterEnabled', 'bookSearchEnabled', 'fruitBasketEnabled', 'petEnabled', 'readingTopEnabled', 'plazaEnabled', 'plazaTalkEnabled', 'classroomEnabled', 'hideoutEnabled', 'classroomCallAt', 'readingMapTheme',
-                                    'petFeedEnabled', 'petRestWeekend', 'petRests', 'petPreviewEnabled'])
+                                    'petFeedEnabled', 'petRestWeekend', 'petRests', 'petReadPages', 'petReadChars', 'petPreviewEnabled'])
                    || (resource.data.get('archived', false) != true
                        && request.resource.data.get('archived', false) != true));
       }
@@ -694,7 +700,7 @@ service cloud.firestore {
       //   · plazaBooks/{학생uid_책id}   책마다 한 장 — 독서 발자국 · 한 권의 책
       //   · plazaComments/{id}         댓글(책 한 권에 한 줄기)
       //  셋 다 **서버(Next API · Admin SDK)만 씁니다.** 서재 정본(users/{uid}/reading/main — 아무도 못 읽음)을
-      //  저장할 때 서버가 사본을 맞추고(lib/server/readingService.js의 writePlaza), 댓글 · 교사의 내리기도
+      //  저장할 때 서버가 사본을 맞추고(lib/server/readingService.js의 writePlaza), 댓글도
       //  API(/api/reading/plaza)가 이름표를 프로필에서 붙여 씁니다. 그래서 여기서는 **읽기만** 엽니다.
       //   · 학생: 같은 반이고(isClassMember — 사용 중지 · 보관된 반은 거부) **그 반이 광장을 켰을 때만**.
       //     끄면 학생은 사본을 못 읽습니다(화면도 탭을 걷음).

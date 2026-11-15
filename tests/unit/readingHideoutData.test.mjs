@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { deriveReading, hideoutOn, initialReadingState, kstToday } from "../../lib/reading.js";
 import { hideoutProgress, normalizeHideoutRoom, validateHideoutLayout } from "../../lib/readingHideout.js";
+import { petGrowthOfSummary } from "../../lib/readingPet.js";
 
 // 실제 자료 모듈을 실행하되 Firebase/로그인/서재 경계만 바꿉니다. 실제 네트워크는 호출하지 않습니다.
 const source = await readFile(new URL("../../lib/data/readingHideout.js", import.meta.url), "utf8");
@@ -31,7 +32,7 @@ async function demo({ lowLevel = false } = {}) {
     mock, hideoutOn,
     demoSuspendedSet: () => suspended,
     isTeacher: (value) => value.role === "teacher" || value.role === "admin",
-    deriveReading, hideoutProgress, normalizeHideoutRoom, validateHideoutLayout,
+    deriveReading, hideoutProgress, normalizeHideoutRoom, validateHideoutLayout, petGrowthOfSummary,
     demoReadingAccess: (classId, targetUid) => {
       const selected = mock.classes.find((entry) => entry.id === classId);
       if (!selected || !selected.readingEnabled || selected.archived) throw Object.assign(new Error("Disabled"), { code: "reading-disabled" });
@@ -43,7 +44,7 @@ async function demo({ lowLevel = false } = {}) {
     demoReadingState: (uid) => { stateReads.push(uid); return state; },
     readingRequest: () => { throw new Error("Unexpected network request"); },
   };
-  const injected = `const { isFirebaseConfigured, mock, hideoutOn, demoSuspendedSet, isTeacher, deriveReading, hideoutProgress, normalizeHideoutRoom, validateHideoutLayout, demoReadingAccess, demoReadingState, readingRequest } = globalThis.__hideoutDataFixture;\n`
+  const injected = `const { isFirebaseConfigured, mock, hideoutOn, demoSuspendedSet, isTeacher, deriveReading, hideoutProgress, normalizeHideoutRoom, validateHideoutLayout, petGrowthOfSummary, demoReadingAccess, demoReadingState, readingRequest } = globalThis.__hideoutDataFixture;\n`
     + source.replace(/^import .+ from "[^"]+";\n/gm, "") + `\n// instance ${serial++}`;
   const module = await import(`data:text/javascript;base64,${Buffer.from(injected).toString("base64")}`);
   return { module, values, cls, mock, suspended, stateReads, blockWrite: (on) => { blockWrite = on; }, switchUser: (uid, role = "student") => { user = { uid, role }; } };
@@ -216,7 +217,13 @@ test("teacher demo lookup reads the selected student's room while peers and non-
   env.switchUser("student-b");
   await assert.rejects(() => env.module.fetchReadingHideout("class", "student-a"), (e) => e.code === "permission-denied");
   env.switchUser("teacher", "teacher");
-  assert.deepEqual((await env.module.fetchReadingHideout("class", "student-a")).room, saved.room);
+  const view = await env.module.fetchReadingHideout("class", "student-a");
+  assert.deepEqual(view.room, saved.room);
+  // 방 주인의 누적 경험치(서버와 같은 칸) — 선생님이 학생의 방을 볼 때 방석의 펫이 자란 만큼 그리는 바탕
+  assert.ok(first.petGrowthXp > 0);
+  assert.equal(view.petGrowthXp, first.petGrowthXp);
+  // 선생님 본인의 방에는 펫이 없어 싣지 않습니다
+  assert.equal("petGrowthXp" in (await env.module.fetchReadingHideout("class")), false);
   await assert.rejects(() => env.module.fetchReadingHideout("class", "../other"), (e) => e.code === "reading/invalid-hideout");
   env.mock.demoUsers[0].role = "teacher";
   await assert.rejects(() => env.module.fetchReadingHideout("class", "student-a"), (e) => e.code === "reading/not-member");

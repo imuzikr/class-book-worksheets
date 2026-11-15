@@ -13,12 +13,13 @@ import { fetchReadingHideout, saveReadingHideout } from "@/lib/data/readingHideo
 import { subscribeMyReadingCharacter, subscribeMyReadingPet } from "@/lib/data/reading";
 import { characterImage, characterName, characterOf } from "@/lib/readingCharacterCatalog";
 import { petGrowthOfSummary, petProgress } from "@/lib/readingPet";
-import { careAway } from "@/lib/petCare";
+import { careAway, careStatus } from "@/lib/petCare";
 import { kstToday } from "@/lib/reading";
 import { eulReul } from "@/lib/korean";
 import { PLAZA_WALK_SPEED, SPRITE_BODY, SPRITE_CELL, SPRITE_FOOT, plazaCharacterSheet, plazaFacing, plazaWalkFrame } from "@/lib/readingPlazaSprites";
 import { hasModalAbove } from "@/lib/modal";
 import PetFigure from "./PetFigure";
+import PetInfoModal from "./PetInfoModal";
 import PlazaSprite from "./PlazaSprite";
 import "./hideout.css";
 
@@ -57,7 +58,7 @@ export default function ReadingHideout(props) {
 
 // petFeed — 그 반의 펫 먹이 규칙(lib/readingPet.js의 petCareRules — 그 학생이 반에 들어온 날까지 반영한 것 · 끈 반이면 on이 거짓).
 //   먹이를 찾아 떠난 펫은 방석에도 없습니다(책 광장과 같은 판정 — lib/petCare.js의 careAway). 돌아오면 다시 쉽니다.
-function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly, characterOn = true, petOn = false, petFeed = null, onDisabled, onExit, initialView = null, onLoaded = null, exitLabel = "학생 서재로", hideExitButton = false, returnRoom = "classroom" }) {
+function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly, characterOn = true, petOn = false, petFeed = null, fruits = 0, onDisabled, onExit, initialView = null, onLoaded = null, exitLabel = "학생 서재로", hideExitButton = false, returnRoom = "classroom" }) {
   // Only the two public map rooms can be return destinations. The parent owns
   // navigation; this private room uses the destination solely for its labels.
   const returnPlace = returnRoom === "plaza" ? "책 광장" : "교실";
@@ -77,6 +78,11 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
   const [reload, setReload] = useState(0);
   const [character, setCharacter] = useState(null);
   const [petMirror, setPetMirror] = useState(null);
+  // 방 주인의 누적 경험치(서버가 방과 함께 보냄 — petGrowthXp). 책 봄 요약(summary)이 없는 화면 — 선생님이 학생의
+  // 방을 볼 때 — 펫이 자란 만큼 그리는 바탕입니다(없으면 다 자란 펫도 2단계 · 경험치 0으로 보였음).
+  const [ownerGrowth, setOwnerGrowth] = useState(null);
+  // 펫 정보 창(방석의 펫을 누르면 — PetInfoModal · 선생님 요청). 떠 있는 동안은 걷지 않습니다(movement의 enabled)
+  const [petOpen, setPetOpen] = useState(false);
   const [spriteMissing, setSpriteMissing] = useState(false);
   const [sceneWidth, setSceneWidth] = useState(0);
   const alive = useRef(true);
@@ -99,7 +105,7 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   useEffect(() => {
     let current = true;
-    setLoading(true); setRoom(null); setDraft(null); setProgress(null); setError(""); setNotice(""); setEditing(false); setDetail(null);
+    setLoading(true); setRoom(null); setDraft(null); setProgress(null); setOwnerGrowth(null); setError(""); setNotice(""); setEditing(false); setDetail(null);
     if (!classId || !viewUid) { setLoading(false); return undefined; }
     const initial = initialViewRef.current;
     const cached = readOnly && reload === 0 && initial?.classId === classId && initial?.uid === viewUid && initial?.value?.room && initial?.value?.progress ? initial.value : null;
@@ -110,6 +116,7 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
       const restore = remembered?.revision === value.room.revision;
       const restored = restore ? normalizeHideoutRoom({ ...value.room, layout: remembered.layout }, value.progress) : value.room;
       setRoom(value.room); setDraft(restored.layout); setProgress(value.progress); setLoading(false);
+      setOwnerGrowth(Number.isFinite(value.petGrowthXp) ? value.petGrowthXp : null);
       if (restore && !sameLayout(restored.layout, value.room.layout)) { setEditing(true); setNotice("이 탭에서 꾸미던 모습을 다시 열었어요. 마음에 들면 저장해 주세요."); }
       else if (remembered) { keepDraft(draftKey, null); setNotice("저장된 방이 바뀌어 최신 모습을 열었어요."); }
     }).catch((e) => {
@@ -157,10 +164,11 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
   const appearance = characterOf({ uid: viewUid, character: characterOn ? character : null });
   const spriteSrc = plazaCharacterSheet(appearance);
   const petGone = petOn && !!petFeed?.on && careAway(petMirror, petFeed, kstToday());
-  const pet = petOn && !petGone ? petProgress(petMirror, petGrowthOfSummary(summary)) : null;
+  const growth = summary ? petGrowthOfSummary(summary) : ownerGrowth;
+  const pet = petOn && !petGone ? petProgress(petMirror, growth) : null;
   const bed = props.find((prop) => prop.category === "bed");
   const movement = useMovement({
-    enabled: !!room && !loading && !readOnly && !editing && !saving && !detail && !exitPending && !resetPending,
+    enabled: !!room && !loading && !readOnly && !editing && !saving && !detail && !exitPending && !resetPending && !petOpen,
     map, spriteRef, onPortal: () => requestExitRef.current?.(),
   });
   // 들어오자마자 방향키로 걷게 무대에 초점을 둡니다 — 교실의 포털로 들어오면 광장의 무대가 사라져 초점이 본문으로
@@ -303,7 +311,7 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
           : <img className="hideout-character-fallback" src={characterImage(appearance)} alt="" draggable={false} style={{ width: actorSize, height: actorSize, left: -actorSize / 2, top: -actorSize * .92 }} />}
         <span className="hideout-resident-name" style={{ bottom: Math.round(actorSize * (spriteSrc && !spriteMissing ? SPRITE_BODY / SPRITE_CELL : .92)) + 5 }}>{myName}</span>
       </div>
-      {pet && bed && <RestingPet pet={pet} bed={bed} />}
+      {pet && bed && <RestingPet pet={pet} bed={bed} owner={readOnly ? myName : ""} onOpen={() => { movement.stop(); setPetOpen(true); }} />}
     </div>
     <p className="hideout-walk-help">{readOnly ? "학생 본인만 아지트를 꾸밀 수 있어요." : editing ? `소품을 고른 뒤 위쪽의 ‘꾸미기 완료’나 ‘꾸미기 취소’를 누르면 다시 걷거나 포털로 ${returnPlace}에 돌아갈 수 있어요.` : `빈 바닥을 누르거나 방향키로 걸어요. ${petGone ? "펫은 먹이를 찾아 떠나 있어요(책 봄에서 다시 불러요). " : pet ? "펫은 창가에서 쉬어요. " : ""}오른쪽 포털로 ${returnPlace}에 돌아가요.`}</p>
     </div>
@@ -351,6 +359,10 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
         <button type="button" className="hideout-primary" onClick={() => finish(true)} disabled={saving}>{saving ? "저장 중…" : `저장하고 ${returnTo}`}</button>
       </div>
     </HideoutDialog>}
+    {/* 펫 정보 창 — 방석의 펫을 누르면. 내 방이면 '나의 펫'(먹이 단추까지), 선생님이 학생의 방을 보면 그 학생의 펫을 읽기만 */}
+    {petOpen && pet && <PetInfoModal classId={classId} own={!readOnly} actions={!readOnly} owner={myName} progress={pet}
+      care={petFeed?.on ? careStatus(petMirror, petFeed, kstToday(), pet.stage) : null} read={petFeed?.read} fruits={fruits}
+      onClose={() => { setPetOpen(false); if (!readOnly) focusStage(); }} />}
     {resetPending && <HideoutDialog title="기본 소품으로 바꿀까요?" onClose={() => setResetPending(false)} alert>
       <p>기본 가구를 놓고 추가 소품은 치워요. 열린 소품은 다시 고를 수 있어요.</p><div className="hideout-dialog-actions">
         <button type="button" onClick={() => setResetPending(false)}>계속 꾸미기</button><button type="button" className="hideout-primary" onClick={() => { setDraft({ ...HIDEOUT_DEFAULT_LAYOUT }); setResetPending(false); setNotice("기본 소품을 놓았어요. ‘꾸미기 완료’를 누르면 저장돼요."); }}>기본 소품 놓기</button>
@@ -411,16 +423,20 @@ function HideoutDialog({ title, onClose, busy = false, alert = false, children }
   </dialog>;
 }
 
-function RestingPet({ pet, bed }) {
+// 방석에서 쉬는 펫 — 누르면 펫 정보 창(onOpen · 선생님 요청). 단추라 바닥을 누른 것으로 읽히지 않습니다(useMovement의 onClick이
+// 단추를 비켜 감) · owner — 선생님이 학생의 방을 볼 때 그 학생의 이름(읽어 주는 이름에 씀).
+function RestingPet({ pet, bed, owner = "", onOpen }) {
   const rest = getHideoutRestPet(pet), egg = pet.hatched !== true || pet.stage === 1;
   const [missing, setMissing] = useState(null);
   const placement = egg ? hideoutEggRestPosition(bed, bed.itemId || bed.id) : hideoutPetRestPosition(bed, bed.itemId || bed.id, rest?.contentBox);
   if (!placement) return null;
-  return <div className={`hideout-pet${egg ? " hideout-pet--egg" : " hideout-pet--resting"}`} data-pet-pose={egg ? "egg" : "rest"} data-resting-pet={egg ? undefined : rest?.species}
-    style={{ ...place(placement.x, placement.y, placement.width), aspectRatio: "1", zIndex: 102 + bed.y }} role="img" aria-label={egg ? "창가 방석에서 쉬는 신비한 알" : "창가 방석에 앉아 쉬는 펫"}>
+  const whose = owner ? `${owner}의 ` : "";
+  return <button type="button" className={`hideout-pet${egg ? " hideout-pet--egg" : " hideout-pet--resting"}`} data-pet-pose={egg ? "egg" : "rest"} data-resting-pet={egg ? undefined : rest?.species}
+    style={{ ...place(placement.x, placement.y, placement.width), aspectRatio: "1", zIndex: 102 + bed.y }} onClick={(e) => { e.stopPropagation(); onOpen?.(); }}
+    aria-label={egg ? `창가 방석에서 쉬는 ${whose}신비한 알 — 펫 정보 보기` : `창가 방석에 앉아 쉬는 ${whose}펫 — 펫 정보 보기`} title="펫 정보 보기">
     {egg ? <PetFigure species={null} stage={1} ready={false} size={placement.width} pixelEgg /> : rest && missing !== rest.src ? <img src={rest.src} alt="" width={rest.cell || 96} height={rest.cell || 96} draggable={false} onError={() => setMissing(rest.src)} />
       : <PetFigure species={pet.species} stage={pet.stage} ready={false} size={placement.width} />}
-  </div>;
+  </button>;
 }
 
 // Position is a ref and animation is painted into the existing plaza sprite. No

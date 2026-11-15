@@ -64,8 +64,8 @@ import { joinPlazaLive, plazaLiveConfigured } from "@/lib/data/plazaLive";
 import { subscribeStudySeatLayout } from "@/lib/store";
 import { todayDateKey } from "@/lib/dates";
 import { characterOf } from "@/lib/readingCharacterCatalog";
-import { petProgress } from "@/lib/readingPet";
-import { careAway } from "@/lib/petCare";
+import { petProgress, publicPetProgress } from "@/lib/readingPet";
+import { careAway, careStatus } from "@/lib/petCare";
 import { kstToday } from "@/lib/reading";
 import { plazaItems } from "@/lib/readingPlaza";
 import {
@@ -79,12 +79,13 @@ import {
   plazaArrival, plazaCamera, plazaClear, plazaNearest, plazaPath, plazaPortalAt, plazaPortalClicked, plazaRoomOf, plazaSpotAt, plazaSpotNear, plazaStep, plazaView, plazaWalkable,
 } from "@/lib/readingPlazaMap";
 import { PLAZA_AVATAR_SEPARATION, plazaAvoidPath, plazaAvoidStep } from "@/lib/readingPlazaAvoidance";
-import { PET_STRIDE, PLAZA_WALK_SPEED, SPRITE_IDLE, plazaCharacterSize, plazaFacing, plazaPetFollow, plazaPetStart, plazaShownFrame } from "@/lib/readingPlazaSprites";
+import { PET_STRIDE, PLAZA_EGG_SIZE, PLAZA_PET_BODY, PLAZA_WALK_SPEED, SPRITE_IDLE, plazaCharacterSize, plazaFacing, plazaPetFollow, plazaPetScale, plazaPetStart, plazaShownFrame } from "@/lib/readingPlazaSprites";
 import { PLAZA_STAGE_MIN_H, plazaRoom as stageRoom, plazaScroller } from "@/lib/plazaStageRoom";
 import { plazaTalkSpot, talkAskTitle, talkBubbles, talkCallName } from "@/lib/readingPlazaTalk";
 import PlazaActor from "./PlazaActor";
 import PlazaClassroom, { PlazaFurniture } from "./PlazaClassroom";
 import PlazaPanel from "./PlazaPanel";
+import PetInfoModal from "./PetInfoModal";
 import { PlazaTalkAsk, PlazaTalkFocus, PlazaTalkPanel, PlazaTalkWaiting } from "./PlazaTalk";
 import usePlazaTalk from "./usePlazaTalk";
 import "./plaza.css";
@@ -135,6 +136,9 @@ const talkLeftKey = (classId, uid) => `bookbom.plaza.talkLeft:${classId}:${uid}`
 const TALK_PICK_NEAR = 140;
 // 친구를 눌렀다고 치는 자리(그림 원본 px) — 몸(키 PLAZA_BODY)과 머리 위 이름표까지
 const TALK_HIT_HALF = 34;
+// 펫을 누르는 범위(원본 px) — 그림의 폭 · 키에 맞추되 작은 펫도 누르기 쉽게 좌우 PET_HIT_MIN은 늘 · 발 아래로 PET_HIT_BELOW
+const PET_HIT_MIN = 18;
+const PET_HIT_BELOW = 8;
 const TALK_HIT_HEAD = 122;
 function recall(store, key) {
   try { return window[store].getItem(key); } catch { return null; }
@@ -204,7 +208,7 @@ function routeAroundPeople(from, goal, people, room, { seat = null, portal = fal
 //     onAttend([학생] 출석 남기기) · onRollCall([선생님] 출석시작) · onStop([선생님] 출석종료) · onSeatSetup([선생님] 자리 배정하기 열기) ·
 //     onMoveAll([선생님] 모두 이동 — 방 id를 받아 신호를 적음) }
 // talkOn — 광장 대화(관리자 설정의 '광장 대화' — lib/reading.js의 plazaTalkOn · 책 광장이 켜져 있어야 켬)
-export default function ReadingPlaza({ classId, user, isTeacher = false, characterOn = true, petOn = false, petFeed = null, growthXp = null, initialBook = null, onExit = null, classroom = null, hideoutOn = false, onEnterHideout = null, initialRoom = null, talkOn = false }) {
+export default function ReadingPlaza({ classId, user, isTeacher = false, characterOn = true, petOn = false, petFeed = null, growthXp = null, fruits = 0, initialBook = null, onExit = null, classroom = null, hideoutOn = false, onEnterHideout = null, initialRoom = null, talkOn = false }) {
   const myUid = user?.uid;
   // 광장 대화 — 반 설정을 켰고, 이 배포가 함께 보기(실시간)를 쓸 때만(대화는 같은 연결로 오감)
   const talkLive = !!talkOn && plazaLiveConfigured() && !!myUid;
@@ -223,6 +227,8 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   const [walked, setWalked] = useState(false);
   // 함께 있는 친구들 — 이름표 · 캐릭터 · 펫 · 어느 방 · 어느 자리(그릴 것만. 자리와 걸음은 cast에) · 연결 상태
   const [friends, setFriends] = useState([]);
+  // 펫 정보 창(펫을 누르면 — PetInfoModal) — { own: true } 내 펫 · { uid, name, pet } 친구의 펫(누른 순간의 입장권 — 종 · 단계)
+  const [petInfo, setPetInfo] = useState(null);
   const [live, setLive] = useState({ status: "off", why: "" });
   // 방 — 교실을 켠 반은 마지막에 있던 방에서 시작합니다. 책꽂이에서 '광장에서 보기'로 넘어왔으면 광장에서.
   const [roomId, setRoomId] = useState(() => {
@@ -1366,6 +1372,15 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     const x = (e.clientX - rect.left) / rect.width * PLAZA_W;
     const y = (e.clientY - rect.top) / rect.height * PLAZA_H;
     stageRef.current.focus({ preventScroll: true });
+    // 펫을 누르면 그 펫의 정보 창(걷지 않음 — 선생님 요청). 펫은 작아서 친구 캐릭터보다 먼저 봅니다. 앉아 있어도 열립니다.
+    const petHit = petAtPoint(x, y);
+    if (petHit) {
+      halt();
+      if (menuRef.current) setMenu(null);
+      if (pickRef.current) setPick(null);
+      setPetInfo(petHit.own ? { own: true } : { uid: petHit.uid, name: petHit.name, pet: petHit.pet });
+      return;
+    }
     // 광장 대화 — 친구를 누르면 고릅니다(걷지 않음 · 발밑에 선택 타원, 머리 위에 'A'). 고른 친구를 한 번 더 누르면
     // 고르는 상자를 열고 닫습니다. 다른 곳을 누르면 고르기를 걷고 지금까지처럼 걷습니다.
     if (talkLive) {
@@ -1460,6 +1475,34 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   // 그리면서 맞춥니다(한 번) — 처음 자리에 한 번 보였다가 옮겨 가지 않게.
   if (!pet) myPet.current = null;
   else if (!myPet.current) myPet.current = plazaPetStart(pos.current, facingRef.current, room);
+
+  // ── 펫 정보 창(선생님 요청) — 누른 자리의 펫: 내 펫 · 같은 방 친구의 펫(그림 크기만큼 · 겹치면 앞에 선 것) ──
+  function petAtPoint(x, y) {
+    const hit = (at, p) => {
+      if (!at || !p) return false;
+      const body = p.hatched ? PLAZA_PET_BODY * plazaPetScale(p.stage) : PLAZA_EGG_SIZE;
+      const half = Math.max(PET_HIT_MIN, body * 0.6);
+      return x >= at.x - half && x <= at.x + half && y >= at.y - body * 1.15 && y <= at.y + PET_HIT_BELOW;
+    };
+    let best = null;
+    if (pet && myPet.current && hit(myPet.current, pet)) best = { own: true, y: myPet.current.y };
+    for (const f of friends) {
+      if (f.room !== here || !f.pet) continue;
+      const at = cast.current.get(f.uid)?.pet;
+      if (hit(at, f.pet) && (!best || at.y > best.y)) best = { uid: f.uid, name: f.name, pet: f.pet, y: at.y };
+    }
+    return best;
+  }
+  // 창에 실을 것 — 내 펫은 지금 모습 그대로(먹이를 주면 배부름이 따라 바뀜), 친구의 펫은 누른 순간의 종 · 단계만(경험치 · 배부름 없음)
+  const petInfoProgress = !petInfo ? null : petInfo.own ? pet : publicPetProgress(petInfo.pet);
+  const petInfoCare = petInfo?.own && pet && petFeed?.on ? careStatus(petState?.mirror ?? null, petFeed, kstToday(), pet.stage) : null;
+  // 내 펫이 창을 연 사이 먹이를 찾아 떠났거나(펫 먹이) 펫이 꺼졌으면 창을 닫습니다
+  const petInfoGone = !!petInfo && !petInfoProgress;
+  useEffect(() => { if (petInfoGone) setPetInfo(null); }, [petInfoGone]);
+  const closePetInfo = useCallback(() => {
+    setPetInfo(null);
+    stageRef.current?.focus({ preventScroll: true });
+  }, []);
 
   // 고른 친구가 이 방을 떠났거나 광장 대화를 껐으면 고르기를 걷습니다
   const pickGone = !!pick && (!talkLive || !friends.some((f) => f.uid === pick.uid && f.room === here));
@@ -1662,6 +1705,11 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
         <PlazaTalkAsk title={talkAskTitle(incomingFrom?.name, !!incomingFrom?.teacher, !!incoming.k)} left={incoming.left}
           more={talker.incomingMore} group={!!incoming.k} stageRef={stageRef}
           onAccept={() => talker.accept(incoming)} onDecline={() => talker.decline(incoming)} />
+      )}
+      {/* 펫 정보 창 — 펫을 누르면(내 펫 · 친구의 펫). 책 봄 '나의 펫'의 자세히 보기와 같은 창 */}
+      {petInfo && petInfoProgress && (
+        <PetInfoModal classId={classId} own={!!petInfo.own} owner={petInfo.name} progress={petInfoProgress}
+          care={petInfoCare} read={petFeed?.read} fruits={fruits} onClose={closePetInfo} />
       )}
       {panel && (
         <PlazaPanel classId={classId} user={user} isTeacher={isTeacher} shelves={shelves ?? []} loading={shelves === null}

@@ -5,7 +5,7 @@ import {
   PET_SPECIES, PET_SPECIES_KEYS, PET_STAGES, PET_STAGE_MAX, PET_HATCH_XP,
   normalizePetMirror, normalizePublicPet, petCareRules, petEnabled, petFeedTimesPatch, petGrowthOfSummary, petGrowthXp, petPreviewOn,
   PET_ART_READY, petCheerKind, petImageSrc, petImageSrcSet, petProgress, petSpecies, petStageName, pickPetSpecies,
-  planPetAction, rankingPet,
+  planPetAction, publicPetProgress, rankingPet,
 } from "@/lib/readingPet";
 import { existsSync, readFileSync } from "node:fs";
 import { deriveReading, getExpForReadingLevel, initialReadingState } from "@/lib/reading";
@@ -158,6 +158,21 @@ test("서버가 보낸 펫을 그리기 전에 거름 — 알은 늘 1단계, �
   assert.deepEqual(normalizePublicPet({ species: "rabbit", stage: 1 }), { species: "rabbit", stage: 2, xp: 0, ready: false });
   assert.equal(normalizePublicPet({ species: "<img>", stage: 3 }), null);
   assert.equal(normalizePublicPet("owl"), null);
+});
+
+test("친구의 펫 정보 창(책 광장 · 교실) — 입장권의 종 · 단계만, 경험치는 모름 · 알은 종이 비밀", () => {
+  // 깨어난 펫 — 단계 · 단계 이름은 있고 경험치 · 막대는 없음(xp가 null이면 창이 막대를 그리지 않음)
+  assert.deepEqual(publicPetProgress({ species: "otter", stage: 4 }), {
+    species: "otter", stage: 4, stageName: "호기심 많은 꼬마", hatched: true, ready: false,
+    xp: null, lower: null, upper: null, toNext: null, percent: null, complete: false,
+  });
+  assert.equal(publicPetProgress({ species: "owl", stage: 10 }).complete, true);
+  // 알 — 종을 몰라 '신비한 알'(입장권에도 종이 없음) · 깨어날 준비도 모름
+  const egg = publicPetProgress({ species: null, stage: 1 });
+  assert.deepEqual([egg.species, egg.stage, egg.stageName, egg.hatched, egg.ready, egg.xp], [null, 1, "신비한 알", false, false, null]);
+  // 모르는 종 · 펫 없음은 그리지 않음
+  assert.equal(publicPetProgress({ species: "<img>", stage: 3 }), null);
+  assert.equal(publicPetProgress(null), null);
 });
 
 test("무작위 고르기 — 열 종 모두 나올 수 있고 범위 밖은 접음", () => {

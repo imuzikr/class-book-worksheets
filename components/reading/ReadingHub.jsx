@@ -6,7 +6,7 @@ import { bookTitleDrifted, coversWholeBook, deriveReading, initialReadingState, 
 import { subscribeReadingState, mutateReading, fetchReadingRankings } from "@/lib/data/reading";
 import { rankingAsOf, rankingsForPeriod } from "@/lib/readingJourney";
 import { petGrowthOfSummary } from "@/lib/readingPet";
-import { CARE_READ_CHARS, CARE_READ_PAGES, readingDayProof } from "@/lib/petCare";
+import { careReadLabel, readingDayProof } from "@/lib/petCare";
 import ReadingBadge from "./ReadingBadge";
 import BookSearch from "./BookSearch";
 import { hasModalAbove } from "@/lib/modal";
@@ -317,7 +317,8 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
       else if (Array.isArray(result?.books) && Array.isArray(result?.logs)) setRaw(result);
       const done = typeof success === "function" ? success(result?.state ?? result) : success;
       // 펫 먹이 — 이 저장으로 오늘이 '읽은 날'이 됐거나(배부름 유지) 떠난 펫을 부르는 걸음이 됐으면 함께 알립니다
-      const petNews = PET_NEWS[result?.petEvent] ?? "";
+      const news = PET_NEWS[result?.petEvent];
+      const petNews = typeof news === "function" ? news(petFeed?.read) : news ?? "";
       if (done || petNews) setNotice(`${done || ""}${done && petNews ? " " : ""}${petNews}`);
       return true;
     } catch (e) {
@@ -334,7 +335,8 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
   const showPet = petOn && !readOnly && !isTeacher && !!user?.uid;
   // 펫 먹이를 켠 반의 학생 — 발자국 창이 '오늘의 읽기'(쪽 · 글자 수)를 보여 줍니다(lib/petCare.js의 readingDayProof)
   const feedOn = showPet && !!petFeed?.on;
-  const readToday = useMemo(() => (feedOn && raw ? readingDayProof(stats, day) : null), [feedOn, raw, stats, day]);
+  // '읽은 날'의 기준은 그 반의 것(선생님이 관리자 설정에서 정한 쪽수 · 글자 수 — petFeed.read · 결과의 need)
+  const readToday = useMemo(() => (feedOn && raw ? readingDayProof(stats, day, petFeed) : null), [feedOn, raw, stats, day, petFeed]);
   // 광장에서 나가기(맵 위의 '나가기') — 첫 탭(책꽂이)으로 돌아갑니다. 광장 탭에서는 책방 머리말과 탭 줄을 가리므로
   // (plaza.css의 '광장 탭') 나가는 길은 이 단추입니다. 나온 뒤에는 초점을 그 탭에 둡니다 — 광장이 사라지며 초점이 길을 잃지 않게.
   const tabsRef = useRef(null);
@@ -369,8 +371,8 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
     {error && !dialog && !confirm && <div className="reading-error" role="alert">{error}<button type="button" onClick={() => setError("")} aria-label="오류 안내 닫기">×</button></div>}
     {notice && <div className="reading-notice" role="status">{notice}</div>}
     {/* 책 광장은 서재(정본)를 기다리지 않습니다 — 반의 공유 사본을 제 손으로 구독합니다. 펫의 단계만 서재에서 받습니다. */}
-    {tab === "plaza" ? <PlazaExitContext.Provider value={leavePlaza}><ReadingPlaza key={plazaJump?.key ?? plazaReturn?.key ?? "plaza"} classId={classId} user={user} isTeacher={isTeacher} characterOn={characterOn} petOn={showPet} petFeed={petFeed} growthXp={raw ? petGrowthOfSummary(stats) : null} initialBook={plazaJump} initialRoom={plazaJump ? null : plazaReturn?.room} onExit={leavePlaza} classroom={classroom} hideoutOn={canHideout && (!readOnly || typeof onOpenOwnHideout === "function")} onEnterHideout={enterHideout} talkOn={plazaOn && talkOn} /></PlazaExitContext.Provider>
-    : tab === "hideout" && canHideout ? <PlazaExitContext.Provider value={leaveHideout}><ReadingHideout key={`${classId}:${viewUid}`} classId={classId} user={user} student={student} summary={stats} readOnly={readOnly} characterOn={characterOn} petOn={petOn} petFeed={petFeed} returnRoom={hideoutOrigin} onDisabled={leaveHideout} onExit={leaveHideout} /></PlazaExitContext.Provider>
+    {tab === "plaza" ? <PlazaExitContext.Provider value={leavePlaza}><ReadingPlaza key={plazaJump?.key ?? plazaReturn?.key ?? "plaza"} classId={classId} user={user} isTeacher={isTeacher} characterOn={characterOn} petOn={showPet} petFeed={petFeed} growthXp={raw ? petGrowthOfSummary(stats) : null} fruits={myFruit} initialBook={plazaJump} initialRoom={plazaJump ? null : plazaReturn?.room} onExit={leavePlaza} classroom={classroom} hideoutOn={canHideout && (!readOnly || typeof onOpenOwnHideout === "function")} onEnterHideout={enterHideout} talkOn={plazaOn && talkOn} /></PlazaExitContext.Provider>
+    : tab === "hideout" && canHideout ? <PlazaExitContext.Provider value={leaveHideout}><ReadingHideout key={`${classId}:${viewUid}`} classId={classId} user={user} student={student} summary={stats} readOnly={readOnly} characterOn={characterOn} petOn={petOn} petFeed={petFeed} fruits={myFruit} returnRoom={hideoutOrigin} onDisabled={leaveHideout} onExit={leaveHideout} /></PlazaExitContext.Provider>
     : loading ? <div className="reading-loading" role="status"><span className="reading-loader" />독서 기록을 불러오고 있어요.</div> : !raw ? <div className="reading-empty"><BookIcon size={40} /><h3>독서 정보를 불러오지 못했어요.</h3><button type="button" className="btn-primary" onClick={() => setRevision((r) => r + 1)}>다시 불러오기</button></div> : <>
       {!readOnly && <ReadingSummary stats={stats} />}
       {tab === "library" && <>
@@ -407,7 +409,8 @@ function ReadingSummary({ stats, compact = false }) {
 // 독서를 저장했을 때의 펫 소식(서버 · 체험반이 돌려주는 petEvent — lib/petCare.js의 planCareReadDay)
 const PET_NEWS = {
   kept: "펫의 배부름이 오늘은 줄지 않아요.",
-  unkept: "오늘의 ‘읽은 날’이 풀렸어요 — 5쪽 · 250자 이상이면 다시 유지돼요.",
+  // 기준은 그 반의 것(선생님이 정한 쪽수 · 글자 수 — 처음 값 5쪽 · 250자)
+  unkept: (read) => `오늘의 ‘읽은 날’이 풀렸어요 — ${careReadLabel(read)} 이상이면 다시 유지돼요.`,
   step: "떠난 펫을 부르는 한 걸음을 채웠어요.",
   unstep: "다시 부르기 걸음이 하나 줄었어요.",
   returned: "펫이 돌아왔어요!",
@@ -521,8 +524,9 @@ function logSavedNotice(plan, state, bookId, editing) {
 // plaza — 책 광장을 켠 반의 학생: 이 발자국을 반 친구들이 함께 읽는다는 것을 쓰는 자리에서 알려 줍니다("shown").
 // 학생이 고르는 칸은 없습니다(선생님 결정 — 광장을 켠 반에서는 모두 공개). 한때 선생님이 광장에서 내린 책이면 "blocked"로
 // '나와 선생님만 봐요'를 띄웠는데, '광장에서 내리기'를 걷어 그 안내도 없습니다(선생님 요청 — 되살리지 마세요).
-// petRead — 펫 먹이를 켠 반의 학생에게만: 저장해 둔 오늘의 발자국 합계 { pages, chars }(lib/petCare.js의 readingDayProof).
-// 쓰는 동안 '오늘의 읽기 n쪽 · n자'를 보여 주어, 5쪽 · 250자 이상이면 오늘은 펫의 배부름이 줄지 않는다는 것을 알립니다.
+// petRead — 펫 먹이를 켠 반의 학생에게만: 저장해 둔 오늘의 발자국 합계 { pages, chars, need }(lib/petCare.js의 readingDayProof —
+// need는 선생님이 관리자 설정에서 정한 기준 · 처음 값 5쪽 · 250자). 쓰는 동안 '오늘의 읽기 n쪽 · n자'를 보여 주어, 기준 이상이면
+// 오늘은 펫의 배부름이 줄지 않는다는 것을 알립니다.
 // reviews — 서재의 '한 권의 책' 목록. 한 번에 완독(1쪽~마지막 쪽 발자국 하나)이면 저장할 때 '한 권의 책'을 어떻게 하는지
 // 안내하고(같은 감상으로 함께 남김 · 함께 남긴 글을 맞춤 · 걷음 — 선생님 요청), 새로 남길 때는 그 별점을 여기서 고릅니다.
 // 고르는 셈은 저장하는 셈과 같은 lib/reading.js의 wholeBookReviewPlan입니다(둘이 어긋나지 않게).
@@ -539,7 +543,8 @@ function LogForm({ book, log, reviews = [], today, busy, plaza = null, petRead =
   const range = Number(form.startPage) >= 1 && Number(form.endPage) >= Number(form.startPage) ? Number(form.endPage) - Number(form.startPage) + 1 : 0;
   const read = petRead && form.date === today
     ? { pages: Math.max(0, petRead.pages - mine.pages) + range, chars: Math.max(0, petRead.chars - mine.chars) + form.notes.trim().length } : null;
-  const readOk = !!read && read.pages >= CARE_READ_PAGES && read.chars >= CARE_READ_CHARS;
+  const need = petRead?.need ?? null;
+  const readOk = !!read && !!need && read.pages >= need.pages && read.chars >= need.chars;
   return <Modal title={log ? "독서 발자국 고치기" : "오늘의 독서 발자국"} onClose={onClose} busy={busy}>
     <form className="reading-form" onSubmit={(e) => { e.preventDefault(); onSave({ ...form, startPage: Number(form.startPage), endPage: Number(form.endPage), notes: form.notes.trim(), ...(wholePlan === "create" ? { rating: Number(rating) } : {}) }, wholePlan); }}>
       <div className="reading-form-book"><BookIcon /><strong>{book.title}</strong><span>총 {number(book.totalPages)}쪽</span></div>
@@ -556,7 +561,7 @@ function LogForm({ book, log, reviews = [], today, busy, plaza = null, petRead =
       {petRead && (read
         ? <p className={`pet-read-note${readOk ? " is-ok" : ""}`}>🍊 오늘의 읽기 <b>{number(read.pages)}쪽</b> · <b>{number(read.chars)}자</b>{readOk
           ? " — 오늘은 ‘읽은 날’이에요. 펫의 배부름이 줄지 않아요 ✓"
-          : ` — ${CARE_READ_PAGES}쪽 · ${CARE_READ_CHARS}자 이상이면 오늘은 펫의 배부름이 줄지 않아요.`}</p>
+          : ` — ${careReadLabel(need)} 이상이면 오늘은 펫의 배부름이 줄지 않아요.`}</p>
         : <p className="pet-read-note">🍊 오늘 날짜의 발자국만 펫의 ‘읽은 날’이 돼요.</p>)}
       {plaza === "shown" && <p className="plaza-note">이 발자국은 책 광장에서 반 친구들이 함께 읽어요.</p>}
       <p className="reading-help">1쪽당 1 EXP. 그날 5쪽 이상 읽으면 연속 독서일로 쳐서 하루 한 번 보너스(연속일 × 15, 7일째부터 105)를 받아요. 이미 기록한 페이지는 중복 적립하지 않아요.</p>

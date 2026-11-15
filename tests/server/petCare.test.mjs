@@ -18,6 +18,7 @@ const OFF = "care-off";
 const OLD = "care-old"; // 펫 먹이를 40일 전에 켠 반 — 나중에 들어온 학생
 const RACE = "care-race"; // 먹이를 주는 도중에 선생님이 펫 먹이를 끄거나 학생을 사용 중지 · 반에서 빼는 반
 const PAUSE = "care-pause"; // 펫 먹이를 껐다 다시 켠 반 — 꺼 둔 날은 세지 않음
+const RULE = "care-rule"; // 선생님이 '읽은 날' 기준을 2쪽 · 20자로 정한 반
 const today = kstToday(new Date());
 const dayBefore = (n) => readingDayKey(readingDayNumber(today) - n);
 const who = (uid) => ({ uid, roleClaim: null, db });
@@ -92,6 +93,12 @@ before(async () => {
   batch.set(db.doc(`memberships/care-paused_${PAUSE}`), { uid: "care-paused", classId: PAUSE });
   batch.set(db.doc(`classes/${PAUSE}/readingMembers/care-paused`), snapshot("care-paused", 300));
   batch.set(db.doc(`rewards/${PAUSE}_care-paused`), { classId: PAUSE, uid: "care-paused", count: 5 });
+  // '읽은 날' 기준을 선생님이 2쪽 · 20자로 정한 반(관리자 설정 — petReadPages · petReadChars)
+  batch.set(db.doc(`classes/${RULE}`), { createdBy: "care-teacher", readingEnabled: true, archived: false, petFeedEnabled: true,
+    petFeedFrom: Timestamp.fromMillis(Date.parse(`${dayBefore(3)}T12:00:00+09:00`)), petReadPages: 2, petReadChars: 20 });
+  batch.set(db.doc("users/care-ruled"), { role: "student", realName: "care-ruled", studentId: "60501", readingPet: hatched() });
+  batch.set(db.doc(`memberships/care-ruled_${RULE}`), { uid: "care-ruled", classId: RULE });
+  batch.set(db.doc(`classes/${RULE}/readingMembers/care-ruled`), snapshot("care-ruled", 300));
   await batch.commit();
 });
 after(async () => { await deleteApp(app); });
@@ -322,4 +329,26 @@ test("껐다 다시 켠 반 — 꺼 둔 날(목록 · 지난번)은 세지 않�
   // 먹이도 그 값에서 — 과일 3개면 100
   const fed = await readingPetAction(who("care-paused"), { classId: PAUSE, action: "feed", count: 3 });
   assert.deepEqual([fed.used, fed.care.full, fed.fruits], [3, 100, 2]);
+});
+
+test("선생님이 정한 '읽은 날' 기준 — 반의 쪽수 · 글자 수를 따르고, 기준을 바꾸면 다음 저장부터 새 기준으로 셈", async () => {
+  const u = who("care-ruled");
+  const send = (requestId, action) => mutateReading(u, { classId: RULE, requestId, action });
+  await send("rule-book-0001", { type: "addBook", title: "기준 시험", author: "지은이", totalPages: 100 });
+  // 처음 값(5쪽 · 250자)이면 모자랄 2쪽 · 20자 — 이 반에서는 읽은 날
+  const kept = await send("rule-log-0001", { type: "addLog", bookId: "rule-book-0001", date: today, startPage: 1, endPage: 2, notes: "가".repeat(20) });
+  assert.equal(kept.petEvent, "kept");
+  assert.equal((await care("care-ruled")).kept, today);
+  // 선생님이 기준을 10쪽 · 300자로 올린 뒤 — 오늘 것을 다시 저장하면 새 기준으로 다시 셈(모자라 풀림)
+  await db.doc(`classes/${RULE}`).update({ petReadPages: 10, petReadChars: 300 });
+  const undone = await send("rule-edit-0001", { type: "updateLog", logId: "rule-log-0001", notes: "가".repeat(25) });
+  assert.equal(undone.petEvent, "unkept");
+  // 새 기준을 채우면 다시 읽은 날
+  const again = await send("rule-log-0002", { type: "addLog", bookId: "rule-book-0001", date: today, startPage: 3, endPage: 10, notes: "나".repeat(280) });
+  assert.equal(again.petEvent, "kept");
+  // 글자 수 0(쪽수만 봄) — 기준만 채우면 됨
+  await db.doc(`classes/${RULE}`).update({ petReadPages: 12, petReadChars: 0 });
+  const pagesOnly = await send("rule-log-0003", { type: "addLog", bookId: "rule-book-0001", date: today, startPage: 11, endPage: 12, notes: "다" });
+  assert.equal(pagesOnly.petEvent, undefined); // 이미 읽은 날 — 그대로(적지 않음)
+  assert.equal((await care("care-ruled")).kept, today);
 });

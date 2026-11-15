@@ -257,3 +257,19 @@ test("removing membership closes a previously saved personal room without deleti
     assert.equal((await roomRef.get()).data().revision, 2);
   } finally { await memberRef.set({ uid: ids.student, classId }); }
 });
+
+test("방 주인의 누적 경험치가 방과 함께 옵니다 — 선생님이 학생의 방을 볼 때도 펫이 자란 만큼 그리게", async () => {
+  await mainRef.set({ state: highState() });
+  const expected = Math.round(deriveReading(highState(), new Date()).xp);
+  assert.ok(expected > 0);
+  // 선생님이 학생의 방을 볼 때 — 화면에 그 학생의 책 봄 요약이 없어 이 값이 펫의 단계 · 경험치의 바탕입니다
+  const studentView = await getReadingHideout(who("teacher"), classId, ids.student);
+  assert.equal(studentView.petGrowthXp, expected);
+  assert.equal((await getReadingHideout(who("admin"), classId, ids.student)).petGrowthXp, expected);
+  assert.equal((await getReadingHideout(who("student"), classId)).petGrowthXp, expected);
+  // 숫자 하나뿐 — 책 제목 · 감상은 아지트 응답 어디에도 없습니다
+  assert.equal(JSON.stringify(studentView).includes("비공개 독서 감상"), false);
+  assert.equal(JSON.stringify(studentView).includes("이 제목은 아지트에 복사되지 않아요"), false);
+  // 선생님 본인의 방에는 펫이 없어 싣지 않습니다
+  assert.equal("petGrowthXp" in (await getReadingHideout(who("teacher"), classId)), false);
+});

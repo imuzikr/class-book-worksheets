@@ -9,7 +9,7 @@
 //  · 관리자 설정의 '학생 펫'(petEnabled) · '펫 미리보기'(petPreviewEnabled)는 참 · 거짓만, 운영 중인 반에서만
 //    (미리보기를 켠 반에서 학생이 고르는 펫도 서버만 적음 — 프로필의 readingPet · 비밀 문서는 그대로 못 씀)
 //  · 펫 먹이(lib/petCare.js) — 배부름(readingPet.care)도 서버만 적고(학생이 제 펫을 배부르게 고치지 못함),
-//    반 설정 칸(petFeedEnabled · petFeedFrom · petRests)은 모양이 맞을 때만 담당 교사가
+//    반 설정 칸(petFeedEnabled · petFeedFrom · petRests · petReadPages · petReadChars)은 모양이 맞을 때만 담당 교사가
 //    (켠 때 petFeedFrom은 서버 시각만 — 반을 만들 때 끼워 넣어도 같은 검사). 옛 '주말에는 줄지 않아요'(petRestWeekend)는
 //    앱이 더 쓰지 않지만(주말에도 줄어듦 — 선생님 결정) 규칙은 그대로 참 · 거짓만 받습니다(배포 중의 옛 화면 · 남은 값)
 //  · 펫 먹이를 껐다 켤 때 — 끈 때(petFeedOffAt) · 다시 켠 때(petFeedOnAt)는 서버 시각만, 쉰 기간 목록(petFeedPauses)은
@@ -147,9 +147,21 @@ describe("독서 펫 — 프로필의 펫과 비밀 문서", () => {
     await assertFails(updateDoc(c1, { petRests: { 0: rest } }));
     await assertFails(updateDoc(c1, { petRests: Array.from({ length: 21 }, () => rest) }));
     await assertSucceeds(updateDoc(c1, { petRests: Array.from({ length: 20 }, () => rest) }));
+    // '읽은 날'의 기준 — 선생님이 정하는 쪽수(1~100) · 글자 수(0~2000), 정수만(lib/data/classes.js의 setTeacherPetReadRule)
+    await assertSucceeds(updateDoc(c1, { petReadPages: 10, petReadChars: 100 }));
+    await assertSucceeds(updateDoc(c1, { petReadPages: 1, petReadChars: 0 }));
+    await assertSucceeds(updateDoc(c1, { petReadPages: 100, petReadChars: 2000 }));
+    for (const bad of [{ petReadPages: 0 }, { petReadPages: 101 }, { petReadPages: 5.5 }, { petReadPages: "5" }, { petReadPages: null },
+      { petReadChars: -1 }, { petReadChars: 2001 }, { petReadChars: 12.5 }, { petReadChars: "250" }, { petReadChars: true },
+      { petReadPages: deleteField() }]) {
+      await assertFails(updateDoc(c1, bad));
+    }
     // 보관된 반 · 학생 · 다른 선생님은 못 바꿈
     await assertFails(updateDoc(doc(db, "classes", "old"), { petFeedEnabled: true, petFeedFrom: serverTimestamp() }));
     await assertFails(updateDoc(doc(db, "classes", "old"), { petRests: [] }));
+    await assertFails(updateDoc(doc(db, "classes", "old"), { petReadPages: 10, petReadChars: 100 }));
+    await assertFails(updateDoc(doc(asStudent(env, "s2").firestore(), "classes", "c1"), { petReadPages: 1, petReadChars: 0 }));
+    await assertFails(updateDoc(doc(asTeacher(env, "teacherB").firestore(), "classes", "c1"), { petReadPages: 10 }));
     await assertFails(updateDoc(doc(asStudent(env, "s2").firestore(), "classes", "c1"), { petFeedEnabled: true }));
     await assertFails(updateDoc(doc(asStudent(env, "s2").firestore(), "classes", "c1"), { petRests: [] }));
     await assertFails(updateDoc(doc(asTeacher(env, "teacherB").firestore(), "classes", "c1"), { petFeedEnabled: true }));
@@ -227,6 +239,11 @@ describe("독서 펫 — 프로필의 펫과 비밀 문서", () => {
     await assertSucceeds(make({}));
     await assertSucceeds(make({ petFeedEnabled: true, petFeedFrom: serverTimestamp(), petRestWeekend: false, petRests: [rest] }));
     await assertSucceeds(make({ petRests: Array.from({ length: 20 }, () => rest) }));
+    // 새 반도 선생님이 정한 '읽은 날' 기준을 따름(featuresForNewClass) — 같은 범위만
+    await assertSucceeds(make({ petReadPages: 12, petReadChars: 300 }));
+    await assertFails(make({ petReadPages: 0 }));
+    await assertFails(make({ petReadChars: 5000 }));
+    await assertFails(make({ petReadPages: "12" }));
     await assertSucceeds(make({ plazaEnabled: false, plazaTalkEnabled: true, classroomEnabled: false, hideoutEnabled: true, readingMapTheme: "continent" }));
     // 책방을 끈 선생님의 새 반도 그 값을 따름(관리자 설정은 모든 반에 한 값)
     await assertSucceeds(make({ bookActivitiesEnabled: false }));

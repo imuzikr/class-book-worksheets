@@ -26,11 +26,12 @@
 //     깨어난 펫은 바꾸지 않습니다(선생님 결정 — 보기만). 끄면 지금 고른 그대로 · 새 알은 무작위.
 //     카드의 '열 친구 미리 보기'로 선생님도 같은 창을 봅니다(고르는 단추 없이 · 스위치가 꺼져 있어도).
 //   · 펫 먹이(petFeedEnabled — 기본 꺼짐, 학생 펫이 켜져 있어야 씀 · lib/petCare.js). 켜면 그날부터 펫(알 포함)이
-//     날마다 배가 고파지고(하루 10), 과일(1개에 +10)과 독서(그날 발자국 5쪽 · 250자 이상이면 유지)로 돌봅니다.
+//     날마다 배가 고파지고(하루 10), 과일(1개에 +10)과 독서(그날 발자국이 선생님이 정한 쪽수 · 글자 수 이상이면 유지)로 돌봅니다.
 //     0이 되면 먹이를 찾아 떠나고 책을 읽어 다시 부릅니다 — 펫이 떠날 수 있는 기능이라 **켤 때만** 한 번 되묻습니다.
 //     껐다 다시 켜면(학생 펫 · 책 봄 · 반 보관도) 꺼 둔 동안의 날은 세지 않고 끈 순간의 배부름에서 이어집니다(선생님 결정 —
 //     lib/readingPet.js의 petFeedTimesPatch가 끈 때 · 다시 켠 때를 서버 시각으로 적음).
-//     바로 아래 '펫이 배고파지지 않는 날'(PetRestSettings — 방학 · 시험 기간 · 기타의 기간. 주말에도 줄어듦 · 선생님 결정)이 함께 섭니다.
+//     바로 아래 '배부름이 줄지 않는 독서량'(PetReadSettings — '읽은 날'의 쪽수 · 글자 수, 처음 5쪽 · 250자 · 선생님 요청 2026년 11월)과
+//     '펫이 배고파지지 않는 날'(PetRestSettings — 방학 · 시험 기간 · 기타의 기간. 주말에도 줄어듦 · 선생님 결정)이 함께 섭니다.
 //   · 책 광장(plazaEnabled — 기본 꺼짐, 책 봄이 켜져 있어야 씀 · lib/readingPlaza.js). 켜면 책 봄의 셋째 탭이
 //     '우리 반 랭킹' 대신 '책 광장'이 되고, **그 반에서 쓴 독서 발자국 · 한 권의 책이 모두 반 친구에게 보입니다**
 //     (켜기 전에 쓴 글도 · 학생이 고르는 것이 없음 — 선생님 결정). 끄면 본인과 선생님만 봅니다. 켜는 순간 무엇이
@@ -46,6 +47,7 @@ import { setPerClassFeature, setTeacherFeature, setTeacherReadingMapTheme } from
 import { featureValue, isPerClassFeature, teacherFeatureSettings } from "@/lib/reading";
 import { READING_MAP_THEMES, readingMapThemeSettings } from "@/lib/readingMapCatalog";
 import ConfirmModal from "./ConfirmModal";
+import PetReadSettings from "./PetReadSettings";
 import PetRestSettings from "./PetRestSettings";
 import { IconGroup } from "./StatusIcons";
 
@@ -128,7 +130,7 @@ const FEATURES = [
     // 카드 안에 '열 친구 미리 보기' — 선생님도 학생과 같은 창을 봅니다(고르는 단추 없이 · 스위치와 상관없이)
     peek: true },
   { key: "petFeedEnabled", label: "펫 먹이", needs: ["readingEnabled", "petEnabled"], needsText: "학생 펫을 먼저 켜 주세요",
-    hint: "펫(알 포함)이 날마다 배가 고파져요(하루에 배부름 10). 과일 1개를 먹이면 +10, 그날 독서 발자국을 5쪽 · 250자 이상 남기면 줄지 않아요. 배부름이 0이 되면 펫이 먹이를 찾아 떠나고, 책을 읽으면 같은 펫이 돌아와요.",
+    hint: "펫(알 포함)이 날마다 배가 고파져요(하루에 배부름 10). 과일 1개를 먹이면 +10, 그날 독서 발자국을 아래에서 정한 만큼(처음 5쪽 · 250자) 남기면 줄지 않아요. 배부름이 0이 되면 펫이 먹이를 찾아 떠나고, 책을 읽으면 같은 펫이 돌아와요.",
     on: "펫 먹이를 켰어요. 오늘부터 펫이 날마다 배가 고파져요.", off: "펫 먹이를 껐어요. 꺼 둔 동안은 배고파지지 않고 떠난 펫도 곁에 보여요. 다시 켜면 끈 순간의 배부름에서 이어져요.",
     // 켠 날부터 펫이 배고파지고 떠날 수도 있으므로 **켤 때만** 한 번 되묻습니다(끌 때는 곧바로).
     ask: { title: "펫 먹이를 켤까요?", confirmLabel: "켜기", icon: "fruit",
@@ -264,10 +266,14 @@ export default function AdminSettingsPanel({ classes = [], onToast }) {
           })}
               </ul>
             </section>
-            {/* 펫 먹이의 '배고파지지 않는 날' — 과일 바구니 · 펫 먹이 카드 바로 아래 */}
+            {/* 펫 먹이의 '읽은 날' 기준(쪽수 · 글자 수) · '배고파지지 않는 날' — 과일 바구니 · 펫 먹이 카드 바로 아래 */}
             {g.key === "reward" && (
-              <PetRestSettings classes={rows} feedOn={settings.petFeedEnabled.on}
-                ready={settings.readingEnabled.on && settings.petEnabled.on} onToast={onToast} />
+              <>
+                <PetReadSettings classes={rows} feedOn={settings.petFeedEnabled.on}
+                  ready={settings.readingEnabled.on && settings.petEnabled.on} onToast={onToast} />
+                <PetRestSettings classes={rows} feedOn={settings.petFeedEnabled.on}
+                  ready={settings.readingEnabled.on && settings.petEnabled.on} onToast={onToast} />
+              </>
             )}
             {g.key === "growth" && (
               <section className="adm-group adm-map-group" aria-labelledby={`${mapId}-title`}>

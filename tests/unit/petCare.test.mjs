@@ -5,6 +5,7 @@ import {
   CARE_DAY_DROP, CARE_FRUIT, CARE_HUNGRY, CARE_MAX, CARE_PAUSES_MAX, CARE_READ_CHARS, CARE_READ_PAGES, CARE_RESTS_MAX, CARE_RETURN, CARE_STEP_FRUIT,
   appendCarePause, careAfterHatch, careAway, carePausesOf, compactCarePauses, careRestOf, careRules, careRulesFor, careSeed, careStatus, careStepsNeeded, isCarePausedDay, isCareRestDay, normalizeCare, normalizeCareRests,
   planCareFeed, planCareReadDay, planCareRecall, planCareStep, readingDayProof,
+  CARE_READ_CHARS_MAX, CARE_READ_PAGES_MAX, careReadLabel, careReadRule, isCareReadChars, isCareReadPages, normalizeCareRead, teacherPetReadSettings,
 } from "@/lib/petCare";
 import { normalizePetMirror, petCareRules, petFeedOn, petFeedTimesPatch, planPetAction } from "@/lib/readingPet";
 import { applyReadingAction, deriveReading, initialReadingState } from "@/lib/reading";
@@ -404,7 +405,7 @@ test("알 깨우기 — 깨어난 펫은 배부름 100에서, 떠난 알은 먼�
   assert.equal("care" in adopted.mirror, false);
 });
 
-test("'읽은 날' — 그날 날짜의 발자국을 합쳐 5쪽 이상 · 250자 이상", () => {
+test("'읽은 날' — 그날 날짜의 발자국을 합쳐 기준(처음 값 5쪽 · 250자 · 선생님이 정함) 이상", () => {
   const now = new Date(at("2026-11-04"));
   const ctx = (id) => ({ uid: "u", classId: "c", now, id });
   const text = (n) => "가".repeat(n);
@@ -412,20 +413,57 @@ test("'읽은 날' — 그날 날짜의 발자국을 합쳐 5쪽 이상 · 250�
   const add = (id, date, startPage, endPage, notes) => { state = applyReadingAction(state, { type: "addLog", bookId: "book-0001", date, startPage, endPage, notes }, ctx(id)); };
   add("log-0001", "2026-11-03", 1, 10, text(300));
   add("log-0002", "2026-11-04", 11, 13, text(100));
+  const need = { pages: 5, chars: 250 };
   let proof = readingDayProof(deriveReading(state, now), "2026-11-04");
-  assert.deepEqual(proof, { pages: 3, chars: 100, ok: false });
+  assert.deepEqual(proof, { pages: 3, chars: 100, need, ok: false });
   add("log-0003", "2026-11-04", 14, 15, text(149));
   proof = readingDayProof(deriveReading(state, now), "2026-11-04");
-  assert.deepEqual(proof, { pages: 5, chars: 249, ok: false }); // 쪽은 됐는데 글이 1자 모자람
+  assert.deepEqual(proof, { pages: 5, chars: 249, need, ok: false }); // 쪽은 됐는데 글이 1자 모자람
   state = applyReadingAction(state, { type: "updateLog", logId: "log-0003", notes: `  ${text(150)}  ` }, ctx("edit-0001"));
   proof = readingDayProof(deriveReading(state, now), "2026-11-04");
-  assert.deepEqual(proof, { pages: 5, chars: 250, ok: true }); // 앞뒤 공백은 안 셈
+  assert.deepEqual(proof, { pages: 5, chars: 250, need, ok: true }); // 앞뒤 공백은 안 셈
   // 글은 넉넉한데 쪽이 모자란 날
   add("log-0004", "2026-11-02", 16, 19, text(400));
   assert.equal(readingDayProof(deriveReading(state, now), "2026-11-02").ok, false);
   // 어제 것은 어제 것대로
-  assert.deepEqual(readingDayProof(deriveReading(state, now), "2026-11-03"), { pages: 10, chars: 300, ok: true });
-  assert.deepEqual(readingDayProof(null, "2026-11-03"), { pages: 0, chars: 0, ok: false });
+  assert.deepEqual(readingDayProof(deriveReading(state, now), "2026-11-03"), { pages: 10, chars: 300, need, ok: true });
+  assert.deepEqual(readingDayProof(null, "2026-11-03"), { pages: 0, chars: 0, need, ok: false });
+  // 선생님이 정한 기준(반 문서의 petReadPages · petReadChars → 규칙의 read)을 따른다 — 4쪽 · 0자(글자 수는 안 봄)면 11-02도 읽은 날
+  const easy = careRules({ petFeedFrom: at("2026-11-01"), petReadPages: 4, petReadChars: 0 }, true);
+  assert.deepEqual(easy.read, { pages: 4, chars: 0 });
+  assert.deepEqual(readingDayProof(deriveReading(state, now), "2026-11-02", easy), { pages: 4, chars: 400, need: { pages: 4, chars: 0 }, ok: true });
+  // 더 많이 정하면 같은 기록도 아직 — 20쪽 · 100자
+  const hard = careRules({ petFeedFrom: at("2026-11-01"), petReadPages: 20, petReadChars: 100 }, true);
+  assert.equal(readingDayProof(deriveReading(state, now), "2026-11-03", hard).ok, false);
+  // 규칙을 모르면(옛 호출) 처음 값
+  assert.equal(readingDayProof(deriveReading(state, now), "2026-11-03", null).ok, true);
+});
+
+test("'읽은 날'의 기준 — 선생님이 정하는 쪽수 1~100 · 글자 수 0~2000(정수), 없거나 틀리면 처음 값 5쪽 · 250자", () => {
+  assert.deepEqual([CARE_READ_PAGES_MAX, CARE_READ_CHARS_MAX], [100, 2000]);
+  assert.deepEqual(careReadRule({}), { pages: 5, chars: 250 });
+  assert.deepEqual(careReadRule(null), { pages: 5, chars: 250 });
+  assert.deepEqual(careReadRule({ petReadPages: 12, petReadChars: 0 }), { pages: 12, chars: 0 });
+  // 칸마다 따로 — 틀린 칸만 처음 값
+  assert.deepEqual(careReadRule({ petReadPages: 0, petReadChars: 300 }), { pages: 5, chars: 300 });
+  assert.deepEqual(careReadRule({ petReadPages: 7.5, petReadChars: 2001 }), { pages: 5, chars: 250 });
+  assert.deepEqual(careReadRule({ petReadPages: "10", petReadChars: -1 }), { pages: 5, chars: 250 });
+  assert.deepEqual(normalizeCareRead({ pages: 100, chars: 2000 }), { pages: 100, chars: 2000 });
+  assert.deepEqual([isCareReadPages(1), isCareReadPages(100), isCareReadPages(0), isCareReadPages(101), isCareReadPages(2.5)], [true, true, false, false, false]);
+  assert.deepEqual([isCareReadChars(0), isCareReadChars(2000), isCareReadChars(-1), isCareReadChars(2001), isCareReadChars(NaN)], [true, true, false, false, false]);
+  // 화면의 말 — 글자 수가 0이면 쪽수만
+  assert.equal(careReadLabel({ pages: 5, chars: 250 }), "5쪽 · 250자");
+  assert.equal(careReadLabel({ pages: 12, chars: 1500 }), "12쪽 · 1,500자");
+  assert.equal(careReadLabel({ pages: 3, chars: 0 }), "3쪽");
+  assert.equal(careReadLabel(null), "5쪽 · 250자");
+  // 학생의 규칙(careRulesFor — 들어온 날)에도 기준이 그대로 실린다
+  const rules = careRulesFor(careRules({ petFeedFrom: at("2026-11-01"), petReadPages: 8, petReadChars: 120 }, true), at("2026-11-05"));
+  assert.deepEqual([rules.from, rules.read], ["2026-11-05", { pages: 8, chars: 120 }]);
+  // 관리자 설정 — 운영 중인 반들의 값(첫 반) · 반마다 다르면 mixed · 보관된 반은 안 봄
+  assert.deepEqual(teacherPetReadSettings([]), { pages: 5, chars: 250, mixed: false });
+  assert.deepEqual(teacherPetReadSettings([{ petReadPages: 10, petReadChars: 100 }, { petReadPages: 10, petReadChars: 100 }]), { pages: 10, chars: 100, mixed: false });
+  assert.deepEqual(teacherPetReadSettings([{ petReadPages: 10, petReadChars: 100 }, {}]), { pages: 10, chars: 100, mixed: true });
+  assert.deepEqual(teacherPetReadSettings([{ archived: true, petReadPages: 30 }, { petReadPages: 6 }]), { pages: 6, chars: 250, mixed: false });
 });
 
 test("순위 장에 적어 둘 care — 보낼 때 반 설정 · 날짜로 '떠났나'를 다시 셈", () => {

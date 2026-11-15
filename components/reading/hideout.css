@@ -31,7 +31,10 @@
 .hideout-character-fallback { position: absolute; object-fit: contain; max-width: none; }
 .hideout-resident-shadow { position: absolute; transform: translate(-50%, -50%); border-radius: 50%; background: #4b39212b; filter: blur(2px); }
 .hideout-resident-name { position: absolute; left: 0; transform: translateX(-50%); border: 1px solid #ece7d5; border-radius: 20px; padding: 1px 7px; background: #fffdf4ee; color: #625c47; font-size: clamp(8px, .8vw, 11px); line-height: 1.4; font-weight: 650; white-space: nowrap; }
-.hideout-pet { position: absolute; transform: translate(-50%, -50%); pointer-events: none; }
+/* 방석의 펫 — 누르면 펫 정보 창(단추 · 선생님 요청). 단추의 바탕 · 테두리를 걷고, 마우스를 올리면 살짝 떠오릅니다 */
+.hideout-pet { position: absolute; transform: translate(-50%, -50%); padding: 0; border: 0; background: none; cursor: pointer; border-radius: 12px; }
+.hideout-pet:hover { filter: drop-shadow(0 0 3px rgba(255, 244, 214, .95)) drop-shadow(0 2px 4px rgba(64, 45, 30, .35)); }
+.hideout-pet:focus-visible { outline: 3px solid var(--primary, #e08a5f); outline-offset: 2px; }
 .hideout-pet > img { width: 100%; height: 100%; display: block; object-fit: contain; image-rendering: pixelated; }
 .hideout-pet .pet-figure { width: 100% !important; height: 100% !important; }
 .hideout-pet .pet-figure > img, .hideout-pet .pet-egg { width: 100%; height: 100%; object-fit: contain; }
