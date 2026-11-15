@@ -14,7 +14,7 @@ import {
   classroomSeatSide, classroomUnseated, plazaArrowKey, plazaLetterKey,
 } from "../../lib/readingClassroom.js";
 import {
-  CLASSROOM_BOARD, CLASSROOM_COLS, CLASSROOM_DESK, CLASSROOM_PORTAL, CLASSROOM_ROOM, CLASSROOM_ROWS, CLASSROOM_RUG, CLASSROOM_RUG_REACH, CLASSROOM_SEATS,
+  CLASSROOM_ATTENDANCE_RECORD, CLASSROOM_BOARD, CLASSROOM_COLS, CLASSROOM_DESK, CLASSROOM_PORTAL, CLASSROOM_ROOM, CLASSROOM_ROWS, CLASSROOM_RUG, CLASSROOM_RUG_REACH, CLASSROOM_SEATS,
   CLASSROOM_SIT_HIDE, DESK_BACK, DESK_FRONT, PLAZA_DOOR_ROOM, PLAZA_H, PLAZA_NEAR, PLAZA_NUDGE, PLAZA_PORTAL, PLAZA_ROOM, PLAZA_SPOTS, PLAZA_W, PORTAL_ART,
   plazaArrival, plazaClear, plazaLayer, plazaNearest, plazaPath, plazaPortalAt, plazaPortalClicked, plazaRoomOf, plazaSpotAt, plazaSpotNear, plazaStep, plazaWalkable,
 } from "../../lib/readingPlazaMap.js";
@@ -75,9 +75,9 @@ test("칠판에서 출석을 확인한 날 — 그날에만 교실 밖의 '출�
   assert.equal(classroomRollToday({ ...on, classroomCallAt: noon.getTime() }), false);
 });
 
-test("그림 — 방의 배경 셋과, 따로 놓는 러그 · 책상과 의자 · 의자 앞부분 · 포털 · 도는 빛이 들어 있다", () => {
+test("그림 — 문 없는 광장과 교실의 배경, 따로 놓는 러그 · 책상과 의자 · 의자 앞부분 · 포털 · 도는 빛이 들어 있다", () => {
   for (const room of [PLAZA_ROOM, PLAZA_DOOR_ROOM, CLASSROOM_ROOM]) assert.equal(existsSync(PUBLIC + room.art), true, room.art);
-  assert.deepEqual([PLAZA_ROOM.art, PLAZA_DOOR_ROOM.art, CLASSROOM_ROOM.art], ["/reading-plaza/plaza.webp", "/reading-plaza/plaza-door.webp", "/reading-plaza/classroom.webp"]);
+  assert.deepEqual([PLAZA_ROOM.art, PLAZA_DOOR_ROOM.art, CLASSROOM_ROOM.art], ["/reading-plaza/plaza.webp", "/reading-plaza/plaza.webp", "/reading-plaza/classroom.webp"]);
   for (const src of [CLASSROOM_RUG.src, CLASSROOM_DESK.src, CLASSROOM_DESK.chair, PORTAL_ART.src, PORTAL_ART.swirl]) {
     assert.match(src, /^\/reading-plaza\/[a-z-]+\.webp$/);
     assert.equal(existsSync(PUBLIC + src), true, src);
@@ -104,22 +104,23 @@ test("문 없는 광장 — 방을 안 주면 예전 그대로(문이 선 자리
   assert.equal(plazaPortalAt(PLAZA_PORTAL, PLAZA_ROOM), null);
 });
 
-test("문 달린 광장 — 문이 선 자리는 못 가고, 여는 곳 · 포털까지 길이 이어진다", () => {
+test("교실 포털이 있는 광장 — 옛 문 자리는 빈 마당이고 가판대와 포털까지 길이 이어진다", () => {
   const room = PLAZA_DOOR_ROOM;
-  // 문(집)이 선 자리 — 옛 둘째 가판대 앞 · 그 아래
-  for (const [x, y] of [[254, 650], [180, 760], [150, 700], [260, 800]]) assert.equal(plazaWalkable(x, y, room), false, `${x},${y}`);
-  // 문 앞의 좁은 바닥 · 집 오른쪽 · 포털 위
-  for (const [x, y] of [[250, 858], [310, 740], [381, 823], [330, 600]]) assert.equal(plazaWalkable(x, y, room), true, `${x},${y}`);
-  // 문이 없는 쪽은 두 그림이 같다(분수 · 마당 한가운데 · 오른쪽 가판대 앞)
+  // 문(집)이 사라진 자리 — 둘째 가판대 앞 · 그 아래를 그대로 걸을 수 있다
+  for (const [x, y] of [[254, 650], [180, 760], [150, 700], [260, 800], [250, 858], [310, 740], [381, 823], [330, 600]]) assert.equal(plazaWalkable(x, y, room), true, `${x},${y}`);
+  assert.equal(room.art, PLAZA_ROOM.art, "교실을 켜도 문 없는 광장 그림");
+  assert.deepEqual(room.floor, PLAZA_ROOM.floor, "보이지 않는 문 장애물이 남지 않음");
+  // 분수 · 마당 한가운데 · 오른쪽 가판대 앞도 같은 걷는 길
   for (const [x, y] of [[836, 330], [836, 496], [1414, 420], [700, 700], [1500, 700], [40, 40]]) {
     assert.equal(plazaWalkable(x, y, room), plazaWalkable(x, y, PLAZA_ROOM), `${x},${y}`);
   }
-  // 둘째 가판대는 서는 자리를 옮겼다 — 그 자리에서 '열기'가 뜬다
+  // 둘째 가판대도 문 없는 광장의 원래 자리에 선다 — 그 자리에서 '열기'가 뜬다
   const stall2 = room.spots.find((s) => s.id === "stall-2");
-  assert.deepEqual(stall2.stand, { x: 252, y: 584 });
+  assert.deepEqual(stall2.stand, { x: 254, y: 650 });
+  assert.deepEqual(room.spots, PLAZA_ROOM.spots, "문 때문에 줄였던 가판대 클릭 영역도 복원");
   assert.equal(plazaSpotNear(stall2.stand, PLAZA_NEAR, room)?.id, "stall-2");
   assert.equal(plazaSpotAt(120, 560, room)?.id, "stall-2");
-  assert.equal(plazaSpotAt(150, 700, room), null, "문은 가판대가 아니다");
+  assert.equal(plazaSpotAt(150, 700, room), null, "가판대 아래는 빈 마당");
   for (const spot of room.spots) {
     assert.equal(plazaWalkable(spot.stand.x, spot.stand.y, room), true, spot.id);
     assert.equal(reach(room.spawn, spot.stand, room), true, spot.id);
@@ -139,7 +140,7 @@ test("포털 — 안쪽에 들어서면 다른 방으로, 건너온 포털의 �
   // 포털은 배경에 그려져 있지 않다 — 그림을 놓을 상자(선생님이 주신 배치 자료의 자리 · 크기)가 따로 있고,
   // 들어서는 타원 · 도는 빛은 그 그림 안에 든다
   // (도트 포털 — 금테가 고르게 둘러 그림의 가운데가 곧 못의 가운데. 예전 그림은 테가 아래로 두꺼워 3px 아래였음)
-  assert.deepEqual(gate.art, { x: 382, y: 823, w: 230, h: 100 });
+  assert.deepEqual(gate.art, { x: 254, y: 810, w: 230, h: 100 });
   assert.deepEqual(door.art, { x: 180, y: 850, w: 230, h: 100 });
   for (const g of [gate, door]) {
     assert.ok(g.rx < g.swirl.rx && g.swirl.rx < g.art.w / 2 && g.ry < g.swirl.ry && g.swirl.ry < g.art.h / 2, g.id);
@@ -165,12 +166,14 @@ test("포털 — 안쪽에 들어서면 다른 방으로, 건너온 포털의 �
     const ways = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dy]) => plazaClear(at, { x: at.x + dx * 90, y: at.y + dy * 60 }, room));
     assert.ok(ways.length >= 2, `${room.id} 포털에서 나오는 길 ${ways.length}`);
   }
-  // 누르기 — 포털의 금빛 테 안 · 문 그림을 누르면 포털로 걸어간다(그 둘레의 바닥은 아님).
+  // 누르기 — 광장에는 문이 없어 포털의 금빛 테 안만 누를 수 있다(그 둘레의 바닥은 아님).
   // 누르는 범위는 도트 포털의 보이는 크기(가로 77 · 세로 47 — 선생님 요청). 예전 포털(가로 112)이면 포털이던 100px 옆은 이제 바닥
   assert.equal(plazaPortalClicked(gate.x + 70, gate.y, PLAZA_DOOR_ROOM)?.to, "classroom");
   assert.equal(plazaPortalClicked(gate.x, gate.y - 40, PLAZA_DOOR_ROOM)?.to, "classroom", "위쪽 손잡이");
   assert.equal(plazaPortalClicked(gate.x + 100, gate.y, PLAZA_DOOR_ROOM), null);
-  assert.equal(plazaPortalClicked(180, 740, PLAZA_DOOR_ROOM)?.to, "classroom", "문 그림");
+  assert.equal(plazaPortalClicked(180, 740, PLAZA_DOOR_ROOM), null, "사라진 문 자리는 포털이 아님");
+  assert.equal(plazaPortalClicked(169, 720, PLAZA_DOOR_ROOM), null, "옛 문 클릭 상자가 남지 않음");
+  assert.equal(plazaPortalClicked(382, 823, PLAZA_DOOR_ROOM), null, "예전 포털 자리도 빈 마당");
   assert.equal(plazaPortalClicked(gate.x + 140, gate.y, PLAZA_DOOR_ROOM), null);
   assert.equal(plazaPortalClicked(gate.x, gate.y - 70, PLAZA_DOOR_ROOM), null);
   assert.equal(plazaPortalClicked(295, 903, CLASSROOM_ROOM)?.to, "plaza", "교실 왼쪽 입구 누름 영역");
@@ -405,27 +408,51 @@ test("교실 — 겹치는 차례: 책상 뒤에 선 캐릭터는 책상 아래 
   }
 });
 
-test("교실 — 칠판 앞(선생님이 출석을 시작하는 자리)", () => {
+test("교실 — 출석부 앞에서만 출석 행동을 인식하고 칠판 가운데에서는 인식하지 않는다", () => {
+  const { stand, reach: zone } = CLASSROOM_ATTENDANCE_RECORD;
+  assert.equal(classroomAtBoard(stand), true);
+  assert.deepEqual(classroomAct({ teacher: true, point: stand }), { kind: "board" });
+  for (const point of [{ x: 836, y: 292 }, { x: 500, y: 290 }, { x: 1044, y: 420 }, { x: 300, y: 250 }, { x: stand.x - zone.rx - 1, y: stand.y }, { x: stand.x + zone.rx + 1, y: stand.y }, { x: stand.x, y: stand.y + zone.ry + 1 }, { x: stand.x, y: zone.minY - 1 }]) {
+    assert.equal(classroomAtBoard(point), false, JSON.stringify(point));
+    assert.deepEqual(classroomAct({ teacher: true, point }), { kind: "far" }, JSON.stringify(point));
+  }
+  for (const point of [null, undefined, {}, { x: stand.x }, { x: NaN, y: stand.y }, { x: stand.x, y: Infinity }, { x: stand.x, y: -Infinity }, { x: String(stand.x), y: stand.y }]) {
+    assert.equal(classroomAtBoard(point), false, `유효하지 않은 점 ${JSON.stringify(point)}`);
+  }
+  for (const point of [{ x: stand.x - zone.rx, y: stand.y }, { x: stand.x + zone.rx, y: stand.y }, { x: stand.x, y: stand.y + zone.ry }, { x: stand.x, y: zone.minY }]) {
+    assert.equal(classroomAtBoard(point), true, `출석부 앞 범위의 경계 ${JSON.stringify(point)}`);
+  }
+});
+
+test("교실 — 출석부 그림만 누를 수 있고 칠판의 나머지 부분은 출석 대상이 아니다", () => {
+  const { rect: [x0, y0, x1, y1], x, y, w, h, mark } = CLASSROOM_ATTENDANCE_RECORD;
+  assert.deepEqual([x0, y0, x1, y1], [x - w / 2, y - h, x + w / 2, y], "보이는 문서와 클릭 범위가 일치");
+  assert.ok(x0 > CLASSROOM_BOARD.rect[0] && y0 > CLASSROOM_BOARD.rect[1] && x1 < CLASSROOM_BOARD.rect[2] && y1 < CLASSROOM_BOARD.rect[3], "출석부가 칠판 안에 붙어 있음");
+  for (const [px, py] of [[x0, y0], [x1, y1], [x, (y0 + y1) / 2]]) assert.equal(classroomBoardAt(px, py), true);
+  for (const [px, py] of [[836, 150], [500, 150], [1170, 150], [x0 - 1, y0], [x1 + 1, y1], [x, y0 - 1], [x, y1 + 1], [NaN, y], [x, Infinity], [String(x), y]]) assert.equal(classroomBoardAt(px, py), false, `${px}, ${py}`);
+  assert.ok(mark.y < y0, "물음표는 출석부 위에 뜸");
+  assert.deepEqual(classroomBoardMark({ x: 836, y: 292 }), mark);
+  assert.deepEqual(classroomBoardMark({ x: 100, y: 420 }), mark, "걷는 위치를 따라 물음표가 옮겨 다니지 않음");
+});
+
+test("교실 — 출석부를 누르면 그 앞의 걸을 수 있는 좁은 범위로 접근한다(사람을 피할 대체 위치 포함)", () => {
   const room = CLASSROOM_ROOM;
-  assert.equal(classroomAtBoard({ x: 836, y: CLASSROOM_BOARD.standY }), true);
-  assert.equal(classroomAtBoard({ x: 500, y: 290 }), true);
-  assert.equal(classroomAtBoard({ x: 836, y: 420 }), false, "복도 아래쪽");
-  assert.equal(classroomAtBoard({ x: 300, y: 250 }), false, "교탁 쪽");
-  assert.equal(classroomAtBoard(null), false);
-  assert.equal(classroomBoardAt(836, 150), true);
-  assert.equal(classroomBoardAt(836, 300), false);
-  // 칠판의 어디를 눌러도 그 아래 바닥에 선다(걸어갈 수 있는 자리 · 칠판 앞)
-  for (const x of [400, 500, 836, 1170, 1400]) {
+  const { stand: recordStand, rect } = CLASSROOM_ATTENDANCE_RECORD;
+  for (const x of [400, 500, 836, recordStand.x, 1170, 1400, undefined, NaN, Infinity, -Infinity]) {
     const stand = classroomBoardStand(x);
     assert.equal(plazaWalkable(stand.x, stand.y, room), true, `x ${x}`);
     assert.equal(classroomAtBoard(stand), true, `x ${x}`);
     assert.equal(reach(room.spawn, stand, room), true, `x ${x}`);
+    assert.ok(stand.x >= rect[0] && stand.x <= rect[2], "누른 칠판 위치와 관계없이 출석부 앞에만 섬");
+    for (const offset of [-80, 0, 80]) {
+      const alternate = classroomBoardStand(stand.x + offset);
+      assert.equal(plazaWalkable(alternate.x, alternate.y, room), true, `대체 자리 ${alternate.x}`);
+      assert.equal(classroomAtBoard(alternate), true, `대체 자리도 출석부 앞 ${alternate.x}`);
+      assert.equal(reach(room.spawn, alternate, room), true, `대체 자리까지 걸을 수 있음 ${alternate.x}`);
+    }
   }
-  // 물음표는 선생님이 선 곳 위(칠판 가로 안에서) — 선생님의 머리(이름표)보다 위
-  const mark = classroomBoardMark({ x: 836, y: 292 });
-  assert.ok(Math.abs(mark.x - 836) <= 30 && mark.y === CLASSROOM_BOARD.markY);
-  assert.ok(CLASSROOM_BOARD.markY < CLASSROOM_BOARD.standY - 88 - 20, "서 있는 캐릭터의 이름표보다 위");
-  assert.ok(classroomBoardMark({ x: 100 }).x >= CLASSROOM_BOARD.rect[0] && classroomBoardMark({ x: 1600 }).x <= CLASSROOM_BOARD.rect[2]);
+  assert.deepEqual(classroomBoardStand(), recordStand);
+  assert.notDeepEqual(classroomBoardStand(recordStand.x - 80), classroomBoardStand(recordStand.x + 80), "좌우 대체 지점은 서로 다름");
 });
 
 test("자리표 — 저장된 자리만, 같은 학생이 두 번 있으면 앞의 자리", () => {
@@ -495,7 +522,7 @@ test("러그 위인가 — 내 자리의 러그에 올라서야 하고, 복도 �
   assert.equal(classroomSeatSide(99), null);
 });
 
-test("A를 누르면 — 학생: 내 책상 옆이면 앉기 · 앉아 있으면 다시 서기 / 선생님: 칠판 앞이면 출석", () => {
+test("A를 누르면 — 학생: 내 책상 옆이면 앉기 · 앉아 있으면 다시 서기 / 선생님: 출석부 앞이면 출석", () => {
   const mine = CLASSROOM_SEATS[8];
   assert.deepEqual(classroomAct({ point: mine.stand, seat: 8, sitting: null }), { kind: "sit", seat: 8 });
   assert.deepEqual(classroomAct({ point: mine.sit, seat: 8, sitting: 8 }), { kind: "stand", seat: 8 });
@@ -505,10 +532,11 @@ test("A를 누르면 — 학생: 내 책상 옆이면 앉기 · 앉아 있으면
   assert.deepEqual(classroomAct({ point: CLASSROOM_ROOM.spawn, seat: 8, sitting: null }), { kind: "far", seat: 8 });
   // 자리표에 없는 학생
   assert.deepEqual(classroomAct({ point: mine.stand, seat: null, sitting: null }), { kind: "noseat" });
-  // 학생은 칠판 앞에서도 출석을 시작하지 못한다
-  assert.equal(classroomAct({ point: { x: 836, y: 292 }, seat: 8, sitting: null }).kind, "far");
-  // 선생님 — 칠판 앞에서만, 책상 옆에서는 앉지 않는다
-  assert.deepEqual(classroomAct({ teacher: true, point: { x: 836, y: 292 } }), { kind: "board" });
+  // 학생은 출석부 앞에서도 출석을 시작하지 못한다
+  assert.equal(classroomAct({ point: CLASSROOM_ATTENDANCE_RECORD.stand, seat: 8, sitting: null }).kind, "far");
+  // 선생님 — 출석부 앞에서만, 칠판 가운데나 책상 옆에서는 앉지 않는다
+  assert.deepEqual(classroomAct({ teacher: true, point: CLASSROOM_ATTENDANCE_RECORD.stand }), { kind: "board" });
+  assert.deepEqual(classroomAct({ teacher: true, point: { x: 836, y: 292 } }), { kind: "far" });
   assert.deepEqual(classroomAct({ teacher: true, point: mine.stand, seat: 8 }), { kind: "far" });
   assert.deepEqual(classroomAct({ teacher: true, point: CLASSROOM_ROOM.spawn }), { kind: "far" });
 });
@@ -643,13 +671,13 @@ test("모두 이동 — 착석은 배정된 학생의 교실 자리만, 광장·
   assert.equal(classroomMoveSeat(), null);
 });
 
-test("모두 이동 — 다시 설 자리: 선생님은 칠판 앞, 학생은 제 러그의 귀, 나머지는 흩어 선다", () => {
+test("모두 이동 — 다시 설 자리: 선생님은 칠판 가운데(출석부 밖), 학생은 제 러그의 귀, 나머지는 흩어 선다", () => {
   const room = CLASSROOM_ROOM;
-  // 선생님 → 교실: 칠판 앞 가운데(곧바로 A로 출석을 시작)
+  // 선생님 → 교실: 칠판 앞 가운데. 출석부로 다가가기 전에는 물음표나 출석 행동이 없음.
   const board = classroomMoveSpot({ to: "classroom", teacher: true, uid: "t" });
   assert.equal(plazaWalkable(board.x, board.y, room), true);
-  assert.equal(classroomAtBoard(board), true);
-  assert.deepEqual(classroomAct({ teacher: true, point: board }), { kind: "board" });
+  assert.equal(classroomAtBoard(board), false);
+  assert.deepEqual(classroomAct({ teacher: true, point: board }), { kind: "far" });
   assert.ok(Math.abs(board.x - PLAZA_W / 2) < 1, "가운데");
   assert.equal(board.facing, "down");
   // 자리가 있는 학생 → 교실: 바로 앉기 전의 안전 위치(다시 일어서면 돌아갈 러그 귀) · 책상 쪽을 본다 · 포털 위가 아니다

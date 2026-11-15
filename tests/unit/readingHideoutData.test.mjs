@@ -9,10 +9,12 @@ const source = await readFile(new URL("../../lib/data/readingHideout.js", import
 let serial = 0;
 async function demo({ lowLevel = false } = {}) {
   const values = new Map();
+  const stateReads = [];
   let blockWrite = false;
   let user = { uid: "student-a", role: "student" };
   const cls = { id: "class", createdBy: "teacher", readingEnabled: true, plazaEnabled: true, classroomEnabled: true, hideoutEnabled: true };
-  const mock = { classes: [cls], demoUsers: [{ uid: "student-a", role: "student" }, { uid: "student-b", role: "student" }] };
+  const mock = { classes: [cls], demoUsers: [{ uid: "student-a", role: "student" }, { uid: "student-b", role: "student" }],
+    memberships: ["student-a", "student-b"].map((uid) => ({ uid, classId: "class" })) };
   const suspended = new Set();
   const state = lowLevel ? initialReadingState() : {
     ...initialReadingState(),
@@ -31,18 +33,20 @@ async function demo({ lowLevel = false } = {}) {
     isTeacher: (value) => value.role === "teacher" || value.role === "admin",
     deriveReading, hideoutProgress, normalizeHideoutRoom, validateHideoutLayout,
     demoReadingAccess: (classId, targetUid) => {
-      if (classId !== cls.id || !cls.readingEnabled || cls.archived) throw Object.assign(new Error("Disabled"), { code: "reading-disabled" });
+      const selected = mock.classes.find((entry) => entry.id === classId);
+      if (!selected || !selected.readingEnabled || selected.archived) throw Object.assign(new Error("Disabled"), { code: "reading-disabled" });
       if (targetUid && targetUid !== user.uid && !["teacher", "admin"].includes(user.role)) throw Object.assign(new Error("Forbidden"), { code: "permission-denied" });
-      if (user.role === "teacher" && user.uid !== cls.createdBy) throw Object.assign(new Error("Forbidden"), { code: "permission-denied" });
+      if (user.role === "teacher" && user.uid !== selected.createdBy) throw Object.assign(new Error("Forbidden"), { code: "permission-denied" });
+      if (user.role === "student" && !mock.memberships.some((member) => member.uid === user.uid && member.classId === classId)) throw Object.assign(new Error("Forbidden"), { code: "permission-denied" });
       return user;
     },
-    demoReadingState: () => state,
+    demoReadingState: (uid) => { stateReads.push(uid); return state; },
     readingRequest: () => { throw new Error("Unexpected network request"); },
   };
   const injected = `const { isFirebaseConfigured, mock, hideoutOn, demoSuspendedSet, isTeacher, deriveReading, hideoutProgress, normalizeHideoutRoom, validateHideoutLayout, demoReadingAccess, demoReadingState, readingRequest } = globalThis.__hideoutDataFixture;\n`
     + source.replace(/^import .+ from "[^"]+";\n/gm, "") + `\n// instance ${serial++}`;
   const module = await import(`data:text/javascript;base64,${Buffer.from(injected).toString("base64")}`);
-  return { module, values, cls, mock, suspended, blockWrite: (on) => { blockWrite = on; }, switchUser: (uid, role = "student") => { user = { uid, role }; } };
+  return { module, values, cls, mock, suspended, stateReads, blockWrite: (on) => { blockWrite = on; }, switchUser: (uid, role = "student") => { user = { uid, role }; } };
 }
 after(() => { delete globalThis.window; delete globalThis.__hideoutDataFixture; });
 
@@ -132,7 +136,77 @@ test("demo reads and writes obey hideout and parent switches, suspension and unl
   env.suspended.clear();
   await assert.rejects(() => env.module.saveReadingHideout("class", { ...first.room, layout: { ...first.room.layout, "book-trophy": "book-trophy-forest" } }), (e) => e.code === "reading/hideout-locked");
   env.switchUser("teacher", "teacher");
-  await assert.rejects(() => env.module.saveReadingHideout("class", first.room), (e) => e.code === "reading/hideout-students-only");
+  assert.equal((await env.module.saveReadingHideout("class", first.room)).progress.teacher, true);
+});
+
+test("teacher and admin demo rooms unlock decor without reading a student ledger and remain owner-scoped", async () => {
+  const env = await demo({ lowLevel: true });
+  const student = await env.module.fetchReadingHideout("class");
+  for (const role of ["teacher", "admin"]) {
+    env.switchUser(role, role);
+    const reads = env.stateReads.length;
+    const first = await env.module.fetchReadingHideout("class");
+    assert.deepEqual(first.progress, { level: 1, earnedBadgeIds: [], teacher: true });
+    assert.equal(env.stateReads.length, reads, "teacher access does not read the student ledger");
+    const saved = await env.module.saveReadingHideout("class", { ...first.room, layout: { ...first.room.layout, "book-trophy": "book-trophy-forest" } });
+    assert.equal(saved.room.layout["book-trophy"], "book-trophy-forest");
+    assert.equal(saved.room.revision, 1);
+    assert.deepEqual((await env.module.fetchReadingHideout("class")).room, saved.room);
+    assert.equal(env.stateReads.length, reads);
+    assert.equal(JSON.parse(env.values.get(`bookbom.reading.hideout.v2:${role}`)).layout["book-trophy"], "book-trophy-forest");
+    await assert.rejects(() => env.module.saveReadingHideout("class", { ...saved.room, teacher: true }), (e) => e.code === "reading/invalid-hideout");
+    const viewed = await env.module.fetchReadingHideout("class", "student-a");
+    assert.deepEqual(viewed.room, student.room);
+    assert.equal(viewed.progress.teacher, undefined);
+    assert.equal(env.stateReads.length, reads + 1);
+    assert.equal(env.stateReads.at(-1), "student-a");
+  }
+  env.switchUser("student-a");
+  assert.equal((await env.module.fetchReadingHideout("class")).progress.teacher, undefined);
+  await assert.rejects(() => env.module.saveReadingHideout("class", { ...student.room, layout: { ...student.room.layout, "book-trophy": "book-trophy-forest" } }), (e) => e.code === "reading/hideout-locked");
+  assert.equal(env.values.has("bookbom.reading.hideout.v2:student-a"), false);
+});
+
+test("teacher room follows the same account across owned demo classes and rejects foreign or disabled entry", async () => {
+  const env = await demo({ lowLevel: true });
+  env.mock.classes.push({ ...env.cls, id: "second" }, { ...env.cls, id: "foreign", createdBy: "someone-else" });
+  env.switchUser("teacher", "teacher");
+  const first = await env.module.fetchReadingHideout("class");
+  const saved = await env.module.saveReadingHideout("class", { ...first.room, layout: { ...first.room.layout, rug: "rug-starlight" } });
+  assert.deepEqual((await env.module.fetchReadingHideout("second")).room, saved.room);
+  await assert.rejects(() => env.module.fetchReadingHideout("foreign"), (e) => e.code === "permission-denied");
+  await assert.rejects(() => env.module.saveReadingHideout("foreign", saved.room), (e) => e.code === "permission-denied");
+  for (const feature of ["hideoutEnabled", "classroomEnabled", "plazaEnabled", "readingEnabled"]) {
+    env.cls[feature] = false;
+    await assert.rejects(() => env.module.fetchReadingHideout("class"));
+    await assert.rejects(() => env.module.saveReadingHideout("class", saved.room));
+    env.cls[feature] = true;
+  }
+  assert.deepEqual((await env.module.fetchReadingHideout("class")).room, saved.room);
+});
+
+test("queued teacher demo saves recheck identity, privileges and feature gates", async () => {
+  const env = await demo({ lowLevel: true });
+  env.switchUser("teacher", "teacher");
+  const first = await env.module.fetchReadingHideout("class");
+  const next = { ...first.room, layout: { ...first.room.layout, "book-trophy": "book-trophy-forest" } };
+  const denied = env.module.saveReadingHideout("class", next);
+  env.cls.hideoutEnabled = false;
+  await assert.rejects(() => denied, (e) => e.code === "reading/hideout-disabled");
+  env.cls.hideoutEnabled = true;
+  const identity = env.module.saveReadingHideout("class", next);
+  env.switchUser("student-a");
+  await assert.rejects(() => identity, (e) => e.code === "reading/unauthenticated");
+  env.switchUser("teacher", "teacher");
+  env.mock.memberships.push({ uid: "teacher", classId: "class" });
+  const demotion = env.module.saveReadingHideout("class", next);
+  env.switchUser("teacher", "student");
+  await assert.rejects(() => demotion, (e) => e.code === "reading/hideout-locked");
+  env.switchUser("teacher", "teacher");
+  assert.deepEqual((await env.module.fetchReadingHideout("class")).room, first.room);
+  const saved = await env.module.saveReadingHideout("class", next);
+  await assert.rejects(() => env.module.saveReadingHideout("class", first.room), (e) => e.code === "reading/hideout-conflict");
+  assert.deepEqual((await env.module.fetchReadingHideout("class")).room, saved.room);
 });
 
 test("teacher demo lookup reads the selected student's room while peers and non-student profiles remain private", async () => {

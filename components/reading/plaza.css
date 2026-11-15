@@ -279,6 +279,17 @@
    벽시계의 시계판(.plaza-clock)도 배경의 빈 시계판 위에 따로 얹습니다 — 칠판 위 벽이라 캐릭터와 겹치지 않습니다. */
 .plaza-rug, .plaza-desk-art, .plaza-clock { position: absolute; display: block; max-width: none; pointer-events: none; user-select: none; }
 .plaza-rug, .plaza-clock { z-index: 1; }
+/* 칠판에 붙인 출석부 — 그림 칸만 누르면 앞으로 걷습니다. 문서 앞에서만 별도의 A 물음표가 섭니다. */
+.plaza-attendance-record {
+  position: absolute; z-index: 2; display: block; box-sizing: border-box; max-width: none;
+  padding: 0; border: 0; border-radius: 0; background: transparent; color: #fff5d9; pointer-events: none;
+  user-select: none; font: inherit; overflow: visible;
+}
+.plaza-attendance-record > img { display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; image-rendering: pixelated; }
+.plaza-attendance-record > span { position: absolute; top: 100%; left: 50%; margin-top: 2px; transform: translateX(-50%); font-size: clamp(8px, .7cqw, 11px); font-weight: 800; line-height: 1.2; white-space: nowrap; text-shadow: 0 1px 1px #244735; pointer-events: none; }
+.plaza-attendance-record.is-interactive { pointer-events: auto; cursor: pointer; }
+.plaza-attendance-record.is-interactive:hover > img { filter: brightness(1.06); }
+.plaza-attendance-record:focus-visible { outline: 3px solid #fff0b8; outline-offset: 3px; border-radius: 3px; }
 /* 내 러그 — 러그(보이는 타원)를 두른 살구빛 테. 러그가 곧 내 자리의 범위라(선생님 요청) 어디에 올라서면 되는지 보입니다.
    책상보다 아래 층이라 책상 · 의자에 가린 가운데는 안 보이고 양옆의 귀가 드러납니다. 올라서면 밝아지고, 앉으면 옅어집니다. */
 .plaza-rug-mine {
@@ -305,7 +316,7 @@
   background: #2f8f5b; color: #fff; font-size: .8em; font-style: normal; font-weight: 800; line-height: 1; vertical-align: -.12em;
   box-shadow: 0 0 0 1.5px #ffffffd9;
 }
-/* 물음표 — 지금 A를 누르면 물을 것이 있습니다(책상 위 · 칠판). 눌러도 같습니다 */
+/* 물음표 — 지금 A를 누르면 물을 것이 있습니다(책상 위 · 출석부 위). 눌러도 같습니다 */
 .plaza-mark {
   position: absolute; z-index: 2100; transform: translate(-50%, -100%);
   display: grid; place-items: center; width: 34px; height: 34px; padding: 0;
@@ -325,7 +336,7 @@
   background: #fff9ecfa; box-shadow: 0 4px 0 #8a5a2b55, 0 10px 24px #3a261238; animation: plaza-act-in .16s ease-out both;
 }
 @keyframes plaza-act-in { from { opacity: 0; translate: 0 6px; } to { opacity: 1; translate: 0 0; } }
-/* 칠판의 고르기(출석시작 · 출석종료) — 선생님 옆, 칠판 위. 상자의 아랫변이 선생님의 발 높이(--act-foot)이고, 선생님의 몸과
+/* 출석부의 고르기(출석시작 · 출석종료) — 선생님 옆, 칠판 위. 상자의 아랫변이 선생님의 발 높이(--act-foot)이고, 선생님의 몸과
    이름표(반폭 29px쯤)를 비켜 36px 옆에서 시작합니다. 칠판 가운데보다 왼쪽에 섰으면 오른쪽(.is-right), 아니면 왼쪽.
    머리 위에 띄우던 때는 위쪽 자리가 모자라 상자가 화면 밖으로 잘렸습니다(PlazaClassroom.jsx의 BOARD_MENU_FOOT 주석). */
 .plaza-act--board { top: var(--act-foot); }

@@ -28,6 +28,8 @@ const highState = () => ({
 before(async () => {
   const batch = db.batch();
   batch.set(db.doc(`classes/${classId}`), { createdBy: ids.teacher, readingEnabled: true, plazaEnabled: true, classroomEnabled: true, hideoutEnabled: true, archived: false });
+  batch.set(db.doc("classes/hideout-second"), { createdBy: ids.teacher, readingEnabled: true, plazaEnabled: true, classroomEnabled: true, hideoutEnabled: true, archived: false });
+  batch.set(db.doc("classes/hideout-foreign"), { createdBy: ids.otherTeacher, readingEnabled: true, plazaEnabled: true, classroomEnabled: true, hideoutEnabled: true, archived: false });
   batch.set(db.doc("classes/hideout-off"), { createdBy: ids.teacher });
   batch.set(db.doc("classes/hideout-archived"), { createdBy: ids.teacher, readingEnabled: true, archived: true });
   for (const [kind, uid] of Object.entries(ids)) {
@@ -40,6 +42,11 @@ beforeEach(async () => {
   await db.doc(`classes/${classId}`).update({ readingEnabled: true, plazaEnabled: true, classroomEnabled: true, hideoutEnabled: true, archived: false });
   await mainRef.set({ state: initialReadingState() });
   await roomRef.delete();
+  await Promise.all(["teacher", "admin"].flatMap((kind) => [
+    db.doc(`users/${ids[kind]}/reading/hideout`).delete(),
+    db.doc(`users/${ids[kind]}/reading/main`).delete(),
+    db.doc(`classes/${classId}/readingMembers/${ids[kind]}`).delete(),
+  ]));
 });
 after(async () => { await deleteApp(app); });
 
@@ -63,6 +70,10 @@ test("the hideout switch and its parent features block reads and writes without 
       await assert.rejects(() => getReadingHideout(who("student"), classId), (e) => e.status === 403 && e.code === code);
       await assert.rejects(() => saveReadingHideout(who("student"), payload(room({}, 3))), (e) => e.status === 403 && e.code === code);
       await assert.rejects(() => getReadingHideout(who("teacher"), classId, ids.student), (e) => e.status === 403 && e.code === code);
+      for (const kind of ["teacher", "admin"]) {
+        await assert.rejects(() => getReadingHideout(who(kind), classId), (e) => e.status === 403 && e.code === code);
+        await assert.rejects(() => saveReadingHideout(who(kind), payload()), (e) => e.status === 403 && e.code === code);
+      }
       assert.deepEqual((await roomRef.get()).data(), room({}, 3));
     } finally { await db.doc(`classes/${classId}`).update({ [feature]: true }); }
   }
@@ -84,9 +95,8 @@ test("enabled class, actual membership, suspended status and role are enforced o
     await assert.rejects(() => getReadingHideout(who("student"), classId), (e) => e.code === "reading/suspended");
     await assert.rejects(() => saveReadingHideout(who("student"), payload()), (e) => e.code === "reading/suspended");
   } finally { await db.doc(`users/${ids.student}`).update({ suspended: false }); }
-  for (const kind of ["teacher", "admin"]) {
-    await assert.rejects(() => saveReadingHideout(who(kind), payload()), (e) => e.code === "reading/hideout-students-only");
-  }
+  await assert.rejects(() => getReadingHideout(who("otherTeacher"), classId), (e) => e.code === "reading/forbidden");
+  await assert.rejects(() => saveReadingHideout(who("otherTeacher"), payload()), (e) => e.code === "reading/forbidden");
 });
 
 test("only the assigned teacher or admin may read a member's room; peer and nonmember targets remain private", async () => {
@@ -95,8 +105,64 @@ test("only the assigned teacher or admin may read a member's room; peer and nonm
   await assert.rejects(() => getReadingHideout(who("peer"), classId, ids.student), (e) => e.status === 403);
   await assert.rejects(() => getReadingHideout(who("otherTeacher"), classId, ids.student), (e) => e.status === 403);
   await assert.rejects(() => getReadingHideout(who("teacher"), classId, ids.outsider), (e) => e.code === "reading/not-member");
-  await assert.rejects(() => getReadingHideout(who("teacher"), classId), (e) => e.code === "reading/hideout-students-only");
+  assert.equal((await getReadingHideout(who("teacher"), classId)).progress.teacher, true);
   await assert.rejects(() => getReadingHideout(who("student"), classId, "../other"), (e) => e.status === 400);
+});
+
+test("teachers and admins decorate only their own private room without reading XP or rank documents", async () => {
+  const studentBefore = (await mainRef.get()).data();
+  await roomRef.set(room({}, 3));
+  for (const kind of ["teacher", "admin"]) {
+    const ownRoom = db.doc(`users/${ids[kind]}/reading/hideout`);
+    const ownMain = db.doc(`users/${ids[kind]}/reading/main`);
+    const ownRank = db.doc(`classes/${classId}/readingMembers/${ids[kind]}`);
+    const first = await getReadingHideout(who(kind), classId);
+    assert.deepEqual(first.room, room());
+    assert.deepEqual(first.progress, { level: 1, earnedBadgeIds: [], teacher: true });
+    assert.equal((await ownRoom.get()).exists, false, "opening does not create a room");
+    assert.deepEqual((await saveReadingHideout(who(kind), payload(first.room))).room, first.room);
+    assert.equal((await ownRoom.get()).exists, false, "an unchanged save does not create a room");
+    const next = room({ "book-trophy": "book-trophy-forest", desk: "desk-forest", bed: "bed-starlight" });
+    const saved = await saveReadingHideout(who(kind), payload(next));
+    assert.deepEqual(saved.room, { ...next, revision: 1 });
+    assert.deepEqual(saved.progress, first.progress);
+    assert.deepEqual((await getReadingHideout(who(kind), classId)).room, saved.room);
+    assert.deepEqual(Object.keys((await ownRoom.get()).data()).sort(), ["layout", "revision", "updatedAt", "version"]);
+    assert.equal((await ownMain.get()).exists, false, "decor access never creates a reading ledger");
+    assert.equal((await ownRank.get()).exists, false, "decor access never writes a ranking snapshot");
+    await assert.rejects(() => saveReadingHideout(who(kind), { ...payload(saved.room), uid: ids.student }), (e) => e.status === 400);
+    await assert.rejects(() => saveReadingHideout(who(kind), payload({ ...saved.room, teacher: true })), (e) => e.status === 400);
+  }
+  assert.deepEqual((await mainRef.get()).data(), studentBefore);
+  assert.deepEqual((await roomRef.get()).data(), room({}, 3));
+  const studentView = await getReadingHideout(who("teacher"), classId, ids.student);
+  assert.equal(studentView.progress.teacher, undefined, "teacher student-view uses the student's own eligibility");
+  assert.equal(studentView.progress.level, 1);
+  await assert.rejects(() => saveReadingHideout(who("student"), payload(room({ "book-trophy": "book-trophy-forest" }))), (e) => e.code === "reading/hideout-locked");
+});
+
+test("a teacher room is shared across owned enabled classes while foreign and archived classes deny access", async () => {
+  const saved = await saveReadingHideout(who("teacher"), payload(room({ "book-trophy": "book-trophy-forest" })));
+  assert.deepEqual((await getReadingHideout(who("teacher"), "hideout-second")).room, saved.room);
+  const next = await saveReadingHideout(who("teacher"), { classId: "hideout-second", room: { ...saved.room, layout: { ...saved.room.layout, rug: "rug-starlight" } } });
+  assert.deepEqual((await getReadingHideout(who("teacher"), classId)).room, next.room);
+  await assert.rejects(() => getReadingHideout(who("teacher"), "hideout-foreign"), (e) => e.code === "reading/forbidden");
+  await assert.rejects(() => saveReadingHideout(who("teacher"), { classId: "hideout-foreign", room: next.room }), (e) => e.code === "reading/forbidden");
+  await assert.rejects(() => getReadingHideout(who("teacher"), "hideout-archived"), (e) => e.code === "reading/disabled");
+  await assert.rejects(() => saveReadingHideout(who("teacher"), { classId: "hideout-archived", room: next.room }), (e) => e.code === "reading/disabled");
+  assert.deepEqual((await getReadingHideout(who("teacher"), classId)).room, next.room);
+});
+
+test("teacher revisions prevent stale edits and role changes are revalidated on each request", async () => {
+  const saved = await saveReadingHideout(who("teacher"), payload(room({ "book-trophy": "book-trophy-forest" })));
+  await assert.rejects(() => saveReadingHideout(who("teacher"), payload(room({ rug: "rug-starlight" }))), (e) => e.code === "reading/hideout-conflict");
+  const teacherProfile = db.doc(`users/${ids.teacher}`);
+  await teacherProfile.update({ role: "student" });
+  try {
+    await assert.rejects(() => getReadingHideout(who("teacher"), classId), (e) => e.code === "reading/forbidden");
+    await assert.rejects(() => saveReadingHideout(who("teacher"), payload(saved.room)), (e) => e.code === "reading/forbidden");
+  } finally { await teacherProfile.update({ role: "teacher" }); }
+  assert.deepEqual((await getReadingHideout(who("teacher"), classId)).room, saved.room);
 });
 
 test("orphan and non-student memberships cannot turn into teacher-viewable rooms", async () => {

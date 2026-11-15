@@ -2,8 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   CLASSROOM_HIDEOUT_PORTAL, CLASSROOM_HIDEOUT_RETURN, CLASSROOM_HIDEOUT_ROOM, CLASSROOM_PORTAL, CLASSROOM_ROOM, CLASSROOM_SEATS,
-  PLAZA_DOOR_ROOM, PLAZA_H, PLAZA_ROOM, PLAZA_W, PORTAL_ART,
-  plazaArrival, plazaClear, plazaPath, plazaPortalAt, plazaPortalClicked, plazaRoomOf, plazaWalkable,
+  PLAZA_DOOR_ROOM, PLAZA_H, PLAZA_HIDEOUT_PORTAL, PLAZA_HIDEOUT_RETURN, PLAZA_HIDEOUT_ROOM, PLAZA_NEAR, PLAZA_PORTAL, PLAZA_ROOM, PLAZA_W, PORTAL_ART,
+  plazaArrival, plazaClear, plazaPath, plazaPortalAt, plazaPortalClicked, plazaRoomOf, plazaSpotNear, plazaWalkable,
 } from "../../lib/readingPlazaMap.js";
 import { classroomSeatAround } from "../../lib/readingClassroom.js";
 
@@ -18,16 +18,84 @@ function assertRoute(from, to, room) {
   assert.ok(Math.hypot(previous.x - to.x, previous.y - to.y) < 1, "목적지까지 걸어감");
 }
 
-test("개인 아지트 입구 — 교실과 아지트가 모두 켜진 교실 변형에만 나타남", () => {
+test("개인 아지트 입구 — 교실과 아지트가 모두 켜진 교실·광장 변형에만 나타남", () => {
   assert.equal(plazaRoomOf("classroom", true, true), CLASSROOM_HIDEOUT_ROOM);
   assert.equal(plazaRoomOf("classroom", true, false), CLASSROOM_ROOM);
   assert.equal(plazaRoomOf("classroom", true), CLASSROOM_ROOM);
   assert.equal(plazaRoomOf("classroom", false, true), PLAZA_ROOM);
-  assert.equal(plazaRoomOf("plaza", true, true), PLAZA_DOOR_ROOM);
+  assert.equal(plazaRoomOf("plaza", true, true), PLAZA_HIDEOUT_ROOM);
+  assert.equal(plazaRoomOf("plaza", true, false), PLAZA_DOOR_ROOM);
+  assert.equal(plazaRoomOf("plaza", true), PLAZA_DOOR_ROOM);
+  assert.equal(plazaRoomOf("plaza", false, true), PLAZA_ROOM);
+  assert.deepEqual(PLAZA_ROOM.portals, [], "교실을 끄면 광장 아지트 포털도 없음");
+  assert.deepEqual(PLAZA_DOOR_ROOM.portals.map((gate) => gate.to), ["classroom"], "아지트를 끄면 교실 포털만 남음");
+  assert.deepEqual(PLAZA_HIDEOUT_ROOM.portals.map((gate) => gate.to), ["classroom", "hideout"]);
   assert.deepEqual(CLASSROOM_ROOM.portals.map((gate) => gate.to), ["plaza"], "기본 공용 교실은 바뀌지 않음");
   assert.deepEqual(CLASSROOM_HIDEOUT_ROOM.portals.map((gate) => gate.to), ["plaza", "hideout"]);
   assert.equal(CLASSROOM_HIDEOUT_ROOM.id, "classroom", "개인 방을 공용 실시간 방에 추가하지 않음");
+  assert.equal(PLAZA_HIDEOUT_ROOM.id, "plaza", "광장 아지트 입구도 공용 실시간 방을 추가하지 않음");
   assert.equal(Object.isFrozen(CLASSROOM_HIDEOUT_ROOM.portals), true);
+});
+
+test("광장 — 문 없는 배경의 왼쪽 아래는 교실 포털, 책꽂이 오른쪽 빈 가장자리는 아지트 포털", () => {
+  const room = PLAZA_HIDEOUT_ROOM;
+  const classroomGate = room.portals.find((gate) => gate.to === "classroom");
+  const hideoutGate = room.portals.find((gate) => gate.to === "hideout");
+  assert.equal(room.art, "/reading-plaza/plaza.webp");
+  assert.deepEqual(room.floor, PLAZA_ROOM.floor, "사라진 문의 장애물도 제거");
+  assert.deepEqual(room.spots, PLAZA_ROOM.spots, "둘째 가판대 앞을 포함해 원래 클릭 영역과 서는 위치 복원");
+  assert.deepEqual({ x: classroomGate.x, y: classroomGate.y }, PLAZA_PORTAL);
+  assert.deepEqual({ x: hideoutGate.x, y: hideoutGate.y }, PLAZA_HIDEOUT_PORTAL);
+  assert.ok(classroomGate.x < PLAZA_W / 4 && classroomGate.y > PLAZA_H * .8, "교실은 왼쪽 아래");
+  assert.ok(hideoutGate.x > PLAZA_W * .7 && hideoutGate.y < PLAZA_H / 3, "아지트는 오른쪽 위");
+  assert.ok(hideoutGate.art.x - hideoutGate.art.w / 2 >= 1125 && hideoutGate.art.y - hideoutGate.art.h / 2 > 205, "책꽂이 앞면에 포털을 겹치지 않음");
+  for (const gate of [classroomGate, hideoutGate]) {
+    assert.equal(plazaWalkable(gate.x, gate.y, room), true);
+    assert.equal(plazaSpotNear(gate, PLAZA_NEAR, room), null, "도착 즉시 책꽂이·가판대 상호작용이 뜨지 않음");
+    assertRoute(room.spawn, gate, room);
+    for (const spot of room.spots) assertRoute(spot.stand, gate, room);
+    // 그림의 실제 금빛 테 전체가 걷는 마당 안에 있어 가장자리로 다가가도 화단을 밟지 않는다.
+    for (let degree = 0; degree < 360; degree += 1) {
+      const angle = degree * Math.PI / 180;
+      assert.equal(plazaWalkable(gate.x + Math.cos(angle) * gate.ring.rx, gate.y + Math.sin(angle) * gate.ring.ry, room), true, `${gate.id} 금빛 테 ${degree}도`);
+    }
+  }
+  assertRoute(classroomGate, hideoutGate, room);
+  assertRoute(hideoutGate, classroomGate, room);
+  assert.equal(plazaPortalAt(room.spawn, room, 22), null, "광장 처음 위치는 어느 포털도 아님");
+});
+
+test("광장 — 포털의 보이는 테만 눌리며 옛 문과 옛 포털 위치에는 보이지 않는 클릭 상자가 없다", () => {
+  const room = PLAZA_HIDEOUT_ROOM;
+  for (const gate of room.portals) {
+    assert.equal(gate.rect, null, "문 그림이 없는 바닥 포털은 별도 사각형 클릭 영역 없음");
+    assert.equal(plazaPortalAt(gate, room)?.id, gate.id);
+    assert.equal(plazaPortalClicked(gate.x + gate.ring.rx - 1, gate.y, room)?.id, gate.id);
+    assert.equal(plazaPortalClicked(gate.x + gate.ring.rx + 1, gate.y, room), null);
+    assert.equal(plazaPortalClicked(gate.x, gate.y - gate.ring.ry - 1, room), null);
+  }
+  for (const [x, y] of [[169, 720], [180, 740], [254, 650], [382, 823]]) {
+    assert.equal(plazaWalkable(x, y, room), true, `빈 마당 ${x},${y}`);
+    assert.equal(plazaPortalClicked(x, y, room), null, `옛 문·포털 ${x},${y}`);
+  }
+  assert.equal(plazaPortalAt(PLAZA_HIDEOUT_PORTAL, PLAZA_DOOR_ROOM), null, "아지트를 끄면 그 자리는 빈 바닥");
+  assert.equal(plazaPortalClicked(PLAZA_HIDEOUT_PORTAL.x, PLAZA_HIDEOUT_PORTAL.y, PLAZA_DOOR_ROOM), null);
+});
+
+test("아지트에서 광장으로 돌아오면 원래 광장의 포털 아래 안전한 바닥에 선다", () => {
+  for (const room of [PLAZA_HIDEOUT_ROOM, PLAZA_DOOR_ROOM, PLAZA_ROOM]) {
+    const arrival = plazaArrival(room, "hideout");
+    assert.deepEqual(arrival, PLAZA_HIDEOUT_RETURN);
+    assert.notEqual(arrival, PLAZA_HIDEOUT_RETURN, "공유 상수를 수정하지 않는 새 좌표");
+    assert.equal(plazaWalkable(arrival.x, arrival.y, room), true);
+    assert.equal(plazaPortalAt(arrival, room, 22), null, "재진입 여유 타원 밖");
+    assert.equal(plazaSpotNear(arrival, PLAZA_NEAR, room), null, "귀환 위치에서 가판대·책꽂이 메뉴가 열리지 않음");
+    assertRoute(arrival, room.spawn, room);
+    for (const spot of room.spots) assertRoute(arrival, spot.stand, room);
+  }
+  assertRoute(PLAZA_HIDEOUT_RETURN, PLAZA_HIDEOUT_PORTAL, PLAZA_HIDEOUT_ROOM);
+  assertRoute(PLAZA_HIDEOUT_RETURN, PLAZA_PORTAL, PLAZA_HIDEOUT_ROOM);
+  assert.deepEqual(plazaArrival(PLAZA_HIDEOUT_ROOM, "classroom"), PLAZA_PORTAL, "교실에서는 왼쪽 아래 교실 포털로 도착");
 });
 
 test("교실 왼쪽은 광장 · 오른쪽은 아지트 — 바닥 위, 책상 자리에서 떨어져 있고 모든 자리에서 도달", () => {

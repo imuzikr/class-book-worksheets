@@ -47,6 +47,20 @@ test("saving rejects locked furniture, another slot, missing slots and unknown p
   assert.throws(() => validateHideoutLayout({ ...layout, bed: "not-an-item" }, { level: 10 }));
 });
 
+test("verified teacher eligibility opens the catalogue without a fabricated reading level or badges", () => {
+  const teacher = hideoutProgress({ level: 50, earnedBadges: ["book-1"] }, { teacher: true });
+  assert.deepEqual(teacher, { level: 1, earnedBadgeIds: [], teacher: true });
+  assert.deepEqual(hideoutProgress({ level: 1, teacher: true }), { level: 1, earnedBadgeIds: [] }, "ordinary progress never infers a teacher role from summary input");
+  for (const item of HIDEOUT_ITEMS) assert.equal(isHideoutItemUnlocked(item.id, teacher), true);
+  const layout = { ...HIDEOUT_DEFAULT_LAYOUT, rug: "rug-starlight", "book-trophy": "book-trophy-starlight" };
+  assert.deepEqual(validateHideoutLayout(layout, teacher), layout);
+  assert.deepEqual(normalizeHideoutRoom({ version: 2, layout, revision: 2 }, teacher).layout, layout);
+  assert.equal(normalizeHideoutRoom({ version: 2, layout }, hideoutProgress({ level: 1 })).layout["book-trophy"], null);
+  assert.equal(isHideoutItemUnlocked("not-a-real-item", teacher), false);
+  assert.throws(() => validateHideoutLayout({ ...layout, rug: "desk-forest" }, teacher));
+  assert.throws(() => validateHideoutLayout({ ...layout, teacher: true }, teacher));
+});
+
 test("record corrections remove unavailable rewards while preserving basic furniture and revision", () => {
   const input = { version: 2, layout: { ...HIDEOUT_DEFAULT_LAYOUT, bed: "bed-starlight", clock: "clock-coastal" }, revision: 6 };
   const room = normalizeHideoutRoom(input, { level: 2 });

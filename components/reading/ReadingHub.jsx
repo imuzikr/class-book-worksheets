@@ -63,10 +63,35 @@ const ReadingHideout = dynamic(() => import("./ReadingHideout"), { ssr: false, l
 // 학생이 한 명도 없는 반에서는 탭 줄 자체가 없어 들어갈 길이 없었고(주소에 ?tab=plaza를 붙여도), 학생이 있는
 // 반에서도 '○○의 독서 여정' 안에 섞여 입구로 보이지 않았습니다(선생님 신고). 틀의 클래스(.reading-hub--plaza)가
 // 학생 화면과 같아 '광장 탭'의 CSS(머리말 · 명단 · 옆 패널 가리기)가 그대로 듣습니다. 선생님에게는 펫 · 곧바로 열 책이 없습니다.
-export function TeacherPlaza({ classId, user, characterOn = true, classroom = null, onExit }) {
-  return <section className="reading-hub reading-hub--plaza" aria-label="책 광장">
-    <PlazaExitContext.Provider value={onExit}>
-      <ReadingPlaza classId={classId} user={user} isTeacher characterOn={characterOn} petOn={false} growthXp={null} initialBook={null} onExit={onExit} classroom={classroom} />
+export function TeacherPlaza({ classId, user, characterOn = true, classroom = null, hideoutOn = false, initialHideout = false, initialHideoutRoom = "classroom", plazaCall = 0, onExit }) {
+  const [ownHideout, setOwnHideout] = useState(initialHideout);
+  const [hideoutOrigin, setHideoutOrigin] = useState(initialHideoutRoom === "plaza" ? "plaza" : "classroom");
+  const [plazaReturn, setPlazaReturn] = useState(null);
+  const sequence = useRef(0);
+  const seenCall = useRef(plazaCall);
+  const canHideout = hideoutOn && !!classroom?.on && !!user?.uid;
+  const enterHideout = useCallback((origin = "classroom") => {
+    if (canHideout) { setHideoutOrigin(origin === "plaza" ? "plaza" : "classroom"); setOwnHideout(true); }
+  }, [canHideout]);
+  const leaveHideout = useCallback(() => {
+    setOwnHideout(false);
+    setPlazaReturn({ room: classroom?.on && hideoutOrigin === "classroom" ? "classroom" : "plaza", key: `teacher-hideout-return-${++sequence.current}` });
+  }, [classroom?.on, hideoutOrigin]);
+  useEffect(() => {
+    if (ownHideout && !canHideout) leaveHideout();
+  }, [ownHideout, canHideout, leaveHideout]);
+  useEffect(() => {
+    if (plazaCall === seenCall.current) return;
+    seenCall.current = plazaCall;
+    if (plazaCall) { setOwnHideout(false); setPlazaReturn(null); }
+  }, [plazaCall]);
+  const inHideout = ownHideout && canHideout;
+  return <section className="reading-hub reading-hub--plaza" aria-label={inHideout ? "선생님의 아지트" : "책 광장"}>
+    <PlazaExitContext.Provider value={inHideout ? leaveHideout : onExit}>
+      {inHideout
+        ? <ReadingHideout key={`${classId}:${user.uid}`} classId={classId} user={user} characterOn={characterOn} petOn={false} returnRoom={hideoutOrigin} onDisabled={leaveHideout} onExit={leaveHideout} />
+        : <ReadingPlaza key={plazaReturn?.key ?? "teacher-plaza"} classId={classId} user={user} isTeacher characterOn={characterOn} petOn={false} growthXp={null} initialBook={null}
+            initialRoom={plazaReturn?.room ?? (ownHideout ? hideoutOrigin : null)} onExit={onExit} classroom={classroom} hideoutOn={canHideout} onEnterHideout={enterHideout} />}
     </PlazaExitContext.Provider>
   </section>;
 }
@@ -147,7 +172,7 @@ function Modal({ title, onClose, children, wide = false, busy = false }) {
 //   이 값이 **이 화면이 떠 있는 동안 바뀌면** 책 광장 탭으로 넘어갑니다(아래).
 // petFeed — 그 반의 펫 먹이 규칙(lib/readingPet.js의 petCareRules — 끈 반이면 on이 거짓) · myFruit — 내가 가진 과일 수(먹이).
 // petPreview — 관리자 설정의 '펫 미리보기'(lib/readingPet.js의 petPreviewOn) — 켠 반이면 '나의 펫'에서 키울 펫을 고릅니다.
-export default function ReadingHub({ classId, user, isTeacher = false, bookSearchOn = false, petOn = false, plazaOn = false, hideoutOn = false, characterOn = true, onDisabled, activities = [], onOpenActivity, initialBookId = null, initialTab = "library", student = null, classroom = null, plazaCall = 0, petFeed = null, myFruit = 0, petPreview = false, teacherTools = null }) {
+export default function ReadingHub({ classId, user, isTeacher = false, bookSearchOn = false, petOn = false, plazaOn = false, hideoutOn = false, characterOn = true, onDisabled, activities = [], onOpenActivity, initialBookId = null, initialTab = "library", student = null, classroom = null, plazaCall = 0, petFeed = null, myFruit = 0, petPreview = false, teacherTools = null, onOpenOwnHideout = null, onOpenHideoutGallery = null }) {
   // student가 있으면 교사가 그 학생의 책 봄을 보는 읽기 전용 화면입니다(선생님 결정 — 감상·발자국까지 전부 보임).
   const readOnly = !!student?.uid;
   const viewUid = readOnly ? student.uid : user?.uid;
@@ -166,20 +191,23 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
   // 책꽂이(첫 탭)에서 '광장에서 보기'로 넘어갈 때 곧바로 열 책({ uid, bookId, place, key })
   const [plazaJump, setPlazaJump] = useState(null);
   const [plazaReturn, setPlazaReturn] = useState(null);
+  const [hideoutOrigin, setHideoutOrigin] = useState("classroom");
   const returnSequence = useRef(0);
-  const enterHideout = useCallback(() => {
-    if (!canHideout || readOnly || !classroom?.on) return;
+  const enterHideout = useCallback((origin = "classroom") => {
+    if (!canHideout || !classroom?.on) return;
+    if (readOnly) { onOpenOwnHideout?.(origin); return; }
+    setHideoutOrigin(origin === "plaza" ? "plaza" : "classroom");
     setDialog(null);
     setError("");
     setTab("hideout");
-  }, [canHideout, readOnly, classroom?.on]);
+  }, [canHideout, readOnly, classroom?.on, onOpenOwnHideout]);
   const leaveHideout = useCallback(() => {
     setPlazaJump(null);
     setDialog(null);
     setError("");
-    setPlazaReturn({ room: "classroom", key: `hideout-return-${++returnSequence.current}` });
-    setTab(!readOnly && plazaOn && classroom?.on ? "plaza" : "library");
-  }, [plazaOn, classroom?.on, readOnly]);
+    setPlazaReturn({ room: classroom?.on && hideoutOrigin === "classroom" ? "classroom" : "plaza", key: `hideout-return-${++returnSequence.current}` });
+    setTab(!readOnly && plazaOn ? "plaza" : "library");
+  }, [plazaOn, classroom?.on, readOnly, hideoutOrigin]);
   useEffect(() => {
     if (tab === "hideout" && !canHideout) leaveHideout();
   }, [tab, canHideout, leaveHideout]);
@@ -322,9 +350,9 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
   });
 
   return <ReadingErrorContext.Provider value={error}><section className={`reading-hub${tab === "plaza" || tab === "hideout" ? " reading-hub--plaza" : ""}`} aria-label="책 봄 성장 기능" aria-busy={tab === "hideout" ? false : loading || busy}>
-    <div className="reading-intro">
-      {readOnly ? <div><p className="reading-eyebrow">READING JOURNEY</p><h2>{student.name || "학생"}의 독서 여정</h2><p>학생이 남긴 책꽂이 · 독서 발자국 · 한 권의 책을 읽기만 합니다.</p>{teacherTools}</div> : <div><p className="reading-eyebrow">MY READING JOURNEY</p><h2>한 페이지씩, 나의 가능성을 넓히다.</h2><p>읽은 순간을 기록하고 나만의 독서 컬렉션을 완성해 보세요.</p></div>}
-      {(featured?.earned || showPet) && <div className="reading-intro-side">
+    <div className={`reading-intro${readOnly ? " reading-intro--teacher" : ""}`}>
+      {readOnly ? <div className="reading-intro-copy"><h2>{student.name || "학생"}의 독서 여정</h2><p>학생이 남긴 책꽂이 · 독서 발자국 · 한 권의 책을 읽기만 합니다.</p></div> : <div><p className="reading-eyebrow">MY READING JOURNEY</p><h2>한 페이지씩, 나의 가능성을 넓히다.</h2><p>읽은 순간을 기록하고 나만의 독서 컬렉션을 완성해 보세요.</p></div>}
+      {readOnly ? (raw && !loading ? <ReadingSummary stats={stats} compact /> : <p className="reading-intro-loading" role="status">{loading ? "독서 기록을 불러오고 있어요." : "독서 정보를 불러오지 못했어요."}</p>) : (featured?.earned || showPet) && <div className="reading-intro-side">
         {featured?.earned && <div className="reading-featured"><ReadingBadge badge={featured} size={70} /><span>{readOnly ? "대표 뱃지" : "나의 대표 뱃지"}<strong>{featured.name}</strong></span></div>}
         {/* 나의 펫 — 단계는 이미 받은 서재로 셉니다(lib/readingPet.js). 서재를 받기 전에는 카드도 기다립니다. */}
         {showPet && <PetCard classId={classId} uid={user.uid} growthXp={raw ? petGrowthOfSummary(stats) : null} level={raw ? stats.level : null} onLevelCheer={markPetLevel}
@@ -332,22 +360,17 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
       </div>}
     </div>
     <nav className="reading-tabs" aria-label="책 봄 메뉴" ref={tabsRef}>
-      {[["library", "책꽂이"], ["growth", "성장·뱃지"], [thirdTab, plazaOn ? "책 광장" : "우리 반 랭킹"], ...(readOnly && canHideout ? [["hideout", "아지트 보기"]] : [])].map(([key, label]) => <button type="button" key={key} className={tab === key ? "active" : ""} aria-current={tab === key ? "page" : undefined} onClick={() => { setTab(key); setDialog(null); setError(""); setPlazaJump(null); setPlazaReturn(null); }}>{label}</button>)}
+      {[["library", "책꽂이"], ["growth", "성장·뱃지"], ...(!readOnly || !plazaOn ? [[thirdTab, plazaOn ? "책 광장" : "우리 반 랭킹"]] : []), ...(readOnly && canHideout ? [["hideout", "아지트 보기"]] : [])].map(([key, label]) => <button type="button" key={key} className={tab === key ? "active" : ""} aria-current={tab === key ? "page" : undefined} data-reading-hideout-gallery={key === "hideout" && onOpenHideoutGallery ? "true" : undefined} onClick={() => { if (key === "hideout" && readOnly && onOpenHideoutGallery) { onOpenHideoutGallery(); return; } setTab(key); setDialog(null); setError(""); setPlazaJump(null); setPlazaReturn(null); }}>{label}</button>)}
     </nav>
     {error && !dialog && !confirm && <div className="reading-error" role="alert">{error}<button type="button" onClick={() => setError("")} aria-label="오류 안내 닫기">×</button></div>}
     {notice && <div className="reading-notice" role="status">{notice}</div>}
     {/* 책 광장은 서재(정본)를 기다리지 않습니다 — 반의 공유 사본을 제 손으로 구독합니다. 펫의 단계만 서재에서 받습니다. */}
-    {tab === "plaza" ? <PlazaExitContext.Provider value={leavePlaza}><ReadingPlaza key={plazaJump?.key ?? plazaReturn?.key ?? "plaza"} classId={classId} user={user} isTeacher={isTeacher} characterOn={characterOn} petOn={showPet} petFeed={petFeed} growthXp={raw ? petGrowthOfSummary(stats) : null} initialBook={plazaJump} initialRoom={plazaJump ? null : plazaReturn?.room} onExit={leavePlaza} classroom={classroom} hideoutOn={canHideout} onEnterHideout={enterHideout} /></PlazaExitContext.Provider>
-    : tab === "hideout" && canHideout ? <PlazaExitContext.Provider value={leaveHideout}><ReadingHideout key={`${classId}:${viewUid}`} classId={classId} user={user} student={student} summary={stats} readOnly={readOnly} characterOn={characterOn} petOn={petOn} petFeed={petFeed} onDisabled={leaveHideout} onExit={leaveHideout} /></PlazaExitContext.Provider>
+    {tab === "plaza" ? <PlazaExitContext.Provider value={leavePlaza}><ReadingPlaza key={plazaJump?.key ?? plazaReturn?.key ?? "plaza"} classId={classId} user={user} isTeacher={isTeacher} characterOn={characterOn} petOn={showPet} petFeed={petFeed} growthXp={raw ? petGrowthOfSummary(stats) : null} initialBook={plazaJump} initialRoom={plazaJump ? null : plazaReturn?.room} onExit={leavePlaza} classroom={classroom} hideoutOn={canHideout && (!readOnly || typeof onOpenOwnHideout === "function")} onEnterHideout={enterHideout} /></PlazaExitContext.Provider>
+    : tab === "hideout" && canHideout ? <PlazaExitContext.Provider value={leaveHideout}><ReadingHideout key={`${classId}:${viewUid}`} classId={classId} user={user} student={student} summary={stats} readOnly={readOnly} characterOn={characterOn} petOn={petOn} petFeed={petFeed} returnRoom={hideoutOrigin} onDisabled={leaveHideout} onExit={leaveHideout} /></PlazaExitContext.Provider>
     : loading ? <div className="reading-loading" role="status"><span className="reading-loader" />독서 기록을 불러오고 있어요.</div> : !raw ? <div className="reading-empty"><BookIcon size={40} /><h3>독서 정보를 불러오지 못했어요.</h3><button type="button" className="btn-primary" onClick={() => setRevision((r) => r + 1)}>다시 불러오기</button></div> : <>
-      <div className="reading-summary">
-        <div className="reading-level"><span>독서 레벨</span><strong><small>Lv.</small>{stats.level}</strong><div className="reading-progress" role="progressbar" aria-label={stats.maxLevel ? "최고 레벨" : "다음 레벨까지"} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(stats.progress || 0)}><i style={{ width: `${stats.progress || 0}%` }} /></div><span>{stats.maxLevel ? `${number(stats.xp)} EXP · 최고 레벨` : `${number(stats.xp)} / ${number(stats.nextXp)} EXP`}</span></div>
-        <div><span>누적 독서량</span><strong>{number(stats.totalPages)}<small>쪽</small></strong><span>기록한 페이지가 경험치로</span></div>
-        <div><span>완독한 책</span><strong>{number(stats.totalBooks)}<small>권</small></strong><span>다음 목표는 3권, 그리고 5권</span></div>
-        <div><span>지금 이어가는 독서</span><strong>{number(stats.currentStreak)}<small>일</small></strong><span>최장 {number(stats.longestStreak)}일 연속</span></div>
-      </div>
+      {!readOnly && <ReadingSummary stats={stats} />}
       {tab === "library" && <>
-        <div className="reading-section-head"><div><h3>책꽂이 <span>{books.filter((b) => !b.archived).length}</span></h3><p>책의 마지막 페이지까지, 나의 속도로.</p></div>{!readOnly && <button type="button" className="btn-primary" onClick={() => setDialog({ type: "book" })}>＋ 책 등록</button>}</div>
+        <div className="reading-section-head"><div><h3>책꽂이 <span>{books.filter((b) => !b.archived).length}</span></h3><p>책의 마지막 페이지까지, 나의 속도로.</p></div>{readOnly ? teacherTools : <button type="button" className="btn-primary" onClick={() => setDialog({ type: "book" })}>＋ 책 등록</button>}</div>
         <div className="reading-filters" aria-label="도서 상태 필터">{FILTERS.map(([key, label]) => <button type="button" key={key} className={filter === key ? "active" : ""} aria-pressed={filter === key} onClick={() => setFilter(key)}>{label}</button>)}</div>
         {visibleBooks.length ? <div className="reading-library-grid">{visibleBooks.map((b, i) => <BookCard key={b.id} book={b} index={i} busy={busy} readOnly={readOnly} onOpen={() => setDialog({ type: "detail", bookId: b.id })} onReview={() => setDialog({ type: "review", bookId: b.id })} onLog={() => setDialog({ type: "log", bookId: b.id })} onRestore={() => run({ type: "archiveBook", bookId: b.id, archived: false }, "책을 책꽂이로 돌려놓았어요.")} />)}</div> : <div className="reading-empty"><BookIcon size={44} /><h3>{readOnly ? "아직 이곳에 놓인 책이 없어요." : filter === "all" ? "나의 첫 책을 기다리고 있어요." : "아직 이곳에 놓인 책이 없어요."}</h3>{!readOnly && <p>{filter === "all" ? "읽고 싶은 책을 등록하고 오늘 읽은 순간을 남겨 보세요." : "책을 읽고 기록하면 책꽂이의 풍경도 달라져요."}</p>}{filter === "all" && !readOnly && <button type="button" className="btn-primary" onClick={() => setDialog({ type: "book" })}>첫 책 등록하기</button>}</div>}
       </>}
@@ -366,6 +389,15 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
     {dialog?.type === "review" && selected && <ReviewForm key={selected.id} book={selected} review={(stats.reviews || raw?.reviews || []).find((r) => r.bookId === selected.id)} busy={busy} plaza={ownPlaza ? (plazaInfo(selected.id).blocked ? "blocked" : "shown") : null} onClose={() => setDialog({ type: "detail", bookId: selected.id })} onSave={async (values) => { const ok = await run({ type: "saveReview", bookId: selected.id, ...values }, "책을 읽고 남긴 생각을 저장했어요."); if (ok) setDialog({ type: "detail", bookId: selected.id }); }} />}
     {confirm && <Modal title="기록 확인" busy={busy} onClose={() => setConfirm(null)}><p className="reading-confirm-copy">{confirm.title}</p><div className="reading-form-actions"><button type="button" className="btn-ghost" onClick={() => setConfirm(null)} disabled={busy}>취소</button><button type="button" className="reading-danger-button" disabled={busy} onClick={async () => { if (await run(confirm.action, "기록을 정리했어요.")) setConfirm(null); }}>{busy ? "처리 중…" : "확인"}</button></div></Modal>}
   </section></ReadingErrorContext.Provider>;
+}
+
+function ReadingSummary({ stats, compact = false }) {
+  return <div className={`reading-summary${compact ? " reading-summary--compact" : ""}`} aria-label="학생 독서 활동 정보">
+    <div className="reading-level"><span>독서 레벨</span><strong><small>Lv.</small>{stats.level}</strong><div className="reading-progress" role="progressbar" aria-label={stats.maxLevel ? "최고 레벨" : "다음 레벨까지"} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(stats.progress || 0)}><i style={{ width: `${stats.progress || 0}%` }} /></div><span>{stats.maxLevel ? `${number(stats.xp)} EXP · 최고 레벨` : `${number(stats.xp)} / ${number(stats.nextXp)} EXP`}</span></div>
+    <div><span>누적 독서량</span><strong>{number(stats.totalPages)}<small>쪽</small></strong><span>기록한 페이지가 경험치로</span></div>
+    <div><span>완독한 책</span><strong>{number(stats.totalBooks)}<small>권</small></strong><span>다음 목표는 3권, 그리고 5권</span></div>
+    <div><span>지금 이어가는 독서</span><strong>{number(stats.currentStreak)}<small>일</small></strong><span>최장 {number(stats.longestStreak)}일 연속</span></div>
+  </div>;
 }
 
 // 독서를 저장했을 때의 펫 소식(서버 · 체험반이 돌려주는 petEvent — lib/petCare.js의 planCareReadDay)

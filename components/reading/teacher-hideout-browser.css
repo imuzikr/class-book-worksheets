@@ -1,0 +1,18 @@
+.teacher-hideout-browser { min-width:0; color:#35513e; }
+.teacher-hideout-browser [hidden] { display:none !important; }
+.teacher-hideout-navigation { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; margin:0 0 16px; padding:12px 16px; border:1px solid #d9dece; border-radius:14px; background:#faf9f1; }
+.teacher-hideout-navigation button { min-height:44px; padding:9px 14px; border:1px solid #cfd8c7; border-radius:10px; background:#fffdf7; color:#35513e; font:inherit; font-size:13px; font-weight:650; cursor:pointer; }
+.teacher-hideout-navigation button:hover:not(:disabled) { background:#eaf0e3; }
+.teacher-hideout-navigation button:disabled { opacity:.5; cursor:default; }
+.teacher-hideout-navigation button:focus-visible { outline:3px solid #478fbd; outline-offset:3px; }
+.teacher-hideout-sequence { display:flex; align-items:center; justify-content:center; gap:16px; min-width:0; }
+.teacher-hideout-sequence p { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:6px 12px; min-width:0; margin:0; text-align:center; outline:none; }
+.teacher-hideout-sequence strong { font-size:15px; overflow-wrap:anywhere; }
+.teacher-hideout-sequence span { font-size:12px; color:#78836f; white-space:nowrap; }
+.teacher-hideout-view .hideout { padding-inline:0; }
+@media (max-width:700px) {
+  .teacher-hideout-navigation { gap:10px; padding:10px; }
+  .teacher-hideout-sequence { order:-1; flex-basis:100%; gap:8px; }
+  .teacher-hideout-sequence p { flex:1; }
+  .teacher-hideout-navigation > button { flex:1; }
+}

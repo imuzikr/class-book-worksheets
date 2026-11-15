@@ -19,6 +19,21 @@
 .reading-summary strong small { font-size:14px; font-weight:600; margin:0 3px; color:#657f73; letter-spacing:0; }
 .reading-summary>div>span:last-child { font-size:10px; color:#657d70; }
 .reading-summary .reading-level { background:#f0f5ed; }
+/* 교사 학생 화면은 제목 옆에 이미 받은 독서 요약을 함께 표시합니다. */
+.reading-intro--teacher { flex-wrap:wrap; gap:16px; }
+.reading-intro-copy { flex:1 1 240px; min-width:0; }
+.reading-intro-copy h2 { font-size:clamp(19px,2vw,25px); overflow-wrap:anywhere; }
+.reading-intro--teacher .reading-summary--compact { flex:2 1 460px; min-width:0; margin:0; border:0; border-radius:0; gap:0; grid-template-columns:1.25fr 1fr 1fr 1fr; background:transparent; }
+.reading-summary--compact > div { min-width:0; gap:7px; padding:10px; border-left:1px solid #d9e3d8; background:transparent; }
+.reading-summary--compact .reading-level { background:transparent; }
+.reading-summary--compact > div > span { overflow-wrap:anywhere; }
+.reading-summary--compact strong { font-size:27px; }
+.reading-intro-loading { flex:2 1 460px; color:#657d70; }
+@media (max-width:600px) {
+  .reading-intro--teacher .reading-summary--compact { flex-basis:100%; grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .reading-summary--compact > div { padding:12px; border-left:0; border-top:1px solid #d9e3d8; }
+  .reading-summary--compact > div:nth-child(even) { border-left:1px solid #d9e3d8; }
+}
 .reading-level strong { color:#2d6252; }
 .reading-progress { height:5px; border-radius:999px; background:#e4e9e1; overflow:hidden; }
 .reading-progress i { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#71ad91,#357b6e); transition:width .35s ease; }
@@ -346,6 +361,7 @@
 .reading-log-tools .reading-text-danger:hover:not(:disabled),
 .reading-review .reading-text-danger:hover:not(:disabled) { background:#fbf1ed; }
 .reading-log-tools { gap:8px; margin-top:6px; }
+.reading-log-tools > button { width:80px; flex:0 0 80px; }
 .reading-review .reading-text-danger { margin-top:10px; }
 .reading-detail-tools { gap:8px; }
 
@@ -361,6 +377,8 @@
 .reading-teacher-sid { font-family: var(--font-mono); font-size: 12px; color: var(--text-sub); font-variant-numeric: tabular-nums; }
 .reading-teacher-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .reading-teacher-main { min-width: 0; }
+.reading-teacher--hideouts { grid-template-columns:minmax(0,1fr); }
+.reading-teacher--hideouts > .reading-teacher-rail { display:none; }
 /* 펫 먹이(lib/petCare.js) — 명단의 배부름 · 떠난 펫 불러 주기 */
 .reading-teacher-care { margin: -4px 4px 10px; font-size: 12px; color: var(--text-faint); }
 .reading-teacher-care.is-alert { color: #a85a22; }
@@ -369,8 +387,8 @@
 .reading-teacher-chip.is-hungry { background: #fdeed9; color: #a85a22; }
 .reading-teacher-chip.is-low { background: #fde3df; color: #b3392f; }
 .reading-teacher-chip.is-away { background: #ebe8e1; color: #6f675c; }
-/* 고른 학생의 '○○의 독서 여정' 머리 — 댓글 이력 단추(선생님 요청 · components/reading/PlazaCommentHistory.jsx) */
-.reading-teacher-history { display: inline-flex; align-items: center; gap: 7px; margin-top: 10px; padding: 7px 14px 7px 11px; border: 1px solid #cfdccf; border-radius: 999px; background: #fff; color: #2c4c3f; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+/* 학생 책꽂이 도구 — 댓글 이력은 제목 영역을 비우고 책꽂이 제목 옆으로 옮깁니다. */
+.reading-teacher-history { display: inline-flex; align-items: center; flex-wrap:wrap; justify-content:center; gap: 7px; padding: 7px 14px 7px 11px; border: 1px solid #cfdccf; border-radius: 999px; background: #fff; color: #2c4c3f; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
 .reading-teacher-history:hover { border-color: #9fbfa6; background: #f6faf3; }
 .reading-teacher-history:focus-visible { outline: 3px solid #478fbd; outline-offset: 2px; }
 .reading-teacher-history small { color: #6f8276; font-size: 11.5px; font-weight: 600; }

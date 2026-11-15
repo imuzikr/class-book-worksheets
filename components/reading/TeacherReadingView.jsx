@@ -10,7 +10,7 @@
 // 책 광장은 반 전체의 자리라 고른 학생과 무관하게, **학생이 한 명도 없는 반에서도** 들어갑니다.
 // 한때 길이 고른 학생 화면(ReadingHub)의 셋째 탭 하나뿐이라 학생이 없는 반에서는 탭 줄 자체가 없었고
 // (주소에 ?tab=plaza를 붙여도 안 열림), 학생이 있는 반에서도 '○○의 독서 여정' 안에 섞여 입구로 보이지 않았습니다.
-// 그 탭은 그대로 두었습니다(같은 광장으로 감) — 입구를 다시 그 탭 하나로 줄이지 마세요.
+// 학생 상세의 중복 책 광장 탭은 없애고 왼쪽 입구를 사용합니다.
 //
 // **펫 먹이**(관리자 설정의 '펫 먹이'를 켠 반 — lib/petCare.js): 명단의 이름 옆에 그 학생 펫의 배부름이 섭니다
 // (배고픔은 살구 · 오늘이 고비면 붉게 · 먹이를 찾아 떠났으면 '떠남'), 명단 위에는 '배고픈 펫 n · 떠난 펫 n'.
@@ -18,7 +18,7 @@
 // 곧바로 불러 줍니다(서버가 담당 교사인지 확인 · recallReadingPet). 배부름은 명단이 이미 받아 둔 학생 프로필의
 // 펫으로 셉니다(읽기 0 — lib/roster.js의 pet · 학생마다 이 반에 들어온 날 joinedAt부터).
 //
-// **댓글 이력**(선생님 요청): 고른 학생의 '○○의 독서 여정' 머리에 '댓글 이력' — 그 학생이 책 광장에 쓴 댓글 · 받은 댓글을
+// **댓글 이력**(선생님 요청): 고른 학생의 책꽂이 제목 옆 '댓글 이력' — 그 학생이 책 광장에 쓴 댓글 · 받은 댓글을
 // 고친 글 · 지운 글까지 봅니다(PlazaCommentHistory · 담당 교사만 읽는 classes/{c}/plazaCommentLog). 광장을 꺼 둔 반에서도
 // 섭니다 — 일이 생긴 뒤 광장을 꺼도 지난 이력은 봐야 하므로.
 // 그 창은 **누를 때만 내려받습니다**(아래 dynamic) — 책 광장의 자료 함수(lib/data/plaza.js)를 함께 끌어와, 곧바로 import하면
@@ -51,6 +51,7 @@ function HistoryLoading() {
   );
 }
 const PlazaCommentHistory = dynamic(() => import("./PlazaCommentHistory"), { ssr: false, loading: HistoryLoading });
+const TeacherHideoutBrowser = dynamic(() => import("./TeacherHideoutBrowser"), { ssr: false, loading: () => <p className="reading-loading" role="status">학생들의 아지트를 펼치고 있어요.</p> });
 
 // 고른 학생은 주소(?student=)가 듭니다 — 리더보드의 '책꽂이로 이동'이 그 학생을 짚어 열고,
 // 새로고침해도 그 학생입니다. 명단을 누르면 주소만 바꿉니다(replace).
@@ -102,26 +103,57 @@ export default function TeacherReadingView({ classId, user, roster = [], student
   const studentFeed = useMemo(() => (feedOn ? careRulesFor(petFeed, studentJoined) : null), [feedOn, petFeed, studentJoined]);
   // 책 광장에 들어가 있는가 — 주소의 ?tab=plaza로 열었으면 처음부터(학생 화면과 같은 주소). 나가면 명단으로 돌아옵니다.
   const [plazaOpen, setPlazaOpen] = useState(initialTab === "plaza");
+  const [startInHideout, setStartInHideout] = useState(false);
+  const [startInHideoutRoom, setStartInHideoutRoom] = useState("classroom");
+  const [galleryOpen, setGalleryOpen] = useState(initialTab === "hideout");
+  const galleryAvailable = !!hubProps.hideoutOn;
+  const galleryActive = galleryOpen && galleryAvailable;
+  const mainRef = useRef(null);
+  const restoreGalleryFocus = useRef(false);
+  const galleryIdentity = `${classId || ""}:${user?.uid || ""}`;
+  const galleryIdentityRef = useRef(galleryIdentity);
+  function closeGallery() {
+    restoreGalleryFocus.current = true;
+    setGalleryOpen(false);
+  }
+  useEffect(() => { if (!galleryAvailable) setGalleryOpen(false); }, [galleryAvailable]);
+  useEffect(() => {
+    if (galleryIdentityRef.current === galleryIdentity) return;
+    galleryIdentityRef.current = galleryIdentity;
+    setGalleryOpen(false);
+  }, [galleryIdentity]);
+  useEffect(() => {
+    if (!galleryActive && restoreGalleryFocus.current) {
+      restoreGalleryFocus.current = false;
+      mainRef.current?.querySelector("[data-reading-hideout-gallery]")?.focus({ preventScroll: true });
+    }
+  }, [galleryActive]);
   const seenCall = useRef(plazaCall);
   useEffect(() => {
     if (plazaCall === seenCall.current) return;
     seenCall.current = plazaCall;
-    if (plazaCall && plazaOn) setPlazaOpen(true);
+    if (plazaCall && plazaOn) { setGalleryOpen(false); setStartInHideout(false); setPlazaOpen(true); }
   }, [plazaCall, plazaOn]);
+  useEffect(() => {
+    // Consume the initial navigation request after the wrapper mounts. Keeping
+    // it would reopen the room on a later class switch after leaving by portal.
+    if (!plazaOn || !hubProps.hideoutOn || (plazaOpen && startInHideout)) setStartInHideout(false);
+  }, [plazaOn, hubProps.hideoutOn, plazaOpen, startInHideout]);
   if (plazaOn && plazaOpen) {
     return (
       <div className="reading-teacher">
-        <TeacherPlaza key={classId} classId={classId} user={user} characterOn={hubProps.characterOn} classroom={hubProps.classroom} onExit={() => setPlazaOpen(false)} />
+        <TeacherPlaza key={classId} classId={classId} user={user} characterOn={hubProps.characterOn} classroom={hubProps.classroom} hideoutOn={hubProps.hideoutOn} initialHideout={startInHideout} initialHideoutRoom={startInHideoutRoom} plazaCall={plazaCall}
+          onExit={() => { setStartInHideout(false); setPlazaOpen(false); }} />
       </div>
     );
   }
   // 광장에서 나온 뒤 서는 학생 화면은 첫 탭부터 — 주소에 tab=plaza가 남아 있어도 그 화면이 다시 광장을 열지 않게.
-  const hubTab = plazaOn && initialTab === "plaza" ? "library" : initialTab;
+  const hubTab = (plazaOn && initialTab === "plaza") || initialTab === "hideout" ? "library" : initialTab;
   return (
-    <div className="reading-teacher">
+    <div className={`reading-teacher${galleryActive ? " reading-teacher--hideouts" : ""}`}>
       <aside className="reading-teacher-rail" aria-label="책 광장 입구와 학생 명단">
         {plazaOn && (
-          <button type="button" className="reading-teacher-plaza" onClick={() => setPlazaOpen(true)}>
+          <button type="button" className="reading-teacher-plaza" onClick={() => { setGalleryOpen(false); setStartInHideout(false); setPlazaOpen(true); }}>
             <strong>책 광장 들어가기 <span aria-hidden="true">→</span></strong>
             <small>{hubProps.classroom?.on ? "광장의 포털로 교실에도 가요" : "학생들의 책과 글을 함께 봐요"}</small>
           </button>
@@ -136,7 +168,7 @@ export default function TeacherReadingView({ classId, user, roster = [], student
           <ol>
             {roster.map((s) => (
               <li key={s.uid}>
-                <button type="button" className={student?.uid === s.uid ? "on" : ""} aria-current={student?.uid === s.uid ? "true" : undefined} onClick={() => onPickStudent?.(s.uid)}>
+                <button type="button" className={student?.uid === s.uid ? "on" : ""} aria-current={student?.uid === s.uid ? "true" : undefined} onClick={() => { setGalleryOpen(false); onPickStudent?.(s.uid); }}>
                   {s.studentId && <span className="reading-teacher-sid">{s.studentId}</span>}
                   <span className="reading-teacher-name">{s.name}</span>
                   {careOf.get(s.uid)?.status && <PetCareChip status={careOf.get(s.uid).status} />}
@@ -146,8 +178,8 @@ export default function TeacherReadingView({ classId, user, roster = [], student
           </ol>
         )}
       </aside>
-      <div className="reading-teacher-main">
-        {student && picked?.status?.away && (
+      <div className="reading-teacher-main" ref={mainRef}>
+        {!galleryActive && student && picked?.status?.away && (
           <div className="reading-teacher-recall" role="status">
             <span>
               <strong>{student.name}의 {picked.mirror.species ? `펫 ${iGa(petSpecies(picked.mirror.species)?.name ?? "펫")}` : "알이"} {picked.mirror.species ? "먹이를 찾아" : "따뜻한 곳을 찾아"} 떠나 있어요.</strong>
@@ -157,7 +189,10 @@ export default function TeacherReadingView({ classId, user, roster = [], student
             <button type="button" className="btn-primary" disabled={recalling} onClick={() => recall(student)}>{recalling ? "불러 주는 중…" : "불러 주기"}</button>
           </div>
         )}
-        {student ? <ReadingHub key={`${classId}:${student.uid}`} classId={classId} user={user} isTeacher student={{ uid: student.uid, name: student.name }} plazaOn={plazaOn} petOn={petOn} petFeed={studentFeed} initialTab={hubTab} {...hubProps}
+        {galleryActive ? <TeacherHideoutBrowser key={`${classId}:${user?.uid}`} classId={classId} user={user} roster={roster} characterOn={hubProps.characterOn} petOn={petOn} petFeed={petFeed} onClose={closeGallery} />
+          : student ? <ReadingHub key={`${classId}:${student.uid}`} classId={classId} user={user} isTeacher student={{ uid: student.uid, name: student.name }} plazaOn={plazaOn} petOn={petOn} petFeed={studentFeed} initialTab={hubTab} {...hubProps}
+          onOpenHideoutGallery={() => { setHistoryFor(null); setGalleryOpen(true); }}
+          onOpenOwnHideout={(origin) => { setStartInHideoutRoom(origin === "plaza" ? "plaza" : "classroom"); setStartInHideout(true); setPlazaOpen(true); }}
           teacherTools={(
             <button type="button" className="reading-teacher-history" onClick={() => setHistoryFor(student)}>
               <IconAnswer size={17} /><span>댓글 이력</span><small>책 광장 · 고친 글 · 지운 글까지</small>
