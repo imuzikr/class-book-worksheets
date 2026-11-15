@@ -579,6 +579,27 @@
 .talk-history-when { flex: none; color: #5f7365; font-variant-numeric: tabular-nums; }
 .talk-history-who { flex: 1; min-width: 0; font-weight: 750; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .talk-history-count { flex: none; padding: 2px 9px; border-radius: 999px; background: #e3f1e5; color: #2f6a47; font-size: 11.5px; font-weight: 700; }
+/* 대화 지우기(선생님 요청 · 2026년 11월) — 줄 오른쪽 '지우기'(연한 살구 — 발자국의 '삭제'와 같은 색 · 이야기하는 중이면 쉼),
+   누르면 그 줄 아래 확인 띠(지우기 · 취소 같은 크기), 머리의 '모두 지우기'는 '새로 불러오기'와 같은 크기 두 칸 */
+.talk-history-row { display: flex; align-items: stretch; }
+.talk-history-row > .talk-history-head { flex: 1; min-width: 0; }
+.talk-history-del { flex: none; align-self: center; margin-right: 10px; height: 30px; padding: 0 12px; border: 1px solid #efd3c5; border-radius: 9px; background: var(--primary-light); color: var(--primary-dark); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.talk-history-del:hover:not(:disabled) { background: #f4dfd3; }
+.talk-history-del:disabled { opacity: .45; cursor: not-allowed; }
+.talk-history-del:focus-visible { outline: 3px solid #478fbd; outline-offset: 2px; }
+.talk-history-live { flex: none; padding: 2px 9px; border-radius: 999px; background: #fff1d6; color: #8a5a12; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.talk-history-confirm { margin: 0 14px 12px; padding: 10px 12px; border: 1px solid #efd3c5; border-radius: 10px; background: #fdf3ee; display: grid; gap: 8px; }
+.plaza-history > .talk-history-confirm { margin: 0 0 8px; }
+.talk-history-confirm p { margin: 0; color: #8a4f35; font-size: 12.5px; line-height: 1.55; }
+.talk-history-confirm-btns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.talk-history-confirm-btns button { height: 34px; border-radius: 9px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.talk-history-confirm-btns .is-danger { border: 1px solid var(--danger); background: var(--danger); color: #fff; }
+.talk-history-confirm-btns button:not(.is-danger) { border: 1px solid #d6e0d4; background: #fff; color: #4c6457; }
+.talk-history-confirm-btns button:disabled { opacity: .6; cursor: wait; }
+.talk-history-confirm-btns button:focus-visible { outline: 3px solid #478fbd; outline-offset: 2px; }
+.talk-history-tools-btns { flex: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.talk-history-tools-btns .btn-ghost { justify-content: center; }
+.plaza-history-note { margin: 0 0 8px; padding: 8px 12px; border-radius: 9px; background: #eef5ec; color: #3d6654; font-size: 12px; line-height: 1.55; }
 .talk-history-lines { list-style: none; margin: 0; padding: 4px 14px 14px; display: grid; gap: 6px; border-top: 1px solid #e3eae0; }
 .talk-history-lines li { display: grid; grid-template-columns: minmax(64px, max-content) minmax(0, 1fr) auto; gap: 4px 10px; align-items: baseline; padding: 6px 10px; border-radius: 10px; background: #fff; }
 .talk-history-lines li.is-mine { background: #fff3ea; }

@@ -4,8 +4,8 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import sharp from "sharp";
 import {
-  TALK_ART, TALK_ASK_AGAIN_MS, TALK_ASK_MS, TALK_GAP, TALK_MAX, TALK_TEXT_MAX,
-  plazaTalkHistory, plazaTalkSpot, readTalkAsk, readTalkLine, readTalkMembers, sortTalkLines,
+  TALK_ART, TALK_ASK_AGAIN_MS, TALK_ASK_MS, TALK_GAP, TALK_MAX, TALK_STALE_MS, TALK_TEXT_MAX,
+  plazaTalkHistory, plazaTalkSpot, readTalkAsk, readTalkLine, readTalkMembers, sortTalkLines, talkInProgress,
   talkArtBox, talkAskAcceptable, talkAskAgainIn, talkAskTitle, talkBubbles, talkCallName, talkChoice, talkIdOk, talkIncoming,
   talkNewId, talkStale, talkTextOf, talkUnread,
 } from "@/lib/readingPlazaTalk";
@@ -187,6 +187,23 @@ test("선생님 기록 — 최근 대화가 위, 대화 안은 때 차례 · 이
   assert.deepEqual(rows[1].lines.map((l) => [l.text, l.name, l.mine]), [["안녕", "가람", true], ["응", "나래", false]]);
   assert.equal(rows[0].says, 1);
   assert.deepEqual(rows[0].people.map((p) => p.name), ["가람", "다온"]);
+});
+
+test("선생님 기록 지우기 — 이야기하는 중인 대화(talkInProgress)는 든 사람이 있고 30분 안에 움직임이 있을 때만", () => {
+  assert.equal(talkInProgress(null, NOW), false);
+  assert.equal(talkInProgress({ a: NOW - 1000, n: { u1: "가람" }, l: { x: { u: "u1", x: "안녕", t: NOW - 500 } } }, NOW), false, "든 사람이 없으면 끝난 대화");
+  assert.equal(talkInProgress({ a: NOW - 1000, m: { u1: { n: "가람", j: NOW - 1000 } } }, NOW), true, "막 만든 대화");
+  const old = NOW - 2 * TALK_STALE_MS;
+  assert.equal(talkInProgress({ a: old, m: { u1: { j: old } }, l: { x: { u: "u1", x: "안녕", t: NOW - TALK_STALE_MS - 1 } } }, NOW), false,
+    "'나감' 없이 떠난 사람만 남아 30분 넘게 움직임이 없으면 끝난 것으로");
+  assert.equal(talkInProgress({ a: old, m: { u1: { j: old } }, l: [{ u: "u1", x: "방금", t: NOW - 1000 }] }, NOW), true, "말(체험반은 배열)도 셈");
+  assert.equal(talkInProgress({ a: old, m: { u1: { j: NOW - 60_000 } } }, NOW), true, "방금 들어온 사람");
+  // 기록 줄에 그대로 실림(기록 창이 그 대화의 '지우기'를 쉬게 함)
+  const rows = plazaTalkHistory([
+    { id: "talk_00001", at: 100, names: { u1: "가람" }, lines: [], ongoing: true },
+    { id: "talk_00002", at: 200, names: { u1: "가람" }, lines: [] },
+  ], "u1");
+  assert.deepEqual(rows.map((r) => [r.id, r.ongoing]), [["talk_00002", false], ["talk_00001", true]]);
 });
 
 test("번호 — 대화 · 요청 번호의 모양", () => {

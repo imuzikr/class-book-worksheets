@@ -249,6 +249,43 @@ test("선생님 기록 — 담당 교사만 · 한 학생이 든 대화의 말 �
   await assert.rejects(act("other", { action: "talkHistory", uid: ids.b }), (e) => e.code === "reading/forbidden");
 });
 
+test("선생님 기록 지우기 — 담당 교사만 · 끝난 대화만 · 함께한 사람들의 기록 찾기까지 걷고, 이야기하는 중인 대화는 남김", async () => {
+  // 지금 이야기하는 중인 대화(talk — 아래 '정리'가 이어 씀)는 지우지 않습니다
+  assert.deepEqual(await act("teacher", { action: "talkDelete", talkIds: [talk] }), { deleted: [], ongoing: [talk], missing: [] });
+  assert.ok(await read(talkPath(talk)), "이야기하는 중인 대화는 그대로");
+  const before = await act("teacher", { action: "talkHistory", uid: ids.b });
+  assert.equal(before.talks.find((t) => t.id === talk)?.ongoing, true, "기록에 '이야기하는 중' 표시");
+  // 끝난 대화 둘 — 아무도 남지 않은 대화 · '나감' 없이 떠난 사람만 남아 30분 넘게 조용한 대화
+  const now = Date.now();
+  const ended = "talk_ended_0001";
+  const quiet = "talk_quiet_0001";
+  await rtdb.ref().update({
+    [talkPath(ended)]: { a: now - 3_600_000, n: { [ids.b]: "나래", [ids.e]: "마루" }, l: { l1: { u: ids.b, x: "끝난 대화", t: now - 3_500_000 } } },
+    [`plazaTalkBy/${CLASS}/${ids.b}/${ended}`]: now - 3_600_000,
+    [`plazaTalkBy/${CLASS}/${ids.e}/${ended}`]: now - 3_600_000,
+    [talkPath(quiet)]: { a: now - 7_200_000, m: { [ids.d]: { n: "라온", j: now - 7_200_000 } }, n: { [ids.b]: "나래", [ids.d]: "라온" }, l: { l1: { u: ids.d, x: "조용한 대화", t: now - 7_000_000 } } },
+    [`plazaTalkBy/${CLASS}/${ids.b}/${quiet}`]: now - 7_200_000,
+    [`plazaTalkBy/${CLASS}/${ids.d}/${quiet}`]: now - 7_200_000,
+  });
+  // 학생 · 다른 반 선생님은 못 지움 · 번호가 없거나 이상하면 거절
+  await assert.rejects(act("b", { action: "talkDelete", talkIds: [ended] }), (e) => e.code === "reading/forbidden");
+  await assert.rejects(act("other", { action: "talkDelete", talkIds: [ended] }), (e) => e.code === "reading/forbidden");
+  await assert.rejects(act("teacher", { action: "talkDelete", talkIds: [] }), (e) => e.status === 400);
+  await assert.rejects(act("teacher", { action: "talkDelete", talkIds: ["bad id"] }), (e) => e.status === 400);
+  assert.ok(await read(talkPath(ended)), "거절된 요청은 아무것도 안 지움");
+  // 한 번에 여럿 — 끝난 둘은 지우고, 이야기하는 중인 대화 · 없는 대화는 그대로 알려 줌
+  const result = await act("teacher", { action: "talkDelete", talkIds: [ended, quiet, talk, "talk_gone_0001"] });
+  assert.deepEqual(result, { deleted: [ended, quiet], ongoing: [talk], missing: ["talk_gone_0001"] });
+  assert.equal(await read(talkPath(ended)), null);
+  assert.equal(await read(talkPath(quiet)), null);
+  for (const [kind, id] of [["b", ended], ["e", ended], ["b", quiet], ["d", quiet]]) {
+    assert.equal(await read(`plazaTalkBy/${CLASS}/${ids[kind]}/${id}`), null, `${kind}의 기록 찾기에서도 걷음`);
+  }
+  assert.ok(await read(`plazaTalkBy/${CLASS}/${ids.b}/${talk}`), "이야기하는 중인 대화의 기록 찾기는 그대로");
+  const after = await act("teacher", { action: "talkHistory", uid: ids.b });
+  assert.deepEqual(after.talks.map((t) => t.id), [talk]);
+});
+
 test("정리 — 반에서 빼기 · 사용 중지는 요청 · 대화 자리를 걷고 기록은 남김, 탈퇴는 그 학생의 말까지 지움", async () => {
   await sleep(600);
   await say("b", talk, "나래의 말");

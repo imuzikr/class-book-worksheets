@@ -3,7 +3,8 @@ import { plazaAction, readingPrincipal, readingErrorResponse } from "@/lib/serve
 import { ReadingHttpError } from "@/lib/server/readingPolicy";
 
 // 책 광장 — 댓글 달기 · 고치기 · 지우기, 실시간 입장권 받기(action "enter"),
-// 광장 대화의 승인(action "talkAccept" — 대화에 사람을 넣는 일은 서버만) · [교사] 한 학생의 광장 대화 기록(action "talkHistory"),
+// 광장 대화의 승인(action "talkAccept" — 대화에 사람을 넣는 일은 서버만) · [교사] 한 학생의 광장 대화 기록(action "talkHistory")과
+// 그 대화 지우기(action "talkDelete" — 끝난 대화만 · 함께한 친구들의 기록에서도 사라짐),
 // 그 반의 공유 사본을 한 번 통째로 맞추기(action "sync" — 광장을 켠 반에서는 모든 글이 공개되므로, 켜기 전에 쓴 글도 맞춤)
 // (lib/server/readingService.js의 plazaAction). 광장의 글을 읽는 것은 이 API가 아니라
 // 화면이 Firestore의 공유 사본(plazaShelves · plazaBooks · plazaComments)을 곧바로 구독합니다.
