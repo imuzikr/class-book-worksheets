@@ -10,7 +10,7 @@ const storage = () => {
   return { getItem: (key) => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) };
 };
 
-test("아지트는 명시적으로 켠 운영 반에서 책나눔·광장·교실이 모두 켜져야 열림", () => {
+test("아지트는 명시적으로 켠 운영 반에서 책 봄·광장·교실이 모두 켜져야 열림", () => {
   assert.equal(hideoutOn(enabled), true);
   assert.equal(hideoutOn(null), false);
   assert.equal(hideoutOn({ readingEnabled: true, plazaEnabled: true, classroomEnabled: true }), false);

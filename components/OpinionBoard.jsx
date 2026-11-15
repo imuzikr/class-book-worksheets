@@ -104,7 +104,7 @@ export default function OpinionBoard({
     });
   }, [activity.id]);
 
-  // 이름표는 **늘 실명**입니다(책봄은 모든 활동이 실명). 새 메모는 붙일 때의
+  // 이름표는 **늘 실명**입니다(책나눔은 모든 활동이 실명). 새 메모는 붙일 때의
   // 학번 · 실명을 적어 두고(real), 익명 기능이 있던 때의 예전 메모(anon · 표시 없음)는
   // **지금 명단의 실명**으로 보여 줍니다 — 교사는 반 명단(roster), 학생은 명단이 없어
   // 그 메모를 쓴 친구의 프로필만 한 번 읽습니다(급우 프로필 읽기는 규칙이 엶).
@@ -945,7 +945,7 @@ function NoteReply({ note, canReply = false, onReply, onBusyChange }) {
 }
 
 // ─── 이름표 — 실명('30105 홍길동') · 교사 메모는 '선생님' ─────────────────
-// 예전에는 익명 닉네임 + 동물 이모지였고 교사만 눌러서 실명을 봤는데, 책봄은 모든
+// 예전에는 익명 닉네임 + 동물 이모지였고 교사만 눌러서 실명을 봤는데, 책나눔은 모든
 // 활동이 실명이라 걷었습니다(이름표를 눌러도 아무 일 없음 — 메모를 누르면 크게 보기).
 function NoteWho({ label, className = "opinion-note-who" }) {
   return <span className={className}>{label}</span>;

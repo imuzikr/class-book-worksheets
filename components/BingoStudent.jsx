@@ -2,7 +2,7 @@
 
 // =============================================================
 // 낱말 빙고 — 학생 화면 (독서 활동 '낱말 빙고', type: 'bingo')
-// 배움나눔(class-peer-qna)의 같은 화면을 옮겨 왔습니다(머리말만 책봄 짜임). 한때 책봄은
+// 배움나눔(class-peer-qna)의 같은 화면을 옮겨 왔습니다(머리말만 책나눔 짜임). 한때 책나눔은
 // 빙고 중에 반 학생 누구나 제 판의 칸을 한 번 누르면 곧바로 불렀는데(callBingoWord — 걷음),
 // 지금은 '학생이 진행'일 때 학번 차례대로 · 칸을 고른 뒤 '부르기'로 부릅니다.
 // 가로세로 낱말 퀴즈의 학생 화면(CrosswordGroupStudent)과 같은 세 칸입니다.
@@ -225,7 +225,7 @@ export default function BingoStudent({ activity, groupId, user, onBack }) {
 
   const head = (
     <>
-      {/* 머리 — 다른 독서 활동과 같은 짜임(제목 · 활동 목록 / 둘째 줄 배지) — 책봄 */}
+      {/* 머리 — 다른 독서 활동과 같은 짜임(제목 · 활동 목록 / 둘째 줄 배지) — 책나눔 */}
       <div className="books-head">
         <div className="books-head-title activity-head-title">
           <h1 className="book-group-title">{activity.title}</h1>

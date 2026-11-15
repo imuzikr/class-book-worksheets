@@ -30,7 +30,7 @@ const addLog = (state, id, bookId, a, b, extra = {}, date = "2026-11-12") => run
   { type: "addLog", bookId, date, startPage: a, endPage: b, notes: `발자국 ${id}` }, ctx(id, extra));
 const project = (state, classId = "classA", options) => plazaProjection(deriveReading(state, new Date(NOW)), classId, options);
 
-test("책 광장 스위치 — 책나눔이 켜진 반에서 켰을 때만(기본 꺼짐)", () => {
+test("책 광장 스위치 — 책 봄이 켜진 반에서 켰을 때만(기본 꺼짐)", () => {
   assert.equal(plazaOn({ readingEnabled: true }), false);
   assert.equal(plazaOn({ readingEnabled: true, plazaEnabled: true }), true);
   assert.equal(plazaOn({ readingEnabled: false, plazaEnabled: true }), false);
@@ -75,7 +75,7 @@ test("반 전체를 한 번 맞출 일이 있는가 — 광장을 켠 반인데 
   assert.equal(plazaNeedsSync({ ...on, plazaSynced: 1 }), true, "옛 기준으로 맞춘 반은 다시");
   assert.equal(plazaNeedsSync({ ...on, plazaSynced: 2 }), true, "종류별 미리보기가 없는 모두 공개 사본도 다시");
   assert.equal(plazaNeedsSync({ ...on, plazaSynced: PLAZA_SHARE_RULE }), false, "지금 기준으로 맞춘 반");
-  // 광장을 끈 반 · 책나눔을 끈 반 · 반을 아직 모를 때는 부탁하지 않는다
+  // 광장을 끈 반 · 책 봄을 끈 반 · 반을 아직 모를 때는 부탁하지 않는다
   assert.equal(plazaNeedsSync({ readingEnabled: true, plazaEnabled: false }), false);
   assert.equal(plazaNeedsSync({ readingEnabled: true, plazaEnabled: false, plazaSynced: 1 }), false);
   assert.equal(plazaNeedsSync({ readingEnabled: false, plazaEnabled: true }), false);

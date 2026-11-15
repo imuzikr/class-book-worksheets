@@ -1,6 +1,6 @@
 "use client";
 // =============================================================
-// 책 광장 — 책나눔의 셋째 탭(광장을 켠 반에서 '우리 반 랭킹' 자리에 섬 · 선생님 요청)
+// 책 광장 — 책 봄의 셋째 탭(광장을 켠 반에서 '우리 반 랭킹' 자리에 섬 · 선생님 요청)
 // -------------------------------------------------------------
 // 광장 그림 위를 내 캐릭터(와 펫)가 걸어 다닙니다 — 누른 곳으로 걸어가고, **방향키**로도 걷습니다.
 //   · 가판대(셋) = 반 친구들의 독서 발자국(완독한 책도 남음)
@@ -62,7 +62,7 @@ import { kstToday } from "@/lib/reading";
 import { plazaItems } from "@/lib/readingPlaza";
 import {
   CLASSROOM_MOVE_LATE_MS, classroomAct, classroomAtBoard, classroomAttendance, classroomBoardAt, classroomBoardMark, classroomBoardStand, classroomDesks,
-  classroomMoveCall, classroomMoveSpot,
+  classroomMoveCall, classroomMoveSeat, classroomMoveSpot,
   classroomNearSeat, classroomRollCall, classroomSeatAt, classroomSeatLabel, classroomSeatOf, classroomSeatSide, classroomUnseated, plazaArrowKey, plazaLetterKey,
 } from "@/lib/readingClassroom";
 import { PLAZA_LIVE_KEY_MS, plazaRemoteEnter, plazaRemoteHear, plazaRemoteStep, plazaSpawnFor } from "@/lib/readingPlazaLive";
@@ -134,7 +134,7 @@ const friendRow = (uid, who, friend) => ({
 });
 
 // initialBook — 책꽂이에서 '광장에서 보기'로 넘어올 때 곧바로 열 책({ uid, bookId, place })
-// onExit — 맵 위의 '나가기'(광장에서 나가 책나눔의 첫 탭 '책꽂이'로 — 광장 탭에서는 탭 줄을 가리므로 나가는 길은 이 단추)
+// onExit — 맵 위의 '나가기'(광장에서 나가 책 봄의 첫 탭 '책꽂이'로 — 광장 탭에서는 탭 줄을 가리므로 나가는 길은 이 단추)
 // classroom — 교실(관리자 설정의 '교실'을 켠 반 · 책방 페이지가 넘김):
 //   { on, openToday(오늘 출석이 열려 있나), attended([학생] 오늘 출석했나), presentUids([선생님] 오늘 출석한 uid들),
 //     rollCall(반 문서의 classroomCallAt — 선생님이 출석을 확인한 때), roster([선생님] 명단), seatLayout([선생님] 자리표),
@@ -250,7 +250,8 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   const noteHold = useRef(0);
   const lateNote = useRef("");
   const movingAll = useRef(0);
-  // [학생] 자리표를 아직 못 받은 채 교실로 옮겨져 뒤쪽에 서 있는 자리({ x, y }) — 자리표가 오면 제 러그로 옮겨 세웁니다(아래)
+  // [학생] 모두 이동 뒤 배정 자리를 기다리는 위치와 신호({ x, y, at }). 자리표가 오면 자동으로 앉습니다.
+  // 그사이 학생이 걷거나 다른 방/새 신호로 바뀌었으면 대기를 걷어, 늦게 다시 끌어오지 않습니다.
   const seatOwed = useRef(null);
 
   // 아지트의 포털로 교실에 돌아온 때 — 곧바로 방향키로 이어 걷게 무대에 초점을 둡니다(아지트의 무대가 사라져 초점이
@@ -272,8 +273,6 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   desksRef.current = desks;
   const mySeatRef = useRef(mySeat);
   mySeatRef.current = mySeat;
-  const layoutRef = useRef(layout);
-  layoutRef.current = layout;
   const openToday = !!classroom?.openToday;
   const attended = !isTeacher && !!classroom?.attended;
   const openTodayRef = useRef(openToday);
@@ -373,29 +372,33 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
 
   // ── 방을 옮깁니다(포털 · 선생님의 '모두 이동') ──
   // 포털로 건너왔으면 건너온 포털의 한가운데에 서고, 그 포털을 벗어날 때까지는 다시 들어서지 않습니다.
-  // 선생님이 모두를 옮겼으면(forced — { at: 설 자리 { x, y, facing }, note: 알릴 한 줄, settle: 같은 방에서 자리만 고쳐 섬 })
-  // 포털이 아니라 사람마다 다른 자리에 섭니다(lib/readingClassroom.js의 classroomMoveSpot — 한 점에 모두 겹치지 않게).
+  // 선생님이 모두를 옮겼으면(forced — { at: 서는 위치, seat: 앉을 자리, note: 알릴 한 줄, settle: 늦게 온 자리표 반영 })
+  // 학생은 자기 배정 의자에 앉습니다. at는 일어설 때 돌아갈 러그 귀라 걷기 가능한지 따로 확인합니다.
   // 친구들에게는 새 방 · 새 자리를 알립니다.
   const enterRoom = useCallback((nextId, forced = null) => {
     const from = hereRef.current;
     const next = plazaRoomOf(nextId, classroomOnRef.current, hideoutEntryRef.current);
     const id = next.id;
     const spot = forced?.at && plazaWalkable(forced.at.x, forced.at.y, next) ? forced.at : null;
+    const requestedSeat = classroomMoveSeat({ to: id, teacher: isTeacher, seat: forced?.seat });
+    const seat = requestedSeat !== null && requestedSeat === mySeatRef.current ? CLASSROOM_SEATS[requestedSeat] : null;
+    const arrival = spot ? { x: spot.x, y: spot.y } : plazaArrival(next, from);
     halt();
+    seatOwed.current = null;
     hereRef.current = id;
     roomRef.current = next;
-    pos.current = spot ? { x: spot.x, y: spot.y } : plazaArrival(next, from);
+    pos.current = seat ? { x: seat.sit.x, y: seat.sit.y } : arrival;
     // 서 있는 포털(있으면) — 포털로 건너왔으면 그 포털, 옮겨진 자리가 마침 포털 위면 그 포털
     const gate = spot ? plazaPortalAt(pos.current, next, PORTAL_REARM) : next.portals.find((g) => g.to === from) ?? null;
     portalArmed.current = spot ? !gate : false;
-    sitFrom.current = null;
-    sittingRef.current = null;
+    sitFrom.current = seat && spot ? { x: spot.x, y: spot.y } : null;
+    sittingRef.current = seat?.index ?? null;
     stride.current = 0;
     round.current = { turn: 0, key: "" };
-    facingRef.current = spot?.facing ?? "down";
+    facingRef.current = seat ? "up" : spot?.facing ?? "down";
     hintRef.current = null;
     nearRef.current = null;
-    if (myPet.current) myPet.current = plazaPetStart(pos.current, facingRef.current, next);
+    if (myPet.current) myPet.current = plazaPetStart(seat ? arrival : pos.current, facingRef.current, next);
     // 새 방에 있는 친구들은 마지막 소식에서 그동안 걸었을 만큼 가 있는 자리에 세웁니다
     const now = performance.now();
     for (const friend of cast.current.values()) {
@@ -411,14 +414,14 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     meRef.current?.show(facingRef.current, SPRITE_IDLE);
     if (myPet.current) meRef.current?.placePet(myPet.current.x, myPet.current.y);
     setRoomId(id);
-    setSitting(null);
+    setSitting(seat?.index ?? null);
     setMenu(null);
     setHint(null);
     setNearId(null);
     setMarker(null);
     setWalked(false);
     setOnGate(gate?.id ?? null);
-    // 같은 방 안에서 자리만 고쳐 설 때(settle — 늦게 온 자리표로 제 러그에 옮겨 섬)는 반짝임 · 떠 있는 한 줄을 그대로 둡니다
+    // 늦게 온 자리표로 앉을 때(settle)는 반짝임 · 떠 있는 한 줄을 그대로 둡니다.
     if (!forced?.settle) {
       // 선생님이 옮겼으면 그 까닭을 한 줄로 — 옮겨 선 자리가 내 러그라 곧바로 물음표가 떠도 이 한 줄은 잠시 붙들어 둡니다
       noteHold.current = forced?.note ? now + NOTE_MS : 0;
@@ -427,11 +430,11 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     }
     if (myUid) {
       remember("localStorage", roomKey(classId, myUid), id);
-      remember("sessionStorage", seatKey(classId, myUid), null);
+      remember("sessionStorage", seatKey(classId, myUid), seat ? `${todayDateKey()}:${seat.index}` : null);
     }
     tell(now);
     wake();
-  }, [classId, myUid, halt, look, say, tell, wake]);
+  }, [classId, myUid, isTeacher, halt, look, say, tell, wake]);
 
   // ── 앉기 · 다시 서기(교실) ──
   const sitDown = useCallback((quiet = false) => {
@@ -812,13 +815,16 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
       seatRestored.current = true;
       if (here === "classroom" && mySeat !== null && myUid && recall("sessionStorage", seatKey(classId, myUid)) === `${todayDateKey()}:${mySeat}`) sitDown(true);
     }
-    // 선생님이 모두를 교실로 불렀는데 자리표를 아직 못 받아 교실 뒤쪽에 세워 둔 학생(화면을 막 연 학생 — 아래 '모두 이동')
-    // — 자리표가 왔으니 제 러그로 옮겨 세웁니다. 그사이 걸음을 뗐으면 그대로 둡니다(걷는 학생을 다시 끌어오지 않음).
+    // 모두 이동 때 자리표/배정을 아직 못 받은 학생은, 같은 신호를 따르는 동안 걷지 않았다면 배정 즉시 앉습니다.
     const owed = seatOwed.current;
-    seatOwed.current = null;
-    if (owed && here === "classroom" && mySeat !== null && sittingRef.current === null && !path.current.length
-      && pos.current.x === owed.x && pos.current.y === owed.y) {
-      enterRoom("classroom", { at: classroomMoveSpot({ to: "classroom", seat: mySeat, uid: myUid }), settle: true });
+    if (owed) {
+      const waiting = hereRef.current === "classroom" && classroomRef.current?.moveTo === "classroom"
+        && !classroomRef.current?.moveWaiting && Number(classroomRef.current?.moveAt) === owed.at && sittingRef.current === null && !path.current.length
+        && pos.current.x === owed.x && pos.current.y === owed.y;
+      if (!waiting || mySeat !== null) seatOwed.current = null;
+      if (waiting && mySeat !== null) {
+        enterRoom("classroom", { at: classroomMoveSpot({ to: "classroom", seat: mySeat, uid: myUid }), seat: mySeat, settle: true });
+      }
     }
     wake();
   }, [isTeacher, classroomOn, layout, mySeat, here, classId, myUid, sitDown, standUp, wake, enterRoom]);
@@ -826,7 +832,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   // 학생 화면도, 단추를 누른 선생님 자신의 화면도 같은 길입니다(lib/readingClassroom.js의 classroomMoveCall).
   // **여기 오는 신호는 알림과 10초 카운트다운을 다 센 뒤의 것**입니다(책방 페이지가 lib/classroomMoveStore.js에서 내놓인
   // 것만 넘김 — 세는 동안에는 아무도 옮기지 않습니다).
-  //   · 보는 동안 새 신호가 오면 곧바로(기기 시계를 보지 않음). 이미 그 방이면 그대로(앉아 있던 학생도 앉은 채).
+  //   · 보는 동안 새 신호가 오면 곧바로(기기 시계를 보지 않음). 교실에서는 서 있는 학생도 자기 자리에 앉습니다.
   //   · 무대가 설 때 이미 있던 신호는 이 기기가 아직 따르지 않았을 때만 —
   //       이 화면이 지켜보는 동안 온 신호(moveTick — 다른 화면에서 막 데려와 무대가 지금 선 학생)는 시계를 보지 않고,
   //       화면을 열었을 때 이미 있던 신호는 한 시간 안의 것만(늦게 들어온 학생).
@@ -837,10 +843,12 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   const moveTo = classroom?.moveTo ?? null;
   const moveAt = Number(classroom?.moveAt) || 0;
   const moveTick = Number(classroom?.moveTick) || 0;
+  const moveWaiting = !!classroom?.moveWaiting;
   useLayoutEffect(() => {
     // 지금까지 본 '보낸 때' 가운데 가장 큰 값을 기억합니다 — 값이 잠깐 비었다 돌아와도 새 신호로 보지 않게
     const prev = seenMove.current;
     seenMove.current = Math.max(prev ?? 0, moveAt);
+    if (seatOwed.current && (moveWaiting || moveTo !== "classroom" || seatOwed.current.at !== moveAt)) seatOwed.current = null;
     if (!classroomOn || !myUid) return;
     if (prev === undefined && initialBook) return;
     const seen = prev === undefined ? Number(recall("localStorage", moveKey(classId, myUid))) || 0 : 0;
@@ -850,7 +858,8 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     const target = classroomMoveCall({ prev, to: moveTo, at: moveAt, seen, now: Date.now(), live });
     if (!target) return;
     remember("localStorage", moveKey(classId, myUid), String(moveAt));
-    if (target === hereRef.current) return;
+    const seat = classroomMoveSeat({ to: target, teacher: isTeacher, seat: mySeatRef.current });
+    if (target === hereRef.current && (isTeacher || target !== "classroom" || (seat !== null && sittingRef.current === seat))) return;
     // 알리는 한 줄 — 학생에게는 옮겨 온 까닭을, 선생님에게는(방금 눌렀을 때만) 누가 함께 옮겨 오는지를
     const note = !isTeacher ? GATHER_NOTE[target] : prev !== undefined || live ? GATHER_DONE[target] : "";
     // 쓰던 댓글이 있는 창은 닫지 않습니다(창 안의 글 칸에 글이 들어 있는가 — 창은 이 화면에 하나뿐)
@@ -860,11 +869,12 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     lateNote.current = drafting ? note : "";
     enterRoom(target, {
       at: classroomMoveSpot({ to: target, teacher: isTeacher, seat: mySeatRef.current, uid: myUid }),
+      seat,
       note: drafting ? "" : note,
     });
-    // 자리표를 아직 못 받았으면(화면을 막 연 학생) 지금은 교실 뒤쪽에 섰습니다 — 자리표가 오면 제 러그로 옮겨 세웁니다(위)
-    seatOwed.current = !isTeacher && target === "classroom" && layoutRef.current === undefined ? { ...pos.current } : null;
-  }, [moveTo, moveAt, moveTick, classroomOn, classId, myUid, isTeacher, initialBook, enterRoom]);
+    // 배정을 모르면 우선 뒤쪽에서 기다립니다. 배정이 오면 위 효과가 같은 신호의 대기만 이어받습니다.
+    seatOwed.current = !isTeacher && target === "classroom" && seat === null ? { ...pos.current, at: moveAt } : null;
+  }, [moveTo, moveAt, moveTick, moveWaiting, classroomOn, classId, myUid, isTeacher, initialBook, enterRoom]);
   // [선생님] 맵 위의 '모두 교실로 · 모두 광장으로' — 신호를 적습니다. 반의 모든 화면에 알림과 10초 카운트다운이 뜨고,
   // 다 세면 모두(선생님 자신도) 그 신호를 따라 옮겨 갑니다 — 위.
   //   · **세는 동안에는 듣지 않습니다**(moveWaiting — 단추가 쉼). 거두려면 화면 위 알림 띠의 '취소'.
@@ -895,13 +905,13 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
 
   // 무대의 크기 — 탭 바로 아래부터 화면 바닥까지를 맵이 채웁니다(선생님 요청).
   // 책방 본문은 제 안에서 구르는 칸(.books-main)이라 CSS만으로는 '남은 높이'를 모릅니다. 그 칸의 높이에서 무대 위쪽까지의
-  // 거리와 무대 아래에 남는 것(책나눔 틀 · 본문 칸의 아래 여백 — 무대 크기와 무관한 값)을 빼서 정합니다.
+  // 거리와 무대 아래에 남는 것(책 봄 틀 · 본문 칸의 아래 여백 — 무대 크기와 무관한 값)을 빼서 정합니다.
   // 창이 아주 낮으면 STAGE_MIN_H까지만 줄고 나머지는 구릅니다. 그리기 전에 재야 처음부터 제 크기로 섭니다(useLayoutEffect).
   useLayoutEffect(() => {
     const wrap = wrapRef.current;
     if (!wrap) return undefined;
     const scroller = plazaScroller(wrap);
-    // 구르는 칸(없으면 본문 main)의 바로 아래 자식 가운데 무대를 품은 것 — 책나눔 틀(교사 화면은 명단까지 품은 틀)
+    // 구르는 칸(없으면 본문 main)의 바로 아래 자식 가운데 무대를 품은 것 — 책 봄 틀(교사 화면은 명단까지 품은 틀)
     const frame = scroller ?? wrap.closest("main") ?? document.body;
     let top = wrap;
     while (top.parentElement && top.parentElement !== frame && top.parentElement !== document.body) top = top.parentElement;
@@ -939,6 +949,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     const goal = plazaNearest(point.x, point.y, place);
     const route = plazaPath(pos.current, goal, place);
     if (!route.length) return;
+    seatOwed.current = null;
     path.current = route;
     pendingSpot.current = spot;
     pendingAct.current = act;
@@ -1047,6 +1058,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     if (dir) {
       e.preventDefault();   // 방향키가 페이지를 굴리지 않게
       if (sittingRef.current !== null) { if (!e.repeat) say(SIT_HELP); return; }
+      seatOwed.current = null;
       keys.current[dir] = true;
       wake();
       return;

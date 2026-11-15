@@ -7,14 +7,14 @@
    · 그림(.plaza-world, 원본 1672×941)은 그 창을 빈틈없이 덮게 키우고, 넘치는 쪽은 시점이 캐릭터를 따라가며
      보여 줍니다(transform — 셈은 lib/readingPlazaMap.js의 plazaView · plazaCamera). 캐릭터 · 이름표는 그림 위에 %로 놓습니다.
    · 제목 · '나가기' · 가판대/책꽂이 단추 · 걷는 법은 맵 위에 얹습니다(.plaza-hud) — 줄을 따로 차지하지 않습니다(선생님 요청).
-     탭 줄이 없으므로 광장에서 나가는 길은 제목 옆의 '나가기'입니다(책나눔의 첫 탭 '책꽂이'로).
+     탭 줄이 없으므로 광장에서 나가는 길은 제목 옆의 '나가기'입니다(책 봄의 첫 탭 '책꽂이'로).
    · 캐릭터 · 펫의 자리는 '발'입니다(left/top = 발이 닿는 점, 그림은 그 위로). 그림은 걷는 그림(도트 시트)을
      캔버스에 그립니다(PlazaSprite.jsx) — 방향 · 걷는 그림을 고르는 셈은 lib/readingPlazaSprites.js.
-   · 창(.plaza-panel)은 책나눔의 다른 창(.reading-modal)과 같은 종이 빛입니다.
+   · 창(.plaza-panel)은 책 봄의 다른 창(.reading-modal)과 같은 종이 빛입니다.
    · 접는 기준은 창 폭(@media)이 아니라 무대 칸(.plaza-stage-wrap) · 창(.plaza-panel)의 폭(@container)입니다.
    ============================================================= */
 /* ── 광장 탭 — 상단바만 남기고 그 아래를 맵이 가득 채웁니다(선생님 요청) ──────────────
-   이 탭에서만 가리는 것: 체험반 안내 띠 · 책방 머리말(한 줄 문구 · 제목 · 반 고르개 · 단추) · 책나눔의 머리띠와 탭 줄 ·
+   이 탭에서만 가리는 것: 체험반 안내 띠 · 책방 머리말(한 줄 문구 · 제목 · 반 고르개 · 단추) · 책 봄의 머리띠와 탭 줄 ·
    알림 줄 · [교사] 왼쪽 학생 명단과 오른쪽 '멋진 순간'. **떼어 내지 않고 가리기만 합니다** — 맵 위의 '나가기'로 나가면
    그대로 돌아오고, 펫 카드 · 패널이 다시 마운트되며 알 받기 · 축하 · 구독을 또 돌리지 않습니다.
    본문 칸의 여백도 걷어 무대가 좌우 끝 · 화면 바닥까지 닿습니다(둥근 모서리 · 그림자 없음).
@@ -29,7 +29,7 @@
 .reading-hub--plaza > .reading-tabs,
 .reading-hub--plaza > .reading-error,
 .reading-hub--plaza > .reading-notice { display: none; }
-/* 교사의 책나눔 — 광장은 반 전체의 자리라 왼쪽 학생 명단도 접습니다(나가면 돌아옴). */
+/* 교사의 책 봄 — 광장은 반 전체의 자리라 왼쪽 학생 명단도 접습니다(나가면 돌아옴). */
 .reading-teacher:has(.reading-hub--plaza) { grid-template-columns: minmax(0, 1fr); }
 .reading-teacher:has(.reading-hub--plaza) .reading-teacher-rail { display: none; }
 /* 무대가 화면 끝에 닿으므로 모서리 · 그림자를 걷습니다.
@@ -74,7 +74,7 @@
 .plaza-hud { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
 .plaza-hud > * { pointer-events: auto; }
 /* 제목과 '나가기' — 이름표와 같은 나무 팻말 둘이 나란히, **같은 모양 · 같은 크기**입니다(선생님 요청 —
-   격자의 같은 폭 두 칸이라 글자 수가 달라도 폭이 같음). '나가기'는 광장에서 나가 책나눔의 첫 탭(책꽂이)으로 갑니다. */
+   격자의 같은 폭 두 칸이라 글자 수가 달라도 폭이 같음). '나가기'는 광장에서 나가 책 봄의 첫 탭(책꽂이)으로 갑니다. */
 .plaza-hud-lead { position: absolute; left: 14px; top: 14px; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; }
 .plaza-title, .plaza-exit {
   display: flex; align-items: center; justify-content: center; height: 40px; margin: 0; padding: 0 16px;

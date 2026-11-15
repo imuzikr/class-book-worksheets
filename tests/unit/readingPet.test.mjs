@@ -25,7 +25,7 @@ test("열 종 · 열 단계 — 이름이 모두 다르고, 6~10단계는 선생
   assert.equal(petSpecies("dragon"), null);
 });
 
-test("학생 펫 스위치 — 책나눔이 켜진 반에서, 값이 없으면 켜짐", () => {
+test("학생 펫 스위치 — 책 봄이 켜진 반에서, 값이 없으면 켜짐", () => {
   assert.equal(petEnabled({ readingEnabled: true }), true);
   assert.equal(petEnabled({ readingEnabled: true, petEnabled: false }), false);
   assert.equal(petEnabled({ readingEnabled: false }), false);
@@ -66,7 +66,7 @@ test("펫 먹이가 켜지고 꺼지는 쓰기 — 처음 켬 · 끔 · 다시 �
   assert.deepEqual(times({ readingEnabled: true, petEnabled: false, petFeedEnabled: true, petFeedFrom: 1 }, { readingEnabled: true }), {});
   assert.deepEqual(times(off, { petFeedEnabled: false }), {});
   assert.deepEqual(times(running, null), {});
-  // 새 반 — 책나눔이 꺼진 채 만들고 선생님의 설정을 한 번에(addClass)
+  // 새 반 — 책 봄이 꺼진 채 만들고 선생님의 설정을 한 번에(addClass)
   assert.deepEqual(times({ readingEnabled: false }, { readingEnabled: true, petEnabled: true, petFeedEnabled: true }), { petFeedFrom: "지금" });
   assert.deepEqual(times({ readingEnabled: false }, { readingEnabled: true, petFeedEnabled: false }), {});
   // 쓰기 전의 반을 모르면 세 스위치 가운데 하나를 켜는 쓰기인가로(켠 때를 새로 — 꺼 둔 날을 세지 않는 쪽)
@@ -80,7 +80,7 @@ test("펫이 자라는 바탕 — 누적 경험치 그대로(과일은 경험치
   assert.equal(petGrowthXp(-20), 0); // 0 아래로 안 내려감
   assert.equal(petGrowthXp(null), 0);
   assert.equal(petGrowthXp("300"), 0); // 숫자가 아니면 0
-  // 책나눔 요약에서도 같은 값 — 옛 화면이 과일 날을 실어 보내도 경험치가 아니므로 그대로
+  // 책 봄 요약에서도 같은 값 — 옛 화면이 과일 날을 실어 보내도 경험치가 아니므로 그대로
   const summary = deriveReading({ ...initialReadingState(), fruits: [{ classId: "c", date: "2026-11-02", count: 4 }] },
     new Date("2026-11-09T12:00:00+09:00"));
   assert.equal(summary.xp, 0);
@@ -253,7 +253,7 @@ test("펫 미리보기 스위치 — 학생 펫이 켜진 반에서, 켠 것만(
   assert.equal(petPreviewOn({ readingEnabled: true }), false); // 기본 꺼짐
   assert.equal(petPreviewOn({ readingEnabled: true, petPreviewEnabled: false }), false);
   assert.equal(petPreviewOn({ readingEnabled: true, petEnabled: false, petPreviewEnabled: true }), false); // 학생 펫을 끄면 함께
-  assert.equal(petPreviewOn({ readingEnabled: false, petPreviewEnabled: true }), false); // 책나눔을 끄면 함께
+  assert.equal(petPreviewOn({ readingEnabled: false, petPreviewEnabled: true }), false); // 책 봄을 끄면 함께
   assert.equal(petPreviewOn({ readingEnabled: true, petPreviewEnabled: true, archived: true }), false);
   assert.equal(petPreviewOn(null), false);
 });

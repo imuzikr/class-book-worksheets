@@ -13,7 +13,7 @@
 // '나에 관한 것'을 모아 둔 자리라 뜻으로도 여기가 맞습니다.
 // 메뉴의 마지막에 선으로 갈라 둡니다 — 위 둘은 여는 것이고 이것은 나가는
 // 것이라, 잘못 눌러 로그아웃되는 일을 줄입니다.
-// - 학생: 실명을 표시합니다. 책봄은 모든 활동 · 게시물 · 채팅이 실명입니다.
+// - 학생: 실명을 표시합니다. 책나눔은 모든 활동 · 게시물 · 채팅이 실명입니다.
 // - 교사/관리자: 항상 '선생님'으로 표시 (getCurrentUser가 결정)
 // =============================================================
 import { useEffect, useRef, useState } from "react";
@@ -34,7 +34,7 @@ export default function UserProfile({
   // 둘(창을 여는 것)과 섞이지 않게 앞에 세웁니다.
   onOpenAdmin = null,
   onStudyExport = null,
-  // 학생 캐릭터(책나눔 · 랭킹 · 학생 캐릭터가 모두 켜진 반) — { number, style } · 저장 함수
+  // 학생 캐릭터(책 봄 · 랭킹 · 학생 캐릭터가 모두 켜진 반) — { number, style } · 저장 함수
   character = null,
   onSaveCharacter = null,
   // 독서 펫 — 학생 펫이 켜진 반의 학생이고 알을 받았으면 { classId, mirror }(lib/readingPet.js)

@@ -58,7 +58,7 @@ function HideoutLoading() {
 }
 const ReadingHideout = dynamic(() => import("./ReadingHideout"), { ssr: false, loading: HideoutLoading });
 
-// 선생님의 책 광장 — **반 전체의 자리**라 '고른 학생'의 책나눔(아래 ReadingHub) 밖에 따로 섭니다
+// 선생님의 책 광장 — **반 전체의 자리**라 '고른 학생'의 책 봄(아래 ReadingHub) 밖에 따로 섭니다
 // (TeacherReadingView의 '책 광장 들어가기'). 한때 선생님이 들어가는 길이 고른 학생 화면의 셋째 탭 하나뿐이라,
 // 학생이 한 명도 없는 반에서는 탭 줄 자체가 없어 들어갈 길이 없었고(주소에 ?tab=plaza를 붙여도), 학생이 있는
 // 반에서도 '○○의 독서 여정' 안에 섞여 입구로 보이지 않았습니다(선생님 신고). 틀의 클래스(.reading-hub--plaza)가
@@ -90,7 +90,7 @@ function Modal({ title, onClose, children, wide = false, busy = false }) {
   const error = useContext(ReadingErrorContext);
   const ref = useRef(null);
   const backdropRef = useRef(null);
-  // onClose는 부르는 쪽이 렌더마다 새로 만듭니다. 한때 아래 효과가 그것에 걸려 있어, 책나눔이 다시
+  // onClose는 부르는 쪽이 렌더마다 새로 만듭니다. 한때 아래 효과가 그것에 걸려 있어, 책 봄이 다시
   // 그려질 때마다(알림 줄이 뜨고 5초 뒤 사라질 때 등) 다시 돌며 초점을 창의 첫 칸으로 끌어왔습니다 —
   // 감상을 쓰던 커서가 날짜 칸으로 튀고, 그때 위에 뜨던 펫 '자랐어요!' 창(지금은 창이 아닌 폭죽)의 초점을
   // 빼앗아 Esc가 밑의 책 상세 창부터 닫았습니다. 그래서 최신 값은 ref로 들고, 초점 · 키 처리는 창이
@@ -148,15 +148,15 @@ function Modal({ title, onClose, children, wide = false, busy = false }) {
 // petFeed — 그 반의 펫 먹이 규칙(lib/readingPet.js의 petCareRules — 끈 반이면 on이 거짓) · myFruit — 내가 가진 과일 수(먹이).
 // petPreview — 관리자 설정의 '펫 미리보기'(lib/readingPet.js의 petPreviewOn) — 켠 반이면 '나의 펫'에서 키울 펫을 고릅니다.
 export default function ReadingHub({ classId, user, isTeacher = false, bookSearchOn = false, petOn = false, plazaOn = false, hideoutOn = false, characterOn = true, onDisabled, activities = [], onOpenActivity, initialBookId = null, initialTab = "library", student = null, classroom = null, plazaCall = 0, petFeed = null, myFruit = 0, petPreview = false, teacherTools = null }) {
-  // student가 있으면 교사가 그 학생의 책나눔을 보는 읽기 전용 화면입니다(선생님 결정 — 감상·발자국까지 전부 보임).
+  // student가 있으면 교사가 그 학생의 책 봄을 보는 읽기 전용 화면입니다(선생님 결정 — 감상·발자국까지 전부 보임).
   const readOnly = !!student?.uid;
   const viewUid = readOnly ? student.uid : user?.uid;
   const [raw, setRaw] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  // '우리 반 랭킹' 탭은 책나눔이 켜져 있으면 늘 섭니다 — 관리자 설정의 '리더보드'를 꺼도 그대로(선생님 요청:
-  // 순위 셈은 책나눔과 함께 늘 돌고, 리더보드 스위치는 상단바 리더보드 화면 · 독서 TOP 3만 켜고 끔).
+  // '우리 반 랭킹' 탭은 책 봄이 켜져 있으면 늘 섭니다 — 관리자 설정의 '리더보드'를 꺼도 그대로(선생님 요청:
+  // 순위 셈은 책 봄과 함께 늘 돌고, 리더보드 스위치는 상단바 리더보드 화면 · 독서 TOP 3만 켜고 끔).
   // 책 광장을 켠 반은 그 자리에 '책 광장'이 섭니다(선생님 요청 — 순위는 상단바 리더보드에서 봄). 끈 반은 지금처럼 '우리 반 랭킹'.
   const thirdTab = plazaOn ? "plaza" : "ranking";
   const canHideout = hideoutOn && (readOnly || (!isTeacher && !!user?.uid));
@@ -203,12 +203,12 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
   const [confirm, setConfirm] = useState(null);
   // 선생님의 '모두 이동'(모두 교실로 · 모두 광장으로 — 선생님 요청) — 알림과 10초 카운트다운이 끝나면, 책꽂이 · 성장 탭에
   // 있던 학생도 책 광장 탭으로 넘어갑니다(그 방으로 옮기는 것은 무대가 맡음 — ReadingPlaza).
-  //   · **처음 받은 값은 기준일 뿐**입니다 — 떠 있는 동안 값이 바뀔 때만 넘어갑니다(한참 전의 신호로 책나눔을 열 때마다
+  //   · **처음 받은 값은 기준일 뿐**입니다 — 떠 있는 동안 값이 바뀔 때만 넘어갑니다(한참 전의 신호로 책 봄을 열 때마다
   //     광장으로 끌려가지 않게. 다른 화면에서 막 데려온 학생은 주소의 ?tab=plaza로 처음부터 광장 탭입니다).
   //   · **쓰던 입력 창(책 등록 · 독서 발자국 · 한 권의 책)은 닫지 않습니다** — 창은 그대로 뜬 채 뒤의 화면만 광장이
   //     됩니다(저장하거나 닫으면 광장이 보임 · 쓰던 글이 날아가지 않게). 읽기만 하는 책 상세 창은 닫습니다.
   //   · 이미 광장 탭이면 아무것도 건드리지 않습니다('광장에서 보기'로 연 책 창이 다시 서지 않게).
-  //   · 선생님이 학생의 책나눔을 읽는 화면(readOnly)은 넘어가지 않습니다 — 선생님의 광장은 따로 섭니다(TeacherReadingView).
+  //   · 선생님이 학생의 책 봄을 읽는 화면(readOnly)은 넘어가지 않습니다 — 선생님의 광장은 따로 섭니다(TeacherReadingView).
   const tabNow = useRef(tab);
   tabNow.current = tab;
   const seenCall = useRef(plazaCall);
@@ -321,7 +321,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
     hasReview: stats.reviews.some((review) => review.bookId === bookId && review.classId === classId),
   });
 
-  return <ReadingErrorContext.Provider value={error}><section className={`reading-hub${tab === "plaza" || tab === "hideout" ? " reading-hub--plaza" : ""}`} aria-label="책나눔 성장 기능" aria-busy={tab === "hideout" ? false : loading || busy}>
+  return <ReadingErrorContext.Provider value={error}><section className={`reading-hub${tab === "plaza" || tab === "hideout" ? " reading-hub--plaza" : ""}`} aria-label="책 봄 성장 기능" aria-busy={tab === "hideout" ? false : loading || busy}>
     <div className="reading-intro">
       {readOnly ? <div><p className="reading-eyebrow">READING JOURNEY</p><h2>{student.name || "학생"}의 독서 여정</h2><p>학생이 남긴 책꽂이 · 독서 발자국 · 한 권의 책을 읽기만 합니다.</p>{teacherTools}</div> : <div><p className="reading-eyebrow">MY READING JOURNEY</p><h2>한 페이지씩, 나의 가능성을 넓히다.</h2><p>읽은 순간을 기록하고 나만의 독서 컬렉션을 완성해 보세요.</p></div>}
       {(featured?.earned || showPet) && <div className="reading-intro-side">
@@ -331,7 +331,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
           feed={petFeed} fruits={myFruit} today={day} preview={petPreview} />}
       </div>}
     </div>
-    <nav className="reading-tabs" aria-label="책나눔 메뉴" ref={tabsRef}>
+    <nav className="reading-tabs" aria-label="책 봄 메뉴" ref={tabsRef}>
       {[["library", "책꽂이"], ["growth", "성장·뱃지"], [thirdTab, plazaOn ? "책 광장" : "우리 반 랭킹"], ...(readOnly && canHideout ? [["hideout", "아지트 보기"]] : [])].map(([key, label]) => <button type="button" key={key} className={tab === key ? "active" : ""} aria-current={tab === key ? "page" : undefined} onClick={() => { setTab(key); setDialog(null); setError(""); setPlazaJump(null); setPlazaReturn(null); }}>{label}</button>)}
     </nav>
     {error && !dialog && !confirm && <div className="reading-error" role="alert">{error}<button type="button" onClick={() => setError("")} aria-label="오류 안내 닫기">×</button></div>}

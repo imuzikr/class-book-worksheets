@@ -1,4 +1,4 @@
-# 책봄 책 광장 이미지
+# 책나눔 책 광장 이미지
 
 > **2026년 11월 — 도트 그림(1번 스타일)으로 바꿨습니다.** 배경 셋 · 러그 · 책상과 의자 · 의자 앞부분 · 포털 · 도는 빛을 선생님이 주신 묶음(`bookbom-pixel-style1` + 넓은 러그 수정본)의 PNG 원본에서 `node scripts/import-pixel-art.mjs <묶음 폴더> <넓은 러그 폴더> <숫자 없는 벽시계 폴더>`로 **같은 이름 · 같은 크기**의 WebP(품질 88)로 구웠습니다 — 크기가 지금 그림과 다르면 아무것도 쓰지 않고 멈춥니다. 교실 칠판 위 벽시계는 배경에 빈 동그라미라, 숫자 없는 벽시계의 시계판(점 12개 · 10시 10분 바늘)을 `classroom-clock.webp`로 떠내 따로 얹습니다(`scripts/prepare-classroom-clock.mjs` · 자리 `CLASSROOM_CLOCK`). 광장 약 256KiB · 교실 약 129KiB(묶음의 앱용 WebP는 무손실이라 1.5MB · 1.1MB였음). 그림에 맞춰 바꾼 좌표 · 크기(교실 줄 30px 아래 · 칠판 앞 · 바닥 · 분수 · 책꽂이 · 문 · 러그 세로 · 의자 · 포털의 도는 빛과 누르는 범위)는 `READING_GROWTH.md`의 '교실' 절에 있고, **`tests/unit/plazaArtFit.test.mjs`가 러그 · 포털 · 의자 숫자를 그림과 직접 견줍니다.** 아래 설명의 KiB · '선생님이 주신 분리 자료' · `prepare-classroom-art.py`는 그 앞 그림의 기록입니다.
 
@@ -28,7 +28,7 @@
 
 광장을 걸어 다니는 캐릭터와 펫의 도트 그림입니다. 선생님이 주신 묶음(`reading-plaza-all-sprites.zip`)의 시트 40장을 그대로 넣었습니다.
 
-- 이름: 캐릭터 `zodiac-01`~`10` · `animal-01`~`10` · `fantasy-01`~`10`(책봄 캐릭터의 묶음 · 번호 그대로 — `lib/readingCharacterCatalog.js`의 `characterOf`가 주는 `{ style, number }`), 펫 `pet-owl` · `pet-hedgehog` · `pet-chick` · `pet-otter` · `pet-fennec` · `pet-redpanda` · `pet-rabbit` · `pet-bear` · `pet-cat` · `pet-puppy`(`lib/readingPet.js`의 종 열쇠).
+- 이름: 캐릭터 `zodiac-01`~`10` · `animal-01`~`10` · `fantasy-01`~`10`(책나눔 캐릭터의 묶음 · 번호 그대로 — `lib/readingCharacterCatalog.js`의 `characterOf`가 주는 `{ style, number }`), 펫 `pet-owl` · `pet-hedgehog` · `pet-chick` · `pet-otter` · `pet-fennec` · `pet-redpanda` · `pet-rabbit` · `pet-bear` · `pet-cat` · `pet-puppy`(`lib/readingPet.js`의 종 열쇠).
 - 규격: 한 장이 **288 × 288px**, 한 칸 **96px**, 3 × 3칸.
 
   | 줄 / 칸 | 0칸 | 1칸 | 2칸 |

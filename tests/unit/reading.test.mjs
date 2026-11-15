@@ -16,7 +16,7 @@ const review = (state, bookId = "book1", extra = {}) => applyReadingAction(state
 }, context(`review-${bookId}`));
 
 // UI gating must be strict even before settings arrive.
-test("책나눔은 명시적으로 켠 운영 반에서만 활성화", () => {
+test("책 봄은 명시적으로 켠 운영 반에서만 활성화", () => {
   for (const value of [undefined, null, {}, { readingEnabled: "true" }, { readingEnabled: false }, { readingEnabled: true, archived: true }]) assert.equal(readingEnabled(value), false);
   assert.equal(readingEnabled({ readingEnabled: true }), true);
 });
@@ -309,7 +309,7 @@ test("관리자 설정은 선생님의 모든 반에 한 값 — 도서 검색 �
   const { bookSearchEnabled, teacherFeatureSettings, featuresForNewClass } = await import("@/lib/reading");
   assert.equal(bookSearchEnabled({ readingEnabled: true, bookSearchEnabled: true }), true);
   assert.equal(bookSearchEnabled({ readingEnabled: true }), false); // 기본 꺼짐
-  assert.equal(bookSearchEnabled({ readingEnabled: false, bookSearchEnabled: true }), false); // 책나눔이 꺼지면 함께
+  assert.equal(bookSearchEnabled({ readingEnabled: false, bookSearchEnabled: true }), false); // 책 봄이 꺼지면 함께
   assert.equal(bookSearchEnabled({ readingEnabled: true, bookSearchEnabled: true, archived: true }), false);
   const classes = [
     { id: "a", readingEnabled: true, bookSearchEnabled: true },
@@ -364,11 +364,11 @@ test("새 반은 운영 중인 반의 독서 맵을 따르고 보관된 반·혼
   assert.equal(featuresForNewClass([{ archived: true, readingMapTheme: "continent" }]), null);
 });
 
-test("독서 TOP 3 스위치(readingTopOn) — 책나눔이 켜지고 끄지 않았을 때만 · 리더보드 스위치와는 따로(선생님 요청)", async () => {
+test("독서 TOP 3 스위치(readingTopOn) — 책 봄이 켜지고 끄지 않았을 때만 · 리더보드 스위치와는 따로(선생님 요청)", async () => {
   const { readingTopOn, rankingEnabled } = await import("@/lib/reading");
   assert.equal(readingTopOn({ readingEnabled: true }), true); // 값이 없으면 켜짐
   assert.equal(readingTopOn({ readingEnabled: true, readingTopEnabled: false }), false);
-  assert.equal(readingTopOn({ readingEnabled: false, readingTopEnabled: true }), false); // 책나눔이 꺼지면 함께
+  assert.equal(readingTopOn({ readingEnabled: false, readingTopEnabled: true }), false); // 책 봄이 꺼지면 함께
   assert.equal(readingTopOn({ readingEnabled: true, archived: true }), false);
   assert.equal(readingTopOn(null), false);
   // 리더보드를 꺼도 TOP 3는 그대로, TOP 3를 꺼도 리더보드는 그대로

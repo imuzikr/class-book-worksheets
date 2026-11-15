@@ -1,5 +1,5 @@
 /* =============================================================
-   독서 펫 — 그림(PetFigure) · 책나눔 '나의 펫' 카드(PetCard) · 자세히 보기 · 깨어남/자람 축하 ·
+   독서 펫 — 그림(PetFigure) · 책 봄 '나의 펫' 카드(PetCard) · 자세히 보기 · 깨어남/자람 축하 ·
    리더보드(랭킹 줄 · 내 여정 · 학생 창 · 독서 맵)와 '내 프로필'의 펫 자리
    셈은 lib/readingPet.js. 클래스 이름은 모두 pet- 또는 reading-pet으로 시작합니다(겹치지 않게).
    ============================================================= */
@@ -16,7 +16,7 @@
 .pet-bar { display:block; height:6px; border-radius:999px; background:#e9e2d2; overflow:hidden; }
 .pet-bar i { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#f2bd84,#e3905c); transition:width .6s ease; }
 
-/* ── 책나눔 머리말 — 대표 뱃지와 나란히 ── */
+/* ── 책 봄 머리말 — 대표 뱃지와 나란히 ── */
 .reading-intro-side { display:flex; align-items:center; justify-content:flex-end; gap:12px; flex-wrap:wrap; flex-shrink:0; }
 .reading-pet { display:flex; align-items:center; gap:10px; padding:6px 12px 6px 6px; background:#ffffff91; border:1px solid #d8e5db; border-radius:14px; }
 .reading-pet.is-ready { border-color:#f0b47a; background:#fff8ee; }
@@ -31,7 +31,7 @@
 /* 좁은 화면에서는 대표 뱃지가 숨으므로(reading.css 900px) 펫 카드가 머리말 아래 줄로 내려갑니다 */
 @media (max-width:900px) { .reading-intro { flex-wrap:wrap; } .reading-intro-side { width:100%; justify-content:flex-start; } }
 
-/* 펫 자세히 보기 창은 책나눔의 창(.reading-modal-backdrop — 1200)보다 한 층 위입니다(알림 줄 1300 아래).
+/* 펫 자세히 보기 창은 책 봄의 창(.reading-modal-backdrop — 1200)보다 한 층 위입니다(알림 줄 1300 아래).
    한때 '자랐어요!' 축하도 이 층의 창이었는데, 지금은 창이 아니라 폭죽입니다(아래 '깨어남 · 자람 축하'). */
 .modal-backdrop.pet-layer { z-index:1250; }
 
@@ -288,7 +288,7 @@
   .pet-welcome-egg .pet-figure { width:172px !important; height:172px !important; }
   .pet-welcome h3 { font-size:21px; }
 }
-/* 책나눔 '나의 펫' 카드 옆의 '펫 고르기'(펫 미리보기를 켠 반) · 자세히 보기의 미리보기 칸 */
+/* 책 봄 '나의 펫' 카드 옆의 '펫 고르기'(펫 미리보기를 켠 반) · 자세히 보기의 미리보기 칸 */
 .reading-pet-pick { padding:7px 11px; font-size:12.5px; white-space:nowrap; }
 .pet-modal-preview { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:11px 14px; border-radius:12px; border:1px dashed #e3b48f; background:#fffaf4; }
 .pet-modal-preview p { margin:0; flex:1 1 220px; font-size:12.5px; color:var(--text-sub); line-height:1.5; word-break:keep-all; }

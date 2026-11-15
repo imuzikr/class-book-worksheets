@@ -534,7 +534,7 @@ test("반을 완전히 지울 때 — 담당 교사만 그 반의 실시간 자�
   await assert.rejects(() => clear("other"), (e) => e.code === "reading/forbidden");
   await assert.rejects(() => clear("teacher", "plv-no-such-class"), (e) => e.code === "reading/forbidden");
   assert.ok((await tree()).who[ids.a]);
-  // 완전 삭제는 보관된 반에서 합니다 — 보관되고 광장을 끈 뒤에도 걷힌다(책나눔 접근 판정을 거치지 않음)
+  // 완전 삭제는 보관된 반에서 합니다 — 보관되고 광장을 끈 뒤에도 걷힌다(책 봄 접근 판정을 거치지 않음)
   await db.doc(`classes/${CLASS}`).update({ archived: true, plazaEnabled: false });
   try {
     assert.deepEqual(await clear("teacher"), { cleared: true });

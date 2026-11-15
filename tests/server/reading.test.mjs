@@ -112,7 +112,7 @@ test("idempotent retry returns current state after later edits", async () => {
   assert.equal(retried.state.logs[0].endPage, 20);
 });
 
-// 리더보드 스위치(관리자 설정)는 상단바 리더보드 화면만 켜고 끕니다 — 순위는 책나눔과 함께 늘 돌아, 꺼도 책나눔의
+// 리더보드 스위치(관리자 설정)는 상단바 리더보드 화면만 켜고 끕니다 — 순위는 책 봄과 함께 늘 돌아, 꺼도 책 봄의
 // '우리 반 랭킹' 탭이 같은 순위를 받고, 독서 TOP 3는 제 스위치(readingTopEnabled)를 따릅니다(선생님 요청).
 test("leaderboard switch off keeps rankings and TOP 3; the TOP 3 switch blocks only TOP 3 (admin settings)", async () => {
   const on = (await rankingsNow(principal("student"), "api-class", "weekly")).rankings;
@@ -374,9 +374,9 @@ test("독서 TOP 3 — 한 주에 한 번 셈해 적어 두고, 그 주에는 �
   await assert.rejects(() => getReadingTop(principal("teacher"), "api-top", { refresh: true }), (e) => e.code === "reading/top-disabled");
 });
 
-// 책나눔 상태 — 서재(독서 기록) 한 장으로만 셉니다. 반 집계 · 과일 지급 이력을 읽지도 고쳐 적지도 않습니다
+// 책 봄 상태 — 서재(독서 기록) 한 장으로만 셉니다. 반 집계 · 과일 지급 이력을 읽지도 고쳐 적지도 않습니다
 // (한때 과일 경험치 때문에 둘 다 읽고, 다르면 집계를 고쳐 적었습니다).
-test("책나눔 상태 — 서재만으로 셈하고 반 집계는 건드리지 않음 · 교사가 보는 학생 책나눔도 같은 값", async () => {
+test("책 봄 상태 — 서재만으로 셈하고 반 집계는 건드리지 않음 · 교사가 보는 학생 책 봄도 같은 값", async () => {
   const memberRef = db.doc(`classes/api-class/readingMembers/${ids.student}`);
   const kept = (await memberRef.get()).data();
   await memberRef.set({ ...kept, sentinel: "그대로" });
@@ -440,7 +440,7 @@ test("사용 중지 — 리더보드 · TOP 3에서 빠지고, 옛 TOP 3 장은 
   await assert.rejects(() => getReadingTop(studentC, "api-susp", { refresh: true }), (e) => e.status === 403 && e.code === "reading/forbidden");
   await assert.rejects(() => getReadingTop(principal("other"), "api-susp", { refresh: true }), (e) => e.status === 403);
   assert.deepEqual(uids((await getReadingTop(principal("admin"), "api-susp", { refresh: true })).rows), ["su-a", "su-c", "su-d"]);
-  // 사용 중지된 학생 본인은 책나눔 API를 못 씀(그대로)
+  // 사용 중지된 학생 본인은 책 봄 API를 못 씀(그대로)
   await assert.rejects(() => getReadingTop({ uid: "su-b", roleClaim: null, db }, "api-susp"), (e) => e.status === 403 && e.code === "reading/suspended");
 });
 

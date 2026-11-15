@@ -96,7 +96,7 @@ function DashboardSession({ user }) {
   // 페이지 이름 — 교사는 '관리자 대시보드', 학생은 '나의 독서 기록'. Next가 메타데이터의
   // 제목을 뒤늦게 다시 적으므로(실측) head가 바뀔 때마다 되돌려 둡니다.
   useEffect(() => {
-    const want = (teacher ? "관리자 대시보드" : "나의 독서 기록") + " | 책봄";
+    const want = (teacher ? "관리자 대시보드" : "나의 독서 기록") + " | 책나눔";
     const apply = () => { if (document.title !== want) document.title = want; };
     apply();
     const observer = new MutationObserver(apply);
@@ -200,7 +200,7 @@ function DashboardSession({ user }) {
       <div className="bb-dash-two-columns bb-dash-align-start"><Reflections data={reflections} /><Feedback rows={asArray(data.feedback)} /></div>
       <StudentPortfolio activities={asArray(data.studentActivities)} />
     </>}
-    {(!teacher || tab === "class") && !readingEnabled && <p className="bb-dash-feature-off">이 반은 책나눔을 사용하지 않아 책방의 독서 활동 기록을 보여줍니다.</p>}
+    {(!teacher || tab === "class") && !readingEnabled && <p className="bb-dash-feature-off">이 반은 책 봄을 사용하지 않아 책방의 독서 활동 기록을 보여줍니다.</p>}
     <footer className="bb-dash-footer"><span>독서 기록을 고치면 집계도 함께 달라집니다.</span>{data.generatedAt && <span>최근 조회 {new Date(data.generatedAt).toLocaleTimeString("ko-KR", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit" })}</span>}</footer>
   </>;
 

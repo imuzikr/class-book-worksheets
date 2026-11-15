@@ -266,7 +266,7 @@ function BooksPageInner() {
   // 학기 전체(출석 창을 열었을 때만). 아래 효과 둘.
   const [todayRecords, setTodayRecords] = useState([]);
   const [allAttendanceRecords, setAllAttendanceRecords] = useState(null);
-  // 책 나눔에는 공부방이 없어, 공부방 머리말에 있던 창들을 여기서 엽니다 —
+  // 책나눔에는 공부방이 없어, 공부방 머리말에 있던 창들을 여기서 엽니다 —
   // 반 관리하기 · 자리/모둠 · 출석 · 과일 바구니.
   // 떠 있는 동그라미(FloatingHub)는 `/books?open=…`으로 엽니다(아래).
   const [classManagerOpen, setClassManagerOpen] = useState(false);
@@ -348,25 +348,25 @@ function BooksPageInner() {
   const classId = admin ? teacherClassId : studentClassId;
   const currentClass = (admin ? myClassesAll : classes).find((c) => c.id === classId) ?? null;
   // 선생님의 '모두 이동' — 반 문서의 신호를 한 곳(lib/classroomMoveStore.js)에 먹이고, 거기서 '세는 중 → 내놓음'을 봅니다.
-  // 상단바도 같은 문서를 먹입니다(같은 신호는 한 번만 셈). 무대 · 책나눔 틀에는 **다 센 뒤의 신호**만 넘깁니다.
+  // 상단바도 같은 문서를 먹입니다(같은 신호는 한 번만 셈). 무대 · 책 봄 틀에는 **다 센 뒤의 신호**만 넘깁니다.
   useEffect(() => watchClassroomMove(classId), [classId]);
   useEffect(() => { feedClassroomMove(classId, currentClass); }, [classId, currentClass]);
   const classMove = useClassroomMove(classId);
   // 무대가 따를 신호 — 다 센 뒤에 내놓인 것(반 문서를 막 받아 아직 먹이기 전이면 그 문서의 값을 '이미 있던 신호'로 —
   // lib/classroomMove.js의 classroomMoveShown)
   const moveShown = classroomMoveShown(classMove, currentClass);
-  // 다 세고 모두를 데려오는 신호의 '보낸 때' — 책나눔의 다른 탭(책꽂이 · 성장 · 선생님의 학생 명단)에 있던 화면이
+  // 다 세고 모두를 데려오는 신호의 '보낸 때' — 책 봄의 다른 탭(책꽂이 · 성장 · 선생님의 학생 명단)에 있던 화면이
   // 이 값이 바뀌는 것을 보고 책 광장 탭으로 넘어갑니다(ReadingHub · TeacherReadingView).
   const plazaCall = moveShown?.pull ? moveShown.at : 0;
   const growthEnabled = readingEnabled(currentClass);
   const readingOpen = growthEnabled && !openActivityId && searchParams.get("area") === "reading";
-  // 리더보드 — 책나눔의 경험치 · 뱃지를 '독서 여정'으로(상단바 '리더보드')
+  // 리더보드 — 책 봄의 경험치 · 뱃지를 '독서 여정'으로(상단바 '리더보드')
   const rankingOn = rankingEnabled(currentClass);
   // 학생 캐릭터 고르기(관리자 설정) — 값이 없으면 켜짐
   const characterOn = characterChoiceEnabled(currentClass);
-  // 학생 펫(관리자 설정 — 값이 없으면 켜짐, lib/readingPet.js) — 책나눔의 '나의 펫' · 리더보드의 펫
+  // 학생 펫(관리자 설정 — 값이 없으면 켜짐, lib/readingPet.js) — 책 봄의 '나의 펫' · 리더보드의 펫
   const petOn = petEnabled(currentClass);
-  // 펫 미리보기(관리자 설정 — 기본 꺼짐) — 켠 반의 학생은 책나눔의 '나의 펫'에서 키울 펫을 고릅니다
+  // 펫 미리보기(관리자 설정 — 기본 꺼짐) — 켠 반의 학생은 책 봄의 '나의 펫'에서 키울 펫을 고릅니다
   const petPreview = petPreviewOn(currentClass);
   // 펫 먹이(관리자 설정 — 기본 꺼짐, lib/petCare.js) — 그 반의 규칙(켠 날 · 쉬는 기간 · 꺼 둔 기간). 내용이 같으면 같은 객체로
   // 넘겨, 반 문서의 다른 칸이 바뀔 때마다 펫 카드가 배부름을 다시 세지 않게 합니다. 끈 반이면 on이 거짓.
@@ -426,7 +426,7 @@ function BooksPageInner() {
   // 왼쪽 '오늘' 패널 — 오늘 이 반이 어떻게 움직였는지(출석·성찰·과일)를
   // 활동을 하는 동안에도 볼 수 있게 놓습니다. 출석은 아래에서 구독합니다.
 
-  // 학생: 내 과일 수 — 과일 바구니 창을 열었을 때, 그리고 펫 먹이를 켠 반의 책나눔을 연 동안(펫에게 줄 과일 —
+  // 학생: 내 과일 수 — 과일 바구니 창을 열었을 때, 그리고 펫 먹이를 켠 반의 책 봄을 연 동안(펫에게 줄 과일 —
   // 문서 1건. 상단바의 과일 뱃지가 같은 질의를 이미 듣고 있어 읽기가 늘지 않습니다).
   const needMyFruit = fruitBasketOpen || (readingOpen && petFeed.on);
   useEffect(() => {
@@ -868,7 +868,7 @@ function BooksPageInner() {
         </aside>
       )}
       {!isFirebaseConfigured && <aside className="demo-classroom-notice" aria-label="체험 데이터 안내">
-        <div><strong>책봄 체험반 · 학생 15명</strong><span>11가지 독서 활동과 학생별 책꽂이의 책 1~2권이 준비되어 있어요. 상단에서 체험 학생을 골라 볼 수 있어요.</span>
+        <div><strong>책나눔 체험반 · 학생 15명</strong><span>11가지 독서 활동과 학생별 책꽂이의 책 1~2권이 준비되어 있어요. 상단에서 체험 학생을 골라 볼 수 있어요.</span>
           <small>{sampleMode
             ? "모두 가상의 기록입니다. 이 체험용 샘플 반에서 한 일은 어디에도 저장되지 않고, 새로고침하면 처음으로 돌아가요. 상단의 '샘플 반 나가기'로 실제 반에 돌아갑니다."
             : "모두 가상의 기록입니다. 활동·독서 기록을 수정한 내용은 새로고침하면 샘플로 돌아가고, 반 설정은 유지됩니다."}</small></div>
@@ -1133,7 +1133,7 @@ function BooksPageInner() {
             <PageTagline />
             <div className="books-head-main">
               <h1>
-                {settingsOpen ? <IconSettings size={26} /> : leaderboardOpen ? <IconTrophy size={26} /> : <IconBook size={26} />} {settingsOpen ? "관리자 설정" : leaderboardOpen ? "리더보드" : readingOpen ? "책나눔" : "책방"}
+                {settingsOpen ? <IconSettings size={26} /> : leaderboardOpen ? <IconTrophy size={26} /> : <IconBook size={26} />} {settingsOpen ? "관리자 설정" : leaderboardOpen ? "리더보드" : readingOpen ? "책 봄" : "책방"}
               </h1>
               {admin && myClasses.length > 0 && (
                 <select
@@ -1428,7 +1428,7 @@ function BooksPageInner() {
 // 예전에는 '종류 그리드 → 그 종류의 목록' 두 화면이었는데, 가운데 화면이
 // 하는 일이 종류를 고르는 것뿐이라 만들기 창의 종류 고르기와 겹쳤습니다.
 // 종류는 카드마다 적혀 있으니 목록을 나눌 이유가 없습니다.
-// 책 나눔에는 공부방 프로젝트가 없습니다 — '오늘' 패널에 빈 목록을 넘깁니다(렌더마다 새 [] 대신)
+// 책나눔에는 공부방 프로젝트가 없습니다 — '오늘' 패널에 빈 목록을 넘깁니다(렌더마다 새 [] 대신)
 
 function ActivityList({
   activities,

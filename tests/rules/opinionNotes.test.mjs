@@ -102,7 +102,7 @@ describe("내 생각은요 메모 규칙", () => {
     await assertFails(setDoc(ref(db, "act1", "fake2"), note("stu1")));
   });
 
-  it("익명 · 닉네임 메모는 못 붙인다(책봄은 늘 실명) — 학번을 비우거나 real을 빼도", async () => {
+  it("익명 · 닉네임 메모는 못 붙인다(책나눔은 늘 실명) — 학번을 비우거나 real을 빼도", async () => {
     const db = asStudent(env, "stu2").firestore();
     await assertFails(
       setDoc(ref(db, "act1", "anon1"), note("stu2", { authorName: "용감한 수달", authorEmoji: "🦦", studentId: null, anon: true, real: false }))

@@ -3,7 +3,7 @@
 // =============================================================
 // 공통 상단 내비게이션
 // -------------------------------------------------------------
-// 왼쪽: 책봄 로고 ｜ 책방 · 책나눔(관리자 설정에서 켰을 때)
+// 왼쪽: 책나눔 로고 ｜ 책방 · 책 봄(관리자 설정에서 켰을 때)
 // 오른쪽: 역할 전환(개발용) ｜ 돌발 퀴즈 ｜ 손들기 ｜ 공지 ｜ 알림 ｜ 사용자 프로필(로그아웃은 그 메뉴 안)
 // =============================================================
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -157,14 +157,14 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
     return subscribeBroadcast(broadcastClassId, setBroadcast);
   }, [broadcastClassId]);
 
-  // 학생 캐릭터 — 프로필 동그라미의 얼굴과 '내 프로필'의 '바꾸기'. 책나눔 · 학생 캐릭터가 켜진 반에서
+  // 학생 캐릭터 — 프로필 동그라미의 얼굴과 '내 프로필'의 '바꾸기'. 책 봄 · 학생 캐릭터가 켜진 반에서
   // (리더보드는 안 봄 — 선생님 요청: 리더보드는 보이는 화면만 켜고 끄고, 캐릭터는 꺼 둔 동안에도 그대로).
   // 반 문서 1건 · 내 프로필 1건을 구독합니다(학생만).
   const myUid = user?.uid;
   const [characterOn, setCharacterOn] = useState(false);
   // 과일 바구니 — 관리자 설정에서 끄면 떠 있는 동그라미의 '과일 바구니'를 가립니다(교사 · 학생 모두).
   const [fruitOn, setFruitOn] = useState(true);
-  // 상단바 가운데 '독서 TOP 3' — 책나눔 성장 기능이 켜지고 관리자 설정의 '독서 TOP 3'를 끄지 않은 반에서만
+  // 상단바 가운데 '독서 TOP 3' — 책 봄 성장 기능이 켜지고 관리자 설정의 '독서 TOP 3'를 끄지 않은 반에서만
   // (리더보드 스위치와는 따로 — 선생님 요청, lib/reading.js의 readingTopOn)
   const [topOn, setTopOn] = useState(false);
   // TOP 3에 고른 캐릭터를 그릴지(교사 · 학생 모두) — 반이 캐릭터를 끄면 기본 캐릭터로
@@ -204,7 +204,7 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
   // 알 받기 — 가입한 학생(또는 이 기능이 생긴 뒤 처음 온 학생)에게 알을 한 번 줍니다. 종은 서버가
   // 무작위로 고르고 알 단계 동안 비밀입니다(/api/reading/pet). 내 프로필의 펫(readingPet)을 구독해
   // **서버에서 확인된 답이 '없음'일 때만** 부릅니다(기기에 남은 옛 값 · 아직 안 온 첫 답으로 부르지 않게).
-  // 책나눔의 펫 카드도 같은 약속(ensureReadingPet)을 나눠 가져 요청은 한 번입니다.
+  // 책 봄의 펫 카드도 같은 약속(ensureReadingPet)을 나눠 가져 요청은 한 번입니다.
   const [myPet, setMyPet] = useState({ loaded: false, mirror: null, fromCache: false, failed: false });
   useEffect(() => {
     setMyPet({ loaded: false, mirror: null, fromCache: false, failed: false });
@@ -237,13 +237,13 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
     if (welcomePending(myUid, quizClassId)) return;
     ensureReadingPet(quizClassId, myUid).catch((e) => console.warn("[독서 펫] 알을 받지 못했어요:", e?.code || e?.message));
   }, [needsEgg, quizClassId, myUid]);
-  // 새로 받은 순간 — 누가 불렀든(이 상단바 · 책나눔의 펫 카드) 한 번 알립니다(lib/data/reading.js의 ensureReadingPet).
+  // 새로 받은 순간 — 누가 불렀든(이 상단바 · 책 봄의 펫 카드) 한 번 알립니다(lib/data/reading.js의 ensureReadingPet).
   // 첫 만남 중이면 큰 알 화면이 알리므로 한 줄 알림은 띄우지 않습니다.
   useEffect(() => {
     if (admin || !myUid) return undefined;
     const onAdopted = (e) => {
       if (e.detail?.uid !== myUid || welcomeActiveRef.current) return;
-      setPetToast("🥚 책 친구 알을 받았어요! 책나눔에서 만나 보세요.");
+      setPetToast("🥚 책 친구 알을 받았어요! 책 봄에서 만나 보세요.");
     };
     window.addEventListener(READING_PET_EVENT, onAdopted);
     return () => window.removeEventListener(READING_PET_EVENT, onAdopted);
@@ -367,8 +367,8 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
       <div className="topbar-left">
         {/* 로고 = '처음으로'. 첫 화면이 공부방이 되었으므로 여기도 공부방으로
             갑니다 — 로고만 질문방으로 가면 '처음'이 두 곳이 됩니다. */}
-        <button className="logo logo-button" onClick={() => go("/books")} aria-label="책봄 홈">
-          <IconLogo size={30} /> 책봄
+        <button className="logo logo-button" onClick={() => go("/books")} aria-label="책나눔 홈">
+          <IconLogo size={30} /> 책나눔
         </button>
         <span className="topbar-divider" aria-hidden="true" />
         <nav className="topnav-menu" aria-label="주요 메뉴">
@@ -381,10 +381,10 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
           {growthEnabled && <button type="button"
             className={`btn-ghost ${readingOpen ? "nav-active" : ""}`}
             aria-current={readingOpen ? "page" : undefined}
-            onClick={() => go("/books?area=reading")} title="책나눔">
-            <IconBook size={20} /> <span className="nav-label">책나눔</span>
+            onClick={() => go("/books?area=reading")} title="책 봄">
+            <IconBook size={20} /> <span className="nav-label">책 봄</span>
           </button>}
-          {/* 리더보드 — 책나눔이 켜지고 관리자 설정에서 리더보드를 끄지 않은 반에만 섭니다 */}
+          {/* 리더보드 — 책 봄이 켜지고 관리자 설정에서 리더보드를 끄지 않은 반에만 섭니다 */}
           {growthEnabled && rankingOn && <button type="button"
             className={`btn-ghost ${leaderboardOpen ? "nav-active" : ""}`}
             aria-current={leaderboardOpen ? "page" : undefined}
@@ -451,7 +451,7 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
 
           지금은 **반별 독서 TOP 3**(ClassTopReaders — 선생님 요청)입니다. 한때
           학교 전체에 하나인 전광판(meta/marquee, AppMarquee)이 섰는데 걷었습니다.
-          책나눔이 꺼졌거나 독서 TOP 3를 끈 반에서는 빈 칸만 남습니다. */}
+          책 봄이 꺼졌거나 독서 TOP 3를 끈 반에서는 빈 칸만 남습니다. */}
       <div className="topbar-mq-slot">
         <ClassTopReaders classId={quizClassId} enabled={topOn} charactersOn={topCharacters} myUid={myUid} myCharacter={myCharacter} />
       </div>

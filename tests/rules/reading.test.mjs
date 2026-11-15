@@ -1,11 +1,11 @@
-// 책나눔: 기본 비활성, 교사 설정 권한, 서버 전용 보상·랭킹 자료.
+// 책 봄: 기본 비활성, 교사 설정 권한, 서버 전용 보상·랭킹 자료.
 import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { assertFails, assertSucceeds } from "@firebase/rules-unit-testing";
 import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, setDoc, updateDoc, writeBatch } from "firebase/firestore";
 import { makeEnv, asStudent, asTeacher, asAdmin, seed } from "./helpers.mjs";
 
-describe("책나눔 활성화와 서버 전용 보상 자료", () => {
+describe("책 봄 활성화와 서버 전용 보상 자료", () => {
   let env;
   before(async () => { env = await makeEnv("demo-rules-reading"); });
   after(async () => { await env?.cleanup(); });

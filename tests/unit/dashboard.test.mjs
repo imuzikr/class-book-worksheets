@@ -171,7 +171,7 @@ test("교사 결과에는 개인 원문·타반 도서·명단 밖 사용자 자
   assert.equal(data.reading.summary.pages, 10);
 });
 
-test("책나눔 OFF는 성장만 제거하고 수업 활동과 성찰을 유지한다", () => {
+test("책 봄 OFF는 성장만 제거하고 수업 활동과 성찰을 유지한다", () => {
   const source = demo({ classDoc: { ...classroom.classDoc, readingEnabled: false } });
   Object.defineProperty(source, "readingStates", { get() { throw new Error("OFF 상태에서 원본 서재를 읽으면 안 됨"); } });
   const result = buildDashboardData(source, { ...fullRange, activityId: DEMO_ACTIVITY_IDS.kwls });

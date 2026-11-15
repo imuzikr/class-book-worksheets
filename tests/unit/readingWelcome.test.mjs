@@ -103,7 +103,7 @@ test("단계 — 반이 쓰지 않는 것 · 이미 있는 것은 건너뛴다",
   assert.equal(welcomeStep(w, { ...fresh, petOn: false }), "character", "펫을 끈 반은 캐릭터만");
   assert.equal(welcomeStep({ ...w, character: true }, { ...fresh, petOn: false, petLoaded: false }), "done");
   assert.equal(welcomeStep(w, { ...fresh, hasCharacter: true, hasPet: true }), "done", "다른 반에서 이미 고른 학생");
-  assert.equal(welcomeStep(w, { ...fresh, characterOn: false, petOn: false }), "done", "책나눔을 끈 반");
+  assert.equal(welcomeStep(w, { ...fresh, characterOn: false, petOn: false }), "done", "책 봄을 끈 반");
 });
 
 test("단계 — 이 반의 표시가 아니면 첫 만남이 아니다", () => {

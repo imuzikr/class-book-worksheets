@@ -349,7 +349,7 @@
 .reading-review .reading-text-danger { margin-top:10px; }
 .reading-detail-tools { gap:8px; }
 
-/* 교사의 책나눔 — 왼쪽 학생 명단 · 오른쪽 고른 학생의 책나눔(TeacherReadingView) */
+/* 교사의 책 봄 — 왼쪽 학생 명단 · 오른쪽 고른 학생의 책 봄(TeacherReadingView) */
 .reading-teacher { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 18px; align-items: start; }
 .reading-teacher-rail { position: sticky; top: 72px; max-height: calc(100vh - 96px); overflow-y: auto; background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 12px; }
 .reading-teacher-rail h3 { margin: 2px 4px 10px; font-size: 14px; color: var(--text-sub); display: flex; gap: 6px; align-items: baseline; }

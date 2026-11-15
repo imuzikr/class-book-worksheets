@@ -121,7 +121,7 @@ describe("독서 펫 — 프로필의 펫과 비밀 문서", () => {
     // 켤 때 — 스위치와 켠 때를 한 번에(lib/data/classes.js의 featureWrite). 켠 때는 서버 시각만
     await assertSucceeds(updateDoc(c1, { petFeedEnabled: true, petFeedFrom: serverTimestamp() }));
     await assertSucceeds(updateDoc(c1, { petFeedEnabled: false }));
-    // 켠 때를 학생 펫 · 책나눔과 함께 적어도 서버 시각만
+    // 켠 때를 학생 펫 · 책 봄과 함께 적어도 서버 시각만
     await assertSucceeds(updateDoc(c1, { readingEnabled: true, petFeedFrom: serverTimestamp() }));
     await assertFails(updateDoc(c1, { petEnabled: true, petFeedFrom: Date.now() }));
     await assertFails(updateDoc(c1, { petFeedEnabled: "true" }));
@@ -241,7 +241,7 @@ describe("독서 펫 — 프로필의 펫과 비밀 문서", () => {
     await assertFails(make({ rankingEnabled: 1 }));
     await assertFails(make({ classroomCallAt: -1 }));
     await assertFails(make({ readingMapTheme: "space" }));
-    // 새 반은 기본 꺼짐 — 책나눔을 켠 채로는 못 만듦(지금까지 그대로)
+    // 새 반은 기본 꺼짐 — 책 봄을 켠 채로는 못 만듦(지금까지 그대로)
     await assertFails(make({ readingEnabled: true }));
   });
 });

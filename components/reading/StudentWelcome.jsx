@@ -45,7 +45,7 @@ export default function StudentWelcome({ uid, classId, welcome, state, previewOn
     if (computed === "pet" && pet === null) setPet(previewOn ? "choose" : "receiving");
   }, [computed, pet, previewOn]);
 
-  // 물을 것이 없으면(다른 반에서 이미 고른 학생 · 책나눔을 끈 반) 창 없이 표시만 지웁니다
+  // 물을 것이 없으면(다른 반에서 이미 고른 학생 · 책 봄을 끈 반) 창 없이 표시만 지웁니다
   useEffect(() => {
     if (computed === "done" && pet === null && !egg) clearWelcome(uid);
   }, [computed, pet, egg, uid]);
@@ -101,7 +101,7 @@ export default function StudentWelcome({ uid, classId, welcome, state, previewOn
         row={characterRow}
         eyebrow="반에 들어왔어요!"
         title="함께 걸을 캐릭터를 골라요"
-        lead="책나눔 · 리더보드 · 책 광장에서 나를 대신할 캐릭터예요. 나중에 ‘내 프로필’에서 언제든 바꿀 수 있어요."
+        lead="책 봄 · 리더보드 · 책 광장에서 나를 대신할 캐릭터예요. 나중에 ‘내 프로필’에서 언제든 바꿀 수 있어요."
         cancelLabel="나중에 고를게요"
         onClose={() => patchWelcome(uid, { character: true })}
         onSave={saveCharacter}
@@ -152,17 +152,17 @@ function WelcomeEgg({ status, species, previewOn, onRetry, onClose, onMeet }) {
         {ready && sp && <p className="pet-welcome-friend"><b>{sp.name}</b> · {sp.animal} — {sp.intro}</p>}
         {!failed && (
           <p className="pet-welcome-how">
-            책을 읽고 독서 발자국을 남길수록 알이 따뜻해져요. 펫 경험치 {PET_HATCH_XP}이 모이면 책나눔에서 알을 깨울 수 있어요.
+            책을 읽고 독서 발자국을 남길수록 알이 따뜻해져요. 펫 경험치 {PET_HATCH_XP}이 모이면 책 봄에서 알을 깨울 수 있어요.
           </p>
         )}
         {ready && (sp
           ? <p className="pet-welcome-note">반 친구들에게는 깨어날 때까지 ‘신비한 알’로 보여요.</p>
-          : previewOn && <p className="pet-welcome-note">알일 때는 책나눔의 ‘펫 미리보기’에서 깨어날 친구를 고를 수도 있어요.</p>)}
+          : previewOn && <p className="pet-welcome-note">알일 때는 책 봄의 ‘펫 미리보기’에서 깨어날 친구를 고를 수도 있어요.</p>)}
         <div className="modal-actions">
           <button type="button" className="btn-ghost" onClick={close} disabled={status === "receiving"}>닫기</button>
           {failed
             ? <button type="button" className="btn-primary" onClick={onRetry}>다시 받기</button>
-            : <button type="button" className="btn-primary" onClick={onMeet} disabled={!ready}>책나눔에서 만나기</button>}
+            : <button type="button" className="btn-primary" onClick={onMeet} disabled={!ready}>책 봄에서 만나기</button>}
         </div>
       </div>
     </div>,

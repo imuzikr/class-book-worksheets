@@ -1,6 +1,6 @@
 "use client";
 // =============================================================
-// 교사의 책나눔 — 왼쪽 반 학생 명단 · 오른쪽 고른 학생의 책나눔(읽기 전용)
+// 교사의 책 봄 — 왼쪽 반 학생 명단 · 오른쪽 고른 학생의 책 봄(읽기 전용)
 // 선생님 결정: 책꽂이(한때 이름이 '서재') · 독서 발자국 · 한 권의 책(감상)까지 전부 보입니다.
 // 읽기는 /api/reading?uid= — 서버가 담당 교사 · 관리자이고 그 학생이 이 반
 // 소속인지 확인합니다(lib/server/readingService.js의 getReading).
@@ -163,7 +163,7 @@ export default function TeacherReadingView({ classId, user, roster = [], student
               <IconAnswer size={17} /><span>댓글 이력</span><small>책 광장 · 고친 글 · 지운 글까지</small>
             </button>
           )} />
-          : <div className="reading-empty"><h3>학생을 기다리고 있어요.</h3><p>학생이 참여 코드로 들어오면 이곳에서 학생마다의 책나눔을 볼 수 있어요.{plazaOn ? " 책 광장은 지금도 ‘책 광장 들어가기’로 둘러볼 수 있어요." : ""}</p></div>}
+          : <div className="reading-empty"><h3>학생을 기다리고 있어요.</h3><p>학생이 참여 코드로 들어오면 이곳에서 학생마다의 책 봄을 볼 수 있어요.{plazaOn ? " 책 광장은 지금도 ‘책 광장 들어가기’로 둘러볼 수 있어요." : ""}</p></div>}
       </div>
       {historyFor && (
         <HistoryCloseContext.Provider value={closeHistory}>

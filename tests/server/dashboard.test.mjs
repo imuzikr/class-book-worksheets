@@ -42,8 +42,8 @@ function stateFor(uid, definition) {
 }
 
 const aliceState = stateFor(ids.alice, (run) => {
-  run({ type: "addBook", title: "두 반에서 함께 읽은 책", author: "책봄 시험", totalPages: 40 }, "dash-alice-shared-book", classes.own, 9);
-  run({ type: "addBook", title: "우리 반에서 완독한 책", author: "책봄 시험", totalPages: 10 }, "dash-alice-class-book", classes.own, 9);
+  run({ type: "addBook", title: "두 반에서 함께 읽은 책", author: "책나눔 시험", totalPages: 40 }, "dash-alice-shared-book", classes.own, 9);
+  run({ type: "addBook", title: "우리 반에서 완독한 책", author: "책나눔 시험", totalPages: 10 }, "dash-alice-class-book", classes.own, 9);
   run({ type: "addBook", title: "PRIVATE_OTHER_CLASS_BOOK", author: "비공개", totalPages: 20 }, "dash-alice-other-book", classes.other, 9);
   run({ type: "addLog", bookId: "dash-alice-other-book", date: day(4), startPage: 1, endPage: 20, notes: "PRIVATE_ALICE_OTHER_NOTE" }, "dash-alice-other-log", classes.other, 4);
   run({ type: "addLog", bookId: "dash-alice-class-book", date: day(3), startPage: 1, endPage: 10, notes: "PRIVATE_ALICE_CURRENT_NOTE" }, "dash-alice-class-log", classes.own, 3);
@@ -53,7 +53,7 @@ const aliceState = stateFor(ids.alice, (run) => {
   run({ type: "saveReview", bookId: "dash-alice-other-book", text: "PRIVATE_OTHER_REVIEW", rating: 3 }, "dash-alice-other-review", classes.other, 1);
 });
 const bobState = stateFor(ids.bob, (run) => {
-  run({ type: "addBook", title: "우리 반의 두 번째 책", author: "책봄 시험", totalPages: 12 }, "dash-bob-book", classes.own, 8);
+  run({ type: "addBook", title: "우리 반의 두 번째 책", author: "책나눔 시험", totalPages: 12 }, "dash-bob-book", classes.own, 8);
   run({ type: "addLog", bookId: "dash-bob-book", date: day(2), startPage: 1, endPage: 12, notes: "PRIVATE_BOB_NOTE" }, "dash-bob-log", classes.own, 2);
   run({ type: "saveReview", bookId: "dash-bob-book", text: "PRIVATE_BOB_REVIEW", rating: 5 }, "dash-bob-review", classes.own, 2);
 });
@@ -363,7 +363,7 @@ test("reading corrections and deletion immediately change dashboard totals witho
   const classId = "dash-correction-class";
   const uid = "dash-correction-student";
   const state = stateFor(uid, (run) => {
-    run({ type: "addBook", title: "정정 시험 책", author: "책봄", totalPages: 30 }, "dash-correction-book", classId, 3);
+    run({ type: "addBook", title: "정정 시험 책", author: "책나눔", totalPages: 30 }, "dash-correction-book", classId, 3);
     run({ type: "addLog", bookId: "dash-correction-book", date: day(1), startPage: 1, endPage: 30, notes: "PRIVATE_CORRECTION_NOTE" }, "dash-correction-log", classId, 1);
   });
   const batch = db.batch();

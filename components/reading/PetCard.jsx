@@ -1,10 +1,10 @@
 "use client";
 
 // =============================================================
-// 책나눔의 '나의 펫' 카드 — 머리말 오른쪽(대표 뱃지 옆)
+// 책 봄의 '나의 펫' 카드 — 머리말 오른쪽(대표 뱃지 옆)
 // -------------------------------------------------------------
 // 단계는 내 프로필의 readingPet(subscribeMyReadingPet)과 지금의 '독서로 얻은 경험치'
-// (책나눔이 이미 받은 서재 — 부르는 쪽이 growthXp로 넘김)로 셉니다(lib/readingPet.js — 읽기 0).
+// (책 봄이 이미 받은 서재 — 부르는 쪽이 growthXp로 넘김)로 셉니다(lib/readingPet.js — 읽기 0).
 // · 알: 경험치 100이 모이면 흔들리며 '알 깨우기' 단추가 섭니다 → 서버가 종을 알려 주고
 //   깨어나는 장면(PetCelebration)이 뜹니다. 그 전에는 어떤 친구인지 비밀입니다.
 // · 깨어난 펫: 단계가 오르면 '자랐어요!'가 한 번 뜹니다. 본 단계는 이 기기에 적어 둡니다
@@ -98,7 +98,7 @@ export function petCareNotice(care, mirror) {
   if (!care) return "";
   const name = petCallName(mirror);
   const hatched = !!mirror?.species;
-  if (care.away) return hatched ? `${iGa(name)} 먹이를 찾아 떠났어요. 책나눔에서 다시 불러 주세요.` : "알이 따뜻한 곳을 찾아 떠났어요. 책나눔에서 다시 불러 주세요.";
+  if (care.away) return hatched ? `${iGa(name)} 먹이를 찾아 떠났어요. 책 봄에서 다시 불러 주세요.` : "알이 따뜻한 곳을 찾아 떠났어요. 책 봄에서 다시 불러 주세요.";
   if (!care.hungry) return "";
   return hatched ? `🍊 ${name}: “${petSay(care, true)}” (배부름 ${care.full})` : `🥚 ${petSay(care, false)} (배부름 ${care.full})`;
 }
@@ -122,11 +122,11 @@ function Steps({ steps }) {
   </span>;
 }
 
-// level · onLevelCheer — 책나눔의 캐릭터 레벨. 같은 저장에서 펫이 자라며 레벨도 오르면(알을 경험치 0에서
-// 받은 학생은 둘의 기준표가 같아 늘 함께 오름) 축하 한 번에 함께 알리고, 책나눔에 그 레벨을 알려
+// level · onLevelCheer — 책 봄의 캐릭터 레벨. 같은 저장에서 펫이 자라며 레벨도 오르면(알을 경험치 0에서
+// 받은 학생은 둘의 기준표가 같아 늘 함께 오름) 축하 한 번에 함께 알리고, 책 봄에 그 레벨을 알려
 // 알림 줄이 같은 말('레벨 n 달성!')을 또 띄우지 않게 합니다.
 // feed — 그 반의 먹이 규칙(lib/readingPet.js의 petCareRules — 펫 먹이를 끈 반이면 on이 거짓) · fruits — 내가 가진 과일 수 ·
-// today — 서울 날짜(책나눔이 1분마다 다시 봄 — 자정을 넘기면 배부름이 따라 줄어듦).
+// today — 서울 날짜(책 봄이 1분마다 다시 봄 — 자정을 넘기면 배부름이 따라 줄어듦).
 // preview — 관리자 설정의 '펫 미리보기'(lib/readingPet.js의 petPreviewOn) — 켠 반이면 키울 펫을 고르는 창을 엽니다.
 export default function PetCard({ classId, uid, growthXp, level = null, onLevelCheer = null, feed = null, fruits = 0, today = null, preview = false }) {
   const [state, setState] = useState({ loaded: false, mirror: null, fromCache: false, failed: false });
@@ -237,8 +237,8 @@ export default function PetCard({ classId, uid, growthXp, level = null, onLevelC
   }
 
   // 단계가 오르면 한 번 축하합니다 — 이 기기에서 본 단계와 견줌(처음이면 적어 두기만 — petCheerKind)
-  // 이 효과는 책나눔(부모)의 레벨 알림 효과보다 먼저 돕니다(React는 자식의 효과부터) — 그래서
-  // onLevelCheer로 알린 레벨을 책나눔이 같은 차례 안에서 보고 알림 줄을 거릅니다.
+  // 이 효과는 책 봄(부모)의 레벨 알림 효과보다 먼저 돕니다(React는 자식의 효과부터) — 그래서
+  // onLevelCheer로 알린 레벨을 책 봄이 같은 차례 안에서 보고 알림 줄을 거릅니다.
   useEffect(() => {
     const before = prevLevel.current;
     if (Number.isInteger(level)) prevLevel.current = level;
@@ -298,7 +298,7 @@ export default function PetCard({ classId, uid, growthXp, level = null, onLevelC
   // 카드 옆 '펫 미리보기' — 먹이 주기 · 알 깨우기 · 다시 부르기가 서 있으면 자세히 보기의 칸으로 엽니다(카드가 넘치지 않게)
   const pickHere = preview && !frozen && !gone && !shown.ready && !(shownCare?.hungry && shown.hatched);
   const openPreview = () => { setPickError(""); setPreviewOpen(true); };
-  // 카드와 그 아래 한 줄(오류 · 고른 뒤 알림)을 한 기둥으로 — 책나눔 머리말의 줄(flex)에서 카드 옆이 아니라 아래에 섭니다
+  // 카드와 그 아래 한 줄(오류 · 고른 뒤 알림)을 한 기둥으로 — 책 봄 머리말의 줄(flex)에서 카드 옆이 아니라 아래에 섭니다
   return <>
     <div className="reading-pet-wrap">
     <div className={`reading-pet${shown.ready && !gone ? " is-ready" : ""}${gone ? " is-away" : ""}${say ? " is-hungry" : ""}`}>
@@ -504,10 +504,10 @@ export function PetProfileField({ classId, mirror }) {
     return () => { live = false; };
   }, [classId, species, baseXp]);
   const shown = progress ?? { species, stage: species ? 2 : 1, hatched: !!species, ready: false };
-  const careLine = progress?.care ? (progress.care.away ? "먹이를 찾아 떠났어요 — 책나눔에서 다시 불러 주세요" : petCareLine(progress.care, progress.hatched)) : "";
+  const careLine = progress?.care ? (progress.care.away ? "먹이를 찾아 떠났어요 — 책 봄에서 다시 불러 주세요" : petCareLine(progress.care, progress.hatched)) : "";
   const line = progress?.care?.away ? careLine : progress
     ? progress.complete ? `${petStatusLine(progress)} · 독서 여행 완성!`
-      : progress.ready ? "알이 깨어나려 해요! 책나눔에서 깨워 주세요."
+      : progress.ready ? "알이 깨어나려 해요! 책 봄에서 깨워 주세요."
         : progress.hatched ? `${petStatusLine(progress)} · 다음 단계까지 ${number(progress.toNext)} EXP`
           : petStatusLine(progress)
     : failed ? "펫 정보를 불러오지 못했어요." : "펫 정보를 불러오는 중…";

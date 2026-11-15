@@ -285,7 +285,7 @@ test("꾸며 적은 '들어온 날' — 먼 앞날을 적어도 서버는 믿지
   assert.deepEqual([back.event, back.care.away, back.care.full], ["returned", false, 60]);
 });
 
-test("처리 도중 — 펫 먹이 · 학생 펫 · 책나눔을 끄거나, 학생을 사용 중지 · 반에서 빼면 과일이 빠지지 않음", async () => {
+test("처리 도중 — 펫 먹이 · 학생 펫 · 책 봄을 끄거나, 학생을 사용 중지 · 반에서 빼면 과일이 빠지지 않음", async () => {
   const classRef = db.doc(`classes/${RACE}`);
   const memberRef = db.doc(`memberships/care-race_${RACE}`);
   const userRef = db.doc("users/care-race");
@@ -293,7 +293,7 @@ test("처리 도중 — 펫 먹이 · 학생 펫 · 책나눔을 끄거나, 학�
   const cases = [
     ["펫 먹이를 끔", () => classRef.update({ petFeedEnabled: false }), () => classRef.update({ petFeedEnabled: true }), "reading/pet-feed-disabled"],
     ["학생 펫을 끔", () => classRef.update({ petEnabled: false }), () => classRef.update({ petEnabled: true }), "reading/pet-disabled"],
-    ["책나눔을 끔", () => classRef.update({ readingEnabled: false }), () => classRef.update({ readingEnabled: true }), "reading/disabled"],
+    ["책 봄을 끔", () => classRef.update({ readingEnabled: false }), () => classRef.update({ readingEnabled: true }), "reading/disabled"],
     ["학생을 사용 중지", () => userRef.update({ suspended: true }), () => userRef.update({ suspended: false }), "reading/suspended"],
     ["반에서 뺌", () => memberRef.delete(), () => memberRef.set({ uid: "care-race", classId: RACE }), "reading/forbidden"],
   ];

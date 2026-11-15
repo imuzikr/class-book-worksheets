@@ -5,27 +5,27 @@
 // 한 줄씩 따로였음). 값은 지금처럼 반 문서마다 적습니다 — 서버 API · 규칙 · 학생 화면이
 // 반 문서를 읽기 때문입니다(setTeacherFeature가 한 묶음으로 씀). 새 반은 만들 때
 // 같은 값을 따릅니다(addClass의 features · lib/reading.js featuresForNewClass).
-//   · 책나눔 성장 기능(readingEnabled — 기본 꺼짐)
+//   · 책 봄 성장 기능(readingEnabled — 기본 꺼짐)
 //   · 도서 검색(bookSearchEnabled — 기본 꺼짐, 카카오 REST API 키가 있어야 씀. 끄면 책꽂이
 //     새 책 등록이 직접 입력만, 켜면 '도서 검색' 단추가 섬)
 //   · 리더보드(rankingEnabled — 값이 없으면 켜짐). 상단바 리더보드 화면만 켜고 끕니다(선생님 요청 — 한때 이름이
-//     '랭킹 시스템'). 경험치 · 레벨 · 순위 집계와 책나눔의 '우리 반 랭킹' 탭은 책나눔만 켜지면 늘 돕니다.
-//   · 독서 TOP 3(readingTopEnabled — 값이 없으면 켜짐, 책나눔이 켜져 있어야 씀). 상단바 가운데의 이번 주 TOP 3를
+//     '랭킹 시스템'). 경험치 · 레벨 · 순위 집계와 책 봄의 '우리 반 랭킹' 탭은 책 봄만 켜지면 늘 돕니다.
+//   · 독서 TOP 3(readingTopEnabled — 값이 없으면 켜짐, 책 봄이 켜져 있어야 씀). 상단바 가운데의 이번 주 TOP 3를
 //     보이고 숨깁니다(선생님 요청 — 한때 리더보드 스위치를 함께 따랐음 · 판정 lib/reading.js의 readingTopOn).
-//   · 학생 캐릭터(characterEnabled — 값이 없으면 켜짐, 책나눔이 켜져 있어야 씀. 리더보드를 꺼도 '내 프로필'에서 고름)
+//   · 학생 캐릭터(characterEnabled — 값이 없으면 켜짐, 책 봄이 켜져 있어야 씀. 리더보드를 꺼도 '내 프로필'에서 고름)
 //   · 과일 바구니(fruitBasketEnabled — 값이 없으면 켜짐, 끄면 떠 있는 동그라미에서도 가림)
-//   · 학생 펫(petEnabled — 값이 없으면 켜짐, 책나눔이 켜져 있어야 씀 · lib/readingPet.js)
+//   · 학생 펫(petEnabled — 값이 없으면 켜짐, 책 봄이 켜져 있어야 씀 · lib/readingPet.js)
 //   · 펫 미리보기(petPreviewEnabled — 기본 꺼짐, 학생 펫이 켜져 있어야 씀 · 선생님 요청). 켜면 학생이 열 가지 펫이 알에서
-//     10단계까지 자라는 모습을 보고 **알일 때** 깨어날 친구를 직접 고릅니다(책나눔의 '나의 펫' — components/reading/PetPreview.jsx).
+//     10단계까지 자라는 모습을 보고 **알일 때** 깨어날 친구를 직접 고릅니다(책 봄의 '나의 펫' — components/reading/PetPreview.jsx).
 //     깨어난 펫은 바꾸지 않습니다(선생님 결정 — 보기만). 끄면 지금 고른 그대로 · 새 알은 무작위.
 //     카드의 '열 친구 미리 보기'로 선생님도 같은 창을 봅니다(고르는 단추 없이 · 스위치가 꺼져 있어도).
 //   · 펫 먹이(petFeedEnabled — 기본 꺼짐, 학생 펫이 켜져 있어야 씀 · lib/petCare.js). 켜면 그날부터 펫(알 포함)이
 //     날마다 배가 고파지고(하루 10), 과일(1개에 +10)과 독서(그날 발자국 5쪽 · 250자 이상이면 유지)로 돌봅니다.
 //     0이 되면 먹이를 찾아 떠나고 책을 읽어 다시 부릅니다 — 펫이 떠날 수 있는 기능이라 **켤 때만** 한 번 되묻습니다.
-//     껐다 다시 켜면(학생 펫 · 책나눔 · 반 보관도) 꺼 둔 동안의 날은 세지 않고 끈 순간의 배부름에서 이어집니다(선생님 결정 —
+//     껐다 다시 켜면(학생 펫 · 책 봄 · 반 보관도) 꺼 둔 동안의 날은 세지 않고 끈 순간의 배부름에서 이어집니다(선생님 결정 —
 //     lib/readingPet.js의 petFeedTimesPatch가 끈 때 · 다시 켠 때를 서버 시각으로 적음).
 //     바로 아래 '펫이 배고파지지 않는 날'(PetRestSettings — 방학 · 시험 기간 · 기타의 기간. 주말에도 줄어듦 · 선생님 결정)이 함께 섭니다.
-//   · 책 광장(plazaEnabled — 기본 꺼짐, 책나눔이 켜져 있어야 씀 · lib/readingPlaza.js). 켜면 책나눔의 셋째 탭이
+//   · 책 광장(plazaEnabled — 기본 꺼짐, 책 봄이 켜져 있어야 씀 · lib/readingPlaza.js). 켜면 책 봄의 셋째 탭이
 //     '우리 반 랭킹' 대신 '책 광장'이 되고, **그 반에서 쓴 독서 발자국 · 한 권의 책이 모두 반 친구에게 보입니다**
 //     (켜기 전에 쓴 글도 · 학생이 고르는 것이 없음 — 선생님 결정). 끄면 본인과 선생님만 봅니다. 켜는 순간 무엇이
 //     공개되는지를 이 스위치의 설명이 말해 주어야 합니다(선생님이 학생에게 미리 알릴 수 있게).
@@ -59,29 +59,29 @@ function Switch({ on, disabled, busy, label, describedBy, onClick }) {
 }
 
 const FEATURES = [
-  { key: "readingEnabled", label: "책나눔 성장 기능", hint: "책꽂이 · 경험치 · 레벨업 · 뱃지 · 우리 반 랭킹이 함께 켜져요. 꺼도 독서 활동은 그대로예요.",
-    on: "책나눔 성장 기능을 켰어요.", off: "책나눔 성장 기능을 껐어요. 기존 기록은 보관됩니다." },
-  { key: "bookSearchEnabled", label: "도서 검색", needs: ["readingEnabled"], needsText: "책나눔 성장 기능을 먼저 켜 주세요",
+  { key: "readingEnabled", label: "책 봄 성장 기능", hint: "책꽂이 · 경험치 · 레벨업 · 뱃지 · 우리 반 랭킹이 함께 켜져요. 꺼도 독서 활동은 그대로예요.",
+    on: "책 봄 성장 기능을 켰어요.", off: "책 봄 성장 기능을 껐어요. 기존 기록은 보관됩니다." },
+  { key: "bookSearchEnabled", label: "도서 검색", needs: ["readingEnabled"], needsText: "책 봄 성장 기능을 먼저 켜 주세요",
     hint: "책꽂이에 책을 담을 때 카카오 책 검색으로 표지 · 정보를 채워요. 카카오 REST API 키가 있어야 써요. 끄면 직접 입력만 해요.",
     on: "도서 검색을 켰어요. 책꽂이의 새 책 등록에 '도서 검색' 단추가 생겨요.", off: "도서 검색을 껐어요. 책 정보는 직접 입력해요." },
-  { key: "rankingEnabled", label: "리더보드", needs: ["readingEnabled"], needsText: "책나눔 성장 기능을 먼저 켜 주세요",
-    hint: "상단바 리더보드(독서 맵 · 독서 랭킹)를 보여요. 꺼도 경험치 · 레벨과 책나눔의 '우리 반 랭킹'은 그대로예요.",
+  { key: "rankingEnabled", label: "리더보드", needs: ["readingEnabled"], needsText: "책 봄 성장 기능을 먼저 켜 주세요",
+    hint: "상단바 리더보드(독서 맵 · 독서 랭킹)를 보여요. 꺼도 경험치 · 레벨과 책 봄의 '우리 반 랭킹'은 그대로예요.",
     on: "리더보드를 켰어요. 그동안 쌓인 순위가 곧바로 보여요.", off: "리더보드를 껐어요. 상단바 리더보드만 숨고, '우리 반 랭킹'과 경험치 · 레벨은 그대로예요." },
-  { key: "readingTopEnabled", label: "독서 TOP 3", needs: ["readingEnabled"], needsText: "책나눔 성장 기능을 먼저 켜 주세요",
+  { key: "readingTopEnabled", label: "독서 TOP 3", needs: ["readingEnabled"], needsText: "책 봄 성장 기능을 먼저 켜 주세요",
     hint: "상단바 가운데에 이번 주 우리 반 독서 TOP 3(캐릭터 · 레벨 · 이름)를 보여요. 월요일 아침마다 바뀌어요.",
     on: "독서 TOP 3를 켰어요. 상단바 가운데에 이번 주 TOP 3가 보여요.", off: "독서 TOP 3를 껐어요. 상단바에서만 숨고, 순위 셈은 그대로예요." },
-  { key: "characterEnabled", label: "학생 캐릭터", needs: ["readingEnabled"], needsText: "책나눔 성장 기능을 먼저 켜 주세요",
+  { key: "characterEnabled", label: "학생 캐릭터", needs: ["readingEnabled"], needsText: "책 봄 성장 기능을 먼저 켜 주세요",
     hint: "학생이 캐릭터를 골라요(리더보드 · 내 프로필). 끄면 모두 기본 캐릭터예요.",
     on: "학생이 캐릭터를 고를 수 있어요.", off: "캐릭터 고르기를 껐어요. 모두 기본 캐릭터로 보이고, 고른 캐릭터는 보관됩니다." },
   { key: "fruitBasketEnabled", label: "과일 바구니",
     hint: "학생이 받은 과일을 바구니에 담아 이벤트에 응모해요. 끄면 오른쪽 아래 동그라미 메뉴에서도 가려져요.",
     on: "과일 바구니를 켰어요.", off: "과일 바구니를 껐어요. 담긴 과일과 응모 기록은 보관됩니다." },
-  { key: "petEnabled", label: "학생 펫", needs: ["readingEnabled"], needsText: "책나눔 성장 기능을 먼저 켜 주세요",
-    hint: "학생마다 알을 하나씩 받아 독서 경험치로 키워요. 책나눔 · 리더보드 · 내 프로필에 보여요. 선생님은 펫이 없어요.",
+  { key: "petEnabled", label: "학생 펫", needs: ["readingEnabled"], needsText: "책 봄 성장 기능을 먼저 켜 주세요",
+    hint: "학생마다 알을 하나씩 받아 독서 경험치로 키워요. 책 봄 · 리더보드 · 내 프로필에 보여요. 선생님은 펫이 없어요.",
     on: "학생 펫을 켰어요. 학생마다 알을 하나씩 받아요.", off: "학생 펫을 껐어요. 키우던 펫은 보관되고, 다시 켜면 그대로 이어져요." },
   { key: "petPreviewEnabled", label: "펫 미리보기", needs: ["readingEnabled", "petEnabled"], needsText: "학생 펫을 먼저 켜 주세요",
-    hint: "열 가지 펫이 알에서 10단계까지 자라는 모습을 학생이 보고, 알일 때 깨어날 친구를 직접 골라요(책나눔의 ‘나의 펫’). 이미 깨어난 펫은 바꾸지 않고 보기만 해요. 끄면 지금 고른 펫 그대로이고, 새로 받는 알은 다시 무작위예요.",
-    on: "펫 미리보기를 켰어요. 알을 가진 학생이 책나눔의 ‘나의 펫’에서 깨어날 친구를 골라요.", off: "펫 미리보기를 껐어요. 학생은 지금 고른 펫 그대로 키우고, 새로 받는 알은 다시 무작위예요.",
+    hint: "열 가지 펫이 알에서 10단계까지 자라는 모습을 학생이 보고, 알일 때 깨어날 친구를 직접 골라요(책 봄의 ‘나의 펫’). 이미 깨어난 펫은 바꾸지 않고 보기만 해요. 끄면 지금 고른 펫 그대로이고, 새로 받는 알은 다시 무작위예요.",
+    on: "펫 미리보기를 켰어요. 알을 가진 학생이 책 봄의 ‘나의 펫’에서 깨어날 친구를 골라요.", off: "펫 미리보기를 껐어요. 학생은 지금 고른 펫 그대로 키우고, 새로 받는 알은 다시 무작위예요.",
     // 카드 안에 '열 친구 미리 보기' — 선생님도 학생과 같은 창을 봅니다(고르는 단추 없이 · 스위치와 상관없이)
     peek: true },
   { key: "petFeedEnabled", label: "펫 먹이", needs: ["readingEnabled", "petEnabled"], needsText: "학생 펫을 먼저 켜 주세요",
@@ -90,9 +90,9 @@ const FEATURES = [
     // 켠 날부터 펫이 배고파지고 떠날 수도 있으므로 **켤 때만** 한 번 되묻습니다(끌 때는 곧바로).
     ask: { title: "펫 먹이를 켤까요?", confirmLabel: "켜기", icon: "fruit",
       description: "켜면 오늘부터 모든 학생의 펫(알 포함)이 날마다 배가 고파져요. 책을 읽지도 과일을 주지도 않으면 열흘쯤 뒤에 펫이 먹이를 찾아 떠나요(책을 읽으면 같은 펫이 돌아와요)." } },
-  { key: "plazaEnabled", label: "책 광장", needs: ["readingEnabled"], needsText: "책나눔 성장 기능을 먼저 켜 주세요",
-    hint: "책나눔의 셋째 탭이 ‘우리 반 랭킹’ 대신 ‘책 광장’이 돼요. 켜면 학생들이 이 반에서 쓴 독서 발자국과 ‘한 권의 책’이 모두 반 친구들에게 보이고(켜기 전에 쓴 글도 · 학생이 따로 고르지 않아요) 서로 댓글을 남겨요. 끄면 자기 글은 본인과 선생님만 봐요. 순위는 상단바 리더보드에서 봐요.",
-    on: "책 광장을 켰어요. 학생들이 쓴 독서 발자국과 ‘한 권의 책’이 모두 반 친구들에게 보여요.", off: "책 광장을 껐어요. 이제 자기 글은 본인과 선생님만 봐요. 광장의 글과 댓글은 보관되고, 책나눔에는 ‘우리 반 랭킹’ 탭이 다시 서요.",
+  { key: "plazaEnabled", label: "책 광장", needs: ["readingEnabled"], needsText: "책 봄 성장 기능을 먼저 켜 주세요",
+    hint: "책 봄의 셋째 탭이 ‘우리 반 랭킹’ 대신 ‘책 광장’이 돼요. 켜면 학생들이 이 반에서 쓴 독서 발자국과 ‘한 권의 책’이 모두 반 친구들에게 보이고(켜기 전에 쓴 글도 · 학생이 따로 고르지 않아요) 서로 댓글을 남겨요. 끄면 자기 글은 본인과 선생님만 봐요. 순위는 상단바 리더보드에서 봐요.",
+    on: "책 광장을 켰어요. 학생들이 쓴 독서 발자국과 ‘한 권의 책’이 모두 반 친구들에게 보여요.", off: "책 광장을 껐어요. 이제 자기 글은 본인과 선생님만 봐요. 광장의 글과 댓글은 보관되고, 책 봄에는 ‘우리 반 랭킹’ 탭이 다시 서요.",
     // 켜는 순간 학생들이 지금까지 써 둔 글이 반 친구에게 보이므로(되돌려도 이미 본 것은 못 물림), **켤 때만** 한 번 되묻습니다.
     // 끌 때는 곧바로 끕니다(보이는 범위를 좁히는 쪽).
     ask: { title: "책 광장을 켤까요?", confirmLabel: "켜기",
@@ -137,7 +137,7 @@ export default function AdminSettingsPanel({ classes = [], onToast }) {
     setBusy(f.key);
     setError("");
     try {
-      // rows — 쓰기 전의 반 문서(이 쓰기로 펫 먹이가 다시 켜지는 반에만 '켠 때'를 새로 적음 — 학생 펫 · 책나눔을 다시 켤 때도)
+      // rows — 쓰기 전의 반 문서(이 쓰기로 펫 먹이가 다시 켜지는 반에만 '켠 때'를 새로 적음 — 학생 펫 · 책 봄을 다시 켤 때도)
       await setTeacherFeature(rows.map((c) => c.id), f.key, enabled, rows);
       onToast?.(`${enabled ? f.on : f.off}${rows.length > 1 ? ` (반 ${rows.length}개 모두)` : ""}`);
     } catch (e) {
@@ -211,7 +211,7 @@ export default function AdminSettingsPanel({ classes = [], onToast }) {
                   <p className="adm-map-picker-hint" id={`${mapId}-hint`}>
                     {settings.readingEnabled.on && settings.rankingEnabled.on
                       ? "선택한 지도는 리더보드의 ‘독서 맵’에 보여요."
-                      : "지도를 미리 골라 두세요. 책나눔 성장 기능과 리더보드를 켜면 보여요."}
+                      : "지도를 미리 골라 두세요. 책 봄 성장 기능과 리더보드를 켜면 보여요."}
                   </p>
                   {mapSetting.mixed && <p className="adm-map-picker-mixed">반마다 지도가 달라요. 하나를 고르면 모든 반에 같이 적용돼요.</p>}
                   <div className="adm-map-options">

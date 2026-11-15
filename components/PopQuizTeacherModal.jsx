@@ -375,7 +375,7 @@ function ComposeQuiz({ classId, board, openQuiz, canCancel, onCancel, onSent }) 
   return (
     <section className="pq-compose">
       <h4 className="pq-compose-title">새 돌발 퀴즈</h4>
-      {/* 책봄은 독서 전용이라 '코드' 퀴즈를 걷었습니다(선생님 요청) — 늘 글로 답합니다.
+      {/* 책나눔은 독서 전용이라 '코드' 퀴즈를 걷었습니다(선생님 요청) — 늘 글로 답합니다.
           예전에 보낸 코드 퀴즈는 학생 창 · 지난 퀴즈에서 그대로 보입니다. */}
       <label className="pq-field">
         <span>제목</span>

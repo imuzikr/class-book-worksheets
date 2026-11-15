@@ -80,7 +80,7 @@ export function TeacherPersonalReport({ data, onEditProfile }) {
     {reading && <Section title="날마다 읽은 독서량" note="선택한 반과 기간의 모든 날마다 그날 읽은 쪽수를 이은 선입니다(누적 아님)." className="bb-report-cumulative">
       <CumulativeReadingChart daily={asArray(reading.daily)} />
     </Section>}
-    {!reading && <p className="bb-dash-feature-off">이 반은 책나눔을 사용하지 않아 책방의 독서 활동 기록을 보여줍니다.</p>}
+    {!reading && <p className="bb-dash-feature-off">이 반은 책 봄을 사용하지 않아 책방의 독서 활동 기록을 보여줍니다.</p>}
   </div>;
 }
 
@@ -99,7 +99,7 @@ export function OverallReport({ data, onSelectClass }) {
       <Metric label="전체 반" value={summary?.classes} unit="개" hint="열람 가능한 모든 운영 반" />
       <Metric label="전체 학생" value={summary?.students} unit="명" hint={"중복 제외 · 반별 소속 합계 " + fmt(summary?.memberships) + "명"} />
       <Metric label="전체 독서 활동" value={summary?.activityCount} unit="개" hint="모든 반에 등록된 활동 수" />
-      <Metric label="읽은 쪽수" value={summary?.reading?.pages} unit="쪽" hint={"선택 기간 · 책나눔 사용 " + fmt(enabledClasses) + "개 반"} />
+      <Metric label="읽은 쪽수" value={summary?.reading?.pages} unit="쪽" hint={"선택 기간 · 책 봄 사용 " + fmt(enabledClasses) + "개 반"} />
     </div>
     <Section title="반별 현황" note="각 학급의 최근 활동 기준 · 학생과 활동 수는 현재 반 전체를, 참여와 기준 충족 인원은 각 반의 최근 활동 하나를 보여줍니다.">
       {classes.length ? <>
@@ -125,9 +125,9 @@ export function OverallReport({ data, onSelectClass }) {
       </> : <Empty>열람할 수 있는 운영 반이 없습니다.</Empty>}
     </Section>
     {enabledClasses > 0 && reading ? <div className="bb-report-reading-grid">
-      <ReadingFlow reading={reading} title="전체 독서 흐름" note={"책나눔을 사용하는 " + fmt(enabledClasses) + "개 반에서 선택 기간에 읽었다고 기록한 쪽수입니다."} overall />
+      <ReadingFlow reading={reading} title="전체 독서 흐름" note={"책 봄을 사용하는 " + fmt(enabledClasses) + "개 반에서 선택 기간에 읽었다고 기록한 쪽수입니다."} overall />
       <ReportBooks books={asArray(reading.books)} title="모든 반이 읽은 책" note="선택 기간의 도서 종류를 합치고, 각 반에서 기록한 쪽수를 더했습니다." />
-    </div> : <p className="bb-dash-feature-off">책나눔을 사용하는 반이 없어 독서 쪽수와 도서 기록은 표시할 내용이 없습니다.</p>}
+    </div> : <p className="bb-dash-feature-off">책 봄을 사용하는 반이 없어 독서 쪽수와 도서 기록은 표시할 내용이 없습니다.</p>}
     {data.period && <p className="bb-report-period-note">독서 기록 집계 기간 · {fullDate(data.period.start)} — {fullDate(data.period.end)}</p>}
   </div>;
 }

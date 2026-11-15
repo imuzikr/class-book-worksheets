@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { DEMO_CLASSES_KEY, readDemoClasses, writeDemoClasses } from "../../lib/demoClasses.js";
+import { DEMO_CLASS_ID, DEMO_CLASS_NAME } from "../../lib/demoClassroom.js";
 
 function memoryStorage() {
   const values = new Map();
@@ -21,7 +22,23 @@ function seed(storage, classes, version = 1) {
   storage.setItem(DEMO_CLASSES_KEY, JSON.stringify({ version, classes }));
 }
 
-test("대시보드 학기 기간도 기존 책나눔 꺼짐 설정과 함께 복원", () => {
+test("옛 기본 체험반 이름만 새 앱명으로 복원하며 설정과 저장 내용은 보존", () => {
+  const storage = memoryStorage();
+  seed(storage, [classroom(DEMO_CLASS_ID, { name: "책봄 체험반 (15명)", readingEnabled: true, plazaEnabled: false, hideoutEnabled: true })]);
+  const saved = storage.getItem(DEMO_CLASSES_KEY);
+  const [restored] = readDemoClasses(storage);
+  assert.equal(restored.name, DEMO_CLASS_NAME);
+  assert.equal(restored.id, DEMO_CLASS_ID);
+  assert.equal(restored.readingEnabled, true);
+  assert.equal(restored.plazaEnabled, false);
+  assert.equal(restored.hideoutEnabled, true);
+  assert.equal(restored.joinCode, "MATH31");
+  assert.equal(storage.getItem(DEMO_CLASSES_KEY), saved, "복원은 기존 저장소를 덮어쓰지 않음");
+  seed(storage, [classroom(DEMO_CLASS_ID, { name: "우리 독서 체험반" }), classroom("custom", { name: "책봄 체험반 (15명)" })]);
+  assert.deepEqual(readDemoClasses(storage).map((c) => c.name), ["우리 독서 체험반", "책봄 체험반 (15명)"], "사용자가 정한 이름과 다른 반 이름은 그대로");
+});
+
+test("대시보드 학기 기간도 기존 책 봄 꺼짐 설정과 함께 복원", () => {
   const storage = memoryStorage();
   writeDemoClasses([classroom("term", { readingEnabled: false,
     dashboardSemesterStart: "2026-08-17", dashboardSemesterEnd: "2027-01-08" })], storage);
@@ -40,7 +57,7 @@ test("손상된 학기 날짜·기간 역전·한 해를 넘는 기간은 복원
   }
 });
 
-test("책나눔 설정은 새 저장소에서 기본 꺼짐이며 값 누락으로 켜지지 않음", () => {
+test("책 봄 설정은 새 저장소에서 기본 꺼짐이며 값 누락으로 켜지지 않음", () => {
   const storage = memoryStorage();
   assert.equal(DEMO_CLASSES_KEY, "bookbom.demo.classes.v1");
   assert.equal(readDemoClasses(storage), null);

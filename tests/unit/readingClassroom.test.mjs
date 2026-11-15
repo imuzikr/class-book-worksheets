@@ -10,7 +10,7 @@ import { classroomOn, classroomRollToday, featureValue, plazaOn, teacherFeatureS
 import { dateKeyOf } from "../../lib/dates.js";
 import {
   CLASSROOM_MOVE_LATE_MS, CLASSROOM_SEAT_COUNT, classroomAct, classroomAtBoard, classroomAttendance, classroomBoardAt, classroomBoardMark, classroomBoardStand,
-  classroomDesks, classroomMoveCall, classroomMoveSpot, classroomNearSeat, classroomRollCall, classroomSeatAround, classroomSeatAt, classroomSeatLabel, classroomSeatOf,
+  classroomDesks, classroomMoveCall, classroomMoveSeat, classroomMoveSpot, classroomNearSeat, classroomRollCall, classroomSeatAround, classroomSeatAt, classroomSeatLabel, classroomSeatOf,
   classroomSeatSide, classroomUnseated, plazaArrowKey, plazaLetterKey,
 } from "../../lib/readingClassroom.js";
 import {
@@ -35,7 +35,7 @@ test("스위치 — 교실은 책 광장이 켜진 반에서 교사가 켰을 �
   assert.equal(featureValue({}, "classroomEnabled"), false);
   assert.equal(classroomOn({ readingEnabled: true, plazaEnabled: true, classroomEnabled: true }), true);
   assert.equal(classroomOn({ readingEnabled: true, plazaEnabled: true }), false);
-  // 광장을 끄면(또는 책나눔을 끄면 · 보관하면) 교실도 꺼진 것 — 교실은 광장의 포털로만 들어갑니다
+  // 광장을 끄면(또는 책 봄을 끄면 · 보관하면) 교실도 꺼진 것 — 교실은 광장의 포털로만 들어갑니다
   assert.equal(classroomOn({ readingEnabled: true, plazaEnabled: false, classroomEnabled: true }), false);
   assert.equal(classroomOn({ readingEnabled: false, plazaEnabled: true, classroomEnabled: true }), false);
   assert.equal(classroomOn({ readingEnabled: true, plazaEnabled: true, classroomEnabled: true, archived: true }), false);
@@ -61,7 +61,7 @@ test("칠판에서 출석을 확인한 날 — 그날에만 교실 밖의 '출�
   // 칠판에서 확인한 적이 없음('출석 관리' 창의 '출석 시작'은 이 값을 적지 않음) → 지금까지처럼 단추
   assert.equal(classroomRollToday({ ...on, attendanceOpen: true, attendanceOpenDate: today }, today), false);
   assert.equal(classroomRollToday({ ...on, classroomCallAt: 0 }, today), false);
-  // 교실을 끈 반(광장 · 책나눔을 끈 반 · 보관한 반 포함)은 앉을 자리가 없으니 늘 단추
+  // 교실을 끈 반(광장 · 책 봄을 끈 반 · 보관한 반 포함)은 앉을 자리가 없으니 늘 단추
   assert.equal(classroomRollToday({ ...on, classroomEnabled: false, classroomCallAt: noon.getTime() }, today), false);
   assert.equal(classroomRollToday({ ...on, plazaEnabled: false, classroomCallAt: noon.getTime() }, today), false);
   assert.equal(classroomRollToday({ ...on, archived: true, classroomCallAt: noon.getTime() }, today), false);
@@ -618,7 +618,31 @@ test("모두 이동 — 이 화면이 지켜보는 동안 온 신호(live)는 �
   assert.equal(classroomMoveCall({ prev: T, to: "classroom", at: T + 1, live: true }), "classroom");
 });
 
-test("모두 이동 — 설 자리: 선생님은 칠판 앞, 학생은 제 러그의 귀(곧바로 앉을 수 있게), 나머지는 흩어 선다", () => {
+test("모두 이동 — 착석은 배정된 학생의 교실 자리만, 광장·선생님·유효하지 않은 자리는 제외", () => {
+  const spots = new Set();
+  for (let seat = 0; seat < CLASSROOM_SEAT_COUNT; seat += 1) {
+    const index = classroomMoveSeat({ to: "classroom", seat });
+    assert.equal(index, seat, `자리 ${seat} — 배정된 자리로 착석`);
+    const chair = CLASSROOM_SEATS[index];
+    const back = classroomMoveSpot({ to: "classroom", seat });
+    assert.equal(plazaWalkable(back.x, back.y, CLASSROOM_ROOM), true, `자리 ${seat} — 다시 설 곳은 바닥`);
+    assert.equal(classroomNearSeat(back, index), true, `자리 ${seat} — 다시 서도 제 러그`);
+    assert.deepEqual(classroomAct({ point: chair.sit, seat: index, sitting: index }), { kind: "stand", seat: index });
+    const packet = plazaLivePos({ ...chair.sit, room: "classroom", seat: index, facing: "up" });
+    assert.equal(packet.s, seat, "함께 보는 친구에게도 앉은 자리를 알림");
+    spots.add(`${chair.sit.x},${chair.sit.y}`);
+    assert.equal(classroomMoveSeat({ to: "classroom", seat, teacher: true }), null);
+    assert.equal(classroomMoveSeat({ to: "plaza", seat }), null);
+  }
+  assert.equal(spots.size, CLASSROOM_SEAT_COUNT, "학생마다 다른 의자에 앉음");
+  for (const seat of [null, undefined, -1, CLASSROOM_SEAT_COUNT, 2.5, "3", true, NaN, Infinity]) {
+    assert.equal(classroomMoveSeat({ to: "classroom", seat }), null, `유효하지 않은 자리 ${seat}`);
+  }
+  assert.equal(classroomMoveSeat({ to: "어디", seat: 0 }), null);
+  assert.equal(classroomMoveSeat(), null);
+});
+
+test("모두 이동 — 다시 설 자리: 선생님은 칠판 앞, 학생은 제 러그의 귀, 나머지는 흩어 선다", () => {
   const room = CLASSROOM_ROOM;
   // 선생님 → 교실: 칠판 앞 가운데(곧바로 A로 출석을 시작)
   const board = classroomMoveSpot({ to: "classroom", teacher: true, uid: "t" });
@@ -627,7 +651,7 @@ test("모두 이동 — 설 자리: 선생님은 칠판 앞, 학생은 제 러�
   assert.deepEqual(classroomAct({ teacher: true, point: board }), { kind: "board" });
   assert.ok(Math.abs(board.x - PLAZA_W / 2) < 1, "가운데");
   assert.equal(board.facing, "down");
-  // 자리가 있는 학생 → 교실: 제 책상의 러그 위(물음표가 떠 A · S로 곧바로 앉음) · 책상 쪽을 본다 · 포털 위가 아니다
+  // 자리가 있는 학생 → 교실: 바로 앉기 전의 안전 위치(다시 일어서면 돌아갈 러그 귀) · 책상 쪽을 본다 · 포털 위가 아니다
   const spots = new Set();
   for (let seat = 0; seat < CLASSROOM_SEAT_COUNT; seat += 1) {
     const at = classroomMoveSpot({ to: "classroom", seat, uid: `s${seat}` });

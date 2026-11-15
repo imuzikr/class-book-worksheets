@@ -388,7 +388,7 @@ test("판을 채울 때 고르는 낱말 — 많이 쓴 앞의 box개를 ㄱ~ㅎ
   assert.deepEqual(bingoBoxWords(null), []);
 });
 
-// ── 책봄에서 더한 것 ─────────────────────────────────────────
+// ── 책나눔에서 더한 것 ─────────────────────────────────────────
 test("판 칸 수(total) — 활동 보고서가 '채운 칸 n / total'로 씀(4×4 16 · 5×5 25), 판 밖 칸 열쇠는 안 셈", () => {
   const words = Array.from({ length: 16 }, (_, i) => `낱말${i}`);
   const cells = Object.fromEntries(words.map((w, i) => [String(i), w]));

@@ -11,7 +11,7 @@
 //   ⑦ 학생이 진행 — 제 차례인 학생만 활동 문서의 bingo.called · by · turn에 낱말 하나를
 //      이어 붙이고 차례를 하나 넘긴다(상자의 안 불린 낱말 · 마지막 다음은 처음).
 //      다른 칸 · 다른 필드 · 두 낱말 · 차례 건너뛰기 · 선생님이 진행 · 판 채우기 · 잠김 · 반 밖은 거부.
-//      한때(책봄)의 '차례 없이 누구나 called 끝에 하나'는 이제 거부(배움나눔과 같은 규칙으로 바꿈)
+//      한때(책나눔)의 '차례 없이 누구나 called 끝에 하나'는 이제 거부(배움나눔과 같은 규칙으로 바꿈)
 // =============================================================
 import { describe, it, before, after, beforeEach } from "node:test";
 import { assertSucceeds, assertFails } from "@firebase/rules-unit-testing";
@@ -174,7 +174,7 @@ describe("낱말 빙고 규칙", () => {
     });
   });
 
-  describe("책봄에서 더 못 박는 것", () => {
+  describe("책나눔에서 더 못 박는 것", () => {
     const words = ["사과", "배", "감"];
     it("차례 없이 called 끝에 낱말 하나만 붙이던 옛 방식(선생님이 진행 · by · turn 없음)은 거부", async () => {
       await seed(env, (db) => updateDoc(doc(db, ...actPath), { bingo: { stage: "play", words, called: ["사과"], goal: 3 } }));

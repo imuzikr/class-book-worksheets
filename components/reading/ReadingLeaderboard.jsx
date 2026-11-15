@@ -52,7 +52,7 @@ function petName(pet) {
 function petLine(pet, mine = false) {
   if (!pet) return "";
   if (!pet.species) {
-    return pet.ready ? (mine ? "알이 깨어나려 해요! 책나눔에서 깨워 주세요." : "알이 곧 깨어나요.")
+    return pet.ready ? (mine ? "알이 깨어나려 해요! 책 봄에서 깨워 주세요." : "알이 곧 깨어나요.")
       : `${mine ? "알이 따뜻해지는 중" : "어떤 친구일지 아직 비밀"} · ${number(Math.min(pet.xp, PET_HATCH_XP))} / ${number(PET_HATCH_XP)}`;
   }
   return `${pet.stage}단계 ${petStageName(pet.stage)} · 펫 경험치 ${number(pet.xp)}`;
@@ -343,7 +343,7 @@ function StudentJourneyModal({ row, me, pet = null, onClose, onOpenLibrary = nul
       <div className="rlb-modal-head">
         <Face row={row} className="rlb-mine-face" pet={pet} petSize={36} />
         <div><h3 id="rlb-modal-title">{nameOf(row)}{me && <span className="reading-me-label">나</span>}</h3><p>{progress ? `Lv.${progress.level} ${journeyTitle(progress.level)} · 📍 ${progress.region.name}` : "누적 성장 정보 집계 중"}</p></div>
-        {/* 교사: 그 학생의 책나눔(읽기 전용 책꽂이)으로 — 선생님 요청 */}
+        {/* 교사: 그 학생의 책 봄(읽기 전용 책꽂이)으로 — 선생님 요청 */}
         {onOpenLibrary && <button type="button" className="btn-ghost rlb-to-library" onClick={onOpenLibrary}>책꽂이로 이동</button>}
         <button type="button" className="btn-close" aria-label="닫기" onClick={onClose}>×</button>
       </div>
