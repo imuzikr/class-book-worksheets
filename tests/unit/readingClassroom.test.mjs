@@ -140,7 +140,7 @@ test("포털 — 안쪽에 들어서면 다른 방으로, 건너온 포털의 �
   // 들어서는 타원 · 도는 빛은 그 그림 안에 든다
   // (도트 포털 — 금테가 고르게 둘러 그림의 가운데가 곧 못의 가운데. 예전 그림은 테가 아래로 두꺼워 3px 아래였음)
   assert.deepEqual(gate.art, { x: 382, y: 823, w: 230, h: 100 });
-  assert.deepEqual(door.art, { x: 1475, y: 855, w: 230, h: 100 });
+  assert.deepEqual(door.art, { x: 180, y: 850, w: 230, h: 100 });
   for (const g of [gate, door]) {
     assert.ok(g.rx < g.swirl.rx && g.swirl.rx < g.art.w / 2 && g.ry < g.swirl.ry && g.swirl.ry < g.art.h / 2, g.id);
     assert.ok(g.ring.rx <= g.art.w / 2 && g.ring.ry <= g.art.h / 2, g.id);
@@ -173,7 +173,8 @@ test("포털 — 안쪽에 들어서면 다른 방으로, 건너온 포털의 �
   assert.equal(plazaPortalClicked(180, 740, PLAZA_DOOR_ROOM)?.to, "classroom", "문 그림");
   assert.equal(plazaPortalClicked(gate.x + 140, gate.y, PLAZA_DOOR_ROOM), null);
   assert.equal(plazaPortalClicked(gate.x, gate.y - 70, PLAZA_DOOR_ROOM), null);
-  assert.equal(plazaPortalClicked(1640, 800, CLASSROOM_ROOM)?.to, "plaza", "교실의 문");
+  assert.equal(plazaPortalClicked(295, 903, CLASSROOM_ROOM)?.to, "plaza", "교실 왼쪽 입구 누름 영역");
+  assert.equal(plazaPortalClicked(1640, 800, CLASSROOM_ROOM), null, "오른쪽 문은 광장으로 이어지지 않음");
   assert.equal(plazaPortalClicked(1300, 800, CLASSROOM_ROOM), null);
 });
 
