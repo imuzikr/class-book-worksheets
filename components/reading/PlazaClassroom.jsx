@@ -5,7 +5,10 @@
 // 무대(ReadingPlaza.jsx)의 그림(.plaza-world) 안에 그립니다. 자리는 그림 원본 px를 %로 바꿔 놓고(그림과 함께 움직임),
 // 글자 · 단추의 크기는 화면 px 그대로입니다(맵을 줄여도 읽을 수 있게).
 //   · PlazaFurniture — **러그 서른 장과 책상·의자 서른 벌**. 교실 배경에는 책상이 없고(선생님이 주신 분리 그림),
-//     자리 좌표(lib/readingPlazaMap.js의 CLASSROOM_SEATS)대로 여기서 그립니다. 러그가 아래, 책상·의자가 위.
+//     자리 좌표(lib/readingPlazaMap.js의 CLASSROOM_SEATS)대로 여기서 그립니다. 러그는 맨 아래 한 층이고, 책상·의자는
+//     **줄마다 캐릭터와 섞인 층**입니다(plazaLayer(러그 가운데 y) — 캐릭터는 plazaLayer(발 y)). 앞뒤 줄 사이가 가로로 다니는
+//     길이라(선생님 요청), 책상 뒤를 지나는 캐릭터는 그 책상에 다리가 가리고 의자 앞을 지나는 캐릭터는 그 줄 위에 섭니다.
+//     책상의 이름표도 그 책상과 같은 층에 답니다(책상 뒤의 캐릭터에게 가려지지 않게 · 앞의 캐릭터에게는 가리게).
 //     칠판 위 벽시계의 시계판(점 12개 · 10시 10분 바늘 — 도트 배경에는 빈 동그라미)도 여기서 얹습니다(CLASSROOM_CLOCK).
 //   · 학생 — **내 러그**에 살구빛 테(그 러그가 내 자리의 범위 — 선생님 요청)와 책상 위의 '내 자리' 이름표.
 //     러그에 올라서면 테가 밝아지고 책상 위(이름표 자리)에 물음표가 뜹니다. A(또는 물음표를 누름) → [앉기(S) · 취소(C)].
@@ -17,7 +20,7 @@
 // 어디에 서 있는지 · 무엇을 고르는 중인지는 무대가 정해 넘깁니다(셈은 lib/readingClassroom.js).
 // =============================================================
 import { memo } from "react";
-import { CLASSROOM_BOARD, CLASSROOM_CLOCK, CLASSROOM_DESK, CLASSROOM_RUG, CLASSROOM_SEATS, PLAZA_H, PLAZA_W } from "@/lib/readingPlazaMap";
+import { CLASSROOM_BOARD, CLASSROOM_CLOCK, CLASSROOM_DESK, CLASSROOM_RUG, CLASSROOM_SEATS, PLAZA_H, PLAZA_W, plazaLayer } from "@/lib/readingPlazaMap";
 
 const pct = (value, whole) => `${(value / whole * 100).toFixed(3)}%`;
 const at = (point) => ({ left: pct(point.x, PLAZA_W), top: pct(point.y, PLAZA_H) });
@@ -34,7 +37,7 @@ export const PlazaFurniture = memo(function PlazaFurniture() {
       ))}
       {CLASSROOM_SEATS.map((seat) => (
         <img key={`desk-${seat.index}`} className="plaza-desk-art" src={CLASSROOM_DESK.src} alt="" draggable={false}
-          style={{ left: pct(seat.box[0], PLAZA_W), top: pct(seat.box[1], PLAZA_H), width: pct(CLASSROOM_DESK.w, PLAZA_W), height: pct(CLASSROOM_DESK.h, PLAZA_H) }} />
+          style={{ left: pct(seat.box[0], PLAZA_W), top: pct(seat.box[1], PLAZA_H), width: pct(CLASSROOM_DESK.w, PLAZA_W), height: pct(CLASSROOM_DESK.h, PLAZA_H), zIndex: plazaLayer(seat.rug.y) }} />
       ))}
     </>
   );
@@ -92,7 +95,7 @@ export default function PlazaClassroom({ teacher = false, desks, names, mySeat =
         const here = present?.has(uid);
         return (
           !seated?.has(i) && (
-            <span key={uid} className={`plaza-desk-name${here ? " is-present" : ""}`} style={at(seat.desk)}>
+            <span key={uid} className={`plaza-desk-name${here ? " is-present" : ""}`} style={{ ...at(seat.desk), zIndex: plazaLayer(seat.rug.y) }}>
               {here && <i role="img" aria-label="출석">✓</i>}{who.name}
             </span>
           )
@@ -104,7 +107,7 @@ export default function PlazaClassroom({ teacher = false, desks, names, mySeat =
           <span className={`plaza-rug-mine${sitting !== null ? " is-seated" : hint === "seat" ? " is-on" : ""}`} aria-hidden="true"
             style={{ left: pct(mine.rug.x - CLASSROOM_RUG.rx, PLAZA_W), top: pct(mine.rug.y - CLASSROOM_RUG.ry, PLAZA_H), width: pct(CLASSROOM_RUG.rx * 2, PLAZA_W), height: pct(CLASSROOM_RUG.ry * 2, PLAZA_H) }} />
           {sitting === null && !asking && (
-            <span className={`plaza-desk-name plaza-desk-name--mine${attended ? " is-present" : ""}`} style={at(mine.desk)}>
+            <span className={`plaza-desk-name plaza-desk-name--mine${attended ? " is-present" : ""}`} style={{ ...at(mine.desk), zIndex: plazaLayer(mine.rug.y) }}>
               {attended && <i role="img" aria-label="오늘 출석 완료">✓</i>}내 자리
             </span>
           )}

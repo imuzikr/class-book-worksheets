@@ -259,12 +259,13 @@
 .plaza-warp { position: absolute; inset: 0; z-index: 3000; pointer-events: none; background: radial-gradient(circle at 50% 55%, #f6fff9 0%, #d9f6ecf2 45%, #bfeee0e6 100%); animation: plaza-warp .55s ease-out both; }
 @keyframes plaza-warp { from { opacity: .96; } to { opacity: 0; } }
 
-/* 러그와 책상·의자 — 교실 배경에는 없고 자리 좌표대로 따로 놓습니다(PlazaFurniture). 러그가 아래, 책상·의자가 위,
-   캐릭터는 그 위(z 10+). 앉은 캐릭터 위에는 '의자만'의 그림을 한 번 더 그립니다(.plaza-chair). 누름은 통과합니다.
+/* 러그와 책상·의자 — 교실 배경에는 없고 자리 좌표대로 따로 놓습니다(PlazaFurniture). 러그는 맨 아래 한 층(z 1),
+   책상·의자는 **줄마다 캐릭터와 섞인 층**입니다 — z는 인라인으로 10 + 러그 가운데 y(캐릭터는 10 + 발 y · lib/readingPlazaMap.js의
+   plazaLayer). 앞뒤 줄 사이가 가로로 다니는 길이라 책상 뒤에 선 캐릭터는 그 책상에 다리가 가립니다(한때 책상을 모두 z 4 한 층에
+   깔았음 — 책상 줄을 통째로 막던 때). 앉은 캐릭터 위에는 '의자만'의 그림을 한 번 더 그립니다(.plaza-chair). 누름은 통과합니다.
    벽시계의 시계판(.plaza-clock)도 배경의 빈 시계판 위에 따로 얹습니다 — 칠판 위 벽이라 캐릭터와 겹치지 않습니다. */
 .plaza-rug, .plaza-desk-art, .plaza-clock { position: absolute; display: block; max-width: none; pointer-events: none; user-select: none; }
 .plaza-rug, .plaza-clock { z-index: 1; }
-.plaza-desk-art { z-index: 4; }
 /* 내 러그 — 러그(보이는 타원)를 두른 살구빛 테. 러그가 곧 내 자리의 범위라(선생님 요청) 어디에 올라서면 되는지 보입니다.
    책상보다 아래 층이라 책상 · 의자에 가린 가운데는 안 보이고 양옆의 귀가 드러납니다. 올라서면 밝아지고, 앉으면 옅어집니다. */
 .plaza-rug-mine {
@@ -275,10 +276,11 @@
 .plaza-rug-mine.is-on { border-color: #d9562a; background: #ff9e6b75; box-shadow: 0 0 0 5px #ff9e6b59, 0 0 16px 4px #ff9e6b66; animation: plaza-rug-on 1.5s ease-in-out infinite; }
 .plaza-rug-mine.is-seated { border-color: #e8784a80; background: #ffb48a1f; box-shadow: none; }
 @keyframes plaza-rug-on { 0%, 100% { box-shadow: 0 0 0 5px #ff9e6b59, 0 0 16px 4px #ff9e6b66; } 50% { box-shadow: 0 0 0 8px #ff9e6b33, 0 0 20px 7px #ff9e6b4d; } }
-/* 책상의 이름표 — 책상 윗면 가운데(선생님: 학생 이름 · 학생: '내 자리'). 캐릭터보다 아래 층이라 앉으면 몸에 가립니다.
+/* 책상의 이름표 — 책상 윗면 가운데(선생님: 학생 이름 · 학생: '내 자리'). 그 책상과 같은 층(인라인 z — 책상 뒤를 지나는
+   캐릭터보다 위 · 의자 앞을 지나는 캐릭터보다 아래)이라 앉으면 몸에 가립니다(앉은 동안은 걷기도 함).
    폭의 천장은 '✓ + 이름 다섯 글자'까지 — ✓가 붙으면서 5.2em으로는 세 글자 이름이 '김…'으로 잘렸습니다(실측). */
 .plaza-desk-name {
-  position: absolute; z-index: 6; transform: translate(-50%, -50%); pointer-events: none;
+  position: absolute; transform: translate(-50%, -50%); pointer-events: none;
   max-width: 7.6em; padding: 1px 6px; border-radius: 7px; background: #fffaf0e0; color: #5a3a1b;
   font-size: clamp(9.5px, 1.15cqw, 12.5px); font-weight: 700; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }

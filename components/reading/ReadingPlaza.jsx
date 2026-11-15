@@ -14,8 +14,9 @@
 // 그대로이고, 방마다 다른 것(바닥 · 여는 곳 · 포털)은 방 정의(lib/readingPlazaMap.js의 plazaRoomOf)가 듭니다.
 // 책 광장 탭을 열면 **마지막에 있던 방**에서 시작합니다(이 기기에 기억).
 // **포털 · 러그 · 책상과 의자는 배경에 그려져 있지 않습니다**(선생님이 주신 분리 그림) — 방 정의의 좌표대로 따로 그립니다
-// (포털은 여기서, 교실의 러그 · 책상은 PlazaClassroom.jsx의 PlazaFurniture가). 겹치는 차례는
-// 바닥 → 러그 → 책상·의자 → 캐릭터 → (앉은 캐릭터의) 의자입니다.
+// (포털은 여기서, 교실의 러그 · 책상은 PlazaClassroom.jsx의 PlazaFurniture가). 겹치는 차례는 바닥 → 러그 → 그 위로
+// **책상·의자와 캐릭터가 바닥에 닿는 높이 차례로 섞입니다**(lib/readingPlazaMap.js의 plazaLayer — 앞뒤 줄 사이가 가로로 다니는
+// 길이라, 책상 뒤에 선 캐릭터는 그 책상에 다리가 가림). 앉은 캐릭터 위에는 의자 등받이를 한 번 더 그립니다.
 // 교실에서는 —
 //   · 학생: 자리표('자리 배정하기')의 **제 책상의 러그**에 올라서면 책상 위에 물음표가 뜹니다(러그가 그 자리의 범위 —
 //     선생님 요청). A → [앉기(S) · 취소(C)], 앉은 채 A → [다시 서기(S) · 취소(C)]. 앉아 있는 동안은 걷지 않습니다.
@@ -465,7 +466,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     pos.current = { x: back.x, y: back.y };
     // 일어서면 책상 쪽을 봅니다
     facingRef.current = seat.rug.x >= back.x ? "right" : "left";
-    // 펫이 책상 줄 건너편에서 기다리고 있었으면 곁으로 데려옵니다(곧게만 걸어 건너오지 못함)
+    // 펫이 책상 건너편에서 기다리고 있었으면 곁으로 데려옵니다(곧게만 걸어 건너오지 못함)
     if (myPet.current && (myPet.current.x - seat.rug.x) * (back.x - seat.rug.x) < 0) {
       myPet.current = plazaPetStart(pos.current, facingRef.current, roomRef.current);
       meRef.current?.placePet(myPet.current.x, myPet.current.y);
@@ -609,7 +610,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
 
     // 펫 — 걷는 동안은 캐릭터가 지나온 길을 조금 뒤에서, 멈추면 곁자리로 옵니다(lib/readingPlazaSprites.js의 plazaPetFollow).
     // 주인이 자리에 앉아 있는 동안에는 그 책상의 러그 귀에서 기다립니다(책상이 한 줄씩이라 양옆이 복도 — 펫이 있는 쪽으로.
-    // 반대쪽은 책상 줄에 막혀 못 갑니다).
+    // 반대쪽은 책상에 막혀 곧게는 못 갑니다).
     let petBusy = false;
     const pet = myPet.current;
     if (pet) {
@@ -725,7 +726,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
           if (moved && friend.pet) friend.pet = plazaPetStart(friend.actor, friend.actor.facing, roomFor(state.room));
           friend.dirty = true;
         }
-        // 자리에서 일어선 친구 — 펫이 책상 줄 건너편에서 기다리고 있었으면 곁으로 데려옵니다(곧게만 걸어 건너오지 못함)
+        // 자리에서 일어선 친구 — 펫이 책상 건너편에서 기다리고 있었으면 곁으로 데려옵니다(곧게만 걸어 건너오지 못함)
         if (!moved && friend.seat !== null && seat === null && friend.pet) {
           const desk = CLASSROOM_SEATS[friend.seat].rug.x;
           if ((friend.pet.x - desk) * (friend.actor.x - desk) < 0) { friend.pet = plazaPetStart(friend.actor, friend.actor.facing, roomRef.current); friend.dirty = true; }

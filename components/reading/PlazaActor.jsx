@@ -15,20 +15,22 @@
 // seat — 교실에서 자리에 앉아 있으면 그 자리(lib/readingPlazaMap.js의 CLASSROOM_SEATS 한 칸), 서 있으면 null.
 //   앉은 모습을 따로 그리지 않습니다 — 뒷모습(칠판 쪽을 봄)의 정지 그림을 의자에 내려 앉히고, 허리 아래는 잘라 낸 뒤
 //   **의자만 남긴 그림**(CLASSROOM_DESK.chair — 책상·의자 그림과 같은 크기 · 같은 자리)을 그 위에 한 번 더 그립니다.
-//   그래서 겹치는 차례가 바닥 → 러그 → 책상·의자 → 캐릭터 → 의자가 되어, 캐릭터가 의자에 앉아 등받이 위로 보입니다.
+//   그래서 그 자리에서는 겹치는 차례가 바닥 → 러그 → 책상·의자 → 캐릭터 → 의자가 되어, 캐릭터가 의자에 앉아 등받이 위로 보입니다
+//   (앉은 발은 러그 가운데보다 3px 아래라 늘 제 책상보다 한 층 위 — plazaLayer. 그 의자 앞을 지나는 캐릭터는 다시 그 위).
 //   무대는 앉은 캐릭터를 seat.sit에 두고 "up"의 정지 그림을 보이게 합니다.
 // checked — 오늘 출석했는가(교실에서 · 선생님 화면의 학생들과 학생 화면의 나). 이름표 앞에 초록 ✓ 동그라미가 붙습니다
 //   (이름표의 바탕색은 그대로 — 내 것 살구 · 친구 남색 · 선생님 초록).
 // =============================================================
 import { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { characterImage } from "@/lib/readingCharacterCatalog";
-import { CLASSROOM_DESK, CLASSROOM_SIT_HIDE, PLAZA_BODY, PLAZA_H, PLAZA_W } from "@/lib/readingPlazaMap";
+import { CLASSROOM_DESK, CLASSROOM_SIT_HIDE, PLAZA_BODY, PLAZA_H, PLAZA_W, plazaLayer } from "@/lib/readingPlazaMap";
 import { PLAZA_EGG_SIZE, SPRITE_BODY, SPRITE_CELL, SPRITE_FOOT, plazaCharacterSheet, plazaCharacterSize, plazaPetSheet, plazaPetSize } from "@/lib/readingPlazaSprites";
 import PetFigure from "./PetFigure";
 import PlazaSprite from "./PlazaSprite";
 
 const pct = (value, whole) => `${(value / whole * 100).toFixed(3)}%`;
-const layer = (y) => String(10 + Math.round(y));
+// 겹치는 차례 — 발이 아래(화면에서)일수록 앞. 교실의 책상·의자도 같은 셈으로 줄마다 섞여 그려집니다(plazaLayer)
+const layer = (y) => String(plazaLayer(y));
 // 앉았을 때 걷는 그림의 아래쪽을 잘라 내는 비율 — 칸의 발 아래 빈 줄 + 발에서 CLASSROOM_SIT_HIDE(원본 px)만큼.
 // 칸 크기에 대한 비율이라 화면 배율과 상관없이 같은 자리가 잘립니다.
 const SIT_CLIP = `inset(0 0 ${((SPRITE_CELL - SPRITE_FOOT.y + CLASSROOM_SIT_HIDE / (PLAZA_BODY / SPRITE_BODY)) / SPRITE_CELL * 100).toFixed(2)}% 0)`;

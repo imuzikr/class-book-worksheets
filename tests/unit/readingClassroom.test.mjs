@@ -15,8 +15,8 @@ import {
 } from "../../lib/readingClassroom.js";
 import {
   CLASSROOM_BOARD, CLASSROOM_COLS, CLASSROOM_DESK, CLASSROOM_PORTAL, CLASSROOM_ROOM, CLASSROOM_ROWS, CLASSROOM_RUG, CLASSROOM_RUG_REACH, CLASSROOM_SEATS,
-  CLASSROOM_SIT_HIDE, PLAZA_DOOR_ROOM, PLAZA_H, PLAZA_NEAR, PLAZA_PORTAL, PLAZA_ROOM, PLAZA_SPOTS, PLAZA_W, PORTAL_ART,
-  plazaArrival, plazaClear, plazaNearest, plazaPath, plazaPortalAt, plazaPortalClicked, plazaRoomOf, plazaSpotAt, plazaSpotNear, plazaStep, plazaWalkable,
+  CLASSROOM_SIT_HIDE, DESK_BACK, DESK_FRONT, PLAZA_DOOR_ROOM, PLAZA_H, PLAZA_NEAR, PLAZA_NUDGE, PLAZA_PORTAL, PLAZA_ROOM, PLAZA_SPOTS, PLAZA_W, PORTAL_ART,
+  plazaArrival, plazaClear, plazaLayer, plazaNearest, plazaPath, plazaPortalAt, plazaPortalClicked, plazaRoomOf, plazaSpotAt, plazaSpotNear, plazaStep, plazaWalkable,
 } from "../../lib/readingPlazaMap.js";
 import { PLAZA_LIVE_IDLE_MS, PLAZA_LIVE_SEATED_IDLE_MS, plazaLivePos, plazaRemoteEnter, plazaRemoteHear, plazaSpawnFor, readPlazaLivePos } from "../../lib/readingPlazaLive.js";
 import { plazaPetFollow, plazaPetStart } from "../../lib/readingPlazaSprites.js";
@@ -223,21 +223,23 @@ test("러그 — 책상마다 한 장, 책상보다 넓어 양옆 복도로 나�
   }
 });
 
-test("교실 — 책상 줄은 못 가고, 자리마다 양옆의 러그 귀(서는 자리 · 펫 자리)가 바닥이며 길이 이어진다", () => {
+test("교실 — 책상·의자 자리는 못 가고, 자리마다 양옆의 러그 귀(서는 자리 · 펫 자리)가 바닥이며 길이 이어진다", () => {
   const room = CLASSROOM_ROOM;
   assert.equal(plazaWalkable(room.spawn.x, room.spawn.y, room), true);
   for (const seat of CLASSROOM_SEATS) {
     const tag = `자리 ${seat.index}`;
-    // 책상 윗면 · 의자(앉는 점) · 책상·의자 그림의 네 귀는 걷는 바닥이 아니다
-    assert.equal(plazaWalkable(seat.desk.x, seat.desk.y, room), false, tag);
+    // 책상·의자가 바닥에 닿은 자리(책상 뒷다리 ~ 의자 앞다리) · 의자(앉는 점)는 걷는 바닥이 아니다 — 그림의 네 다리 자리까지
     assert.equal(plazaWalkable(seat.sit.x, seat.sit.y, room), false, tag);
-    for (const [x, y] of [[seat.box[0] + 4, seat.box[1] + 4], [seat.box[2] - 4, seat.box[1] + 4], [seat.box[0] + 4, seat.box[3] - 2], [seat.box[2] - 4, seat.box[3] - 2]]) {
-      assert.equal(plazaWalkable(x, y, room), false, `${tag} 그림 ${x},${y}`);
+    assert.equal(plazaWalkable(seat.rug.x, seat.rug.y, room), false, tag);
+    for (const [x, y] of [[seat.box[0] + 4, seat.rug.y - 27], [seat.box[2] - 4, seat.rug.y - 27], [seat.box[0] + 4, seat.rug.y + 15], [seat.box[2] - 4, seat.rug.y + 15]]) {
+      assert.equal(plazaWalkable(x, y, room), false, `${tag} 다리 ${x},${y}`);
     }
-    // 의자 바로 뒤 — 뒷줄의 책상이 이어져 못 가고, 맨 뒷줄만 교실 뒤쪽 바닥(거기도 러그 위)
+    // 의자 바로 앞(화면에서 아래) — 앞뒤 줄 사이의 가로 길(맨 뒷줄은 교실 뒤쪽 바닥)이고 그 자리의 러그 위다(물음표가 뜸)
     const back = { x: seat.rug.x, y: seat.box[3] + 8 };
-    assert.equal(plazaWalkable(back.x, back.y, room), seat.row === CLASSROOM_ROWS - 1, `${tag} 뒤`);
-    if (seat.row === CLASSROOM_ROWS - 1) assert.equal(classroomNearSeat(back, seat.index), true, `${tag} 뒤도 러그 위`);
+    assert.equal(plazaWalkable(back.x, back.y, room), true, `${tag} 의자 앞`);
+    assert.equal(classroomNearSeat(back, seat.index), true, `${tag} 의자 앞도 러그 위`);
+    // 책상 바로 뒤(윗판에 다리가 가리는 곳)도 다니는 바닥 — 첫 줄은 교탁 · 칠판 · 책장 앞, 나머지는 앞줄과의 사이 길
+    assert.equal(plazaWalkable(seat.rug.x, seat.rug.y - DESK_BACK - 4, room), true, `${tag} 책상 뒤`);
     // 양옆의 서는 자리 · 펫 자리는 복도 바닥이고 러그 위다(물음표가 뜸)
     assert.deepEqual(seat.sides.map((side) => side.side), [-1, 1]);
     for (const side of seat.sides) {
@@ -260,10 +262,11 @@ test("교실 — 책상 줄은 못 가고, 자리마다 양옆의 러그 귀(서
     // 물음표는 책상 윗면에(말풍선의 아래 끝이 윗면의 앞쪽 가장자리 — 의자 등받이 바로 위)
     assert.ok(seat.mark.x === seat.rug.x && seat.mark.y > seat.desk.y && seat.mark.y <= seat.chair[1], tag);
   }
-  // 책상 줄 사이의 복도(한가운데 · 러그의 귀) · 칠판 앞 · 교실 뒤쪽 · 양쪽 벽 옆은 다닌다
-  for (const [x, y] of [[452, 400], [649, 400], [1044, 500], [836, 292], [836, 800], [260, 500], [1450, 500], [410, 369], [300, 369]]) assert.equal(plazaWalkable(x, y, room), true, `${x},${y}`);
-  // 교탁 · 책장 · 벽 · 창가의 책장 · 열린 문은 못 간다
-  for (const [x, y] of [[300, 220], [1300, 200], [836, 150], [60, 500], [1640, 760], [1660, 400]]) assert.equal(plazaWalkable(x, y, room), false, `${x},${y}`);
+  // 책상 사이의 복도(한가운데 · 러그의 귀) · 줄 사이 길 · 칠판 앞 · 첫 줄 왼쪽 · 오른쪽 끝 책상 뒤(교탁 · 책장 앞) · 교실 뒤쪽 · 양쪽 벽 옆은 다닌다
+  for (const [x, y] of [[452, 400], [649, 400], [1044, 500], [836, 292], [836, 800], [260, 500], [1450, 500], [410, 369], [300, 369],
+    [355, 410], [748, 500], [1332, 592], [945, 684], [355, 320], [1332, 320], [355, 302]]) assert.equal(plazaWalkable(x, y, room), true, `${x},${y}`);
+  // 교탁(다리까지) · 책장 · 벽 · 창가의 책장 · 열린 문은 못 간다
+  for (const [x, y] of [[300, 220], [355, 296], [1300, 200], [1300, 294], [836, 150], [60, 500], [1640, 760], [1660, 400]]) assert.equal(plazaWalkable(x, y, room), false, `${x},${y}`);
   assert.equal(reach(room.spawn, CLASSROOM_PORTAL, room), true);
   // 책상을 눌러도 그 옆 바닥까지 걸어간다
   const near = plazaNearest(CLASSROOM_SEATS[14].desk.x, CLASSROOM_SEATS[14].desk.y, room);
@@ -276,6 +279,129 @@ test("교실 — 책상 줄은 못 가고, 자리마다 양옆의 러그 귀(서
   at = { ...first.sides[1].stand };
   for (let i = 0; i < 60; i += 1) at = plazaStep(at, -6, 0, null, room);
   assert.ok(at.x > first.box[2] && classroomNearSeat(at, 0), `책상 오른쪽에서 멈춤 ${at.x} — 러그 위`);
+});
+
+test("교실 — 앞뒤 줄 사이와 첫 줄 뒤는 가로로 다니는 길(선생님 요청): 왼쪽 끝 복도에서 오른쪽 끝 복도까지 곧게 간다", () => {
+  const room = CLASSROOM_ROOM;
+  const rows = Array.from({ length: CLASSROOM_ROWS }, (_, r) => CLASSROOM_SEATS[r * CLASSROOM_COLS].rug.y);
+  // 길마다 발이 설 수 있는 폭 — 줄 사이는 앞줄 의자 앞다리와 뒷줄 책상 뒷다리 사이(길 찾기 칸 16px이 두 줄 들어감)
+  const lanes = [{ top: 300, bottom: rows[0] - DESK_BACK - 1, name: "첫 줄 뒤(교탁 · 칠판 · 책장 앞)" }];
+  for (let r = 0; r < CLASSROOM_ROWS - 1; r += 1) {
+    const lane = { top: rows[r] + DESK_FRONT + 1, bottom: rows[r + 1] - DESK_BACK - 1, name: `${r + 1}번째 줄과 ${r + 2}번째 줄 사이` };
+    assert.ok(lane.bottom - lane.top >= 36, `${lane.name} 폭 ${lane.bottom - lane.top}px`);
+    lanes.push(lane);
+  }
+  for (const lane of lanes) {
+    const y = Math.round((lane.top + lane.bottom) / 2);
+    const left = { x: 240, y };
+    const right = { x: 1460, y };
+    // 누른 곳으로 걷기 — 한 번에 곧게(책상 사이를 지그재그로 돌지 않음)
+    assert.equal(plazaClear(left, right, room), true, lane.name);
+    assert.deepEqual(plazaPath(left, right, room), [right], lane.name);
+    assert.deepEqual(plazaPath(right, left, room), [left], lane.name);
+    // 방향키 — 오른쪽 끝 복도까지 막히지 않고 간다
+    let at = { ...left };
+    for (let i = 0; i < 260; i += 1) at = plazaStep(at, 6, 0, null, room);
+    assert.ok(at.x > 1450 && Math.abs(at.y - y) < 1, `${lane.name} 방향키로 ${at.x},${at.y}`);
+    // 길의 위아래 끝도 바닥이고, 그 바로 바깥(책상 다리 쪽)은 아니다 — 책상 한가운데(x)에서
+    for (const seat of CLASSROOM_SEATS) {
+      assert.equal(plazaWalkable(seat.rug.x, lane.top, room), true, `${lane.name} 자리 ${seat.index} 위 끝`);
+      assert.equal(plazaWalkable(seat.rug.x, lane.bottom, room), true, `${lane.name} 자리 ${seat.index} 아래 끝`);
+    }
+  }
+  // 첫 줄 왼쪽 · 오른쪽 끝 — 교탁 · 책장에 막혀 못 건너던 곳(교실 뒤로 돌아가지 않고 앞으로 곧게)
+  assert.deepEqual(plazaPath({ x: 250, y: 330 }, { x: 452, y: 330 }, room), [{ x: 452, y: 330 }]);
+  assert.deepEqual(plazaPath({ x: 1240, y: 320 }, { x: 1460, y: 320 }, room), [{ x: 1460, y: 320 }]);
+  // 교실 왼쪽 끝 복도 → 오른쪽 끝 복도는 어느 높이에서든 멀리 돌지 않는다(가로 길로 곧장 — 곧은 거리의 1.25배 안)
+  for (const y of [340, 450, 560, 650, 740]) {
+    const from = { x: 230, y };
+    const to = { x: 1470, y };
+    let length = 0;
+    let here = plazaNearest(from.x, from.y, room);
+    for (const point of plazaPath(from, to, room)) {
+      assert.equal(plazaClear(here, point, room), true, `y ${y} — 막힌 곳을 지나지 않음`);
+      length += Math.hypot(point.x - here.x, point.y - here.y);
+      here = point;
+    }
+    assert.ok(length < (to.x - from.x) * 1.25, `y ${y} — 걷는 거리 ${Math.round(length)}`);
+  }
+});
+
+test("교실 — 바닥 어디를 눌러도 길이 있다(줄 사이 길의 가장자리처럼 칸 한가운데가 책상 자리에 걸린 곳도)", () => {
+  const room = CLASSROOM_ROOM;
+  // 실제로 멈춰 서던 경우 — 빈 책상(자리 20) 바로 뒤에서 그 의자 앞 가장자리를 누름(누른 점은 바닥, 그 칸의 한가운데는 책상 자리)
+  const from = { x: 747.0892117745835, y: 605.5030525030526 };
+  const to = { x: 747.9782678720983, y: 670.993894993895 };
+  assert.equal(plazaWalkable(to.x, to.y, room), true);
+  assert.equal(plazaWalkable(744, 664, room), false, "그 칸의 한가운데는 책상 자리");
+  const route = plazaPath(from, to, room);
+  assert.deepEqual(route.at(-1), to);
+  let here = from;
+  for (const point of route) { assert.equal(plazaClear(here, point, room), true, "막힌 곳을 지나지 않음"); here = point; }
+  const check = (start, x, y) => {
+    const path = plazaPath(start, { x, y }, room);
+    assert.ok(path.length && Math.hypot(path.at(-1).x - x, path.at(-1).y - y) < 0.5, `${x},${y}까지 길이 있다`);
+    let at = plazaNearest(start.x, start.y, room);
+    for (const point of path) { assert.equal(plazaClear(at, point, room), true, `${x},${y}로 가는 길이 막힌 곳을 지남`); at = point; }
+  };
+  // 줄 사이 길 · 첫 줄 뒤 · 맨 뒷줄 앞의 위아래 가장자리(책상마다) — 처음 서는 자리에서
+  const rows = Array.from({ length: CLASSROOM_ROWS }, (_, r) => CLASSROOM_SEATS[r * CLASSROOM_COLS].rug.y);
+  const edges = [300, rows[0] - DESK_BACK - 1, rows[CLASSROOM_ROWS - 1] + DESK_FRONT + 1];
+  for (let r = 0; r < CLASSROOM_ROWS - 1; r += 1) edges.push(rows[r] + DESK_FRONT + 1, rows[r + 1] - DESK_BACK - 1);
+  for (const edge of edges) {
+    for (const seat of CLASSROOM_SEATS.slice(0, CLASSROOM_COLS)) {
+      for (const y of [edge - 0.4, edge, edge + 0.4]) if (plazaWalkable(seat.rug.x, y, room)) check(room.spawn, seat.rug.x, y);
+    }
+  }
+  // 교실 바닥을 성기게 훑어 — 어디든 길이 있고, 길의 마디마다 곧게 걸을 수 있다
+  for (let x = 30; x < 1650; x += 71) {
+    for (let y = 280; y < 930; y += 17) if (plazaWalkable(x, y, room)) check(room.spawn, x, y);
+  }
+});
+
+test("교실 — 방향키로 책상 모서리에 걸리면 가까운 길로 비켜 들어가고, 책상 한가운데 앞에서는 멈춘다", () => {
+  const room = CLASSROOM_ROOM;
+  const first = CLASSROOM_SEATS[0];
+  const second = CLASSROOM_SEATS[CLASSROOM_COLS];
+  const laneTop = first.rug.y + DESK_FRONT + 1;
+  const laneBottom = second.rug.y - DESK_BACK - 1;
+  // 길보다 조금 위 · 조금 아래(비켜 설 거리 안)에서 오른쪽으로 — 길로 비켜 들어가 오른쪽 끝까지
+  for (const y of [laneTop - PLAZA_NUDGE + 1, laneTop - 4, laneBottom + 4, laneBottom + PLAZA_NUDGE - 1]) {
+    let at = { x: 240, y };
+    for (let i = 0; i < 300; i += 1) at = plazaStep(at, 6, 0, null, room);
+    assert.ok(at.x > 1450, `y ${y}에서 시작 — ${Math.round(at.x)}까지`);
+    assert.ok(at.y >= laneTop && at.y <= laneBottom, `y ${y} → 길 안 ${at.y}`);
+  }
+  // 세로로도 — 복도 쪽으로 몇 px 벗어난 채 아래로 걸으면 복도로 비켜 내려간다
+  let down = { x: first.rug.x + 54 - 6, y: laneTop + 10 };
+  for (let i = 0; i < 120; i += 1) down = plazaStep(down, 0, 6, null, room);
+  assert.ok(down.y > 760 && down.x > first.rug.x + 54, `복도로 비켜 내려감 ${down.x},${down.y}`);
+  // 비켜 서도 늘 바닥 위 — 한 걸음은 걸음의 길이를 넘지 않는다
+  let at = { x: 240, y: laneTop - 10 };
+  for (let i = 0; i < 40; i += 1) {
+    const next = plazaStep(at, 4, 0, null, room);
+    assert.equal(plazaWalkable(next.x, next.y, room), true);
+    assert.ok(Math.hypot(next.x - at.x, next.y - at.y) <= 4 + 1e-9);
+    at = next;
+  }
+  // 광장(책상이 없음)의 벽 · 가판대에서는 비켜 서지 않고 멈춘다(예전 그대로)
+  let wall = { x: 300, y: 250 };
+  for (let i = 0; i < 40; i += 1) wall = plazaStep(wall, 0, -6, null, PLAZA_ROOM);
+  const again = plazaStep(wall, 0, -6, null, PLAZA_ROOM);
+  assert.deepEqual(again, wall, "광장 위쪽 끝에서 멈춤");
+});
+
+test("교실 — 겹치는 차례: 책상 뒤에 선 캐릭터는 책상 아래 층, 의자 앞은 위 층, 앉은 캐릭터는 늘 제 책상 위", () => {
+  for (const seat of CLASSROOM_SEATS) {
+    const desk = plazaLayer(seat.rug.y);
+    assert.ok(plazaLayer(seat.sit.y) > desk, `자리 ${seat.index} — 앉은 캐릭터가 책상 위`);
+    assert.ok(plazaLayer(seat.rug.y - DESK_BACK - 1) < desk, `자리 ${seat.index} — 책상 뒤에 선 캐릭터는 책상에 가림`);
+    assert.ok(plazaLayer(seat.rug.y + DESK_FRONT + 1) > desk, `자리 ${seat.index} — 의자 앞에 선 캐릭터는 책상 · 앉은 친구 위`);
+    assert.ok(plazaLayer(seat.rug.y + DESK_FRONT + 1) > plazaLayer(seat.sit.y), `자리 ${seat.index} — 의자 앞은 앉은 친구보다 앞`);
+    const behind = seat.row < CLASSROOM_ROWS - 1 ? CLASSROOM_SEATS[seat.index + CLASSROOM_COLS] : null;
+    // 줄 사이 길(이 줄의 의자 앞 ~ 뒷줄의 책상 뒤) 어디에 서도 뒷줄 책상보다는 아래 층
+    if (behind) assert.ok(plazaLayer(behind.rug.y - DESK_BACK - 1) < plazaLayer(behind.rug.y), `자리 ${seat.index} 뒤 줄`);
+  }
 });
 
 test("교실 — 칠판 앞(선생님이 출석을 시작하는 자리)", () => {
