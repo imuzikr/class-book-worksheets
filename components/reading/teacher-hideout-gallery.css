@@ -1,0 +1,35 @@
+/* A static saved-room overview, without running room editors or live presence. */
+.teacher-hideout-gallery { min-width: 0; color: #35513e; padding: 8px 0 24px; }
+.teacher-hideout-gallery * { box-sizing: border-box; }
+.teacher-hideout-gallery-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; }
+.teacher-hideout-gallery-heading h2 { margin: 0; font-size: 23px; line-height: 1.4; }
+.teacher-hideout-gallery-heading h2 span { margin-left: 6px; color: #77866f; font-size: 14px; font-weight: 500; }
+.teacher-hideout-gallery-heading p { margin: 7px 0 0; color: #75816e; font-size: 13px; line-height: 1.7; }
+.teacher-hideout-gallery-heading > button { min-height: 44px; }
+.teacher-hideout-gallery-status { min-height: 20px; margin: 14px 0 12px; color: #74806d; font-size: 12px; line-height: 1.6; }
+.teacher-hideout-gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 12px; }
+.teacher-hideout-gallery-card { min-width: 0; overflow: hidden; border: 1px solid #d9dece; border-radius: 12px; background: #fffdf7; }
+.teacher-hideout-gallery-open { display: block; width: 100%; border: 0; padding: 0; text-align: left; font: inherit; color: inherit; background: transparent; cursor: pointer; }
+.teacher-hideout-gallery-open:hover { background: #edf2e4; }
+.teacher-hideout-gallery button:focus-visible { outline: 3px solid #478fbd; outline-offset: -3px; }
+.teacher-hideout-gallery-scene { position: relative; display: block; width: 100%; aspect-ratio: 1536 / 1024; overflow: hidden; isolation: isolate; background: #e6c8a0; }
+.teacher-hideout-gallery-background { display: block; width: 100%; height: 100%; pointer-events: none; }
+.teacher-hideout-gallery-prop { position: absolute; height: auto; max-width: none; transform: translate(-50%, -100%); pointer-events: none; }
+.teacher-hideout-gallery-caption { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 48px; padding: 10px; }
+.teacher-hideout-gallery-student { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 6px; min-width: 0; }
+.teacher-hideout-gallery-student small { color: #7a8573; font-size: 10px; }
+.teacher-hideout-gallery-student strong { font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
+.teacher-hideout-gallery-caption > span:last-child:not(.teacher-hideout-gallery-student) { flex: none; color: #6a8063; font-size: 11px; }
+.teacher-hideout-gallery-placeholder { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px; aspect-ratio: 1536 / 1024; padding: 10px; background: #f2f3e9; color: #7b8973; text-align: center; font-size: 12px; }
+.teacher-hideout-gallery-placeholder.is-error { background: #fff4ec; color: #93654d; }
+.teacher-hideout-gallery-placeholder p { margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; line-height: 1.5; }
+.teacher-hideout-gallery-placeholder button { min-height: 36px; padding: 5px 9px; border: 1px solid #d4c8b7; border-radius: 8px; color: #735c44; background: #fffdf7; font: inherit; font-size: 11px; cursor: pointer; }
+.teacher-hideout-gallery-empty { margin-top: 20px; padding: 40px 20px; border: 1px dashed #d5e1d3; border-radius: 14px; text-align: center; background: #f8faf3; }
+.teacher-hideout-gallery-empty h3 { font-size: 16px; }
+.teacher-hideout-gallery-empty p { font-size: 13px; line-height: 1.7; color: #75816e; }
+@media (max-width: 480px) {
+  .teacher-hideout-gallery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .teacher-hideout-gallery-caption { flex-wrap: wrap; gap: 3px 8px; padding: 8px; }
+  .teacher-hideout-gallery-student { width: 100%; }
+  .teacher-hideout-gallery-heading h2 { font-size: 21px; }
+}

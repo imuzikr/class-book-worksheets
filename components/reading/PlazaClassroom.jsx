@@ -13,14 +13,15 @@
 //   · 학생 — **내 러그**에 살구빛 테(그 러그가 내 자리의 범위 — 선생님 요청)와 책상 위의 '내 자리' 이름표.
 //     러그에 올라서면 테가 밝아지고 책상 위(이름표 자리)에 물음표가 뜹니다. A(또는 물음표를 누름) → [앉기(S) · 취소(C)].
 //     앉아 있으면 A(또는 내 자리를 누름) → [다시 서기(S) · 취소(C)] — 앉은 동안에는 물음표를 띄우지 않습니다(앉은 캐릭터의 머리를 가림).
-//   · 선생님 — 책상마다 학생 이름, 칠판 앞에 서면 칠판에 물음표가 뜨고 A → [출석시작(S) · 출석종료(C)].
+//   · 선생님 — 책상마다 학생 이름. 칠판에 붙은 출석부 앞에 서면 문서 위에 물음표가 뜨고
+//     A → [출석시작(S) · 출석종료(C)]. 일반 칠판 앞에서는 물음표가 뜨지 않습니다.
 //   · 오늘 출석은 **이름표 앞의 초록 ✓ 동그라미**로 표시합니다 — 책상의 이름표에(앉아 있으면 의자 등받이의 이름표에 — PlazaActor).
 //     이름표의 바탕색은 그대로입니다(내 것 살구 · 친구 남색 · 선생님 초록). 책상 모서리에 따로 띄우던 ✓ 동그라미는
 //     걷었습니다(책상이 한 줄씩이 되면서 러그에 올라선 캐릭터의 얼굴을 가림).
 // 어디에 서 있는지 · 무엇을 고르는 중인지는 무대가 정해 넘깁니다(셈은 lib/readingClassroom.js).
 // =============================================================
 import { memo } from "react";
-import { CLASSROOM_BOARD, CLASSROOM_CLOCK, CLASSROOM_DESK, CLASSROOM_RUG, CLASSROOM_SEATS, PLAZA_H, PLAZA_W, plazaLayer } from "@/lib/readingPlazaMap";
+import { CLASSROOM_ATTENDANCE_RECORD, CLASSROOM_BOARD, CLASSROOM_CLOCK, CLASSROOM_DESK, CLASSROOM_RUG, CLASSROOM_SEATS, PLAZA_H, PLAZA_W, plazaLayer } from "@/lib/readingPlazaMap";
 
 const pct = (value, whole) => `${(value / whole * 100).toFixed(3)}%`;
 const at = (point) => ({ left: pct(point.x, PLAZA_W), top: pct(point.y, PLAZA_H) });
@@ -45,18 +46,18 @@ export const PlazaFurniture = memo(function PlazaFurniture() {
 
 // 앉기 · 다시 서기 단추를 물음표 자리(책상 윗면)에서 얼마나 올려 띄우나(그림 원본 px) — 책상 윗변 위로 32px쯤
 const MENU_LIFT = 66;
-// 칠판의 고르는 단추(출석시작 · 출석종료)는 **선생님 옆, 칠판 위**에 뜹니다 — 상자의 아랫변이 선생님의 발 높이(원본 px).
+// 출석부의 고르는 단추(출석시작 · 출석종료)는 **선생님 옆, 칠판 위**에 뜹니다 — 상자의 아랫변이 선생님의 발 높이(원본 px).
 // 머리 위(물음표 자리)에 띄우면 위쪽에 자리가 모자랍니다 — 선생님 머리 위로는 그림 132px(화면 80~115px)뿐인데 상자는
 // 109~127px라, 1440×900에서도 '출석을 받는 중' 안내가 화면 밖으로 잘렸고 1024×700에서는 안내 글이 통째로 잘렸습니다(실측).
 // 옆에 띄우면 첫 줄 책상(280px~)과 거기 앉은 학생의 머리(254px~)를 가리지 않습니다. 칠판 가운데보다 왼쪽에 섰으면 오른쪽에,
 // 오른쪽에 섰으면 왼쪽에 — 화면 안쪽으로. 무대가 좁으면(폰) 옆자리가 없어 발 아래에 띄웁니다(plaza.css의 .plaza-act--board).
-const BOARD_MENU_FOOT = CLASSROOM_BOARD.standY - 2;
-const BOARD_MENU_BELOW = CLASSROOM_BOARD.standY + 14;
+const BOARD_MENU_FOOT = CLASSROOM_ATTENDANCE_RECORD.stand.y - 2;
+const BOARD_MENU_BELOW = CLASSROOM_ATTENDANCE_RECORD.stand.y + 14;
 const BOARD_MID = (CLASSROOM_BOARD.rect[0] + CLASSROOM_BOARD.rect[2]) / 2;
 const MENUS = {
   sit: { title: "내 자리", primary: "앉기", secondary: "취소" },
   stand: { title: "내 자리", primary: "다시 서기", secondary: "취소" },
-  board: { title: "출석", primary: "출석시작", secondary: "출석종료" },
+  board: { title: "출석부", primary: "출석시작", secondary: "출석종료" },
 };
 
 // menu        고르는 중인 것 — { kind: "sit" | "stand" | "board", x?(칠판일 때 선생님이 선 자리) }
@@ -64,14 +65,14 @@ const MENUS = {
 // desks       책상마다 앉을 학생 uid(30칸 · 없으면 null) — lib/readingClassroom.js의 classroomDesks
 // names       [선생님] uid → { name, studentId }(지금 명단)
 // mySeat      [학생] 내 자리 번호(없으면 null) · sitting 앉아 있는 자리 번호(서 있으면 null)
-// hint        지금 A를 누르면 물을 것이 있는가 — "seat"(내 러그 위 · 앉아 있음) · "board"(칠판 앞) · null
-// boardMark   칠판의 물음표가 뜰 자리 · menu 고르는 중인 것({ kind }) · roll 출석 수({ present, total })
+// hint        지금 A를 누르면 물을 것이 있는가 — "seat"(내 러그 위 · 앉아 있음) · "board"(출석부 앞) · null
+// boardMark   출석부 위 고정 물음표 자리 · menu 고르는 중인 것({ kind }) · roll 출석 수({ present, total })
 // present     [선생님] 오늘 출석한 uid들(Set · 기록이 없으면 null) · attended [학생] 오늘 출석했나 · openToday 오늘 출석이 열려 있나
 // seated      지금 의자에 앉아 있는 자리 번호들(Set) — 그 책상의 이름표는 몸에 가려 걷습니다
 export default function PlazaClassroom({ teacher = false, desks, names, mySeat = null, sitting = null, hint = null, boardMark = null, menu = null,
-  present = null, attended = false, openToday = false, roll = null, seated, onAct, onChoose }) {
+  present = null, attended = false, openToday = false, roll = null, seated, onAct, onChoose, onAttendanceRecord }) {
   const mine = mySeat !== null ? CLASSROOM_SEATS[mySeat] : null;
-  const anchor = (menu?.kind ?? hint) === "board" ? boardMark : mine?.mark ?? null;
+  const anchor = (menu?.kind ?? hint) === "board" ? boardMark ?? CLASSROOM_ATTENDANCE_RECORD.mark : mine?.mark ?? null;
   // 고르는 단추는 책상보다 조금 위에 — 책상과 그 옆에 선(또는 앉은) 내 캐릭터의 머리 · 이름표가 단추 아래로 보이게.
   // (책상 윗변에 붙였을 때는 '다시 서기' 단추가 앉은 캐릭터의 머리를 덮었습니다 — 실측)
   const menuAt = anchor && menu?.kind !== "board" ? { x: anchor.x, y: anchor.y - MENU_LIFT } : anchor;
@@ -85,8 +86,16 @@ export default function PlazaClassroom({ teacher = false, desks, names, mySeat =
   const asking = !teacher && sitting === null && (hint === "seat" || menu?.kind === "sit");
   const copy = menu ? MENUS[menu.kind] : null;
   const canStop = menu?.kind === "board" && openToday;
+  const record = CLASSROOM_ATTENDANCE_RECORD;
+  const recordStyle = { left: pct(record.x - record.w / 2, PLAZA_W), top: pct(record.y - record.h, PLAZA_H), width: pct(record.w, PLAZA_W), height: pct(record.h, PLAZA_H) };
+  const recordArt = <><img src={record.src} alt={teacher ? "" : "칠판에 붙인 출석부"} draggable={false} /><span aria-hidden="true">출석부</span></>;
   return (
     <>
+      {/* 칠판의 출석부 — 배경을 다시 굽지 않고 문서를 붙입니다. 학생에게는 장식, 선생님에게는 앞으로 걷는 입구입니다. */}
+      {teacher ? <button type="button" className="plaza-attendance-record is-interactive" style={recordStyle}
+        aria-label="출석부 — 앞으로 걸어가 출석 확인하기" title="출석부 앞으로 걸어가 출석 확인하기"
+        onClick={(event) => { event.stopPropagation(); onAttendanceRecord?.(); }}>{recordArt}</button>
+        : <div className="plaza-attendance-record" style={recordStyle}>{recordArt}</div>}
       {/* 선생님 — 책상마다 학생 이름(의자에 앉아 있으면 캐릭터의 이름표가 대신 보임) */}
       {teacher && desks.map((uid, i) => {
         const who = uid ? names?.get(uid) : null;
@@ -116,7 +125,7 @@ export default function PlazaClassroom({ teacher = false, desks, names, mySeat =
       {/* 물음표 — 지금 A를 누르면 물을 것이 있습니다(눌러도 같음 — 자판이 없는 기기) */}
       {hint && anchor && !menu && sitting === null && (
         <button type="button" className="plaza-mark" style={at(anchor)} onClick={onAct}
-          aria-label={hint === "board" ? "출석 — A를 누르거나 눌러서 고르기" : "앉기 — A를 누르거나 눌러서 고르기"}>
+          aria-label={hint === "board" ? "출석부 — A를 누르거나 눌러서 고르기" : "앉기 — A를 누르거나 눌러서 고르기"}>
           ?<i aria-hidden="true">A</i>
         </button>
       )}
