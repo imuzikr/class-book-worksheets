@@ -505,14 +505,11 @@
 /* 학생 화면 — 입력칸 바로 아래 한 줄(선생님이 정한 말: '모든 댓글은 선생님이 확인할 수 있습니다.') */
 .plaza-comment-notice { margin: 6px 2px 0; color: #5f7365; font-size: 11.5px; line-height: 1.5; }
 
-/* 서재 쪽 — 책 상세의 '책 광장' 칸과 발자국 · 한 권의 책 창의 안내.
-   학생이 고르는 스위치('광장 책꽂이에 꽂기' · '발자국 보이기')와 그 CSS는 걷었습니다(선생님 결정 — 광장을 켠 반에서는 모두 공개). */
+/* 서재 쪽 — 발자국 · 한 권의 책 창의 안내(반 친구들이 함께 읽는 글 — 빼지 마세요).
+   학생이 고르는 스위치('광장 책꽂이에 꽂기' · '발자국 보이기')와 그 CSS는 걷었습니다(선생님 결정 — 광장을 켠 반에서는 모두 공개).
+   책 상세 창의 '책 광장' 안내 상자(.plaza-own — 설명 · 댓글 수)도 걷었습니다(선생님 요청 · 2026년 11월 — 가판대 · 책꽂이 단추는
+   상세 창 위 단추 줄로, reading.css의 .reading-detail-tools). */
 .plaza-note { margin: 0; padding: 9px 12px; border-radius: 9px; background: #eef5ec; color: #3d6654; font-size: 12px; line-height: 1.6; }
-.plaza-own { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 16px 0 20px; padding: 12px 14px; border: 1px solid #dce8dc; border-radius: 12px; background: #f6faf3; }
-.plaza-own-text { flex: 1 1 240px; min-width: 0; }
-.plaza-own-text strong { display: block; font-size: 13px; color: #2c4c3f; }
-.plaza-own-text span { display: block; margin-top: 3px; color: #6f8276; font-size: 11.5px; line-height: 1.55; }
-.plaza-own-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 @container plazapanel (max-width: 560px) {
   .plaza-logs li { grid-template-columns: minmax(0, 1fr); gap: 6px; }
   .plaza-log-date { flex-direction: row; align-items: baseline; gap: 8px; }

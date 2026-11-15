@@ -20,7 +20,7 @@
 @container readingworkspace (max-width:679px) {
   .reading-workspace-layout { grid-template-columns:minmax(0,1fr); gap:16px; }
 }
-.reading-hub button:focus-visible,.reading-modal button:focus-visible,.reading-form input:focus-visible,.reading-form textarea:focus-visible,.reading-form select:focus-visible { outline:3px solid #478fbd; outline-offset:3px; }
+.reading-hub button:focus-visible,.reading-hub .reading-book-actions > a:focus-visible,.reading-modal button:focus-visible,.reading-form input:focus-visible,.reading-form textarea:focus-visible,.reading-form select:focus-visible { outline:3px solid #478fbd; outline-offset:3px; }
 .reading-summary { display:grid; grid-template-columns:1.25fr 1fr 1fr 1fr; gap:1px; border:1px solid var(--reading-line); border-radius:14px; overflow:hidden; background:var(--reading-line); margin-bottom:28px; }
 .reading-summary>div { display:flex; flex-direction:column; justify-content:center; gap:8px; background:var(--reading-paper); padding:19px 24px; }
 .reading-summary>div>span:first-child { font-size:11px; font-weight:700; color:#778476; }
@@ -119,13 +119,15 @@
 .reading-book-percent { color:#7d8d7c; font-size:9px; }
 @media (max-width:600px) {
   .reading-library-grid { --reading-completion-size:42px; gap:28px; }
-  .reading-library-grid .reading-book-actions button { padding:0 3px; font-size:11px; }
+  .reading-library-grid .reading-book-actions button, .reading-library-grid .reading-book-actions > a { padding:0 3px; font-size:11px; }
   .reading-book-meta { min-height:42px; gap:8px; }
 }
 /* 카드 아래 단추 — 같은 크기 세 칸(가운데 '한 권의 책'은 완독한 책에만, 없으면 빈 칸) */
 .reading-book-actions { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); align-items:center; gap:8px; padding:10px 14px; border-top:1px solid #e7ece2; border-radius:0 0 13px 13px; background:#fafbf6; }
-.reading-book-actions button { height:36px; min-height:0; padding:0 6px; font-size:12.5px; font-weight:700; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; box-sizing:border-box; width:100%; }
+.reading-book-actions button, .reading-book-actions > a { height:36px; min-height:0; padding:0 6px; font-size:12.5px; font-weight:700; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; box-sizing:border-box; width:100%; }
 .reading-book-actions .btn-ghost { font-size:12.5px; padding:0 6px; }
+/* 첫 칸 '도서 정보 보기'는 새 창 링크(lib/reading.js의 bookInfoUrl) — 단추와 같은 모양으로, 밑줄 없이 */
+.reading-book-actions > a { text-decoration:none; }
 .reading-small-review { background:#fff4e8; border:1px solid #efcfae; border-radius:7px; color:#9a5a2c; font:inherit; cursor:pointer; }
 .reading-small-review:hover { background:#fde9d4; }
 .reading-small-review:disabled { opacity:.5; cursor:wait; }
@@ -173,9 +175,11 @@
 .reading-danger-button:disabled,.reading-text-danger:disabled { opacity:.5; cursor:wait; }
 .reading-muted { color:#8b9984; font-size:12px; line-height:1.7; }
 .reading-detail-meta { display:flex; flex-wrap:wrap; gap:8px 15px; margin:-10px 0 18px; color:#7c8d76; font-size:12px; }
-.reading-detail-tools { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-bottom:24px; }
-.reading-detail-tools .btn-ghost { font-size:11px; }
-.reading-detail-tools .btn-primary { margin-left:auto; font-size:12px; }
+/* 책 상세 창 위 단추 줄 — 책 정보 고치기 · 보관함으로 · (책 광장을 켠 반) 가판대에서 발자국 보기 · 책꽂이에서 감상 보기.
+   네 칸 같은 크기 격자로 줄을 고르게 나눕니다(선생님 요청 · 2026년 11월 — 광장 단추 둘은 한때 아래 '책 광장' 안내 상자 안).
+   단추가 둘 · 셋인 책도 칸 크기는 같고(빈 칸은 오른쪽), 640px 아래는 두 줄 두 칸. 글자가 칸보다 길면 넘치지 않고 낱말 사이에서
+   두 줄로 접히며, 모든 칸이 가장 높은 단추에 맞춰 같은 높이입니다(grid-auto-rows). 단추 모양은 아래 '책 상세 창의 단추 크기' 뒤. */
+.reading-detail-tools { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); grid-auto-rows:1fr; gap:8px; margin-bottom:24px; }
 .reading-detail-section { padding:19px 0; border-top:1px solid #e0e7d9; }
 .reading-detail-section>header { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:12px; }
 .reading-detail-section h3 { margin:0; font-size:14px; color:#45643e; }
@@ -262,7 +266,7 @@
 .reading-me-label { display:inline-block; padding:2px 5px; margin-left:6px; border:1px solid #bfd0aa; border-radius:4px; background:#e7efd9; color:#6e8555; font-size:9px; }
 .reading-sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 @media (max-width:900px) { .reading-summary { grid-template-columns:repeat(2,1fr); } .reading-summary>div { padding:18px 20px; } .reading-intro { padding:22px; } .reading-featured { display:none; } }
-@media (max-width:600px) { .reading-hub { padding-top:0; } .reading-intro { padding:22px 18px; border-radius:12px; } .reading-intro p:last-child { font-size:11px; } .reading-tabs { padding-top:10px; margin-bottom:16px; gap:0; } .reading-tabs button { flex:1; min-width:0; padding:13px 7px; font-size:12px; } .reading-summary { margin-bottom:22px; } .reading-summary>div { padding:16px; gap:7px; } .reading-summary strong { font-size:26px; } .reading-summary>div>span:last-child { font-size:9px; } .reading-section-head h3 { font-size:17px; } .reading-section-head p { font-size:11px; } .reading-section-head .btn-primary { font-size:11px; padding:8px 11px; } .reading-filters { gap:2px; } .reading-filters button { font-size:11px; padding:7px 9px; } .reading-library-grid { grid-template-columns:1fr; } .reading-book-open { padding:19px; gap:20px; } .reading-book-cover { width:92px; height:134px; } .reading-modal { padding:22px 20px; border-radius:14px; } .reading-modal-head h2 { font-size:18px; } .reading-modal-backdrop { padding:16px 10px; } .reading-modal { max-height:calc(100dvh - 32px); } .reading-detail-tools .btn-primary { margin-left:0; } .reading-tier-guide { gap:10px 15px; padding:12px; } .reading-tier-guide>span { font-size:9px; gap:5px; } .reading-tier-guide strong { font-size:10px; } .reading-badge-series>header { padding:15px; gap:10px; } .reading-badge-series h4 { font-size:14px; } .reading-badge-series>header p { font-size:10px; line-height:1.6; } .reading-next-goal { font-size:9px; padding:5px 7px; } .reading-badge-card { padding:17px 8px; } .reading-badge-visual { min-height:94px; } .reading-badge-visual .reading-badge-art { width:77px; height:auto; } .reading-badge-card h5 { font-size:11px; } .reading-badge-card>p { font-size:9px; min-height:31px; } .reading-badge-card .reading-feature-button { font-size:9px; padding:7px 5px; } .reading-earned-label { right:0; font-size:7px; } .reading-badge-exp { font-size:9px; } .reading-tier-label { font-size:9px; } .reading-unearned,.reading-earned-date { font-size:9px; } .reading-my-rank { flex-wrap:wrap; gap:9px 13px; padding:13px 15px; font-size:10px; } .reading-ranking-table thead th,.reading-ranking-table tbody td,.reading-ranking-table tbody th { padding:12px; } }
+@media (max-width:600px) { .reading-hub { padding-top:0; } .reading-intro { padding:22px 18px; border-radius:12px; } .reading-intro p:last-child { font-size:11px; } .reading-tabs { padding-top:10px; margin-bottom:16px; gap:0; } .reading-tabs button { flex:1; min-width:0; padding:13px 7px; font-size:12px; } .reading-summary { margin-bottom:22px; } .reading-summary>div { padding:16px; gap:7px; } .reading-summary strong { font-size:26px; } .reading-summary>div>span:last-child { font-size:9px; } .reading-section-head h3 { font-size:17px; } .reading-section-head p { font-size:11px; } .reading-section-head .btn-primary { font-size:11px; padding:8px 11px; } .reading-filters { gap:2px; } .reading-filters button { font-size:11px; padding:7px 9px; } .reading-library-grid { grid-template-columns:1fr; } .reading-book-open { padding:19px; gap:20px; } .reading-book-cover { width:92px; height:134px; } .reading-modal { padding:22px 20px; border-radius:14px; } .reading-modal-head h2 { font-size:18px; } .reading-modal-backdrop { padding:16px 10px; } .reading-modal { max-height:calc(100dvh - 32px); } .reading-tier-guide { gap:10px 15px; padding:12px; } .reading-tier-guide>span { font-size:9px; gap:5px; } .reading-tier-guide strong { font-size:10px; } .reading-badge-series>header { padding:15px; gap:10px; } .reading-badge-series h4 { font-size:14px; } .reading-badge-series>header p { font-size:10px; line-height:1.6; } .reading-next-goal { font-size:9px; padding:5px 7px; } .reading-badge-card { padding:17px 8px; } .reading-badge-visual { min-height:94px; } .reading-badge-visual .reading-badge-art { width:77px; height:auto; } .reading-badge-card h5 { font-size:11px; } .reading-badge-card>p { font-size:9px; min-height:31px; } .reading-badge-card .reading-feature-button { font-size:9px; padding:7px 5px; } .reading-earned-label { right:0; font-size:7px; } .reading-badge-exp { font-size:9px; } .reading-tier-label { font-size:9px; } .reading-unearned,.reading-earned-date { font-size:9px; } .reading-my-rank { flex-wrap:wrap; gap:9px 13px; padding:13px 15px; font-size:10px; } .reading-ranking-table thead th,.reading-ranking-table tbody td,.reading-ranking-table tbody th { padding:12px; } }
 @media (prefers-reduced-motion:reduce) { .reading-loader { animation:none; } .reading-progress i { transition:none; } }
 .reading-optional { display:inline; font-size:10px; color:#89957c; font-weight:400; }
 .reading-linked-activity { display:flex; justify-content:space-between; align-items:center; gap:14px; margin:0 0 22px; padding:14px 16px; border:1px solid #d0ddc6; border-radius:10px; background:#eff5e8; }
@@ -270,7 +274,7 @@
 .reading-linked-activity span { color:#839772; font-size:10px; }
 .reading-linked-activity strong { color:#577148; font-size:13px; overflow-wrap:anywhere; }
 .reading-linked-activity button { flex-shrink:0; font-size:11px; }
-@media(max-width:600px) { .reading-filters button,.reading-book-actions button,.reading-feature-button,.reading-log-tools button { min-height:38px; } }
+@media(max-width:600px) { .reading-filters button,.reading-book-actions button,.reading-book-actions > a,.reading-feature-button,.reading-log-tools button { min-height:38px; } }
 .reading-preview-button { margin:10px 0 0; padding:7px 10px; font:inherit; font-size:10px; border:1px solid #d9dfd0; border-radius:7px; color:#77856b; background:#f9faf5; cursor:pointer; }
 .reading-preview-button:hover { background:#eef2e4; border-color:#b5c4a3; color:#526b3f; }
 .reading-badge-preview { display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center; }
@@ -421,7 +425,7 @@
 
 /* 책 상세 창의 단추 크기 — 한때 11px 알약이라 너무 작았습니다(선생님 요청).
    앱의 다른 단추처럼 글자 13.5px · 높이 38px로 맞춥니다. 위 규칙들보다 뒤에 와야 이깁니다. */
-.reading-detail-tools .btn-ghost, .reading-detail-tools .btn-primary, .reading-linked-activity button,
+.reading-linked-activity button,
 .reading-detail-section>header button,
 .reading-review .reading-text-danger {
   height:38px; min-height:0; padding:0 16px; font-size:13.5px; font-weight:600;
@@ -431,7 +435,9 @@
 .reading-review .reading-text-danger { border:1px solid #e8cbc1; border-radius:var(--radius-btn); background:#fff; }
 .reading-review .reading-text-danger:hover:not(:disabled) { background:#fbf1ed; }
 .reading-review .reading-text-danger { margin-top:10px; }
-.reading-detail-tools { gap:8px; }
+.reading-detail-tools > button { width:100%; height:auto; min-height:40px; min-width:0; margin:0; padding:5px 8px; font-size:13.5px; font-weight:600; line-height:1.3;
+  display:flex; align-items:center; justify-content:center; text-align:center; white-space:normal; text-wrap:balance; word-break:keep-all; box-sizing:border-box; }
+@media (max-width:640px) { .reading-detail-tools { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
 
 /* 교사의 책 봄 — 왼쪽 학생 명단 · 오른쪽 고른 학생의 책 봄(TeacherReadingView) */
 .reading-teacher { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 18px; align-items: start; }

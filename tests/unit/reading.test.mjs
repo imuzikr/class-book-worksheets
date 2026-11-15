@@ -476,6 +476,26 @@ test("새 반은 운영 중인 반의 독서 맵을 따르고 보관된 반·혼
   assert.equal(featuresForNewClass([{ archived: true, readingMapTheme: "continent" }]), null);
 });
 
+test("도서 정보 보기(bookInfoUrl) — 검색으로 담은 책은 그 책의 정보 쪽, 주소가 없거나 낯선 주소면 다음 검색으로 '제목 지은이'", async () => {
+  const { bookInfoUrl, BOOK_INFO_SEARCH } = await import("@/lib/reading");
+  const page = "https://search.daum.net/search?w=bookpage&bookId=123&q=%EC%96%B4%EB%A6%B0%20%EC%99%95%EC%9E%90";
+  assert.equal(bookInfoUrl({ title: "어린 왕자", author: "생텍쥐페리", bookLink: page }), page);
+  assert.equal(bookInfoUrl({ title: "책", bookLink: "https://book.naver.com/bookdb/book_detail.naver?bid=1" }), "https://book.naver.com/bookdb/book_detail.naver?bid=1");
+  const search = (q) => BOOK_INFO_SEARCH + encodeURIComponent(q);
+  // 직접 적어 담은 책(주소 없음) — 제목 + 지은이로 찾기, 지은이가 없으면 제목만
+  assert.equal(bookInfoUrl({ title: " 어린 왕자 ", author: " 생텍쥐페리 " }), search("어린 왕자 생텍쥐페리"));
+  assert.equal(bookInfoUrl({ title: "어린 왕자", author: "" }), search("어린 왕자"));
+  assert.ok(bookInfoUrl({ title: "가 & 나?", author: "A/B" }).startsWith("https://search.daum.net/search?w=tot&q="));
+  assert.equal(new URL(bookInfoUrl({ title: "가 & 나?", author: "A/B" })).searchParams.get("q"), "가 & 나? A/B");
+  // 저장할 때 받지 않는 주소는 쓰지 않고 검색으로(HTTPS가 아님 · 다른 사이트 · 스크립트 · 계정 · 포트 · 깨진 주소)
+  for (const bad of ["http://search.daum.net/x", "https://evil.example.com/daum.net", "https://daum.net.evil.com/", "javascript:alert(1)", "https://u:p@search.daum.net/", "https://search.daum.net:8443/", "not a url"]) {
+    assert.equal(bookInfoUrl({ title: "어린 왕자", author: "생텍쥐페리", bookLink: bad }), search("어린 왕자 생텍쥐페리"), bad);
+  }
+  // 제목이 없으면 단추를 그리지 않음
+  assert.equal(bookInfoUrl({ title: "  ", author: "누구" }), null);
+  assert.equal(bookInfoUrl(null), null);
+});
+
 test("책 등록 창 — 제목이 검색한 책과 다른 책이 되었나(bookTitleDrifted): 띄어쓰기 · 문장 부호 · 대소문자만 다르면 같은 책", async () => {
   const { bookTitleDrifted } = await import("@/lib/reading");
   const picked = "뱅크시, 아무 데나 낙서해도 돼?";
