@@ -13,6 +13,7 @@
 .reading-tabs button:hover { color:#254f44; background:#f0f4ed; border-radius:8px 8px 0 0; }
 /* 뱃지는 책꽂이 왼쪽에 둡니다. 반 명단·옆 패널을 뺀 실제 본문 너비로 접습니다. */
 .reading-workspace { min-width:0; container:readingworkspace / inline-size; }
+.reading-hub--no-tabs > .reading-workspace { margin-top:24px; }
 .reading-workspace-layout { display:grid; grid-template-columns:240px minmax(0,1fr); align-items:start; gap:20px; }
 .reading-workspace-main { min-width:0; }
 .reading-workspace-main .reading-section-head { margin-top:0; }
@@ -57,21 +58,44 @@
 @media (max-width:700px) {
   .reading-intro--teacher > .reading-intro-side { margin-left:0; justify-content:flex-start; }
 }
-/* 학생 머리말 — 제목과 독서 요약 사이의 여백을 쓰고 펫은 기존 카드 그대로 오른쪽에 둡니다. */
+/* 학생 머리말 — 제목 · 독서 요약 아래에 대표 뱃지 · 캐릭터 · 펫을 함께 표시합니다. */
 .reading-intro--student { display:grid; grid-template-columns:minmax(0,1fr) minmax(380px,1.3fr); grid-template-areas:"copy stats"; gap:16px; }
-.reading-intro--student.has-pet { grid-template-columns:minmax(0,1fr) minmax(380px,1.3fr) max-content; grid-template-areas:"copy stats pet"; }
+.reading-intro--student.has-profile { grid-template-areas:"copy stats" "profile profile"; }
 .reading-intro--student > .reading-intro-copy { grid-area:copy; }
 .reading-intro--student .reading-intro-copy h2 { font-size:clamp(19px,2.3vw,28px); }
 .reading-intro--student > .reading-summary--compact,
 .reading-intro--student > .reading-intro-loading { grid-area:stats; }
-.reading-intro--student > .reading-intro-side { grid-area:pet; width:auto; justify-self:end; justify-content:flex-end; }
-@media (max-width:1280px) {
-  .reading-intro--student.has-pet { grid-template-columns:minmax(0,1fr) max-content; grid-template-areas:"copy pet" "stats stats"; }
-}
+.reading-intro--student > .reading-intro-side { grid-area:profile; width:100%; min-width:0; align-items:stretch; justify-content:flex-end; }
+.reading-intro--student .reading-featured,
+.reading-intro--student .reading-character-summary { display:flex; align-items:center; flex:1 1 180px; min-width:0; max-width:280px; min-height:104px; gap:12px; padding:8px 12px; border:1px solid #d8e5db; border-radius:14px; background:#ffffff91; }
+.reading-intro--student .reading-featured > svg { flex-shrink:0; color:#99aa9d; }
+.reading-intro--student .reading-featured > span { min-width:0; overflow-wrap:anywhere; }
+.reading-intro--student .reading-featured em { color:#567066; font-size:11px; font-style:normal; }
+.reading-character-summary > img,
+.reading-character-placeholder { flex-shrink:0; width:60px; height:60px; object-fit:contain; }
+.reading-character-placeholder { border-radius:12px; background:#e9efe6; }
+.reading-character-info { display:flex; flex-direction:column; min-width:0; gap:4px; overflow-wrap:anywhere; }
+.reading-character-info small { color:#688076; font-size:11px; }
+.reading-character-info strong { color:#294c42; font-size:13px; }
+.reading-character-info em { color:#567066; font-size:11.5px; font-style:normal; }
+.reading-intro--student .reading-pet-wrap,
+.reading-intro--student > .reading-intro-side > .reading-pet { flex:1.4 1 320px; min-width:0; max-width:400px; }
+.reading-intro--student .reading-pet-wrap { display:flex; flex-direction:column; }
+.reading-intro--student .reading-pet { min-width:0; min-height:104px; flex-wrap:wrap; }
+.reading-intro--student .pet-say { position:relative; left:auto; bottom:auto; flex:0 0 100%; max-width:100%; box-shadow:none; }
+.reading-intro--student .reading-pet-wrap > .reading-pet { flex:1; }
+.reading-intro--student .reading-pet-open { flex:1 1 200px; min-width:0; }
+.reading-intro--student .reading-pet-text { min-width:0; }
+.reading-intro--student .reading-pet-care { flex-wrap:wrap; }
+.reading-intro--student .reading-pet-care b { white-space:normal; }
 @media (max-width:700px) {
   .reading-intro--student { grid-template-columns:minmax(0,1fr); grid-template-areas:"copy" "stats"; }
-  .reading-intro--student.has-pet { grid-template-columns:minmax(0,1fr); grid-template-areas:"copy" "stats" "pet"; }
-  .reading-intro--student > .reading-intro-side { min-width:0; justify-self:stretch; justify-content:flex-start; }
+  .reading-intro--student.has-profile { grid-template-areas:"copy" "stats" "profile"; }
+  .reading-intro--student > .reading-intro-side { justify-content:flex-start; }
+  .reading-intro--student .reading-featured,
+  .reading-intro--student .reading-character-summary { flex-basis:140px; max-width:none; }
+  .reading-intro--student .reading-pet-wrap,
+  .reading-intro--student > .reading-intro-side > .reading-pet { max-width:none; }
   .reading-intro--student .reading-summary--compact { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .reading-intro--student .reading-summary--compact > div { border-left:0; border-top:1px solid #d9e3d8; }
   .reading-intro--student .reading-summary--compact > div:nth-child(even) { border-left:1px solid #d9e3d8; }
@@ -89,6 +113,16 @@
 .reading-section-head h3 span { margin-left:7px; color:#748273; font-size:13px; font-weight:500; }
 .reading-section-head p { margin:6px 0 0; color:#7a8578; font-size:12px; line-height:1.5; }
 .reading-section-head button { flex-shrink:0; }
+.reading-library-head { flex-wrap:wrap; }
+.reading-library-head > :first-child { min-width:0; }
+.reading-library-actions { display:inline-grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; max-width:100%; margin-left:auto; }
+.reading-library-actions .btn-primary,
+.reading-library-entry .btn-primary { display:inline-flex; justify-content:center; align-items:center; min-width:0; min-height:44px; padding:0 16px; font-size:13px; white-space:nowrap; cursor:pointer; }
+.reading-library-actions .reading-plaza-entry,
+.reading-library-entry .reading-plaza-entry { background:#4d7056; }
+.reading-library-actions .reading-plaza-entry:hover:not(:disabled),
+.reading-library-entry .reading-plaza-entry:hover:not(:disabled) { background:#3c5d44; }
+.reading-library-entry { display:flex; justify-content:flex-end; margin-top:24px; }
 .reading-filters { display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin:14px 0 20px; }
 .reading-filters button { font:inherit; font-size:12px; border:1px solid transparent; border-radius:8px; background:transparent; padding:8px 13px; color:#748274; cursor:pointer; }
 .reading-filters button.active { border-color:#cedbce; background:#eef4e9; color:#315b44; font-weight:750; }
