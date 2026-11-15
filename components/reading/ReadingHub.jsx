@@ -214,7 +214,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
   useEffect(() => {
     if (tab === "hideout" && !canHideout) leaveHideout();
   }, [tab, canHideout, leaveHideout]);
-  // 내 광장 목록 한 장 — 선생님이 내린 책 · 내 책에 달린 댓글 수(학생 본인 화면 · 광장을 켠 반에서만, 읽기 1)
+  // 내 광장 목록 한 장 — 내 책에 달린 댓글 수 · 지금 광장에 올라가 있는 모습(학생 본인 화면 · 광장을 켠 반에서만, 읽기 1)
   const [myShelf, setMyShelf] = useState(null);
   const ownPlaza = plazaOn && !readOnly && !isTeacher && !!user?.uid;
   const myUid = user?.uid;
@@ -347,7 +347,6 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
   }, []);
   // 책 광장 — 이 책이 지금 광장에 어떻게 올라가 있는지(책 상세 창)
   const plazaInfo = (bookId) => ({
-    blocked: Array.isArray(myShelf?.blocked) && myShelf.blocked.includes(bookId),
     comments: Math.max(0, Number(myShelf?.counts?.[bookId]) || 0),
     entry: (Array.isArray(myShelf?.books) ? myShelf.books : []).find((b) => b?.id === bookId) ?? null,
     hasLogs: stats.logs.some((log) => log.bookId === bookId && log.classId === classId),
@@ -390,8 +389,8 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
     {dialog?.type === "detail" && selected && <BookDetail book={selected} classId={classId} readOnly={readOnly} activity={activities.find((a) => a.id === selected.activityId)} onOpenActivity={onOpenActivity} logs={(stats.logs || raw?.logs || []).filter((l) => l.bookId === selected.id)} review={(stats.reviews || raw?.reviews || []).find((r) => r.bookId === selected.id)} busy={busy} onClose={() => setDialog(null)} onEdit={() => setDialog({ type: "book", bookId: selected.id })} onLog={(log) => setDialog({ type: "log", bookId: selected.id, log })} onReview={() => setDialog({ type: "review", bookId: selected.id })} onDeleteLog={(log) => ask((raw?.reviews || []).some((r) => r.bookId === log.bookId && r.fromLogId === log.id) ? "이 독서 기록을 삭제할까요? 경험치와 달성 기록도 다시 계산해요. 함께 남긴 ‘한 권의 책’은 지워지지 않고 그대로 남아요." : "이 독서 기록을 삭제할까요? 경험치와 달성 기록도 다시 계산해요.", { type: "deleteLog", logId: log.id })} onArchive={() => ask(selected.archived ? "이 책을 책꽂이로 돌려놓을까요?" : "이 책을 보관함으로 옮길까요? 독서 기록은 그대로 남아요.", { type: "archiveBook", bookId: selected.id, archived: !selected.archived })}
       plaza={ownPlaza ? plazaInfo(selected.id) : null}
       onOpenPlaza={(place) => { setDialog(null); setError(""); setPlazaJump({ uid: viewUid, bookId: selected.id, place, key: `jump-${Date.now()}` }); setTab("plaza"); }} />}
-    {dialog?.type === "log" && selected && <LogForm key={dialog.log?.id || selected.id} book={selected} log={dialog.log} reviews={raw?.reviews || []} today={day} busy={busy} petRead={readToday} plaza={ownPlaza ? (plazaInfo(selected.id).blocked ? "blocked" : "shown") : null} onClose={() => setDialog({ type: "detail", bookId: selected.id })} onSave={async (values, plan) => { const bookId = selected.id; const ok = await run({ type: dialog.log ? "updateLog" : "addLog", bookId, ...(dialog.log ? { logId: dialog.log.id } : {}), ...values }, (state) => logSavedNotice(plan, state, bookId, !!dialog.log)); if (ok) setDialog({ type: "detail", bookId }); }} />}
-    {dialog?.type === "review" && selected && <ReviewForm key={selected.id} book={selected} review={(stats.reviews || raw?.reviews || []).find((r) => r.bookId === selected.id)} busy={busy} plaza={ownPlaza ? (plazaInfo(selected.id).blocked ? "blocked" : "shown") : null} onClose={() => setDialog({ type: "detail", bookId: selected.id })} onSave={async (values) => { const ok = await run({ type: "saveReview", bookId: selected.id, ...values }, "책을 읽고 남긴 생각을 저장했어요."); if (ok) setDialog({ type: "detail", bookId: selected.id }); }} />}
+    {dialog?.type === "log" && selected && <LogForm key={dialog.log?.id || selected.id} book={selected} log={dialog.log} reviews={raw?.reviews || []} today={day} busy={busy} petRead={readToday} plaza={ownPlaza ? "shown" : null} onClose={() => setDialog({ type: "detail", bookId: selected.id })} onSave={async (values, plan) => { const bookId = selected.id; const ok = await run({ type: dialog.log ? "updateLog" : "addLog", bookId, ...(dialog.log ? { logId: dialog.log.id } : {}), ...values }, (state) => logSavedNotice(plan, state, bookId, !!dialog.log)); if (ok) setDialog({ type: "detail", bookId }); }} />}
+    {dialog?.type === "review" && selected && <ReviewForm key={selected.id} book={selected} review={(stats.reviews || raw?.reviews || []).find((r) => r.bookId === selected.id)} busy={busy} plaza={ownPlaza ? "shown" : null} onClose={() => setDialog({ type: "detail", bookId: selected.id })} onSave={async (values) => { const ok = await run({ type: "saveReview", bookId: selected.id, ...values }, "책을 읽고 남긴 생각을 저장했어요."); if (ok) setDialog({ type: "detail", bookId: selected.id }); }} />}
     {confirm && <Modal title="기록 확인" busy={busy} onClose={() => setConfirm(null)}><p className="reading-confirm-copy">{confirm.title}</p><div className="reading-form-actions"><button type="button" className="btn-ghost" onClick={() => setConfirm(null)} disabled={busy}>취소</button><button type="button" className="reading-danger-button" disabled={busy} onClick={async () => { if (await run(confirm.action, "기록을 정리했어요.")) setConfirm(null); }}>{busy ? "처리 중…" : "확인"}</button></div></Modal>}
   </section></ReadingErrorContext.Provider>;
 }
@@ -519,8 +518,9 @@ function logSavedNotice(plan, state, bookId, editing) {
   return editing ? "독서 발자국을 고쳤어요." : "오늘의 독서를 기록했어요.";
 }
 
-// plaza — 책 광장을 켠 반의 학생: 이 발자국을 반 친구들이 함께 읽는다는 것을 쓰는 자리에서 알려 줍니다
-// ("shown" · 선생님이 이 책을 내렸으면 "blocked"). 학생이 고르는 칸은 없습니다(선생님 결정 — 광장을 켠 반에서는 모두 공개).
+// plaza — 책 광장을 켠 반의 학생: 이 발자국을 반 친구들이 함께 읽는다는 것을 쓰는 자리에서 알려 줍니다("shown").
+// 학생이 고르는 칸은 없습니다(선생님 결정 — 광장을 켠 반에서는 모두 공개). 한때 선생님이 광장에서 내린 책이면 "blocked"로
+// '나와 선생님만 봐요'를 띄웠는데, '광장에서 내리기'를 걷어 그 안내도 없습니다(선생님 요청 — 되살리지 마세요).
 // petRead — 펫 먹이를 켠 반의 학생에게만: 저장해 둔 오늘의 발자국 합계 { pages, chars }(lib/petCare.js의 readingDayProof).
 // 쓰는 동안 '오늘의 읽기 n쪽 · n자'를 보여 주어, 5쪽 · 250자 이상이면 오늘은 펫의 배부름이 줄지 않는다는 것을 알립니다.
 // reviews — 서재의 '한 권의 책' 목록. 한 번에 완독(1쪽~마지막 쪽 발자국 하나)이면 저장할 때 '한 권의 책'을 어떻게 하는지
@@ -559,14 +559,13 @@ function LogForm({ book, log, reviews = [], today, busy, plaza = null, petRead =
           : ` — ${CARE_READ_PAGES}쪽 · ${CARE_READ_CHARS}자 이상이면 오늘은 펫의 배부름이 줄지 않아요.`}</p>
         : <p className="pet-read-note">🍊 오늘 날짜의 발자국만 펫의 ‘읽은 날’이 돼요.</p>)}
       {plaza === "shown" && <p className="plaza-note">이 발자국은 책 광장에서 반 친구들이 함께 읽어요.</p>}
-      {plaza === "blocked" && <p className="plaza-note plaza-note--off">선생님이 이 책을 광장에서 내려, 이 발자국은 나와 선생님만 봐요.</p>}
       <p className="reading-help">1쪽당 1 EXP. 그날 5쪽 이상 읽으면 연속 독서일로 쳐서 하루 한 번 보너스(연속일 × 15, 7일째부터 105)를 받아요. 이미 기록한 페이지는 중복 적립하지 않아요.</p>
       <div className="reading-form-actions"><button type="button" className="btn-ghost" onClick={onClose} disabled={busy}>취소</button><button type="submit" className="btn-primary" disabled={busy || !form.notes.trim()}>{busy ? "저장 중…" : "독서 발자국 저장"}</button></div>
     </form>
   </Modal>;
 }
 
-// plaza — 책 광장을 켠 반의 학생: 이 글을 반 친구들이 함께 읽는다는 것을 알려 줍니다("shown" · "blocked").
+// plaza — 책 광장을 켠 반의 학생: 이 글을 반 친구들이 함께 읽는다는 것을 알려 줍니다("shown").
 // 한때 '광장 책꽂이에 꽂기'를 여기서 골랐습니다 — 걷었습니다(선생님 결정 — 모두 공개. 되살리지 마세요).
 function ReviewForm({ book, review, busy, plaza = null, onSave, onClose }) {
   const [text, setText] = useState(review?.text || "");
@@ -577,7 +576,6 @@ function ReviewForm({ book, review, busy, plaza = null, onSave, onClose }) {
       <label>나의 별점<select value={rating} onChange={(e) => setRating(e.target.value)}>{[5, 4, 3, 2, 1].map((n) => <option key={n} value={n}>{n}점</option>)}</select></label>
       <label>읽고 남은 생각<textarea data-initial-focus required rows={8} maxLength={5000} value={text} onChange={(e) => setText(e.target.value)} placeholder="이 책이 내게 남긴 것, 친구와 나누고 싶은 생각을 써 보세요." /><span className="reading-field-count">{text.length} / 5,000</span></label>
       {plaza === "shown" && <p className="plaza-note">이 글은 책 광장 책꽂이에서 반 친구들이 함께 읽고 댓글을 남길 수 있어요.</p>}
-      {plaza === "blocked" && <p className="plaza-note plaza-note--off">선생님이 이 책을 광장에서 내려, 이 글은 나와 선생님만 봐요.</p>}
       {review?.fromLogId && <p className="reading-whole-note">한 번에 완독한 독서 발자국의 감상을 함께 남긴 글이에요. 고쳐 저장하면 그때부터 발자국과 따로 남아요.</p>}
       <p className="reading-help">다 읽은 책을 마무리하는 총평이에요. 서로 다른 책의 첫 ‘한 권의 책’에 70 EXP를 받아요. 고쳐 쓸 때는 중복 지급하지 않아요.</p>
       <div className="reading-form-actions"><button type="button" className="btn-ghost" disabled={busy} onClick={onClose}>취소</button><button type="submit" className="btn-primary" disabled={busy || !text.trim()}>{busy ? "저장 중…" : "한 권의 책 저장"}</button></div>
@@ -588,9 +586,9 @@ function ReviewForm({ book, review, busy, plaza = null, onSave, onClose }) {
 // 책 광장 — 이 책의 글을 반 친구들이 함께 읽는다는 것을 알려 줍니다(책 상세 창 · 광장을 켠 반의 학생 본인에게만).
 // **학생이 고르는 칸은 없습니다**(선생님 결정 — "학생이 선택할 수 있는 옵션을 제거하고 모두 공개"). 한때 여기에
 // '광장 책꽂이에 꽂기' · '발자국 보이기' 두 스위치가 있었습니다 — 걷었습니다(되살리지 마세요).
-// info — { blocked(선생님이 내림), comments(달린 댓글 수), entry(지금 광장에 올라가 있는 모습) }
+// info — { comments(달린 댓글 수), entry(지금 광장에 올라가 있는 모습) }. 한때 선생님이 내린 책(blocked)이면 '선생님이 이 책을
+// 광장에서 내렸어요'를 띄웠는데, '광장에서 내리기'를 걷었습니다(선생님 요청 — 되살리지 마세요).
 function PlazaOwn({ info, busy, onOpen }) {
-  if (info.blocked) return <div className="plaza-own"><div className="plaza-own-text"><strong>책 광장</strong><span>선생님이 이 책을 광장에서 내렸어요. 이 책의 글은 나와 선생님만 봐요.</span></div></div>;
   const text = "독서 발자국은 광장 가판대에서, 완독 감상 ‘한 권의 책’은 광장 책꽂이에서 반 친구들과 함께 읽어요. 완독해도 발자국은 가판대에 남아요.";
   return <div className="plaza-own">
     <div className="plaza-own-text"><strong>책 광장</strong><span>{text}</span></div>

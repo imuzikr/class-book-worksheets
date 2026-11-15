@@ -1,4 +1,4 @@
-// 책 광장 — 서버가 저장할 때 맞추는 공유 사본과 댓글 · 내리기(lib/server/readingService.js).
+// 책 광장 — 서버가 저장할 때 맞추는 공유 사본과 댓글(lib/server/readingService.js). '광장에서 내리기'는 걷었습니다.
 // **광장을 켠 반에서는 그 반에서 쓴 독서 발자국 · 한 권의 책이 모두 반 친구에게 보입니다**(선생님 결정 — 학생이 고르는
 // 것이 없음 · 켜기 전에 쓴 글도 켜면 반 전체를 한 번 맞춰 모두 공개). 꺼 둔 반의 글은 사본으로 나가지 않습니다.
 // Auth · Firestore 에뮬레이터에서 진짜 트랜잭션으로 봅니다(tests/server/README.md).
@@ -338,29 +338,39 @@ test(`댓글 고치기는 한 댓글에 ${PLAZA_COMMENT_EDIT_MAX}번까지 — �
   assert.equal((await bookDoc("a", "plz-book-0001")).comments, 1);
 });
 
-test("[교사] 책을 광장에서 내리면 비워지고, 학생이 다시 써도 안 올라온다 — 다시 올리면 돌아온다", async () => {
-  await assert.rejects(() => act("b", { action: "block", ownerUid: ids.a, bookId: "plz-book-0001", blocked: true }), (e) => e.status === 403);
-  assert.deepEqual(await act("teacher", { action: "block", ownerUid: ids.a, bookId: "plz-book-0001", blocked: true }), { blocked: ["plz-book-0001"] });
-  let s = await shelf("a");
-  assert.deepEqual([s.books, s.blocked], [[], ["plz-book-0001"]]);
-  let b = await bookDoc("a", "plz-book-0001");
-  assert.deepEqual([b.place, b.logs, b.review, b.comments], [null, [], null, 1]);
-  // 내려간 책에는 댓글을 달 수 없다
-  await assert.rejects(() => act("b", { action: "comment", ownerUid: ids.a, bookId: "plz-book-0001", text: "아직 있나요", requestId: "plz-cmt-00008" }), (e) => e.code === "reading/plaza-gone");
-  // 이미 단 댓글도 고칠 수 없다(선생님이 단 댓글 — 쓴 사람이라도)
-  await assert.rejects(() => act("teacher", { action: "editComment", commentId: "plz-cmt-00002", text: "내린 책의 댓글" }), (e) => e.code === "reading/plaza-gone");
-  // 학생이 고쳐 써도 내린 책은 그대로 내려가 있다
+test("[교사] '광장에서 내리기'는 걷었다 — 요청은 거절하고, 예전에 내린 책도 다시 올라와 남은 표시를 지운다", async () => {
+  // 새로고침 전의 옛 화면이 보내도 — 선생님이든 학생이든 거절하고 아무것도 바꾸지 않는다
+  const kept = await shelf("a");
+  for (const kind of ["teacher", "b"]) {
+    await assert.rejects(() => act(kind, { action: "block", ownerUid: ids.a, bookId: "plz-book-0001", blocked: true }),
+      (e) => e.status === 410 && e.code === "reading/plaza-block-removed" && /새로고침/.test(e.message));
+  }
+  assert.deepEqual(await shelf("a"), kept);
+  assert.equal((await bookDoc("a", "plz-book-0001")).place, "shelf");
+  // 걷기 전에 선생님이 내려 둔 책 — 옛 기준(3)의 사본: 목록에서 빠지고 blocked에 적힘 · 책 사본은 비워짐 · 댓글 수는 남음
+  const takenDownBefore = async () => {
+    const cur = await shelf("a");
+    await db.doc(`classes/${CLASS}/plazaShelves/${ids.a}`).set({ ...cur, rule: 3, books: cur.books.filter((x) => x.id !== "plz-book-0001"), blocked: ["plz-book-0001"] });
+    await db.doc(`classes/${CLASS}/plazaBooks/${ids.a}_plz-book-0001`).update({ place: null, logs: [], logCount: 0, review: null });
+  };
+  const shownAgain = async (text) => {
+    const s = await shelf("a");
+    assert.deepEqual([s.rule, "blocked" in s, s.counts["plz-book-0001"]], [PLAZA_SHARE_RULE, false, 1]);
+    assert.equal(s.books.find((x) => x.id === "plz-book-0001")?.place, "shelf");
+    const b = await bookDoc("a", "plz-book-0001");
+    assert.deepEqual([b.place, b.review.text, b.comments], ["shelf", text, 1]);
+    assert.equal(notesOf(b).length > 0, true);
+  };
+  // ① 그 학생이 다음에 저장하면 — 사본을 통째로 다시 써서 그 책도 다른 책처럼 다시 올라온다
+  await takenDownBefore();
   await send("a", "plz-review-03", { type: "saveReview", bookId: "plz-book-0001", text: "또 고친 글", rating: 4 });
-  s = await shelf("a");
-  assert.deepEqual([s.books, s.blocked], [[], ["plz-book-0001"]]);
-  assert.equal((await bookDoc("a", "plz-book-0001")).place, null);
-  // 다시 올리면 지금 서재대로 돌아오고, 댓글 수도 그대로
-  assert.deepEqual(await act("teacher", { action: "block", ownerUid: ids.a, bookId: "plz-book-0001", blocked: false }), { blocked: [] });
-  s = await shelf("a");
-  assert.equal(s.books[0].place, "shelf");
-  assert.equal(s.counts["plz-book-0001"], 1);
-  b = await bookDoc("a", "plz-book-0001");
-  assert.deepEqual([b.place, b.review.text, b.comments], ["shelf", "또 고친 글", 1]);
+  await shownAgain("또 고친 글");
+  // ② 저장하지 않아도 — 반 문서가 옛 기준이면(책방 화면이 plazaNeedsSync를 보고 부탁) 반 전체 맞추기가 다시 올린다
+  await takenDownBefore();
+  await db.doc(`classes/${CLASS}`).update({ plazaSynced: 3 });
+  assert.deepEqual(await act("teacher", { action: "sync" }), { synced: true, ran: true, members: 3 });
+  assert.equal((await classDoc()).plazaSynced, PLAZA_SHARE_RULE);
+  await shownAgain("또 고친 글");
 });
 
 test("사용 중지된 친구의 책에는 댓글을 달 수 없고, 사용 중지된 학생은 댓글을 못 단다", async () => {
@@ -396,7 +406,8 @@ test("광장을 한 번도 켜지 않은 반 — 저장해도 사본을 만들�
   await db.doc(`classes/${NEVER}/plazaBooks/${ids.a}_plz-never-bk01`).set({ uid: ids.a, bookId: "plz-never-bk01", place: "stall", logs: [{ id: "x", notes: "옛 글" }], logCount: 1, review: null, comments: 3 });
   await send("a", "plz-never-ed01", { type: "updateLog", logId: "plz-never-lg01", notes: "고쳐 쓴 발자국" }, NEVER);
   const s = await shelf("a", NEVER);
-  assert.deepEqual([s.rule, s.books[0].excerpt], [PLAZA_SHARE_RULE, "고쳐 쓴 발자국"]);
+  // 옛 사본에 남은 blocked 칸(선생님이 내리던 때 — 걷음)도 이때 함께 지운다
+  assert.deepEqual([s.rule, s.books[0].excerpt, "blocked" in s], [PLAZA_SHARE_RULE, "고쳐 쓴 발자국", false]);
   const b = await bookDoc("a", "plz-never-bk01", NEVER);
   assert.deepEqual([notesOf(b), b.comments], [["고쳐 쓴 발자국"], 3]);
   // 지우면 사본도 비워진다(지운 글이 남지 않게)

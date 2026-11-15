@@ -16,7 +16,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { backdropClose } from "@/lib/modal";
 import { formatTime } from "@/lib/dates";
-import { addPlazaComment, deletePlazaComment, editPlazaComment, setPlazaBlocked, subscribePlazaBook, subscribePlazaComments } from "@/lib/data/plaza";
+import { addPlazaComment, deletePlazaComment, editPlazaComment, subscribePlazaBook, subscribePlazaComments } from "@/lib/data/plaza";
 import { PLAZA_COMMENT_MAX, plazaCommentEdited, plazaDayLabel, plazaEntryForPlace, plazaFriends, plazaItems, plazaLogsNewestFirst, plazaNameLabel } from "@/lib/readingPlaza";
 
 const PLACES = { stall: { name: "가판대", description: "독서 발자국" }, shelf: { name: "책꽂이", description: "완독 감상" } };
@@ -233,32 +233,13 @@ function Comments({ classId, owner, bookId, myUid, isTeacher }) {
 
 function BookView({ classId, shelves, target, place, myUid, isTeacher, onNavigate }) {
   const [book, setBook] = useState(undefined);   // undefined 아직 · null 광장에 없음
-  const [blocking, setBlocking] = useState(false);
-  const [confirmBlock, setConfirmBlock] = useState(false);
-  const [error, setError] = useState("");
   useEffect(() => {
-    setBook(undefined); setError(""); setConfirmBlock(false);
+    setBook(undefined);
     return subscribePlazaBook(classId, target.uid, target.bookId, setBook, () => setBook(null));
   }, [classId, target.uid, target.bookId]);
-  useEffect(() => {
-    if (!confirmBlock) return undefined;
-    const timer = setTimeout(() => setConfirmBlock(false), 4000);
-    return () => clearTimeout(timer);
-  }, [confirmBlock]);
   const owner = shelves.find((s) => s.uid === target.uid);
   const others = (owner?.books ?? []).filter((b) => b.id !== target.bookId).map((b) => plazaEntryForPlace(b, place)).filter(Boolean);
   const logs = useMemo(() => plazaLogsNewestFirst(book?.logs ?? []), [book]);
-
-  async function block() {
-    if (!confirmBlock) { setConfirmBlock(true); return; }
-    setConfirmBlock(false); setBlocking(true); setError("");
-    try {
-      await setPlazaBlocked(classId, target.uid, target.bookId, true);
-      onNavigate({ book: null });
-    } catch (e) {
-      setError(e?.message || "광장에서 내리지 못했어요.");
-    } finally { setBlocking(false); }
-  }
 
   if (book === undefined) return <div className="reading-loading" role="status"><span className="reading-loader" />책을 펼치고 있어요.</div>;
   if (!book || (place === "shelf" ? !book.review : logs.length === 0)) {
@@ -280,14 +261,8 @@ function BookView({ classId, shelves, target, place, myUid, isTeacher, onNavigat
           <h3>{book.title}</h3>
           <p>{book.author}</p>
           <span className="plaza-card-progress"><span className="reading-progress"><i style={{ width: `${percent(book)}%` }} /></span>{number(book.read)} / {number(book.total)}쪽 · {book.status === "completed" ? "완독" : book.status === "paused" ? "잠시 멈춤" : "읽는 중"}</span>
-          {isTeacher && (
-            <button type="button" className="reading-text-danger plaza-block" disabled={blocking} onClick={block}>
-              {blocking ? "내리는 중…" : confirmBlock ? "한 번 더 누르면 광장에서 내려요" : "광장에서 내리기"}
-            </button>
-          )}
         </div>
       </div>
-      {error && <div className="reading-error" role="alert">{error}</div>}
       {place === "shelf" && book.review && (
         <section className="plaza-review" aria-label="한 권의 책">
           <h4>한 권의 책 <Stars rating={book.review.rating} /></h4>

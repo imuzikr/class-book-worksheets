@@ -458,7 +458,6 @@
 .plaza-book-info h3 { margin: 0; font-size: 20px; font-weight: 750; letter-spacing: -.03em; line-height: 1.35; overflow-wrap: anywhere; }
 .plaza-book-info p { margin: 0; color: #7c8b79; font-size: 13px; }
 .plaza-book-info .plaza-card-progress { max-width: 360px; font-size: 12px; }
-.plaza-block { align-self: flex-start; padding-left: 0; }
 .plaza-review, .plaza-logs, .plaza-others, .plaza-comments { border-top: 1px solid #e6ece2; padding-top: 16px; }
 .plaza-review p { margin: 0; padding: 14px 16px; border-radius: 12px; background: #f6f8f1; font-size: 14px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
 .plaza-logs ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
@@ -509,7 +508,6 @@
 /* 서재 쪽 — 책 상세의 '책 광장' 칸과 발자국 · 한 권의 책 창의 안내.
    학생이 고르는 스위치('광장 책꽂이에 꽂기' · '발자국 보이기')와 그 CSS는 걷었습니다(선생님 결정 — 광장을 켠 반에서는 모두 공개). */
 .plaza-note { margin: 0; padding: 9px 12px; border-radius: 9px; background: #eef5ec; color: #3d6654; font-size: 12px; line-height: 1.6; }
-.plaza-note--off { background: #f4f3ee; color: #7a8578; }
 .plaza-own { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 16px 0 20px; padding: 12px 14px; border: 1px solid #dce8dc; border-radius: 12px; background: #f6faf3; }
 .plaza-own-text { flex: 1 1 240px; min-width: 0; }
 .plaza-own-text strong { display: block; font-size: 13px; color: #2c4c3f; }

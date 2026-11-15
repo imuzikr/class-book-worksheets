@@ -28,7 +28,7 @@ const run = (state, action, context) => applyReadingAction(state, action, contex
 const addBook = (state, id, pages = 20) => run(state, { type: "addBook", title: `책 ${id}`, author: "지은이", totalPages: pages }, ctx(id));
 const addLog = (state, id, bookId, a, b, extra = {}, date = "2026-11-12") => run(state,
   { type: "addLog", bookId, date, startPage: a, endPage: b, notes: `발자국 ${id}` }, ctx(id, extra));
-const project = (state, classId = "classA", options) => plazaProjection(deriveReading(state, new Date(NOW)), classId, options);
+const project = (state, classId = "classA") => plazaProjection(deriveReading(state, new Date(NOW)), classId);
 
 test("책 광장 스위치 — 책 봄이 켜진 반에서 켰을 때만(기본 꺼짐)", () => {
   assert.equal(plazaOn({ readingEnabled: true }), false);
@@ -65,8 +65,9 @@ test("모두 공개 — 그 반에서 쓴 독서 발자국은 언제 썼든 모�
   assert.equal(project(s).entries.length, 0);
   // 글이 하나도 없는 책(등록만 한 책)은 싣지 않는다
   assert.equal(project(addBook(initialReadingState(), "book7", 40)).entries.length, 0);
-  // 기준을 바꾸면 번호를 올린다 — 1은 학생이 고른 글만 싣던 때(그 번호의 사본은 서버가 통째로 다시 씀)
-  assert.ok(Number.isInteger(PLAZA_SHARE_RULE) && PLAZA_SHARE_RULE >= 3);
+  // 기준을 바꾸면 번호를 올린다 — 1은 학생이 고른 글만 싣던 때(그 번호의 사본은 서버가 통째로 다시 씀) ·
+  // 4는 선생님이 '광장에서 내리기'로 내린 책도 다시 보이게 한 때
+  assert.ok(Number.isInteger(PLAZA_SHARE_RULE) && PLAZA_SHARE_RULE >= 4);
 });
 
 test("반 전체를 한 번 맞출 일이 있는가 — 광장을 켠 반인데 지금 기준으로 맞춘 표시가 없을 때만", () => {
@@ -74,6 +75,7 @@ test("반 전체를 한 번 맞출 일이 있는가 — 광장을 켠 반인데 
   assert.equal(plazaNeedsSync(on), true, "켠 반 · 아직 맞춘 적 없음");
   assert.equal(plazaNeedsSync({ ...on, plazaSynced: 1 }), true, "옛 기준으로 맞춘 반은 다시");
   assert.equal(plazaNeedsSync({ ...on, plazaSynced: 2 }), true, "종류별 미리보기가 없는 모두 공개 사본도 다시");
+  assert.equal(plazaNeedsSync({ ...on, plazaSynced: 3 }), true, "선생님이 내린 책을 비워 둔 사본도 다시(내리기를 걷음)");
   assert.equal(plazaNeedsSync({ ...on, plazaSynced: PLAZA_SHARE_RULE }), false, "지금 기준으로 맞춘 반");
   // 광장을 끈 반 · 책 봄을 끈 반 · 반을 아직 모를 때는 부탁하지 않는다
   assert.equal(plazaNeedsSync({ readingEnabled: true, plazaEnabled: false }), false);
@@ -198,14 +200,16 @@ test("걷은 요청 — 옛 화면이 보내는 '빼기 · 숨기기'는 까닭�
   assert.deepEqual(["shelved" in again.reviews[0], "shelvedAt" in again.reviews[0]], [false, false]);
 });
 
-test("보관한 책 · 선생님이 내린 책 · 다른 반에서 쓴 글은 사본에 없다", () => {
+test("보관한 책 · 다른 반에서 쓴 글은 사본에 없다 — 선생님이 내리던 옛 칸(blocked)은 걷었다", () => {
   let s = addBook(initialReadingState(), "book1", 40);
   s = addBook(s, "book2", 40);
   s = addLog(s, "log00001", "book1", 1, 10);
   s = run(s, { type: "addLog", bookId: "book2", date: "2026-11-12", startPage: 1, endPage: 5, notes: "다른 반" }, { uid: "stu", classId: "classB", now: NOW, id: "log00002" });
   assert.deepEqual(project(s).entries.map((e) => e.id), ["book1"]);
   assert.deepEqual(project(s, "classB").entries.map((e) => e.id), ["book2"]);
-  assert.equal(project(s, "classA", { blocked: ["book1"] }).entries.length, 0);
+  // '광장에서 내리기'는 걷었다 — 옛 화면처럼 blocked를 넘겨도 그 책을 빼지 않는다(PLAZA_SHARE_RULE 4)
+  assert.deepEqual(plazaProjection(deriveReading(s, new Date(NOW)), "classA", { blocked: ["book1"] }).entries.map((e) => e.id), ["book1"]);
+  assert.equal(PLAZA_SHARE_RULE, 4);
   // 다른 반에서 쓴 한 권의 책도 이 반의 사본에는 없다
   let r = addBook(initialReadingState(), "book3", 10);
   r = addLog(r, "log00003", "book3", 1, 10);
