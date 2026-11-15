@@ -6,9 +6,9 @@
 // 위에 열 종(같은 단계의 모습으로 나란히 — 단계를 바꾸면 모두 그 단계로 바뀌어 견줘 보기 좋게), 가운데에 고른 종의
 // 큰 그림 · 이름 · 소개, 아래에 그 종이 자라는 열 단계(알 → 10단계 · 그 단계에 닿는 펫 경험치)가 섭니다.
 // 단계를 누르면 큰 그림이 그 단계로 바뀝니다.
-//   · mode "student" — 책나눔의 '나의 펫'에서 엽니다. 아래 '○○ 키우기'로 고르면 서버가 적습니다(chooseReadingPet).
-//       알이면 깨어날 친구가 바뀌고(반 친구에게는 깨어날 때까지 '신비한 알'), 깨어난 펫은 모습과 이름만 바뀝니다
-//       (단계 · 펫 경험치 · 배부름은 그대로). 먹이를 찾아 떠나 있으면(펫 먹이) 고를 수 없습니다.
+//   · mode "student" — 책나눔의 '나의 펫'에서 엽니다. **알일 때만** 아래 '○○ 키우기'로 깨어날 친구를 고릅니다(서버가 적음 —
+//       chooseReadingPet · 반 친구에게는 깨어날 때까지 '신비한 알'). **이미 깨어난 펫은 바꾸지 않습니다**(선생님 결정 — 고르는
+//       단추 없이 보기만. 한때 깨어난 펫도 모습과 이름을 바꿀 수 있었음 — 되살리지 마세요). 먹이를 찾아 떠나 있으면(펫 먹이) 고를 수 없습니다.
 //   · mode "teacher" — 관리자 설정의 '펫 미리보기' 카드에서 선생님이 미리 봅니다(고르는 단추 없음 · 펫이 없음).
 // 그림은 public/reading-pets(PetFigure — 작은 자리는 160px 그림). 창을 열 때만 받습니다(열 종 + 열 단계 ≈ 20장).
 // =============================================================
@@ -39,16 +39,17 @@ export default function PetPreviewModal({ mode = "student", current = null, busy
   const thumbStage = stage <= 1 ? PET_STAGE_MAX : stage;
   const isMine = !!mine && mine === sp.key;
   const away = !!current?.away;
+  const hatched = !!current?.hatched;
+  // 고르기는 알일 때만(선생님 결정) — 깨어난 펫이면 고르는 단추 없이 보기만
+  const canChoose = !teacher && !!onChoose && !hatched;
   const note = teacher
-    ? "학생은 이 창에서 키울 펫을 골라요. 알이면 깨어날 친구가 바뀌고, 이미 깨어난 펫은 단계와 경험치는 그대로 모습과 이름만 바뀌어요."
-    : away
-      ? (current?.hatched ? "펫이 먹이를 찾아 떠나 있어요. 먼저 다시 불러 주세요." : "알이 따뜻한 곳을 찾아 떠나 있어요. 먼저 다시 불러 주세요.")
-      : current?.hatched
-        ? "고르면 단계와 펫 경험치는 그대로이고, 모습과 이름만 바뀌어요."
-        : "고르면 알에서 이 친구가 깨어나요. 반 친구들에게는 깨어날 때까지 ‘신비한 알’로 보여요.";
-  const action = busy ? "고르는 중…"
-    : isMine ? (current?.hatched ? "지금 나의 펫이에요" : "이 친구로 골랐어요")
-      : `${sp.name} 키우기`;
+    ? "학생은 알일 때 이 창에서 깨어날 친구를 골라요. 이미 깨어난 펫은 바꾸지 않고, 자라는 모습을 보기만 해요."
+    : hatched
+      ? "펫은 알일 때만 고를 수 있어요. 지금 펫과 함께 자라면서, 열 친구가 자라는 모습은 언제든 볼 수 있어요."
+      : away
+        ? "알이 따뜻한 곳을 찾아 떠나 있어요. 먼저 다시 불러 주세요."
+        : "고르면 알에서 이 친구가 깨어나요. 깨어나면 바꿀 수 없어요. 반 친구들에게는 깨어날 때까지 ‘신비한 알’로 보여요.";
+  const action = busy ? "고르는 중…" : isMine ? "이 친구로 골랐어요" : `${sp.name} 키우기`;
   if (typeof document === "undefined") return null;
   return createPortal(
     <div className="modal-backdrop pet-layer" {...backdropClose(onClose)}>
@@ -57,7 +58,7 @@ export default function PetPreviewModal({ mode = "student", current = null, busy
         <header className="petpv-head">
           <p className="pet-modal-eyebrow">펫 미리보기</p>
           <h3 id={titleId}>열 친구가 자라는 모습</h3>
-          <p>{teacher ? "학생이 고를 수 있는 열 친구예요. 단계를 누르면 그 단계의 모습으로 바뀌어요." : "마음에 드는 친구를 골라 키워요. 단계를 누르면 그 단계의 모습을 볼 수 있어요."}</p>
+          <p>{teacher ? "학생이 알일 때 고를 수 있는 열 친구예요. 단계를 누르면 그 단계의 모습으로 바뀌어요." : hatched ? "열 친구가 알에서 10단계까지 자라는 모습이에요. 단계를 누르면 그 단계의 모습을 볼 수 있어요." : "마음에 드는 친구를 골라 키워요. 단계를 누르면 그 단계의 모습을 볼 수 있어요."}</p>
         </header>
         <div className="petpv-species" aria-label="펫 종류">
           {PET_SPECIES.map((s) => {
@@ -99,7 +100,7 @@ export default function PetPreviewModal({ mode = "student", current = null, busy
         <div className="petpv-foot">
           <p className="petpv-note">{note}</p>
           {error && <p className="form-error" role="alert">{error}</p>}
-          {!teacher && onChoose && <button type="button" className="btn-primary petpv-choose" disabled={busy || isMine || away} onClick={() => onChoose(sp.key)}>{action}</button>}
+          {canChoose && <button type="button" className="btn-primary petpv-choose" disabled={busy || isMine || away} onClick={() => onChoose(sp.key)}>{action}</button>}
         </div>
       </div>
     </div>,

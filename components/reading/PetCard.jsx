@@ -23,10 +23,10 @@
 //
 // **펫 미리보기**(관리자 설정의 '펫 미리보기'를 켠 반 — preview · 선생님 요청)
 // · 카드 옆 '펫 미리보기'(먹이 주기 · 알 깨우기 · 다시 부르기가 서 있지 않을 때)와 자세히 보기의 칸이 미리보기 창
-//   (PetPreview.jsx)을 엽니다 — 열 친구가 알에서 10단계까지 자라는 모습을 보고 키울 펫을 고릅니다(chooseReadingPet).
-// · 알이면 깨어날 친구가 바뀌고 카드에 '고른 친구 · 쫑긋'이 섭니다(본인에게만 — 반 친구에게는 깨어날 때까지 '신비한 알').
+//   (PetPreview.jsx)을 엽니다 — 열 친구가 알에서 10단계까지 자라는 모습을 보고, **알일 때** 깨어날 친구를 고릅니다(chooseReadingPet).
+// · 고르면 카드에 '고른 친구 · 쫑긋'이 섭니다(본인에게만 — 반 친구에게는 깨어날 때까지 '신비한 알').
 //   고른 종은 서버만 읽는 자리에 있어, 미리보기를 켠 반의 알이면 카드를 열 때 한 번 묻습니다(fetchMyReadingPet의 chosen).
-// · 깨어난 펫은 모습과 이름만 바뀝니다(단계 · 펫 경험치 · 배부름 그대로 — 프로필 구독으로 곧바로 새 모습).
+// · **깨어난 펫은 바꾸지 않습니다**(선생님 결정) — 미리보기 창은 고르는 단추 없이 보기만 합니다.
 // =============================================================
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -179,7 +179,7 @@ export default function PetCard({ classId, uid, growthXp, level = null, onLevelC
     const timer = setTimeout(() => setNotice(""), 6000);
     return () => clearTimeout(timer);
   }, [notice]);
-  // 펫 고르기 — 알이면 깨어날 친구, 깨어난 펫이면 모습과 이름(단계 · 경험치 그대로). 고르면 창을 닫고 한 줄로 알립니다.
+  // 펫 고르기 — 알일 때만 깨어날 친구를 고릅니다(선생님 결정 — 깨어난 펫은 바꾸지 않음). 고르면 창을 닫고 한 줄로 알립니다.
   async function choose(species) {
     if (pickBusy) return;
     setPickBusy(true);
@@ -189,9 +189,7 @@ export default function PetCard({ classId, uid, growthXp, level = null, onLevelC
       const sp = petSpecies(result?.chosen ?? species);
       if (result?.pet && !result.pet.hatched) setChosen(sp?.key ?? null);
       setPreviewOpen(false);
-      if (sp && result?.event) {
-        setNotice(result.pet?.hatched ? `${iGa(sp.name)} 나의 펫이 되었어요! 단계와 경험치는 그대로예요.` : `알에서 ${iGa(sp.name)} 깨어날 거예요!`);
-      }
+      if (sp && result?.event) setNotice(`알에서 ${iGa(sp.name)} 깨어날 거예요!`);
     } catch (e) {
       setPickError(e?.message || "펫을 고르지 못했어요. 잠시 뒤 다시 해 볼까요?");
     } finally {
@@ -427,7 +425,7 @@ export function PetDetailModal({ progress, busy = false, error = "", onHatch = n
         </ol>
         <p className="pet-modal-note">펫은 알을 받은 뒤부터 <b>독서로 얻은 경험치</b>로 자라요. 깨어난 펫은 다시 알로 돌아가지 않아요.</p>
         {onPreview && <div className="pet-modal-preview">
-          <p>열 친구가 알에서 10단계까지 자라는 모습을 보고 키울 펫을 골라요.{progress.hatched ? " 바꿔도 단계와 경험치는 그대로예요." : ""}</p>
+          <p>{progress.hatched ? "열 친구가 알에서 10단계까지 자라는 모습을 볼 수 있어요. 펫은 알일 때만 고를 수 있어요." : "열 친구가 알에서 10단계까지 자라는 모습을 보고 깨어날 친구를 골라요. 깨어나면 바꿀 수 없어요."}</p>
           <button type="button" className="btn-ghost" onClick={onPreview}>펫 미리보기</button>
         </div>}
         {error && <p className="form-error" role="alert">{error}</p>}

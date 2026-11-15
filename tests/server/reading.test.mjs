@@ -522,7 +522,7 @@ test("독서 펫 — 학생만 알 하나(받을 때의 경험치가 바탕 · �
   await db.doc("classes/api-pet").update({ petEnabled: true });
 });
 
-test("펫 미리보기 — 켠 반에서만 펫을 고르고, 알은 비밀 문서만(본인에게만 알림) · 깨어난 펫은 모습만 바뀌고 리더보드 줄도 함께", async () => {
+test("펫 미리보기 — 켠 반에서 알일 때만 펫을 고르고(비밀 문서만 · 본인에게만 알림), 깨어난 펫은 바꾸지 않음(선생님 결정)", async () => {
   const { getReadingPet, readingPetAction } = await import("../../lib/server/readingService.js");
   const snapshot = (uid, totalXp) => ({ uid, level: getReadingLevel(totalXp), featuredBadge: null, formula: READING_FORMULA,
     events: [{ date: today, xp: totalXp }], xpDays: [{ date: today, xp: totalXp }],
@@ -572,20 +572,15 @@ test("펫 미리보기 — 켠 반에서만 펫을 고르고, 알은 비밀 문�
   await db.doc("classes/api-pick/readingMembers/pick-egg").set(snapshot("pick-egg", 130));
   assert.equal((await readingPetAction(who("pick-egg"), { classId: "api-pick", action: "hatch" })).pet.species, "fennec");
 
-  // 깨어난 펫 — 모습만 바뀌고 단계 · 바탕 · 깨어난 날은 그대로, 저장해 둔 반 순위의 그 줄도 곧바로 새 모습
+  // 깨어난 펫은 바꾸지 않음 — 막히고 프로필 · 비밀 문서 그대로(선생님 결정 · 한때 모습과 이름을 바꿀 수 있었음)
   const before = (await db.doc("users/pick-pet").get()).data().readingPet;
-  const cached = await getReadingRankings(principal("teacher"), "api-pick", "all-time"); // 반 순위를 한 장에 저장
-  assert.equal(cached.rankings.find((r) => r.uid === "pick-pet").pet.species, "owl");
-  const changed = await readingPetAction(who("pick-pet"), { classId: "api-pick", action: "choose", species: "cat" });
-  assert.equal(changed.event, "changed");
-  assert.equal(changed.pet.stage, 6);
-  const after = (await db.doc("users/pick-pet").get()).data().readingPet;
-  assert.deepEqual(after, { ...before, species: "cat" });
-  // 저장해 둔 반 순위 한 장의 그 줄도 그 자리에서 고침(다시 세지 않아도 새 모습)
-  assert.equal((await db.doc("classes/api-pick/readingRank/current").get()).data().rows["pick-pet"].pet.species, "cat");
-  assert.equal((await getReadingRankings(principal("teacher"), "api-pick", "all-time")).rankings.find((r) => r.uid === "pick-pet").pet.species, "cat");
-  // 같은 종을 다시 고르면 아무것도 안 씀
-  assert.equal((await readingPetAction(who("pick-pet"), { classId: "api-pick", action: "choose", species: "cat" })).event, null);
+  await assert.rejects(() => readingPetAction(who("pick-pet"), { classId: "api-pick", action: "choose", species: "cat" }),
+    (e) => e.status === 409 && e.code === "reading/pet-hatched");
+  assert.deepEqual((await db.doc("users/pick-pet").get()).data().readingPet, before);
+  assert.equal((await db.doc("users/pick-pet/reading/pet").get()).data().species, "owl");
+  // 고른 알이 깨어난 뒤에도 바꿀 수 없음
+  await assert.rejects(() => readingPetAction(who("pick-egg"), { classId: "api-pick", action: "choose", species: "bear" }),
+    (e) => e.code === "reading/pet-hatched");
 
   // 알을 아직 안 받은 학생 — 고른 종의 알을 받음
   const fresh = await readingPetAction(who("pick-new"), { classId: "api-pick", action: "choose", species: "otter" });
@@ -595,11 +590,11 @@ test("펫 미리보기 — 켠 반에서만 펫을 고르고, 알은 비밀 문�
   // 그 뒤 알 받기(상단바)는 그대로 — 알은 하나
   assert.equal((await readingPetAction(who("pick-new"), { classId: "api-pick", action: "adopt" })).event, null);
 
-  // 처리 도중 선생님이 미리보기를 끄면(트랜잭션이 다시 읽은 반 문서로) 막힘
+  // 선생님이 미리보기를 끄면(트랜잭션이 다시 읽은 반 문서로) 막히고, 지금 고른 알은 그대로
   await db.doc("classes/api-pick").update({ petPreviewEnabled: false });
-  await assert.rejects(() => readingPetAction(who("pick-pet"), { classId: "api-pick", action: "choose", species: "bear" }),
+  await assert.rejects(() => readingPetAction(who("pick-new"), { classId: "api-pick", action: "choose", species: "bear" }),
     (e) => e.code === "reading/pet-preview-disabled");
-  assert.equal((await db.doc("users/pick-pet").get()).data().readingPet.species, "cat"); // 끄면 지금 고른 그대로
+  assert.equal((await db.doc("users/pick-new/reading/pet").get()).data().species, "otter");
 });
 
 // ── 반 순위 저장(10분) — 한 번 셈해 classes/{c}/readingRank/current에 적어 두고 여럿이 그대로 씀(선생님 요청) ──

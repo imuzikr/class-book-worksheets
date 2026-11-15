@@ -5,7 +5,7 @@ import { ReadingHttpError } from "@/lib/server/readingPolicy";
 // 독서 펫 — GET: 내 펫의 지금 모습('내 프로필' 창 · 펫 먹이를 켠 반이면 배부름도)
 // POST { classId, action } — "adopt" 알 받기 · "hatch" 알 깨우기 · "feed"(count: 과일 수) 먹이 주기 ·
 //   "call" 떠난 펫 다시 부르기의 과일 걸음(과일 2개) · "recall"(uid: 학생) [선생님] 떠난 펫 불러 주기 ·
-//   "choose"(species: 종) 펫 고르기 — 관리자 설정의 '펫 미리보기'를 켠 반에서만.
+//   "choose"(species: 종) 펫 고르기 — 관리자 설정의 '펫 미리보기'를 켠 반에서만 · 알일 때만(깨어난 펫은 바꾸지 않음).
 // 학생 본인만('recall'은 담당 교사 · 관리자), '학생 펫'이 켜진 반에서만. 먹이 · 다시 부르기는 '펫 먹이'를 켠 반에서만
 // (lib/server/readingService.js · 셈은 lib/petCare.js). 과일은 서버가 줄입니다.
 export const runtime = "nodejs";
