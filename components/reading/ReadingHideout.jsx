@@ -58,7 +58,7 @@ export default function ReadingHideout(props) {
 
 // petFeed — 그 반의 펫 먹이 규칙(lib/readingPet.js의 petCareRules — 그 학생이 반에 들어온 날까지 반영한 것 · 끈 반이면 on이 거짓).
 //   먹이를 찾아 떠난 펫은 방석에도 없습니다(책 광장과 같은 판정 — lib/petCare.js의 careAway). 돌아오면 다시 쉽니다.
-function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly, characterOn = true, petOn = false, petFeed = null, fruits = 0, onDisabled, onExit, initialView = null, onLoaded = null, exitLabel = "학생 서재로", hideExitButton = false, returnRoom = "classroom" }) {
+function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly, characterOn = true, petOn = false, petFeed = null, fruits = 0, onDisabled, onExit, initialView = null, onLoaded = null, exitLabel = "학생 서재로", hideExitButton = false, hideHeading = false, returnRoom = "classroom" }) {
   // Only the two public map rooms can be return destinations. The parent owns
   // navigation; this private room uses the destination solely for its labels.
   const returnPlace = returnRoom === "plaza" ? "책 광장" : "교실";
@@ -268,7 +268,7 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
   const actorSize = HIDEOUT_OCCUPANTS.character.width * sceneWidth / HIDEOUT_SCENE.width;
   const portal = HIDEOUT_RETURN_PORTAL;
   return <section className={`hideout${editing ? " is-editing" : ""}`} aria-label={`${myName}의 아지트`} aria-busy={saving}>
-    <header className="hideout-heading">
+    {!(readOnly && hideHeading) && <header className="hideout-heading">
       <div><p className="hideout-eyebrow">이야기가 머무는 작은 방</p><h2>{readOnly || teacherOwn ? `${myName}의 아지트` : "나의 아지트"}</h2></div>
       {/* 꾸미기를 시작한 그 자리에 마치는 단추가 섭니다(선생님 신고 — 한때 '꾸미기 취소 · 꾸미기 완료'가 오른쪽 패널의 소품 카드
           맨 아래에 있어, 패널을 끝까지 굴려야 보였고 꾸미기를 켜면 저장 · 끝내기가 없는 것처럼 보였음). 그 자리로 되돌리지 마세요. */}
@@ -282,7 +282,7 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
         </>}
         {onExit && readOnly && !hideExitButton && <button type="button" onClick={requestExit} disabled={saving}>{exitLabel}</button>}
       </div>
-    </header>
+    </header>}
     {error && <div className="hideout-error" role="alert"><p>{error}</p><button type="button" disabled={saving} onClick={() => { movement.stop(); keepDraft(draftKey, null); draftSnapshot.current = null; setReload((value) => value + 1); }}>저장된 모습 다시 불러오기</button></div>}
     <p className="hideout-status" role="status" aria-live="polite">{notice}</p>
     <div className="hideout-layout">

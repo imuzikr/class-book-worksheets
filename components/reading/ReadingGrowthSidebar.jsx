@@ -31,12 +31,11 @@ export default function ReadingGrowthSidebar({ stats, onInspect }) {
   const earned = (badges || []).filter((badge) => badge.earned).length;
   const featuredId = stats?.featuredBadge?.id || stats?.featuredBadge;
 
-  return <details className="reading-growth-rail" open>
-    <summary className="reading-growth-summary">
+  return <aside className="reading-growth-rail" aria-label="성장·뱃지">
+    <header className="reading-growth-summary">
       <h3 className="reading-growth-title">성장·뱃지</h3>
       <span className="reading-growth-count" aria-label={`${badges?.length || 0}개 중 ${earned}개 획득`}>{earned} / {badges?.length || 0}</span>
-      <span className="reading-growth-toggle" aria-hidden="true"><span className="reading-growth-collapse">접기 ⌃</span><span className="reading-growth-expand">펼치기 ⌄</span></span>
-    </summary>
+    </header>
     <div className="reading-growth-body">
       {series.map(({ key, badges: items }) => {
         const next = items.find((badge) => !badge.earned);
@@ -63,5 +62,5 @@ export default function ReadingGrowthSidebar({ stats, onInspect }) {
       })}
       {!series.length && <p className="reading-growth-empty">독서 기록을 불러오면 성취를 볼 수 있어요.</p>}
     </div>
-  </details>;
+  </aside>;
 }

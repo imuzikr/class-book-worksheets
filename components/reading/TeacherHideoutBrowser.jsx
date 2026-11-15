@@ -10,7 +10,7 @@ import "./teacher-hideout-browser.css";
 // change the selected library student, or subscribe to each student's ledger.
 export default function TeacherHideoutBrowser({ classId, user, roster = [], characterOn = true, petOn = false, petFeed = null, onClose }) {
   const [viewingUid, setViewingUid] = useState(null);
-  const snapshots = useRef(new Map());
+  const [snapshots, setSnapshots] = useState(() => new Map());
   const heading = useRef(null);
   const gallery = useRef(null);
   const focusCard = useRef(null);
@@ -21,13 +21,15 @@ export default function TeacherHideoutBrowser({ classId, user, roster = [], char
   const joinedAt = student?.joinedAt ?? null;
   const feed = useMemo(() => petOn && petFeed?.on ? careRulesFor(petFeed, joinedAt) : null, [petOn, petFeed, joinedAt]);
   useEffect(() => { if (viewingUid && index < 0) setViewingUid(null); }, [viewingUid, index]);
-  const remember = useCallback((uid, value) => { snapshots.current.set(uid, value); }, []);
+  const remember = useCallback((uid, value) => {
+    setSnapshots((current) => current.get(uid) === value ? current : new Map(current).set(uid, value));
+  }, []);
   const select = useCallback((uid, value) => {
-    if (value) snapshots.current.set(uid, value);
+    if (value) remember(uid, value);
     focusCard.current = uid;
     focusRoomHeading.current = true;
     setViewingUid(uid);
-  }, []);
+  }, [remember]);
   function browse(direction) {
     if (roster.length < 2 || index < 0) return;
     const next = roster[(index + direction + roster.length) % roster.length];
@@ -50,19 +52,26 @@ export default function TeacherHideoutBrowser({ classId, user, roster = [], char
       <TeacherHideoutGallery classId={classId} user={user} roster={roster} onSelect={select} onLoaded={remember} onClose={onClose} />
     </div>
     {student && <div className="teacher-hideout-view">
-      <nav className="teacher-hideout-navigation" aria-label="학생 아지트 둘러보기">
-        <button type="button" onClick={() => setViewingUid(null)}>전체 아지트</button>
-        <div className="teacher-hideout-sequence">
-          <button type="button" aria-label="이전 학생 아지트" onClick={() => browse(-1)} disabled={roster.length < 2}>← 이전</button>
-          <p ref={heading} tabIndex={-1} aria-live="polite"><strong>{student.studentId ? `${student.studentId} ` : ""}{student.name || "학생"}</strong><span>{index + 1} / {roster.length}</span></p>
-          <button type="button" aria-label="다음 학생 아지트" onClick={() => browse(1)} disabled={roster.length < 2}>다음 →</button>
+      <header className="teacher-hideout-heading">
+        <div className="teacher-hideout-title">
+          <p className="hideout-eyebrow">이야기가 머무는 작은 방{student.studentId ? ` · ${student.studentId}` : ""}</p>
+          <h2 ref={heading} tabIndex={-1} aria-live="polite">{student.realName || student.name || "학생"}의 아지트</h2>
         </div>
-        <button type="button" onClick={onClose}>학생 서재로</button>
-      </nav>
+        <nav className="teacher-hideout-navigation" aria-label="학생 아지트 둘러보기">
+          <button type="button" onClick={() => setViewingUid(null)}>전체 아지트</button>
+          <div className="teacher-hideout-sequence">
+            <button type="button" aria-label="이전 학생 아지트" onClick={() => browse(-1)} disabled={roster.length < 2}>← 이전</button>
+            <span aria-live="polite" aria-label={`${index + 1}번째 학생, 전체 ${roster.length}명`}>{index + 1} / {roster.length}</span>
+            <button type="button" aria-label="다음 학생 아지트" onClick={() => browse(1)} disabled={roster.length < 2}>다음 →</button>
+          </div>
+          <button type="button" onClick={onClose}>학생 서재로</button>
+        </nav>
+        {snapshots.get(student.uid)?.progress?.level != null && <span className="hideout-level">독서 레벨 <strong>{snapshots.get(student.uid).progress.level}</strong></span>}
+      </header>
       <ReadingHideout key={`${classId}:${student.uid}`} classId={classId} user={user} student={student} readOnly
-        initialView={snapshots.current.has(student.uid) ? { classId, uid: student.uid, value: snapshots.current.get(student.uid) } : null}
+        initialView={snapshots.has(student.uid) ? { classId, uid: student.uid, value: snapshots.get(student.uid) } : null}
         onLoaded={remember} characterOn={characterOn} petOn={petOn} petFeed={feed}
-        onDisabled={onClose} onExit={() => setViewingUid(null)} exitLabel="전체 아지트" hideExitButton />
+        onDisabled={onClose} onExit={() => setViewingUid(null)} exitLabel="전체 아지트" hideExitButton hideHeading />
     </div>}
   </section>;
 }
