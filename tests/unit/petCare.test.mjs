@@ -139,6 +139,28 @@ test("쉬는 기간에는 줄지 않음 — 방학 내내 그대로, 끝난 다�
   assert.equal(careStatus(p, rules, "2026-12-02", 3).full, 60);
 });
 
+test("기간 안의 주말도 줄지 않음 — 시작일 · 끝일 포함, 기간 밖의 주말은 줄어듦(설정 화면의 안내 문구 그대로)", () => {
+  // 11-16(월)에 켬 · 시험 기간 11-19(목) ~ 11-24(화) — 그 안에 11-21(토) · 11-22(일)
+  const rules = rulesFrom("2026-11-16", { petRests: [{ kind: "exam", from: "2026-11-19", to: "2026-11-24" }] });
+  assert.equal(isCareRestDay("2026-11-19", rules), true);  // 시작일
+  assert.equal(isCareRestDay("2026-11-21", rules), true);  // 기간 안의 토
+  assert.equal(isCareRestDay("2026-11-22", rules), true);  // 기간 안의 일
+  assert.equal(isCareRestDay("2026-11-24", rules), true);  // 끝일
+  assert.equal(isCareRestDay("2026-11-28", rules), false); // 기간 밖의 토
+  const p = pet();
+  assert.equal(careStatus(p, rules, "2026-11-19", 3).full, 80); // 11-17 · 11-18이 줄어듦
+  assert.equal(careStatus(p, rules, "2026-11-21", 3).restToday, true);
+  assert.equal(careStatus(p, rules, "2026-11-23", 3).full, 80); // 토 · 일이 지나도 그대로
+  assert.equal(careStatus(p, rules, "2026-11-25", 3).full, 80); // 끝일(11-24)도 줄지 않음
+  assert.equal(careStatus(p, rules, "2026-11-26", 3).full, 70); // 끝난 다음 날부터
+  assert.equal(careStatus(p, rules, "2026-11-28", 3).full, 50);
+  assert.equal(careStatus(p, rules, "2026-11-30", 3).full, 30); // 기간 밖의 토 · 일은 줄어듦
+  // 기간을 넣지 않았으면 — 같은 날들에 날마다 10씩
+  const none = rulesFrom("2026-11-16");
+  assert.equal(careStatus(p, none, "2026-11-23", 3).full, 40);
+  assert.equal(careStatus(p, none, "2026-11-27", 3).away, true);
+});
+
 test("펫 먹이를 끈 반 · 켠 날을 모르는 반 — 세지 않음", () => {
   const p = pet();
   assert.equal(careStatus(p, careRules({ petFeedFrom: at("2026-11-01") }, false), "2026-11-20", 3), null);
