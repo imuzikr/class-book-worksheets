@@ -251,7 +251,7 @@ export default function LandingPage() {
       <section className="lp-hero" ref={heroRef} aria-labelledby="landing-title">
         {/* ── 왼쪽 글: 꼬리표 · 제목 · 소개 ── */}
         <div className="lp-copy">
-          <p className="lp-eyebrow">우리 반 독서 공간</p>
+          <p className="lp-eyebrow">우리 학교 독서 공간</p>
           <h1 id="landing-title" className="lp-title">
             책나눔, <span className="lp-title-line">함께 읽고 <span className="lp-mark">생각을 나누다</span></span>
           </h1>
