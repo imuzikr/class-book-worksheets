@@ -571,4 +571,31 @@
   .plaza-history-backdrop { padding: 0; align-items: stretch; }
   .modal.plaza-history { width: 100%; height: 100dvh; max-height: none; border-radius: 0; padding: 16px; }
 }
+/* [교사] 광장 대화 기록(PlazaTalkHistory.jsx) — 댓글 이력과 같은 창. 대화마다 접고 펴는 머리줄(처음에는 가장 최근 것만 펼침) */
+.talk-history-item { padding: 0; overflow: hidden; }
+.talk-history-head {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 46px; padding: 10px 14px; border: 0; background: none;
+  color: #2c4c3f; font: inherit; font-size: 13px; text-align: left; cursor: pointer;
+}
+.talk-history-head:hover { background: #f4f8f1; }
+.talk-history-head:focus-visible { outline: 3px solid #478fbd; outline-offset: -3px; }
+.talk-history-caret { flex: none; color: #6f8276; transition: transform .15s; }
+.talk-history-item.is-open .talk-history-caret { transform: rotate(90deg); }
+.talk-history-when { flex: none; color: #5f7365; font-variant-numeric: tabular-nums; }
+.talk-history-who { flex: 1; min-width: 0; font-weight: 750; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.talk-history-count { flex: none; padding: 2px 9px; border-radius: 999px; background: #e3f1e5; color: #2f6a47; font-size: 11.5px; font-weight: 700; }
+.talk-history-lines { list-style: none; margin: 0; padding: 4px 14px 14px; display: grid; gap: 6px; border-top: 1px solid #e3eae0; }
+.talk-history-lines li { display: grid; grid-template-columns: minmax(64px, max-content) minmax(0, 1fr) auto; gap: 4px 10px; align-items: baseline; padding: 6px 10px; border-radius: 10px; background: #fff; }
+.talk-history-lines li.is-mine { background: #fff3ea; }
+.talk-history-lines li b { color: #2c4c3f; font-size: 12.5px; font-weight: 750; overflow-wrap: anywhere; }
+.talk-history-lines li.is-mine b { color: #a24d26; }
+.talk-history-text { color: #2f3a33; font-size: 13.5px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.talk-history-lines time { color: #8f9a8d; font-size: 11px; font-variant-numeric: tabular-nums; }
+.talk-history-lines li.is-system { display: block; padding: 2px 10px; background: none; color: #7c8b79; font-size: 11.5px; text-align: center; }
+@media (max-width: 600px) {
+  .talk-history-head { flex-wrap: wrap; row-gap: 4px; }
+  .talk-history-who { flex-basis: 100%; order: 3; white-space: normal; }
+  .talk-history-lines li { grid-template-columns: minmax(0, 1fr) auto; }
+  .talk-history-lines li b { grid-column: 1 / -1; }
+}
 

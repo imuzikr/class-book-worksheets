@@ -97,12 +97,15 @@ const FEATURES = [
     // 끌 때는 곧바로 끕니다(보이는 범위를 좁히는 쪽).
     ask: { title: "책 광장을 켤까요?", confirmLabel: "켜기",
       description: "켜면 학생들이 이 반에서 지금까지 쓴 독서 발자국과 ‘한 권의 책’이 모두 반 친구들에게 보여요. 학생이 따로 고르지 않아요. 켜기 전에 학생들에게 먼저 알려 주세요." } },
+  { key: "plazaTalkEnabled", label: "광장 대화", needs: ["readingEnabled", "plazaEnabled"], needsText: "책 광장을 먼저 켜 주세요",
+    hint: "책 광장 · 교실에서 친구 캐릭터를 누르고 A → 대화 초대(S)로 이야기를 청해요. 친구가 승인(S)하면 곁으로 걸어가 마주 서고, 화면 오른쪽 대화창에서 이야기해요(4명까지). 다른 친구에게는 머리 위 말풍선만 보이고, 대화 내용은 선생님이 책 봄 학생 화면의 ‘광장 대화’에서 볼 수 있어요. 친구들의 캐릭터가 함께 보이는 배포에서만 돌아요.",
+    on: "광장 대화를 켰어요. 책 광장에서 친구를 누르고 A → 대화 초대(S)로 이야기를 나눠요.", off: "광장 대화를 껐어요. 열려 있던 대화창이 닫히고, 지난 대화 기록은 그대로예요." },
   { key: "classroomEnabled", label: "교실", needs: ["readingEnabled", "plazaEnabled"], needsText: "책 광장을 먼저 켜 주세요",
-    hint: "책 광장에 교실로 가는 문과 포털이 생겨요. 학생이 ‘자리 배정하기’의 제 책상 옆에서 A → 앉기(S)로 앉고, 선생님이 칠판 앞에서 A → 출석시작(S)을 누르면 그 순간 앉아 있던 학생만 출석으로 확인돼요.",
-    on: "교실을 켰어요. 책 광장 왼쪽 아래의 포털로 교실에 들어가요.", off: "교실을 껐어요. 책 광장의 문과 포털이 사라지고, 출석 기록은 그대로예요." },
+    hint: "책 광장 왼쪽 아래에 교실로 가는 포털이 생겨요. 학생이 ‘자리 배정하기’의 제 책상 옆에서 A → 앉기(S)로 앉고, 선생님이 칠판에 붙인 출석부 앞에서 A → 출석시작(S)을 누르면 그 순간 앉아 있던 학생만 출석으로 확인돼요.",
+    on: "교실을 켰어요. 책 광장 왼쪽 아래의 포털로 교실에 들어가요.", off: "교실을 껐어요. 교실로 가는 포털이 사라지고, 출석 기록은 그대로예요." },
   { key: "hideoutEnabled", label: "개인 아지트", needs: ["readingEnabled", "plazaEnabled", "classroomEnabled"], needsText: "책 광장과 교실을 먼저 켜 주세요",
-    hint: "교실 오른쪽 아래 포털로 학생과 선생님이 자신의 아지트에 들어가요. 학생은 독서 레벨에 따라 열린 소품으로, 선생님은 모든 소품으로 꾸며요. 포털로 교실에 돌아와요. 학생의 방은 본인과 담당 교사만 확인해요.",
-    on: "개인 아지트를 켰어요. 교실 오른쪽 아래에 아지트 포털이 생겨요.", off: "개인 아지트를 껐어요. 입구는 숨기고 저장한 꾸미기는 보관해요." },
+    hint: "책 광장 오른쪽 위나 교실 오른쪽 아래 포털로 학생과 선생님이 자신의 아지트에 들어가요. 학생은 독서 레벨에 따라 열린 소품으로, 선생님은 모든 소품으로 꾸며요. 돌아오는 포털은 들어온 광장이나 교실로 이어져요. 학생의 방은 본인과 담당 교사만 확인해요.",
+    on: "개인 아지트를 켰어요. 책 광장 오른쪽 위와 교실 오른쪽 아래에 아지트 포털이 생겨요.", off: "개인 아지트를 껐어요. 입구는 숨기고 저장한 꾸미기는 보관해요." },
 ];
 
 // 성격이 같은 것끼리 묶습니다(선생님 요청 — 2 · 4 · 1, 2026년 11월 '함께 읽기'(책 광장) 한 묶음을 더함). 리더보드 옆에 독서 TOP 3(보이는 화면 둘), 그 아래 줄에
@@ -112,7 +115,7 @@ const FEATURES = [
 const GROUPS = [
   { key: "reading", title: "독서 기록", desc: "학생의 책꽂이와 책 정보", keys: ["readingEnabled", "bookSearchEnabled"] },
   { key: "growth", title: "리더보드 · 꾸미기", desc: "반 친구와 함께 보는 성장 · 캐릭터와 펫", keys: ["rankingEnabled", "readingTopEnabled", "characterEnabled", "petEnabled", "petPreviewEnabled"] },
-  { key: "share", title: "함께 읽기", desc: "책 광장 · 함께 앉는 교실 · 나만의 아지트", keys: ["plazaEnabled", "classroomEnabled", "hideoutEnabled"] },
+  { key: "share", title: "함께 읽기", desc: "책 광장 · 친구와 나누는 대화 · 함께 앉는 교실 · 나만의 아지트", keys: ["plazaEnabled", "plazaTalkEnabled", "classroomEnabled", "hideoutEnabled"] },
   { key: "reward", title: "교실 보상", desc: "과일 모으기와 이벤트 · 펫의 먹이", keys: ["fruitBasketEnabled", "petFeedEnabled"] },
 ];
 

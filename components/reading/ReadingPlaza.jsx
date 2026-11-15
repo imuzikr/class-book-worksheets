@@ -45,6 +45,14 @@
 // 앉은 친구는 그 의자에 앉혀 그립니다(그 책상이 자리표에서 그 친구의 것일 때만).
 // 주소(NEXT_PUBLIC_FIREBASE_DATABASE_URL)를 넣지 않은 배포에서는 지금까지처럼 내 캐릭터만 보입니다(앉기 · 출석은 그대로 됨).
 //
+// **광장 대화**(선생님 요청 · 관리자 설정의 '광장 대화'를 켠 반 — READING_GROWTH.md의 '광장 대화') — 친구(또는 선생님)를
+// 누르면 발밑에 선택 타원과 머리 위에 'A'가 뜨고, A(또는 'A'를 누름) → [대화 초대(S) · 취소(C)]. 상대 화면에는
+// '○○님이 대화를 요청합니다' [승인(S) · 취소(C)](20초). 승인하면 요청한 사람이 상대 곁으로 걸어가 마주 서고(무리로의
+// 초대면 초대받은 사람이 걸어감 — 선생님 결정), 든 사람들의 머리 위에 말풍선(내용 없음)이 뜨며, 오른쪽에 대화창이 열립니다.
+// 대화 중에 다른 친구를 골라 초대하면 4명까지 함께 이야기합니다. 상태와 할 일은 usePlazaTalk.js, 조각은 PlazaTalk.jsx,
+// 셈은 lib/readingPlazaTalk.js. 선생님의 '모두 이동'은 대화도 닫습니다(선생님 결정). 광장 탭을 나가면 대화에서 나옵니다.
+// 대화창에 쓰는 동안의 자판은 무대가 듣지 않습니다(대화창은 무대 밖 — 캐릭터가 걷지 않음).
+//
 // 캐릭터 · 펫의 움직임, 바라보는 쪽, 걷는 그림, 시점은 React 상태가 아니라 ref와 requestAnimationFrame으로
 // DOM(과 캔버스)에 곧바로 적습니다(프레임마다 다시 그리지 않게 — 캐릭터 한 명의 DOM은 PlazaActor.jsx).
 // 어느 방인지 · 어디 앞인지 · 앉았는지 · 무엇을 고르는 중인지 · 갈 곳 표시 · 누가 함께 있는지(이름표)만 상태입니다.
@@ -71,11 +79,14 @@ import {
   plazaArrival, plazaCamera, plazaClear, plazaNearest, plazaPath, plazaPortalAt, plazaPortalClicked, plazaRoomOf, plazaSpotAt, plazaSpotNear, plazaStep, plazaView, plazaWalkable,
 } from "@/lib/readingPlazaMap";
 import { PLAZA_AVATAR_SEPARATION, plazaAvoidPath, plazaAvoidStep } from "@/lib/readingPlazaAvoidance";
-import { PET_STRIDE, PLAZA_WALK_SPEED, SPRITE_IDLE, plazaFacing, plazaPetFollow, plazaPetStart, plazaShownFrame } from "@/lib/readingPlazaSprites";
+import { PET_STRIDE, PLAZA_WALK_SPEED, SPRITE_IDLE, plazaCharacterSize, plazaFacing, plazaPetFollow, plazaPetStart, plazaShownFrame } from "@/lib/readingPlazaSprites";
 import { PLAZA_STAGE_MIN_H, plazaRoom as stageRoom, plazaScroller } from "@/lib/plazaStageRoom";
+import { plazaTalkSpot, talkAskTitle, talkBubbles, talkCallName } from "@/lib/readingPlazaTalk";
 import PlazaActor from "./PlazaActor";
 import PlazaClassroom, { PlazaFurniture } from "./PlazaClassroom";
 import PlazaPanel from "./PlazaPanel";
+import { PlazaTalkAsk, PlazaTalkFocus, PlazaTalkPanel, PlazaTalkWaiting } from "./PlazaTalk";
+import usePlazaTalk from "./usePlazaTalk";
 import "./plaza.css";
 
 // 걷는 빠르기(그림 원본 px/초) — 내 캐릭터와 친구들의 캐릭터가 같은 값으로 걷습니다(lib/readingPlazaSprites.js).
@@ -118,6 +129,13 @@ const SIT_HELP = "앉아 있어요. 일어서려면 A를 누르거나 내 자리
 const roomKey = (classId, uid) => `bookbom.plaza.room:${classId}:${uid}`;
 const seatKey = (classId, uid) => `bookbom.plaza.seat:${classId}:${uid}`;
 const moveKey = (classId, uid) => `bookbom.plaza.move:${classId}:${uid}`;
+// 광장 탭을 나가며 나온 대화(쉬는 화면이라 서버에 닿지 못했어도 다음에 이어 가지 않게 — usePlazaTalk.js)
+const talkLeftKey = (classId, uid) => `bookbom.plaza.talkLeft:${classId}:${uid}`;
+// 광장 대화 — A를 눌렀는데 고른 친구가 없을 때 곁의 친구를 고르는 거리(그림 원본 px · 자판만 쓰는 사람의 길)
+const TALK_PICK_NEAR = 140;
+// 친구를 눌렀다고 치는 자리(그림 원본 px) — 몸(키 PLAZA_BODY)과 머리 위 이름표까지
+const TALK_HIT_HALF = 34;
+const TALK_HIT_HEAD = 122;
 function recall(store, key) {
   try { return window[store].getItem(key); } catch { return null; }
 }
@@ -131,8 +149,10 @@ function remember(store, key, value) {
 const friendPet = (pet) => (pet ? { species: pet.species, stage: pet.stage, hatched: !!pet.species, ready: false } : null);
 const friendRow = (uid, who, friend) => ({
   uid, name: who.name, teacher: who.teacher, character: characterOf({ uid, character: who.character }), pet: friendPet(who.pet),
-  reading: !!friend.reading, room: friend.room, seat: friend.seat,
+  reading: !!friend.reading, room: friend.room, seat: friend.seat, talk: friend.talk ?? null,
 });
+// 친구가 다 와서 설 자리(걷는 중이면 남은 길의 끝)
+const restOf = (actor) => (actor.queue?.length ? actor.queue[actor.queue.length - 1] : { x: actor.x, y: actor.y });
 
 // Only characters currently drawn in this room are moving obstacles. Chairs
 // already cover seated students, and pets never block a classroom aisle.
@@ -146,7 +166,7 @@ function peopleInRoom(members, roomId) {
   return people;
 }
 const samePoint = (a, b) => a && b && Math.hypot(a.x - b.x, a.y - b.y) < .5;
-function routeAroundPeople(from, goal, people, room, { seat = null, portal = false, spot = null, board = false } = {}) {
+function routeAroundPeople(from, goal, people, room, { seat = null, portal = false, spot = null, board = false, talk = false } = {}) {
   const candidates = seat !== null ? CLASSROOM_SEATS[seat].sides.map((side) => side.stand)
     : board ? [goal, classroomBoardStand(goal.x - 80), classroomBoardStand(goal.x + 80)] : [goal];
   let best = null;
@@ -170,7 +190,7 @@ function routeAroundPeople(from, goal, people, room, { seat = null, portal = fal
     if (length < cost) { cost = length; best = route; }
   }
   return best ? { route: best, waiting: false }
-    : { route: seat !== null || portal || spot || board ? plazaPath(from, goal, room) : [], waiting: true };
+    : { route: seat !== null || portal || spot || board || talk ? plazaPath(from, goal, room) : [], waiting: true };
 }
 
 // initialBook — 책꽂이에서 '광장에서 보기'로 넘어올 때 곧바로 열 책({ uid, bookId, place })
@@ -183,8 +203,11 @@ function routeAroundPeople(from, goal, people, room, { seat = null, portal = fal
 //       그것을 내놓은 때 · 아니면 0) · moveWaiting(세는 중인가 — [선생님] 단추를 쉬게 함),
 //     onAttend([학생] 출석 남기기) · onRollCall([선생님] 출석시작) · onStop([선생님] 출석종료) · onSeatSetup([선생님] 자리 배정하기 열기) ·
 //     onMoveAll([선생님] 모두 이동 — 방 id를 받아 신호를 적음) }
-export default function ReadingPlaza({ classId, user, isTeacher = false, characterOn = true, petOn = false, petFeed = null, growthXp = null, initialBook = null, onExit = null, classroom = null, hideoutOn = false, onEnterHideout = null, initialRoom = null }) {
+// talkOn — 광장 대화(관리자 설정의 '광장 대화' — lib/reading.js의 plazaTalkOn · 책 광장이 켜져 있어야 켬)
+export default function ReadingPlaza({ classId, user, isTeacher = false, characterOn = true, petOn = false, petFeed = null, growthXp = null, initialBook = null, onExit = null, classroom = null, hideoutOn = false, onEnterHideout = null, initialRoom = null, talkOn = false }) {
   const myUid = user?.uid;
+  // 광장 대화 — 반 설정을 켰고, 이 배포가 함께 보기(실시간)를 쓸 때만(대화는 같은 연결로 오감)
+  const talkLive = !!talkOn && plazaLiveConfigured() && !!myUid;
   const classroomOn = !!classroom?.on;
   const hideoutEntryOn = classroomOn && hideoutOn === true && typeof onEnterHideout === "function";
   const returningFromHideout = initialRoom === "plaza" || (initialRoom === "classroom" && classroomOn);
@@ -220,6 +243,8 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   const [warp, setWarp] = useState(0);
   // 방을 막 건너와 서 있는 포털(그 id) — 벗어날 때까지 그 포털의 이름표를 걷습니다(이름표가 내 캐릭터의 얼굴 높이라 가림)
   const [onGate, setOnGate] = useState(null);
+  // 광장 대화 — 고른 친구({ uid, open: 고르는 상자를 열었나 }) · 없으면 null
+  const [pick, setPick] = useState(null);
 
   const stageRef = useRef(null);
   const wrapRef = useRef(null);
@@ -246,6 +271,12 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   // 그림을 얼마나 키웠나(plazaView) · 시점(그림의 어느 자리가 창의 왼쪽 위인가, 화면 px)
   const view = useRef(plazaView(0, 0));
   const cam = useRef({ x: 0, y: 0 });
+  // 광장 대화창이 맵을 가린 만큼(화면 px — 오른쪽 · 아래) — 시점이 내 캐릭터를 그 나머지의 가운데에 둡니다
+  const camCover = useRef({ right: 0, bottom: 0 });
+  const camAim = useCallback(() => {
+    const k = view.current.scale > 0 ? view.current.scale : 1;
+    return { x: pos.current.x + camCover.current.right / 2 / k, y: pos.current.y + camCover.current.bottom / 2 / k };
+  }, []);
   const path = useRef([]);
   const keys = useRef(NO_KEYS());
   // 방향키로 걷다 분수에 막혔을 때 어느 쪽으로 돌고 있는지(lib/readingPlazaMap.js의 plazaStep이 적음)
@@ -301,6 +332,17 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   // [학생] 모두 이동 뒤 배정 자리를 기다리는 위치와 신호({ x, y, at }). 자리표가 오면 자동으로 앉습니다.
   // 그사이 학생이 걷거나 다른 방/새 신호로 바뀌었으면 대기를 걷어, 늦게 다시 끌어오지 않습니다.
   const seatOwed = useRef(null);
+  // 광장 대화 — 내가 든 대화 번호(내 자리와 함께 올림 — 친구 화면의 말풍선) · 고른 친구 · 그 머리 위 조각의 손잡이 ·
+  // 걸어가서 마주 볼 사람(다 와서 그쪽을 봄) · 친구들(uid → 이름표 줄) · 대화 상태(usePlazaTalk)
+  const talkKeyRef = useRef(null);
+  const pickRef = useRef(null);
+  pickRef.current = pick;
+  const focusRef = useRef(null);
+  const pendingFace = useRef(null);
+  const friendMapRef = useRef(new Map());
+  const talkerRef = useRef(null);
+  const talkLiveRef = useRef(talkLive);
+  talkLiveRef.current = talkLive;
 
   // 아지트의 포털로 교실에 돌아온 때 — 곧바로 방향키로 이어 걷게 무대에 초점을 둡니다(아지트의 무대가 사라져 초점이
   // 본문으로 떨어지면 무대를 한 번 눌러야 방향키가 들었습니다). 이 길에는 열려 있는 창이 없어 빼앗을 초점도 없습니다.
@@ -381,7 +423,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     const mode = walkMode.current;
     return {
       x: pos.current.x, y: pos.current.y, path: mode === 1 ? path.current.slice() : [], mode, facing: facingRef.current,
-      reading: panelOpen.current, room: hereRef.current, seat: sittingRef.current,
+      reading: panelOpen.current, room: hereRef.current, seat: sittingRef.current, talk: talkKeyRef.current,
     };
   }, []);
   // 친구들에게 알립니다 — 걸음마다가 아니라 걸음이 바뀔 때만(아래 tick · walkTo · 창을 여닫을 때 · 앉고 일어설 때 · 방을 옮길 때)
@@ -394,6 +436,21 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     routeChanged.current = false;
     session.current?.publish(state);
   }, [liveState]);
+  // ── 광장 대화(상태와 할 일 — usePlazaTalk.js) ──
+  // 새 대화가 승인되면 요청한 내가 상대 곁으로 걸어가고, 무리로의 초대를 내가 승인했으면 초대한 사람 곁으로 걸어갑니다.
+  // 내가 새 대화를 승인했으면 걸어올 친구 쪽으로 돌아서기만 합니다(아래 talkWalk · talkTurn).
+  const talkMovesRef = useRef({ walk() {}, turn() {} });
+  const talker = usePlazaTalk({
+    on: talkLive, sessionRef: session, idRef: talkKeyRef, storeKey: myUid ? talkLeftKey(classId, myUid) : "",
+    nameOf: (uid) => friendMapRef.current.get(uid) ?? null,
+    say,
+    onChange: () => tell(),
+    onAccepted: ({ to, invited }) => { if (!invited) talkMovesRef.current.walk(to); },
+    onJoined: ({ from, invited }) => { if (invited) talkMovesRef.current.walk(from); else talkMovesRef.current.turn(from); },
+    // 새 요청이 오면 열려 있던 고르는 상자를 닫습니다 — S · C가 승인창의 것이 되게
+    onAsked: () => { setPick((current) => (current?.open ? { ...current, open: false } : current)); setMenu(null); },
+  });
+  talkerRef.current = talker;
   // 시점을 DOM에 적습니다 — 그림을 통째로 밉니다(transform이라 다시 칠하지 않음)
   const look = useCallback(() => {
     const el = worldRef.current;
@@ -407,6 +464,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     routeChanged.current = false;
     pendingSpot.current = null;
     pendingAct.current = null;
+    pendingFace.current = null;
     keys.current = NO_KEYS();
     walkMode.current = 0;
   }, []);
@@ -460,7 +518,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
       if (friend.pet) friend.pet = plazaPetStart(friend.actor, friend.actor.facing, next);
       friend.dirty = true;
     }
-    const goal = plazaCamera(view.current, pos.current);
+    const goal = plazaCamera(view.current, camAim(), camCover.current);
     cam.current = { x: Math.round(goal.x), y: Math.round(goal.y) };
     look();
     meRef.current?.place(pos.current.x, pos.current.y);
@@ -487,7 +545,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     }
     tell(now);
     wake();
-  }, [classId, myUid, isTeacher, halt, look, say, tell, wake]);
+  }, [classId, myUid, isTeacher, halt, look, say, tell, wake, camAim]);
 
   // ── 앉기 · 다시 서기(교실) ──
   const sitDown = useCallback((quiet = false) => {
@@ -564,6 +622,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
       walkGoal.current = null;
       pendingSpot.current = null;
       pendingAct.current = null;
+      pendingFace.current = null;
       const len = Math.hypot(dx, dy);
       proposed = plazaStep(from, dx / len * step, dy / len * step, round.current, place);
     } else if (path.current.length && !seated) {
@@ -598,8 +657,17 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
       if (target && (blocked || (avoiding && destinationOccupied)) && !waitingPortal && walkGoal.current && time - replanAt.current >= 600) {
         replanAt.current = time;
         const intent = walkGoal.current;
-        const plan = routeAroundPeople(pos.current, intent.point, people, place, {
-          seat: intent.act === "seat" ? mySeatRef.current : null, portal: intent.portal, spot: intent.spot, board: intent.act === "board",
+        // 광장 대화 — 가는 동안 곁 자리에 다른 친구가 섰으면, 그 자리 언저리에서 멈추지 않고 상대 곁의 빈 자리를 새로 고릅니다
+        let aim = intent.point;
+        const partner = intent.talk && pendingFace.current ? cast.current.get(pendingFace.current) : null;
+        if (partner && partner.room === hereRef.current) {
+          const others = [];
+          for (const [id, friend] of cast.current) if (id !== pendingFace.current && friend.room === hereRef.current) others.push(restOf(friend.actor));
+          const spot = plazaTalkSpot({ target: restOf(partner.actor), mover: pos.current, room: place, others, seat: partner.seat });
+          if (spot) aim = { x: spot.x, y: spot.y };
+        }
+        const plan = routeAroundPeople(pos.current, aim, people, place, {
+          seat: intent.act === "seat" ? mySeatRef.current : null, portal: intent.portal, spot: intent.spot, board: intent.act === "board", talk: intent.talk,
         });
         if (plan.route.length) {
           path.current = plan.route;
@@ -644,6 +712,8 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
               enteringHideout.current = true;
               portalArmed.current = false;
               halt();
+              // 아지트는 혼자 있는 방 — 광장 대화에서 나오고 요청을 닫은 뒤 연결을 놓습니다
+              talkerRef.current?.shutdown();
               session.current?.close();
               session.current = null;
               if (myUid) remember("sessionStorage", seatKey(classId, myUid), null);
@@ -698,6 +768,14 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
         const want = pendingAct.current;
         pendingAct.current = null;
         if (want === ask) setMenu(want === "board" ? { kind: "board", x: pos.current.x } : { kind: "sit" });
+      } else if (pendingFace.current) {
+        // 광장 대화 — 대화 상대 곁에 다 왔습니다. 상대를 봅니다(아래에서 '섰다'와 함께 친구들에게 알림)
+        const friend = cast.current.get(pendingFace.current);
+        pendingFace.current = null;
+        if (friend && friend.room === hereRef.current) {
+          facingRef.current = plazaFacing(null, friend.actor.x - pos.current.x, friend.actor.y - pos.current.y);
+          me?.show(facingRef.current, SPRITE_IDLE);
+        }
       }
     }
 
@@ -761,9 +839,15 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
       }
       if (fresh) friend.dirty = false;
     }
+    // 광장 대화 — 고른 친구의 머리 위 조각('A' · 고르는 상자)이 친구를 따라갑니다
+    const picked = pickRef.current;
+    if (picked) {
+      const friend = cast.current.get(picked.uid);
+      if (friend && friend.room === hereRef.current) focusRef.current?.place(friend.actor.x, friend.actor.y);
+    }
 
     // 시점 — 따라붙는 중이면 한 프레임 더. 다 왔으면 정수 px에 맞춰 멈춥니다(이름표 글자가 흐려지지 않게).
-    const goal = plazaCamera(view.current, pos.current);
+    const goal = plazaCamera(view.current, camAim(), camCover.current);
     const ease = calm.current ? 1 : 1 - Math.exp(-dt / CAM_EASE);
     cam.current = { x: cam.current.x + (goal.x - cam.current.x) * ease, y: cam.current.y + (goal.y - cam.current.y) * ease };
     const trailing = Math.abs(goal.x - cam.current.x) > 0.5 || Math.abs(goal.y - cam.current.y) > 0.5;
@@ -774,7 +858,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
       lastTick.current = 0;
     }
     look();
-  }, [isTeacher, enterRoom, halt, myUid, classId, look, openSpot, say, tell]);
+  }, [isTeacher, enterRoom, halt, myUid, classId, look, openSpot, say, tell, camAim]);
 
   useLayoutEffect(() => {
     wakeRef.current = () => {
@@ -801,8 +885,11 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     const members = cast.current;
     const attaches = castRefs.current;
     const roomFor = (id) => plazaRoomOf(id, classroomOnRef.current);
+    // 광장 대화의 소식 — 늘 같은 묶음(usePlazaTalk). 반 설정을 꺼 둔 반에서도 받는 요청함 하나만 듣습니다(화면이 걸러 냄)
+    const talkHandlers = talkerRef.current?.handlers;
     const joined = joinPlazaLive(classId, { uid: myUid, teacher: isTeacher, classroom: classroomOn }, {
       current: liveState,
+      talk: talkHandlers,
       // 자리에 앉아 있는 동안은 가만히 있어도 연결을 놓지 않습니다(선생님이 출석을 확인할 때 앉아 있는 모습이 보여야 함)
       keep: () => sittingRef.current !== null,
       onJoin(uid, who, state, ageMs) {
@@ -811,7 +898,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
         const actor = plazaRemoteEnter(fixed, ageMs, now);
         const friend = {
           actor, pet: who.pet ? plazaPetStart(actor, actor.facing, roomFor(state.room)) : null, handle: members.get(uid)?.handle ?? null, dirty: true,
-          reading: state.reading, room: state.room, seat, state: fixed, heard: state, heardAt: now - ageMs,
+          reading: state.reading, room: state.room, seat, state: fixed, heard: state, heardAt: now - ageMs, talk: state.talk ?? null,
         };
         members.set(uid, friend);
         setFriends((list) => [...list.filter((f) => f.uid !== uid), friendRow(uid, who, friend)]);
@@ -850,24 +937,35 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
           const desk = CLASSROOM_SEATS[friend.seat].rug.x;
           if ((friend.pet.x - desk) * (friend.actor.x - desk) < 0) { friend.pet = plazaPetStart(friend.actor, friend.actor.facing, roomRef.current); friend.dirty = true; }
         }
-        if (moved || friend.seat !== seat || friend.reading !== state.reading) {
+        const talk = state.talk ?? null;
+        if (moved || friend.seat !== seat || friend.reading !== state.reading || friend.talk !== talk) {
           friend.room = state.room;
           friend.seat = seat;
           friend.reading = state.reading;
-          setFriends((list) => list.map((f) => (f.uid === uid ? { ...f, reading: state.reading, room: state.room, seat } : f)));
+          friend.talk = talk;
+          setFriends((list) => list.map((f) => (f.uid === uid ? { ...f, reading: state.reading, room: state.room, seat, talk } : f)));
         }
+        // 고른 친구가 다른 방으로 갔으면 고르기를 걷습니다
+        if (moved && pickRef.current?.uid === uid && state.room !== hereRef.current) setPick(null);
         wake();
       },
       onLeave(uid) {
         members.delete(uid);
         attaches.delete(uid);
         setFriends((list) => list.filter((f) => f.uid !== uid));
+        if (pickRef.current?.uid === uid) setPick(null);
         wake();
       },
-      onStatus(status, why) { setLive({ status, why: why || "" }); },
+      onStatus(status, why) {
+        setLive({ status, why: why || "" });
+        // 이어졌으면 — 쉬는 동안 못 보낸 '나가기'를 보내고, 처음이면 내가 든 대화를 되찾습니다
+        if (status === "live") talkerRef.current?.onLive();
+      },
     });
     session.current = joined;
     return () => {
+      // 광장 탭을 나갑니다 — 대화에서 나오고 요청을 닫은 뒤 연결을 놓습니다(선생님 결정 — 나가면 대화도 나감)
+      talkerRef.current?.shutdown();
       session.current = null;
       joined.close();
       members.clear();
@@ -975,10 +1073,17 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     const target = classroomMoveCall({ prev, to: moveTo, at: moveAt, seen, now: Date.now(), live });
     if (!target) return;
     remember("localStorage", moveKey(classId, myUid), String(moveAt));
+    // 광장 대화도 닫습니다 — 대화 · 보낸 요청 · 받은 요청(선생님 결정 — 이동과 함께 대화도 닫힘)
+    const talkClosed = talkerRef.current?.endAll() ?? false;
+    setPick(null);
     const seat = classroomMoveSeat({ to: target, teacher: isTeacher, seat: mySeatRef.current });
-    if (target === hereRef.current && (isTeacher || target !== "classroom" || (seat !== null && sittingRef.current === seat))) return;
+    if (target === hereRef.current && (isTeacher || target !== "classroom" || (seat !== null && sittingRef.current === seat))) {
+      if (talkClosed) say("선생님이 모두를 불러 대화가 닫혔어요.");
+      return;
+    }
     // 알리는 한 줄 — 학생에게는 옮겨 온 까닭을, 선생님에게는(방금 눌렀을 때만) 누가 함께 옮겨 오는지를
-    const note = !isTeacher ? GATHER_NOTE[target] : prev !== undefined || live ? GATHER_DONE[target] : "";
+    const baseNote = !isTeacher ? GATHER_NOTE[target] : prev !== undefined || live ? GATHER_DONE[target] : "";
+    const note = talkClosed ? `${baseNote ? `${baseNote} ` : ""}대화는 닫혔어요.` : baseNote;
     // 쓰던 댓글이 있는 창은 닫지 않습니다(창 안의 글 칸에 글이 들어 있는가 — 창은 이 화면에 하나뿐)
     const drafting = panelOpen.current && typeof document !== "undefined"
       && [...document.querySelectorAll(".plaza-panel textarea")].some((el) => el.value.trim());
@@ -991,7 +1096,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     });
     // 배정을 모르면 우선 뒤쪽에서 기다립니다. 배정이 오면 위 효과가 같은 신호의 대기만 이어받습니다.
     seatOwed.current = !isTeacher && target === "classroom" && seat === null ? { ...pos.current, at: moveAt } : null;
-  }, [moveTo, moveAt, moveTick, moveWaiting, classroomOn, classId, myUid, isTeacher, initialBook, enterRoom]);
+  }, [moveTo, moveAt, moveTick, moveWaiting, classroomOn, classId, myUid, isTeacher, initialBook, enterRoom, say]);
   // [선생님] 맵 위의 '모두 교실로 · 모두 광장으로' — 신호를 적습니다. 반의 모든 화면에 알림과 10초 카운트다운이 뜨고,
   // 다 세면 모두(선생님 자신도) 그 신호를 따라 옮겨 갑니다 — 위.
   //   · **세는 동안에는 듣지 않습니다**(moveWaiting — 단추가 쉼). 거두려면 화면 위 알림 띠의 '취소'.
@@ -1055,33 +1160,78 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   useLayoutEffect(() => {
     if (!size) return;
     view.current = plazaView(size.w, size.h);
-    const goal = plazaCamera(view.current, pos.current);
+    const goal = plazaCamera(view.current, camAim(), camCover.current);
     cam.current = { x: Math.round(goal.x), y: Math.round(goal.y) };
     look();
-  }, [size, look]);
+  }, [size, look, camAim]);
+  // 광장 대화창이 맵을 가린 만큼(PlazaTalkPanel이 알림) — 시점이 그 나머지의 가운데로 미끄러집니다
+  const onTalkCover = useCallback((cover) => {
+    const prev = camCover.current;
+    if (prev.right === cover.right && prev.bottom === cover.bottom) return;
+    camCover.current = cover;
+    wake();
+  }, [wake]);
 
-  // 그곳으로 걸어갑니다 — spot(다 와서 열 곳) · act(다 와서 물을 것 — "seat" · "board")
-  const walkTo = useCallback((point, spot = null, act = null) => {
+  // 광장 대화 — 그 친구를 봅니다(대화 상대 곁에 이미 서 있을 때)
+  const faceToward = useCallback((uid) => {
+    const friend = cast.current.get(uid);
+    if (!friend || friend.room !== hereRef.current || sittingRef.current !== null) return;
+    facingRef.current = plazaFacing(null, friend.actor.x - pos.current.x, friend.actor.y - pos.current.y);
+    meRef.current?.show(facingRef.current, SPRITE_IDLE);
+    tell();
+  }, [tell]);
+  // 그곳으로 걸어갑니다 — spot(다 와서 열 곳) · act(다 와서 물을 것 — "seat" · "board") · options.face(다 와서 볼 친구 — 광장 대화)
+  const walkTo = useCallback((point, spot = null, act = null, options = null) => {
     const place = roomRef.current;
     const goal = plazaNearest(point.x, point.y, place);
+    const face = options?.face ?? null;
     const people = peopleInRoom(cast.current, hereRef.current);
     const portal = place.portals.some((gate) => samePoint(gate, goal));
-    const plan = routeAroundPeople(pos.current, goal, people, place, { seat: act === "seat" ? mySeatRef.current : null, portal, spot, board: act === "board" });
+    const plan = routeAroundPeople(pos.current, goal, people, place, { seat: act === "seat" ? mySeatRef.current : null, portal, spot, board: act === "board", talk: !!face });
     const route = plan.route;
-    if (!route.length) return;
+    // 이미 그 자리면(길이 없음) — 광장 대화는 곧바로 친구를 봅니다
+    if (!route.length) { if (face) faceToward(face); return; }
     seatOwed.current = null;
     path.current = route;
-    walkGoal.current = { point: { ...(portal || plan.waiting ? goal : route[route.length - 1]) }, portal, act, spot, waiting: plan.waiting };
+    walkGoal.current = { point: { ...(portal || plan.waiting ? goal : route[route.length - 1]) }, portal, act, spot, talk: !!face, waiting: plan.waiting };
     avoidance.current = {};
     replanAt.current = performance.now();
     pendingSpot.current = spot;
     pendingAct.current = act;
-    setMarker(spot || act ? null : { x: goal.x, y: goal.y, key: Date.now() });
+    pendingFace.current = face;
+    setMarker(spot || act || face ? null : { x: goal.x, y: goal.y, key: Date.now() });
     // 어디에서 어느 길로 걷는지를 한 번 알립니다(걸음마다 올리지 않음 — 친구 화면이 같은 빠르기로 그림)
     walkMode.current = 1;
     tell();
     wake();
-  }, [tell, wake]);
+  }, [faceToward, tell, wake]);
+
+  // ── 광장 대화 — 걸어가 마주 서기 ──
+  // 걸어가는 사람(새 대화는 요청한 사람, 무리로의 초대는 초대받은 사람 — 선생님 결정)이 상대 곁의 걸을 수 있는 자리로 가서
+  // 상대를 봅니다(lib/readingPlazaTalk.js의 plazaTalkSpot — 다른 사람 · 포털 · 바닥 밖을 피함, 앉은 상대는 그 책상의 러그 귀).
+  // 앉아 있으면 걷지 않습니다(일어서지 않음). 상대가 다른 방이면 그대로 둡니다(대화는 방을 옮겨도 이어짐).
+  const othersBut = useCallback((skip) => {
+    const list = [];
+    for (const [uid, friend] of cast.current) if (uid !== skip && friend.room === hereRef.current) list.push(restOf(friend.actor));
+    return list;
+  }, []);
+  const talkWalk = useCallback((uid) => {
+    const friend = cast.current.get(uid);
+    if (!friend || friend.room !== hereRef.current || sittingRef.current !== null || enteringHideout.current) return;
+    const spot = plazaTalkSpot({ target: restOf(friend.actor), mover: pos.current, room: roomRef.current, others: othersBut(uid), seat: friend.seat });
+    if (spot) walkTo({ x: spot.x, y: spot.y }, null, null, { face: uid });
+  }, [othersBut, walkTo]);
+  // 내가 새 대화를 승인했습니다 — 걸어올 친구가 설 쪽으로 돌아섭니다(걷는 중 · 앉아 있으면 그대로)
+  const talkTurn = useCallback((uid) => {
+    const friend = cast.current.get(uid);
+    if (!friend || friend.room !== hereRef.current || sittingRef.current !== null || path.current.length || walkMode.current === 2) return;
+    const spot = plazaTalkSpot({ target: pos.current, mover: restOf(friend.actor), room: roomRef.current, others: othersBut(uid) });
+    if (!spot?.back) return;
+    facingRef.current = spot.back;
+    meRef.current?.show(spot.back, SPRITE_IDLE);
+    tell();
+  }, [othersBut, tell]);
+  talkMovesRef.current = { walk: talkWalk, turn: talkTurn };
 
   // 책꽂이 · 가판대로 — 이미 그 앞이면 곧바로 열고, 아니면 걸어가서 엽니다.
   // 이름표(단추)를 눌러도 초점은 무대에 둡니다 — 이어서 방향키로 걸을 수 있게.
@@ -1098,13 +1248,66 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     walkTo({ x: gate.x, y: gate.y });
   }, [say, walkTo]);
 
+  // ── 광장 대화 — 친구 고르기 ──
+  // 누른 자리의 친구(같은 방 · 몸과 머리 위 이름표까지 · 겹치면 앞에 선 친구)
+  const friendAt = useCallback((x, y) => {
+    let best = null;
+    for (const [uid, friend] of cast.current) {
+      if (friend.room !== hereRef.current || !friend.handle) continue;
+      const a = friend.actor;
+      if (x < a.x - TALK_HIT_HALF || x > a.x + TALK_HIT_HALF || y < a.y - TALK_HIT_HEAD || y > a.y + 10) continue;
+      if (!best || a.y > best.y) best = { uid, y: a.y };
+    }
+    return best?.uid ?? null;
+  }, []);
+  // 곁의 친구 — A를 눌렀는데 고른 친구가 없을 때(자판만 쓰는 사람의 길 · 가장 가까운 친구)
+  const friendNear = useCallback(() => {
+    let best = null;
+    for (const [uid, friend] of cast.current) {
+      if (friend.room !== hereRef.current || !friend.handle) continue;
+      const d = Math.hypot(friend.actor.x - pos.current.x, friend.actor.y - pos.current.y);
+      if (d <= TALK_PICK_NEAR && (!best || d < best.d)) best = { uid, d };
+    }
+    return best?.uid ?? null;
+  }, []);
+  // 고르는 상자의 S(대화 초대) · C(취소) — 어느 쪽이든 상자를 닫고 고르기를 걷습니다
+  const chooseTalk = useCallback((primary) => {
+    const picked = pickRef.current;
+    setPick(null);
+    stageRef.current?.focus({ preventScroll: true });
+    if (!primary || !picked) return;
+    talkerRef.current?.invite(picked.uid, cast.current.get(picked.uid)?.talk ?? null);
+  }, []);
+
   // ── A(행동) · S · C ──
-  // A — 광장에서는 앞에 선 책꽂이 · 가판대를 열고, 교실에서는 고르는 단추를 엽니다(다시 누르면 닫음).
+  // A — 고른 친구가 있으면 그 친구의 고르는 상자(광장 대화)를 열고 닫습니다. 아니면 광장에서는 앞에 선 책꽂이 · 가판대를
+  // 열고, 교실에서는 고르는 단추를 엽니다(다시 누르면 닫음). 그럴 것이 없고 곁에 친구가 있으면 그 친구를 골라 상자를 엽니다.
   const act = useCallback(() => {
+    if (talkLiveRef.current) {
+      const picked = pickRef.current;
+      // 받은 요청이 떠 있는 동안에는 S · C가 그 창의 것 — 고르는 상자를 새로 열지 않습니다
+      if (talkerRef.current?.incoming) {
+        if (picked || friendNear()) { say("받은 대화 요청에 먼저 대답해 주세요 — 승인(S) · 취소(C)"); return true; }
+      } else if (picked) {
+        setMenu(null);
+        setPick({ ...picked, open: !picked.open });
+        return true;
+      }
+    }
+    const pickNear = () => {
+      if (!talkLiveRef.current || talkerRef.current?.incoming) return false;
+      const uid = friendNear();
+      if (!uid) return false;
+      halt();
+      setMarker(null);
+      setMenu(null);
+      setPick({ uid, open: true });
+      return true;
+    };
     if (hereRef.current !== "classroom") {
       const spot = roomRef.current.spots.find((s) => s.id === nearRef.current);
-      if (spot) openSpot(spot);
-      return !!spot;
+      if (spot) { openSpot(spot); return true; }
+      return pickNear();
     }
     if (menuRef.current) { setMenu(null); return true; }
     const what = classroomAct({ teacher: isTeacher, point: pos.current, seat: mySeatRef.current, sitting: sittingRef.current });
@@ -1115,12 +1318,13 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
       setMenu(what.kind === "board" ? { kind: "board", x: pos.current.x } : { kind: what.kind });
       return true;
     }
+    if (pickNear()) return true;
     if (what.kind === "noseat") say("아직 내 자리가 없어요. 선생님께 자리 배정을 부탁해 주세요.");
     else if (what.kind === "other") say(`여기는 ${desksRef.current[what.at] ? "다른 친구의 자리" : "빈자리"}예요. 내 자리는 ${classroomSeatLabel(what.seat)}예요.`);
     else if (isTeacher) say("칠판에 붙인 출석부 앞에서 A를 누르면 출석시작(S) · 출석종료(C)를 고를 수 있어요.");
     else say(`내 자리의 러그에 올라서서 A를 누르면 앉을 수 있어요. 내 자리는 ${classroomSeatLabel(what.seat)}예요.`);
     return true;
-  }, [isTeacher, halt, openSpot, say]);
+  }, [isTeacher, halt, openSpot, say, friendNear]);
   // S(첫 단추) · C(둘째 단추)
   const choose = useCallback((primary) => {
     const kind = menuRef.current?.kind;
@@ -1142,6 +1346,9 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   const goAttendanceRecord = useCallback(() => {
     if (!isTeacher || hereRef.current !== "classroom") return;
     stageRef.current?.focus({ preventScroll: true });
+    // Attendance is the chosen action now; an earlier talk selection must not
+    // capture S and send an invitation instead of starting the roll call.
+    setPick(null);
     setMenu(null);
     if (classroomAtBoard(pos.current)) {
       halt(); setMarker(null); setMenu({ kind: "board", x: pos.current.x });
@@ -1159,6 +1366,18 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     const x = (e.clientX - rect.left) / rect.width * PLAZA_W;
     const y = (e.clientY - rect.top) / rect.height * PLAZA_H;
     stageRef.current.focus({ preventScroll: true });
+    // 광장 대화 — 친구를 누르면 고릅니다(걷지 않음 · 발밑에 선택 타원, 머리 위에 'A'). 고른 친구를 한 번 더 누르면
+    // 고르는 상자를 열고 닫습니다. 다른 곳을 누르면 고르기를 걷고 지금까지처럼 걷습니다.
+    if (talkLive) {
+      const uid = friendAt(x, y);
+      if (uid) {
+        if (menuRef.current) setMenu(null);
+        const busy = !!talkerRef.current?.incoming;
+        setPick((current) => (current?.uid === uid && !busy ? { uid, open: !current.open } : { uid, open: false }));
+        return;
+      }
+      if (pickRef.current) setPick(null);
+    }
     if (sittingRef.current !== null) {
       // 앉아 있는 동안 — 내 자리를 누르면 다시 서기를 묻고(자판이 없는 기기), 다른 곳을 누르면 어떻게 일어서는지 알려 줍니다
       if (classroomSeatAt(x, y) === sittingRef.current) setMenu((current) => (current ? null : { kind: "stand" }));
@@ -1186,7 +1405,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     if (e.altKey || e.ctrlKey || e.metaKey) return;
     // 무대 자체, 또는 무대 안의 고르는 단추(.plaza-act) · 물음표에 초점이 있을 때만 듣습니다
     const onButton = e.target !== e.currentTarget;
-    if (onButton && !e.target.closest?.(".plaza-act, .plaza-mark")) return;
+    if (onButton && !e.target.closest?.(".plaza-act, .plaza-mark, .plaza-talk-focus")) return;
     const dir = plazaArrowKey(e);
     if (dir) {
       e.preventDefault();   // 방향키가 페이지를 굴리지 않게
@@ -1197,12 +1416,19 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
       return;
     }
     if (e.key === "Escape") {
-      // 고르는 단추만 닫습니다(preventDefault — 공통 Esc 처리가 이 키를 또 쓰지 않게)
+      // 고르는 단추 · 고른 친구만 걷습니다(preventDefault — 공통 Esc 처리가 이 키를 또 쓰지 않게)
+      if (pickRef.current) { e.preventDefault(); setPick(null); return; }
       if (menuRef.current) { e.preventDefault(); setMenu(null); }
       return;
     }
     if (e.repeat) return;
     const letter = plazaLetterKey(e);
+    // 광장 대화의 고르는 상자 — S 대화 초대 · C 취소. (받은 요청 창의 S · C는 그 창이 듣습니다 — PlazaTalkAsk)
+    if (pickRef.current?.open && (letter === "s" || letter === "c")) {
+      e.preventDefault();
+      chooseTalk(letter === "s");
+      return;
+    }
     if (menuRef.current && (letter === "s" || letter === "c")) {
       e.preventDefault();
       choose(letter === "s");
@@ -1235,6 +1461,10 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   if (!pet) myPet.current = null;
   else if (!myPet.current) myPet.current = plazaPetStart(pos.current, facingRef.current, room);
 
+  // 고른 친구가 이 방을 떠났거나 광장 대화를 껐으면 고르기를 걷습니다
+  const pickGone = !!pick && (!talkLive || !friends.some((f) => f.uid === pick.uid && f.room === here));
+  useEffect(() => { if (pickGone) setPick(null); }, [pickGone]);
+
   const world = size ? plazaView(size.w, size.h) : null;
   const who = useMemo(() => characterOf({ uid: myUid || "", character: characterOn ? character : null }), [myUid, characterOn, character]);
   const myName = isTeacher ? "선생님" : user?.realName || user?.displayName || "나";
@@ -1242,6 +1472,17 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   // 나와 같은 방에 있는 친구들 · 의자에 앉아 있는 자리들(그 책상의 이름표는 몸에 가려 걷습니다)
   const mates = friends.filter((f) => f.room === here);
   const inClass = here === "classroom";
+  // 광장 대화 — 친구들(uid → 이름표 줄 — 요청 창 · 안내의 이름) · 내가 든 대화 · 머리 위 말풍선(같은 방에 보이는 사람끼리)
+  const friendMap = useMemo(() => new Map(friends.map((f) => [f.uid, f])), [friends]);
+  friendMapRef.current = friendMap;
+  const myTalk = talkLive && talker.talk && !talker.talk.ended ? talker.talk.id : null;
+  const bubbles = talkLive ? talkBubbles([{ uid: myUid, talk: myTalk }, ...mates.map((f) => ({ uid: f.uid, talk: f.talk }))]) : new Map();
+  const badgeOf = (uid) => (talkLive ? talker.marks.get(uid)?.kind ?? bubbles.get(uid) ?? null : null);
+  const myBadge = talkLive ? (talker.pending ? "waiting" : bubbles.get(myUid) ?? null) : null;
+  const picked = talkLive && pick ? mates.find((f) => f.uid === pick.uid) ?? null : null;
+  const pickedMember = picked ? cast.current.get(picked.uid) : null;
+  const incoming = talkLive ? talker.incoming : null;
+  const incomingFrom = incoming ? friendMap.get(incoming.from) ?? null : null;
   // [선생님] 모두 이동 단추가 서는가 · 옮길 저쪽 방 · 지금 세는 중인가(그동안 단추가 쉼)
   const canGather = isTeacher && classroomOn && !!classroom?.onMoveAll;
   const other = inClass ? "plaza" : "classroom";
@@ -1256,10 +1497,13 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   const presentUids = isTeacher ? classroom?.presentUids ?? null : null;
   const roll = useMemo(() => (roster ? classroomAttendance(roster, presentUids) : null), [roster, presentUids]);
   const unseated = useMemo(() => (inClass && roster ? classroomUnseated(desks, roster) : []), [inClass, roster, desks]);
-  const stageLabel = !inClass
+  const talkLabel = talkLive ? " 친구를 누르거나 친구 곁에서 A를 누르면 대화 초대(S)와 취소(C)를 고릅니다." : "";
+  const stageLabel = (!inClass
     ? "책 광장 마당. 누른 곳으로 걸어가고 방향키로도 걷습니다. 책꽂이나 가판대 앞에서 A 또는 Enter로 엽니다."
     : isTeacher ? "교실. 누른 곳으로 걸어가고 방향키로도 걷습니다. 칠판에 붙인 출석부 앞에서 A를 누르면 출석시작(S)과 출석종료(C)를 고릅니다."
-      : "교실. 누른 곳으로 걸어가고 방향키로도 걷습니다. 내 자리의 러그에 올라서서 A를 누르면 앉기(S)와 취소(C)를 고르고, 앉은 채 A를 누르면 다시 서기(S)를 고릅니다.";
+      : "교실. 누른 곳으로 걸어가고 방향키로도 걷습니다. 내 자리의 러그에 올라서서 A를 누르면 앉기(S)와 취소(C)를 고르고, 앉은 채 A를 누르면 다시 서기(S)를 고릅니다.") + talkLabel;
+  // 머리 위 조각의 높이 — 이름표가 서는 자리(서 있으면 몸 + 5px, 앉아 있으면 머리)
+  const bodyPx = world ? plazaCharacterSize(world.scale).body : 0;
 
   return (
     <section className="plaza" aria-label={ROOM_NAME[here]}>
@@ -1323,11 +1567,20 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
                 return (
                   <PlazaActor key={friend.uid} ref={castRef(friend.uid)} character={friend.character} pet={member.pet ? friend.pet : null}
                     name={friend.name} teacher={friend.teacher} reading={friend.reading} scale={world.scale} at={member.actor} petAt={member.pet}
-                    seat={friend.seat !== null ? CLASSROOM_SEATS[friend.seat] : null} checked={inClass && !friend.teacher && !!presentUids?.has(friend.uid)} />
+                    seat={friend.seat !== null ? CLASSROOM_SEATS[friend.seat] : null} checked={inClass && !friend.teacher && !!presentUids?.has(friend.uid)}
+                    ring={picked?.uid === friend.uid} badge={badgeOf(friend.uid)} />
                 );
               })}
               <PlazaActor ref={meRef} me character={who} pet={pet} name={myName} reading={reading} scale={world.scale} at={pos.current} petAt={myPet.current}
-                seat={inClass && sitting !== null ? CLASSROOM_SEATS[sitting] : null} checked={inClass && attended} />
+                seat={inClass && sitting !== null ? CLASSROOM_SEATS[sitting] : null} checked={inClass && attended} badge={myBadge} />
+              {/* 광장 대화 — 고른 친구의 머리 위('A' · 고르는 상자). 친구를 따라 걸음 루프가 옮깁니다 */}
+              {picked && pickedMember && (
+                <PlazaTalkFocus ref={focusRef} at={pickedMember.actor} lift={Math.round(bodyPx) + (picked.seat !== null ? 0 : 5)}
+                  seated={picked.seat !== null} raised={!!badgeOf(picked.uid)} call={talkCallName(picked.name, picked.teacher)}
+                  open={!!pick?.open} choice={talker.choiceFor(picked.uid, picked.talk)} group={!!myTalk}
+                  onOpen={() => { stageRef.current?.focus({ preventScroll: true }); setMenu(null); setPick((current) => (current ? { ...current, open: true } : current)); }}
+                  onChoose={chooseTalk} />
+              )}
             </div>
           )}
           {/* 방을 옮길 때의 반짝임 — 옮길 때마다 새로 그려 한 번 돕니다 */}
@@ -1382,17 +1635,34 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
           {live.status === "connecting" && <p className="plaza-live plaza-live--connecting" role="status"><i aria-hidden="true" />친구들을 찾는 중…</p>}
           {live.status === "resting" && <p className="plaza-live plaza-live--resting" role="status"><i aria-hidden="true" />쉬는 중 — 움직이면 친구들이 다시 보여요</p>}
           {liveNote && <p className="plaza-live plaza-live--note" role="status">{liveNote}</p>}
+          {/* 광장 대화 — 대답을 기다리는 내 요청(맵 아래쪽 · 폰에서는 위쪽) */}
+          {talkLive && talker.pending && (
+            <PlazaTalkWaiting call={talkCallName(friendMap.get(talker.pending.to)?.name, !!friendMap.get(talker.pending.to)?.teacher)}
+              left={talker.pendingLeft} onCancel={() => { talker.cancelOut(); stageRef.current?.focus({ preventScroll: true }); }} />
+          )}
           {error && <div className="plaza-hud-error" role="alert">{error}</div>}
           {note
             ? <p key={note.key} className="plaza-hint plaza-hint--note" role="status">{note.text}</p>
             : !walked && (
-              !inClass ? <p className="plaza-hint" aria-hidden="true">마당을 누르면 그곳으로 걸어가요<span> · 방향키로도 걷고, 책꽂이와 가판대 앞에서 A(또는 눌러서)로 열어요{classroomOn ? " · 왼쪽 아래 포털은 교실로 가요" : ""}</span></p>
+              !inClass ? <p className="plaza-hint" aria-hidden="true">마당을 누르면 그곳으로 걸어가요<span> · 방향키로도 걷고, 책꽂이와 가판대 앞에서 A(또는 눌러서)로 열어요{classroomOn ? " · 왼쪽 아래 포털은 교실로 가요" : ""}{hideoutEntryOn ? " · 오른쪽 위 포털은 나의 아지트로 가요" : ""}{talkLive ? " · 친구를 누르고 A로 대화를 청해요" : ""}</span></p>
                 : isTeacher ? <p className="plaza-hint" aria-hidden="true">칠판의 출석부 앞에서 A를 누르면<span> 출석시작(S) · 출석종료(C)를 골라요 · 방향키나 누르기로 걸어요</span></p>
                   : sitting !== null ? <p className="plaza-hint" aria-hidden="true">자리에 앉아 있어요<span> · 일어서려면 A를 누르고 다시 서기(S)를 골라요</span></p>
                     : <p className="plaza-hint" aria-hidden="true">내 자리의 러그에 올라서면 물음표가 떠요<span> · A를 누르고 앉기(S)를 골라요 · 방향키나 누르기로 걸어요</span></p>
             )}
         </div>
+        {/* 광장 대화 — 오른쪽 대화창(접으면 작은 단추 · 폰에서는 아래쪽 창). 무대 밖이라 여기에 쓰는 동안 캐릭터가 걷지 않습니다 */}
+        {talkLive && talker.talk && (
+          <PlazaTalkPanel key={talker.talk.id} talk={talker.talk} myUid={myUid} onSend={talker.send} onCover={onTalkCover}
+            onLeave={() => { talker.leave(); stageRef.current?.focus({ preventScroll: true }); }}
+            onDismiss={() => { talker.dismiss(); stageRef.current?.focus({ preventScroll: true }); }} />
+        )}
       </div>
+      {/* 광장 대화 — 나에게 온 요청(책 보기 창 위에 뜸 · S 승인 · C 취소) */}
+      {incoming && (
+        <PlazaTalkAsk title={talkAskTitle(incomingFrom?.name, !!incomingFrom?.teacher, !!incoming.k)} left={incoming.left}
+          more={talker.incomingMore} group={!!incoming.k} stageRef={stageRef}
+          onAccept={() => talker.accept(incoming)} onDecline={() => talker.decline(incoming)} />
+      )}
       {panel && (
         <PlazaPanel classId={classId} user={user} isTeacher={isTeacher} shelves={shelves ?? []} loading={shelves === null}
           place={panel.place} friendUid={panel.friendUid ?? null} book={panel.book ?? null}

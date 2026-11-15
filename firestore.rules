@@ -581,7 +581,9 @@ service cloud.firestore {
       allow list: if isAdmin() || (isTeacher() && resource.data.createdBy == uid());
       // 새 반은 기본 꺼짐. 켜기는 운영 중인 반의 담당 교사/관리자만 합니다.
       // 관리자 설정 화면의 스위치(책 봄 성장 · 도서 검색 · 리더보드(rankingEnabled) · 독서 TOP 3 ·
-      // 학생 캐릭터 · 과일 바구니 · 학생 펫 · 펫 미리보기 · 펫 먹이 · 책 광장 · 교실 · 개인 아지트)도 같은 판정 — 참·거짓만, 운영 중인 반에서만 바꿉니다.
+      // 학생 캐릭터 · 과일 바구니 · 학생 펫 · 펫 미리보기 · 펫 먹이 · 책 광장 · 교실 · 광장 대화 · 개인 아지트)도 같은 판정 — 참·거짓만, 운영 중인 반에서만 바꿉니다.
+      // 광장 대화(plazaTalkEnabled)의 요청 · 말은 Firestore가 아니라 Realtime Database에 있습니다(database.rules.json —
+      // 대화에 사람을 넣는 일과 선생님의 기록 읽기는 서버만 · /api/reading/plaza). 여기서는 스위치의 모양만 봅니다.
       // 펫 미리보기(petPreviewEnabled)를 켠 반의 학생이 고르는 펫은 서버만 적습니다(/api/reading/pet — 프로필의 readingPet ·
       // 비밀 문서 users/{uid}/reading/pet은 아래 users 규칙이 학생 · 교사 모두 못 쓰게 막음).
       // 독서 맵(readingMapTheme)은 대륙 · 모험의 식별자 두 개만 받습니다.
@@ -622,6 +624,7 @@ service cloud.firestore {
                && (!keys.hasAny(['petRests']) || (d.get('petRests', null) is list && d.petRests.size() <= 20))
                && (!keys.hasAny(['readingTopEnabled']) || d.get('readingTopEnabled', null) is bool)
                && (!keys.hasAny(['plazaEnabled']) || d.get('plazaEnabled', null) is bool)
+               && (!keys.hasAny(['plazaTalkEnabled']) || d.get('plazaTalkEnabled', null) is bool)
                && (!keys.hasAny(['classroomEnabled']) || d.get('classroomEnabled', null) is bool)
                && (!keys.hasAny(['hideoutEnabled']) || d.get('hideoutEnabled', null) is bool)
                && (!keys.hasAny(['classroomCallAt'])
@@ -659,7 +662,7 @@ service cloud.firestore {
         let changed = request.resource.data.diff(resource.data).affectedKeys();
         return classSettingsShapeOk(request.resource.data, changed)
                && petFeedPauseFlowOk(changed)
-               && (!changed.hasAny(['readingEnabled', 'rankingEnabled', 'characterEnabled', 'bookSearchEnabled', 'fruitBasketEnabled', 'petEnabled', 'readingTopEnabled', 'plazaEnabled', 'classroomEnabled', 'hideoutEnabled', 'classroomCallAt', 'readingMapTheme',
+               && (!changed.hasAny(['readingEnabled', 'rankingEnabled', 'characterEnabled', 'bookSearchEnabled', 'fruitBasketEnabled', 'petEnabled', 'readingTopEnabled', 'plazaEnabled', 'plazaTalkEnabled', 'classroomEnabled', 'hideoutEnabled', 'classroomCallAt', 'readingMapTheme',
                                     'petFeedEnabled', 'petRestWeekend', 'petRests', 'petPreviewEnabled'])
                    || (resource.data.get('archived', false) != true
                        && request.resource.data.get('archived', false) != true));

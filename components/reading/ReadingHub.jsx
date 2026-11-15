@@ -63,7 +63,7 @@ const ReadingHideout = dynamic(() => import("./ReadingHideout"), { ssr: false, l
 // 학생이 한 명도 없는 반에서는 탭 줄 자체가 없어 들어갈 길이 없었고(주소에 ?tab=plaza를 붙여도), 학생이 있는
 // 반에서도 '○○의 독서 여정' 안에 섞여 입구로 보이지 않았습니다(선생님 신고). 틀의 클래스(.reading-hub--plaza)가
 // 학생 화면과 같아 '광장 탭'의 CSS(머리말 · 명단 · 옆 패널 가리기)가 그대로 듣습니다. 선생님에게는 펫 · 곧바로 열 책이 없습니다.
-export function TeacherPlaza({ classId, user, characterOn = true, classroom = null, hideoutOn = false, initialHideout = false, initialHideoutRoom = "classroom", plazaCall = 0, onExit }) {
+export function TeacherPlaza({ classId, user, characterOn = true, classroom = null, hideoutOn = false, talkOn = false, initialHideout = false, initialHideoutRoom = "classroom", plazaCall = 0, onExit }) {
   const [ownHideout, setOwnHideout] = useState(initialHideout);
   const [hideoutOrigin, setHideoutOrigin] = useState(initialHideoutRoom === "plaza" ? "plaza" : "classroom");
   const [plazaReturn, setPlazaReturn] = useState(null);
@@ -91,7 +91,7 @@ export function TeacherPlaza({ classId, user, characterOn = true, classroom = nu
       {inHideout
         ? <ReadingHideout key={`${classId}:${user.uid}`} classId={classId} user={user} characterOn={characterOn} petOn={false} returnRoom={hideoutOrigin} onDisabled={leaveHideout} onExit={leaveHideout} />
         : <ReadingPlaza key={plazaReturn?.key ?? "teacher-plaza"} classId={classId} user={user} isTeacher characterOn={characterOn} petOn={false} growthXp={null} initialBook={null}
-            initialRoom={plazaReturn?.room ?? (ownHideout ? hideoutOrigin : null)} onExit={onExit} classroom={classroom} hideoutOn={canHideout} onEnterHideout={enterHideout} />}
+            initialRoom={plazaReturn?.room ?? (ownHideout ? hideoutOrigin : null)} onExit={onExit} classroom={classroom} hideoutOn={canHideout} onEnterHideout={enterHideout} talkOn={talkOn} />}
     </PlazaExitContext.Provider>
   </section>;
 }
@@ -172,7 +172,7 @@ function Modal({ title, onClose, children, wide = false, busy = false }) {
 //   이 값이 **이 화면이 떠 있는 동안 바뀌면** 책 광장 탭으로 넘어갑니다(아래).
 // petFeed — 그 반의 펫 먹이 규칙(lib/readingPet.js의 petCareRules — 끈 반이면 on이 거짓) · myFruit — 내가 가진 과일 수(먹이).
 // petPreview — 관리자 설정의 '펫 미리보기'(lib/readingPet.js의 petPreviewOn) — 켠 반이면 '나의 펫'에서 키울 펫을 고릅니다.
-export default function ReadingHub({ classId, user, isTeacher = false, bookSearchOn = false, petOn = false, plazaOn = false, hideoutOn = false, characterOn = true, onDisabled, activities = [], onOpenActivity, initialBookId = null, initialTab = "library", student = null, classroom = null, plazaCall = 0, petFeed = null, myFruit = 0, petPreview = false, teacherTools = null, onOpenOwnHideout = null, onOpenHideoutGallery = null }) {
+export default function ReadingHub({ classId, user, isTeacher = false, bookSearchOn = false, petOn = false, plazaOn = false, hideoutOn = false, talkOn = false, characterOn = true, onDisabled, activities = [], onOpenActivity, initialBookId = null, initialTab = "library", student = null, classroom = null, plazaCall = 0, petFeed = null, myFruit = 0, petPreview = false, teacherTools = null, onOpenOwnHideout = null, onOpenHideoutGallery = null }) {
   // student가 있으면 교사가 그 학생의 책 봄을 보는 읽기 전용 화면입니다(선생님 결정 — 감상·발자국까지 전부 보임).
   const readOnly = !!student?.uid;
   const viewUid = readOnly ? student.uid : user?.uid;
@@ -365,7 +365,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
     {error && !dialog && !confirm && <div className="reading-error" role="alert">{error}<button type="button" onClick={() => setError("")} aria-label="오류 안내 닫기">×</button></div>}
     {notice && <div className="reading-notice" role="status">{notice}</div>}
     {/* 책 광장은 서재(정본)를 기다리지 않습니다 — 반의 공유 사본을 제 손으로 구독합니다. 펫의 단계만 서재에서 받습니다. */}
-    {tab === "plaza" ? <PlazaExitContext.Provider value={leavePlaza}><ReadingPlaza key={plazaJump?.key ?? plazaReturn?.key ?? "plaza"} classId={classId} user={user} isTeacher={isTeacher} characterOn={characterOn} petOn={showPet} petFeed={petFeed} growthXp={raw ? petGrowthOfSummary(stats) : null} initialBook={plazaJump} initialRoom={plazaJump ? null : plazaReturn?.room} onExit={leavePlaza} classroom={classroom} hideoutOn={canHideout && (!readOnly || typeof onOpenOwnHideout === "function")} onEnterHideout={enterHideout} /></PlazaExitContext.Provider>
+    {tab === "plaza" ? <PlazaExitContext.Provider value={leavePlaza}><ReadingPlaza key={plazaJump?.key ?? plazaReturn?.key ?? "plaza"} classId={classId} user={user} isTeacher={isTeacher} characterOn={characterOn} petOn={showPet} petFeed={petFeed} growthXp={raw ? petGrowthOfSummary(stats) : null} initialBook={plazaJump} initialRoom={plazaJump ? null : plazaReturn?.room} onExit={leavePlaza} classroom={classroom} hideoutOn={canHideout && (!readOnly || typeof onOpenOwnHideout === "function")} onEnterHideout={enterHideout} talkOn={plazaOn && talkOn} /></PlazaExitContext.Provider>
     : tab === "hideout" && canHideout ? <PlazaExitContext.Provider value={leaveHideout}><ReadingHideout key={`${classId}:${viewUid}`} classId={classId} user={user} student={student} summary={stats} readOnly={readOnly} characterOn={characterOn} petOn={petOn} petFeed={petFeed} returnRoom={hideoutOrigin} onDisabled={leaveHideout} onExit={leaveHideout} /></PlazaExitContext.Provider>
     : loading ? <div className="reading-loading" role="status"><span className="reading-loader" />독서 기록을 불러오고 있어요.</div> : !raw ? <div className="reading-empty"><BookIcon size={40} /><h3>독서 정보를 불러오지 못했어요.</h3><button type="button" className="btn-primary" onClick={() => setRevision((r) => r + 1)}>다시 불러오기</button></div> : <>
       {!readOnly && <ReadingSummary stats={stats} />}

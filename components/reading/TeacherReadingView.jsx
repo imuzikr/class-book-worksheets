@@ -23,6 +23,8 @@
 // 섭니다 — 일이 생긴 뒤 광장을 꺼도 지난 이력은 봐야 하므로.
 // 그 창은 **누를 때만 내려받습니다**(아래 dynamic) — 책 광장의 자료 함수(lib/data/plaza.js)를 함께 끌어와, 곧바로 import하면
 // 책방 첫 화면 묶음이 그만큼 커집니다(광장의 코드는 쓸 때만 — CLAUDE.md). 내려받는 동안에도 같은 자리에 창이 서고 닫힙니다.
+// **광장 대화**(선생님 결정 — 대화 기록을 남기고 담당 교사 · 관리자가 봄): 같은 머리에 '광장 대화' — 그 학생이 책 광장 · 교실에서
+// 든 대화의 말 전체(PlazaTalkHistory · 서버가 담당 교사인지 확인). 댓글 이력과 같은 약속으로 광장 대화를 꺼 둔 반에서도 섭니다.
 // =============================================================
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
@@ -35,15 +37,15 @@ import { petSpecies } from "@/lib/readingPet";
 import { kstToday } from "@/lib/reading";
 import { iGa } from "@/lib/korean";
 
-// 내려받는 동안의 창 — 닫기는 context로 받습니다(dynamic의 loading은 props를 받지 못함 · ReadingHub의 PlazaLoading과 같은 길)
-const HistoryCloseContext = createContext(() => {});
+// 내려받는 동안의 창 — 닫기 · 제목은 context로 받습니다(dynamic의 loading은 props를 받지 못함 · ReadingHub의 PlazaLoading과 같은 길)
+const HistoryCloseContext = createContext({ onClose: () => {}, title: "댓글 이력" });
 function HistoryLoading() {
-  const onClose = useContext(HistoryCloseContext);
+  const { onClose, title } = useContext(HistoryCloseContext);
   return (
     <div className="modal-backdrop plaza-history-backdrop" {...backdropClose(onClose)}>
-      <div className="modal plaza-history" role="dialog" aria-modal="true" aria-label="댓글 이력">
+      <div className="modal plaza-history" role="dialog" aria-modal="true" aria-label={title}>
         <div className="plaza-history-head">
-          <div><h3>댓글 이력</h3><p role="status">댓글 이력 창을 여는 중이에요.</p></div>
+          <div><h3>{title}</h3><p role="status">{title} 창을 여는 중이에요.</p></div>
           <button type="button" className="btn-close" aria-label="닫기" onClick={onClose}>×</button>
         </div>
       </div>
@@ -52,6 +54,7 @@ function HistoryLoading() {
 }
 const PlazaCommentHistory = dynamic(() => import("./PlazaCommentHistory"), { ssr: false, loading: HistoryLoading });
 const TeacherHideoutBrowser = dynamic(() => import("./TeacherHideoutBrowser"), { ssr: false, loading: () => <p className="reading-loading" role="status">학생들의 아지트를 펼치고 있어요.</p> });
+const PlazaTalkHistory = dynamic(() => import("./PlazaTalkHistory"), { ssr: false, loading: HistoryLoading });
 
 // 고른 학생은 주소(?student=)가 듭니다 — 리더보드의 '책꽂이로 이동'이 그 학생을 짚어 열고,
 // 새로고침해도 그 학생입니다. 명단을 누르면 주소만 바꿉니다(replace).
@@ -79,7 +82,7 @@ export default function TeacherReadingView({ classId, user, roster = [], student
   }, [feedOn, pets, petFeed, today, roster]);
   const hungryCount = [...careOf.values()].filter((c) => c.status?.hungry).length;
   const awayCount = [...careOf.values()].filter((c) => c.status?.away).length;
-  const [historyFor, setHistoryFor] = useState(null);   // 댓글 이력 창을 연 학생
+  const [historyFor, setHistoryFor] = useState(null);   // 댓글 이력 · 광장 대화 창을 연 학생과 창({ student, kind: "comments" | "talk" })
   const closeHistory = () => setHistoryFor(null);
   const [recalling, setRecalling] = useState(false);
   const [recallError, setRecallError] = useState("");
@@ -142,7 +145,7 @@ export default function TeacherReadingView({ classId, user, roster = [], student
   if (plazaOn && plazaOpen) {
     return (
       <div className="reading-teacher">
-        <TeacherPlaza key={classId} classId={classId} user={user} characterOn={hubProps.characterOn} classroom={hubProps.classroom} hideoutOn={hubProps.hideoutOn} initialHideout={startInHideout} initialHideoutRoom={startInHideoutRoom} plazaCall={plazaCall}
+        <TeacherPlaza key={classId} classId={classId} user={user} characterOn={hubProps.characterOn} classroom={hubProps.classroom} hideoutOn={hubProps.hideoutOn} initialHideout={startInHideout} initialHideoutRoom={startInHideoutRoom} plazaCall={plazaCall} talkOn={plazaOn && !!hubProps.talkOn}
           onExit={() => { setStartInHideout(false); setPlazaOpen(false); }} />
       </div>
     );
@@ -194,15 +197,22 @@ export default function TeacherReadingView({ classId, user, roster = [], student
           onOpenHideoutGallery={() => { setHistoryFor(null); setGalleryOpen(true); }}
           onOpenOwnHideout={(origin) => { setStartInHideoutRoom(origin === "plaza" ? "plaza" : "classroom"); setStartInHideout(true); setPlazaOpen(true); }}
           teacherTools={(
-            <button type="button" className="reading-teacher-history" onClick={() => setHistoryFor(student)}>
-              <IconAnswer size={17} /><span>댓글 이력</span><small>책 광장 · 고친 글 · 지운 글까지</small>
-            </button>
+            <div className="reading-teacher-tools">
+              <button type="button" className="reading-teacher-history" onClick={() => setHistoryFor({ student, kind: "comments" })}>
+                <IconAnswer size={17} /><span>댓글 이력</span><small>책 광장 · 고친 글 · 지운 글까지</small>
+              </button>
+              <button type="button" className="reading-teacher-history" onClick={() => setHistoryFor({ student, kind: "talk" })}>
+                <IconAnswer size={17} /><span>광장 대화</span><small>친구들과 나눈 말</small>
+              </button>
+            </div>
           )} />
           : <div className="reading-empty"><h3>학생을 기다리고 있어요.</h3><p>학생이 참여 코드로 들어오면 이곳에서 학생마다의 책 봄을 볼 수 있어요.{plazaOn ? " 책 광장은 지금도 ‘책 광장 들어가기’로 둘러볼 수 있어요." : ""}</p></div>}
       </div>
       {historyFor && (
-        <HistoryCloseContext.Provider value={closeHistory}>
-          <PlazaCommentHistory classId={classId} student={historyFor} roster={roster} onClose={closeHistory} />
+        <HistoryCloseContext.Provider value={{ onClose: closeHistory, title: historyFor.kind === "talk" ? "광장 대화" : "댓글 이력" }}>
+          {historyFor.kind === "talk"
+            ? <PlazaTalkHistory classId={classId} student={historyFor.student} onClose={closeHistory} />
+            : <PlazaCommentHistory classId={classId} student={historyFor.student} roster={roster} onClose={closeHistory} />}
         </HistoryCloseContext.Provider>
       )}
     </div>

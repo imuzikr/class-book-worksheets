@@ -419,6 +419,17 @@ test("무대 — 그림이 보이는 창을 빈틈없이 덮고, 시점은 캐�
   assert.ok(Math.abs(camTall.x + tall.w / 2 - PLAZA_SPAWN.x * tall.scale) < 1e-6);
   // 크기를 아직 모르면 시점은 0
   assert.deepEqual(plazaCamera(plazaView(0, 0), PLAZA_SPAWN), { x: 0, y: 0 });
+  // 광장 대화창이 오른쪽 360px을 가리면 — 맵 오른쪽 끝에 선 캐릭터도 가려지지 않게 그만큼 더 밀 수 있음(넘는 것은 그 만큼까지)
+  const fit = plazaView(1280, 720);
+  const edge = { x: PLAZA_W - 40, y: 500 };
+  assert.equal(Math.round(plazaCamera(fit, edge).x), Math.round(fit.worldW - fit.w));
+  const pushed = plazaCamera(fit, { x: edge.x + 180 / fit.scale, y: edge.y }, { right: 360 });
+  assert.ok(pushed.x > fit.worldW - fit.w && pushed.x <= fit.worldW - fit.w + 360);
+  assert.ok(edge.x * fit.scale - pushed.x < fit.w - 360, "캐릭터가 대화창 왼쪽에 보임");
+  // 아래를 가린 폰의 대화창도 같은 셈
+  const phone = plazaView(420, 760);
+  const low = { x: 836, y: PLAZA_H - 20 };
+  assert.ok(plazaCamera(phone, low, { bottom: 400 }).y >= plazaCamera(phone, low).y);
 });
 
 // ── 걷는 그림 · 펫 따라오기 (lib/readingPlazaSprites.js) ──
