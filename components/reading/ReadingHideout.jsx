@@ -16,7 +16,7 @@ import { petGrowthOfSummary, petProgress } from "@/lib/readingPet";
 import { careAway } from "@/lib/petCare";
 import { kstToday } from "@/lib/reading";
 import { eulReul } from "@/lib/korean";
-import { PLAZA_WALK_SPEED, SPRITE_CELL, SPRITE_FOOT, plazaCharacterSheet, plazaFacing, plazaWalkFrame } from "@/lib/readingPlazaSprites";
+import { PLAZA_WALK_SPEED, SPRITE_BODY, SPRITE_CELL, SPRITE_FOOT, plazaCharacterSheet, plazaFacing, plazaWalkFrame } from "@/lib/readingPlazaSprites";
 import { hasModalAbove } from "@/lib/modal";
 import PetFigure from "./PetFigure";
 import PlazaSprite from "./PlazaSprite";
@@ -287,7 +287,7 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
         <span className="hideout-resident-shadow" style={{ width: actorSize * .35, height: actorSize * .05 }} />
         {spriteSrc && !spriteMissing ? <PlazaSprite ref={spriteRef} src={spriteSrc} size={actorSize || 1} style={{ position: "absolute", left: -actorSize / 2, top: -actorSize * SPRITE_FOOT.y / SPRITE_CELL }} onMissing={() => setSpriteMissing(true)} />
           : <img className="hideout-character-fallback" src={characterImage(appearance)} alt="" draggable={false} style={{ width: actorSize, height: actorSize, left: -actorSize / 2, top: -actorSize * .92 }} />}
-        <span className="hideout-resident-name">{myName}</span>
+        <span className="hideout-resident-name" style={{ bottom: Math.round(actorSize * (spriteSrc && !spriteMissing ? SPRITE_BODY / SPRITE_CELL : .92)) + 5 }}>{myName}</span>
       </div>
       {pet && bed && <RestingPet pet={pet} bed={bed} />}
     </div>

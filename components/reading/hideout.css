@@ -30,7 +30,7 @@
 .hideout-resident .plaza-sprite { max-width: none; }
 .hideout-character-fallback { position: absolute; object-fit: contain; max-width: none; }
 .hideout-resident-shadow { position: absolute; transform: translate(-50%, -50%); border-radius: 50%; background: #4b39212b; filter: blur(2px); }
-.hideout-resident-name { position: absolute; top: 6px; left: 0; transform: translateX(-50%); border: 1px solid #ece7d5; border-radius: 20px; padding: 1px 7px; background: #fffdf4ee; color: #625c47; font-size: clamp(8px, .8vw, 11px); line-height: 1.4; font-weight: 650; white-space: nowrap; }
+.hideout-resident-name { position: absolute; left: 0; transform: translateX(-50%); border: 1px solid #ece7d5; border-radius: 20px; padding: 1px 7px; background: #fffdf4ee; color: #625c47; font-size: clamp(8px, .8vw, 11px); line-height: 1.4; font-weight: 650; white-space: nowrap; }
 .hideout-pet { position: absolute; transform: translate(-50%, -50%); pointer-events: none; }
 .hideout-pet > img { width: 100%; height: 100%; display: block; object-fit: contain; image-rendering: pixelated; }
 .hideout-pet .pet-figure { width: 100% !important; height: 100% !important; }

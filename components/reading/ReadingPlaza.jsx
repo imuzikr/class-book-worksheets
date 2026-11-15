@@ -10,7 +10,7 @@
 // 이 화면(과 창 PlazaPanel)은 광장 탭을 열 때만 내려받습니다(ReadingHub의 dynamic import).
 //
 // **방이 둘입니다 — 책 광장과 교실**(선생님 요청 · 관리자 설정의 '교실'을 켠 반). 광장 왼쪽 아래의 포털에 올라서면
-// 교실로, 교실 오른쪽 아래(문 앞)의 포털에 올라서면 광장으로 옮겨 갑니다. 두 그림이 같은 크기라 무대 · 시점의 셈은
+// 교실로, 교실 왼쪽 아래의 포털에 올라서면 광장으로 옮겨 갑니다. 두 그림이 같은 크기라 무대 · 시점의 셈은
 // 그대로이고, 방마다 다른 것(바닥 · 여는 곳 · 포털)은 방 정의(lib/readingPlazaMap.js의 plazaRoomOf)가 듭니다.
 // 책 광장 탭을 열면 **마지막에 있던 방**에서 시작합니다(이 기기에 기억).
 // **포털 · 러그 · 책상과 의자는 배경에 그려져 있지 않습니다**(선생님이 주신 분리 그림) — 방 정의의 좌표대로 따로 그립니다
@@ -73,11 +73,12 @@ import {
   classroomMoveCall, classroomMoveSeat, classroomMoveSpot,
   classroomNearSeat, classroomRollCall, classroomSeatAt, classroomSeatLabel, classroomSeatOf, classroomSeatSide, classroomUnseated, plazaArrowKey, plazaLetterKey,
 } from "@/lib/readingClassroom";
-import { PLAZA_LIVE_KEY_MS, plazaRemoteEnter, plazaRemoteHear, plazaRemoteStep, plazaSpawnFor } from "@/lib/readingPlazaLive";
+import { PLAZA_LIVE_KEY_MS, PLAZA_LIVE_PATH_MAX, plazaRemoteEnter, plazaRemoteHear, plazaRemoteStep, plazaSpawnFor } from "@/lib/readingPlazaLive";
 import {
   CLASSROOM_SEATS, PLAZA_H, PLAZA_NEAR, PLAZA_W, PORTAL_ART,
-  plazaArrival, plazaCamera, plazaNearest, plazaPath, plazaPortalAt, plazaPortalClicked, plazaRoomOf, plazaSpotAt, plazaSpotNear, plazaStep, plazaView, plazaWalkable,
+  plazaArrival, plazaCamera, plazaClear, plazaNearest, plazaPath, plazaPortalAt, plazaPortalClicked, plazaRoomOf, plazaSpotAt, plazaSpotNear, plazaStep, plazaView, plazaWalkable,
 } from "@/lib/readingPlazaMap";
+import { PLAZA_AVATAR_SEPARATION, plazaAvoidPath, plazaAvoidStep } from "@/lib/readingPlazaAvoidance";
 import { PET_STRIDE, PLAZA_WALK_SPEED, SPRITE_IDLE, plazaCharacterSize, plazaFacing, plazaPetFollow, plazaPetStart, plazaShownFrame } from "@/lib/readingPlazaSprites";
 import { PLAZA_STAGE_MIN_H, plazaRoom as stageRoom, plazaScroller } from "@/lib/plazaStageRoom";
 import { plazaTalkSpot, talkAskTitle, talkBubbles, talkCallName } from "@/lib/readingPlazaTalk";
@@ -152,6 +153,45 @@ const friendRow = (uid, who, friend) => ({
 });
 // 친구가 다 와서 설 자리(걷는 중이면 남은 길의 끝)
 const restOf = (actor) => (actor.queue?.length ? actor.queue[actor.queue.length - 1] : { x: actor.x, y: actor.y });
+
+// Only characters currently drawn in this room are moving obstacles. Chairs
+// already cover seated students, and pets never block a classroom aisle.
+function peopleInRoom(members, roomId) {
+  const people = [];
+  for (const [uid, friend] of members) {
+    const actor = friend.actor;
+    if (friend.room !== roomId || friend.seat !== null || !Number.isFinite(actor.x) || !Number.isFinite(actor.y)) continue;
+    people.push({ uid, x: actor.x, y: actor.y, moving: actor.walking && actor.queue.length > 0 });
+  }
+  return people;
+}
+const samePoint = (a, b) => a && b && Math.hypot(a.x - b.x, a.y - b.y) < .5;
+function routeAroundPeople(from, goal, people, room, { seat = null, portal = false, spot = null, board = false, talk = false } = {}) {
+  const candidates = seat !== null ? CLASSROOM_SEATS[seat].sides.map((side) => side.stand)
+    : board ? [goal, classroomBoardStand(goal.x - 80), classroomBoardStand(goal.x + 80)] : [goal];
+  let best = null;
+  let cost = Infinity;
+  for (const candidate of candidates) {
+    const route = plazaAvoidPath(from, candidate, people, room);
+    if (!route.length) continue;
+    const end = route[route.length - 1];
+    if (seat !== null && !classroomNearSeat(end, seat)) continue;
+    if (spot && Math.hypot(end.x - spot.stand.x, end.y - spot.stand.y) > PLAZA_NEAR) continue;
+    if (board && !classroomAtBoard(end)) continue;
+    // A crowded portal must keep its real destination: wait for the core to
+    // clear rather than finishing beside it or warping outside its trigger.
+    if (portal && !samePoint(end, goal)) {
+      if (!plazaClear(end, goal, room)) continue;
+      route.push({ ...goal });
+    }
+    let length = 0;
+    let previous = from;
+    for (const point of route) { length += Math.hypot(point.x - previous.x, point.y - previous.y); previous = point; }
+    if (length < cost) { cost = length; best = route; }
+  }
+  return best ? { route: best, waiting: false }
+    : { route: seat !== null || portal || spot || board || talk ? plazaPath(from, goal, room) : [], waiting: true };
+}
 
 // initialBook — 책꽂이에서 '광장에서 보기'로 넘어올 때 곧바로 열 책({ uid, bookId, place })
 // onExit — 맵 위의 '나가기'(광장에서 나가 책 봄의 첫 탭 '책꽂이'로 — 광장 탭에서는 탭 줄을 가리므로 나가는 길은 이 단추)
@@ -238,6 +278,11 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   const keys = useRef(NO_KEYS());
   // 방향키로 걷다 분수에 막혔을 때 어느 쪽으로 돌고 있는지(lib/readingPlazaMap.js의 plazaStep이 적음)
   const round = useRef({ turn: 0, key: "" });
+  const avoidance = useRef({});
+  const walkGoal = useRef(null);
+  const replanAt = useRef(0);
+  const routeChanged = useRef(false);
+  const announcedEnd = useRef(null);
   const pendingSpot = useRef(null);
   // 걸어가서 물을 것("seat" 내 책상을 눌렀음 · "board" 칠판을 눌렀음)
   const pendingAct = useRef(null);
@@ -384,6 +429,8 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     const state = liveState();
     told.current = state.mode;
     toldAt.current = time;
+    announcedEnd.current = state.mode === 1 ? state.path[Math.min(state.path.length, PLAZA_LIVE_PATH_MAX) - 1] ?? null : null;
+    routeChanged.current = false;
     session.current?.publish(state);
   }, [liveState]);
   // ── 광장 대화(상태와 할 일 — usePlazaTalk.js) ──
@@ -409,6 +456,9 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   // 걸음을 멈춥니다(길 · 누르고 있던 방향키 · 걸어가서 하려던 일을 모두 걷음)
   const halt = useCallback(() => {
     path.current = [];
+    walkGoal.current = null;
+    avoidance.current = {};
+    routeChanged.current = false;
     pendingSpot.current = null;
     pendingAct.current = null;
     pendingFace.current = null;
@@ -557,30 +607,84 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     const dx = seated ? 0 : (k.right ? 1 : 0) - (k.left ? 1 : 0);
     const dy = seated ? 0 : (k.down ? 1 : 0) - (k.up ? 1 : 0);
     const from = pos.current;
-    let walking = false;
+    const people = peopleInRoom(cast.current, hereRef.current);
+    const step = SPEED * dt;
+    let proposed = from;
+    let target = null;
+    let avoiding = false;
+    let blocked = false;
     if (dx || dy) {
+      if (walkGoal.current) avoidance.current = {};
       path.current = [];
+      walkGoal.current = null;
       pendingSpot.current = null;
       pendingAct.current = null;
       pendingFace.current = null;
       const len = Math.hypot(dx, dy);
-      pos.current = plazaStep(from, dx / len * SPEED * dt, dy / len * SPEED * dt, round.current, place);
+      proposed = plazaStep(from, dx / len * step, dy / len * step, round.current, place);
     } else if (path.current.length && !seated) {
-      const target = path.current[0];
+      target = path.current[0];
       const distance = Math.hypot(target.x - from.x, target.y - from.y);
-      const step = SPEED * dt;
       if (distance <= step) {
-        pos.current = { x: target.x, y: target.y };
-        path.current.shift();
+        proposed = { x: target.x, y: target.y };
       } else {
-        pos.current = { x: from.x + (target.x - from.x) / distance * step, y: from.y + (target.y - from.y) / distance * step };
+        proposed = { x: from.x + (target.x - from.x) / distance * step, y: from.y + (target.y - from.y) / distance * step };
       }
-      walking = true;
+    }
+    if (!seated && (dx || dy || target)) {
+      const waitingPortal = target && walkGoal.current?.portal
+        && Math.hypot(from.x - walkGoal.current.point.x, from.y - walkGoal.current.point.y) <= PLAZA_AVATAR_SEPARATION + 8
+        && people.some((p) => plazaPortalAt(p, place)
+          && Math.hypot(p.x - from.x, p.y - from.y) <= PLAZA_AVATAR_SEPARATION + 6
+          && Math.hypot(p.x - walkGoal.current.point.x, p.y - walkGoal.current.point.y) < PLAZA_AVATAR_SEPARATION);
+      let next = waitingPortal ? { ...from, avoiding: true, blocked: true }
+        : plazaAvoidStep(from, proposed, { peers: people, memo: avoidance.current, room: place, id: myUid, goal: target, maxStep: step });
+      // Keep an interaction pending if a crowd fills its whole usable range.
+      // Circling forever or silently finishing too far away would lose the A action.
+      const enteringOverlap = people.some((p) => Math.hypot(p.x - from.x, p.y - from.y) < PLAZA_AVATAR_SEPARATION - .001);
+      if (target && walkGoal.current?.waiting && next.avoiding && !enteringOverlap) next = { ...from, avoiding: true, blocked: true };
+      pos.current = { x: next.x, y: next.y };
+      avoiding = next.avoiding;
+      blocked = next.blocked;
+      // A* is only retried after a real obstruction, at most once per600ms.
+      // Per-frame steering keeps its chosen side without rebuilding the map.
+      const destinationOccupied = target && walkGoal.current && people.some((p) =>
+        Math.hypot(p.x - walkGoal.current.point.x, p.y - walkGoal.current.point.y) < PLAZA_AVATAR_SEPARATION + 4
+        || Math.hypot(p.x - target.x, p.y - target.y) < PLAZA_AVATAR_SEPARATION + 4);
+      if (target && (blocked || (avoiding && destinationOccupied)) && !waitingPortal && walkGoal.current && time - replanAt.current >= 600) {
+        replanAt.current = time;
+        const intent = walkGoal.current;
+        // 광장 대화 — 가는 동안 곁 자리에 다른 친구가 섰으면, 그 자리 언저리에서 멈추지 않고 상대 곁의 빈 자리를 새로 고릅니다
+        let aim = intent.point;
+        const partner = intent.talk && pendingFace.current ? cast.current.get(pendingFace.current) : null;
+        if (partner && partner.room === hereRef.current) {
+          const others = [];
+          for (const [id, friend] of cast.current) if (id !== pendingFace.current && friend.room === hereRef.current) others.push(restOf(friend.actor));
+          const spot = plazaTalkSpot({ target: restOf(partner.actor), mover: pos.current, room: place, others, seat: partner.seat });
+          if (spot) aim = { x: spot.x, y: spot.y };
+        }
+        const plan = routeAroundPeople(pos.current, aim, people, place, {
+          seat: intent.act === "seat" ? mySeatRef.current : null, portal: intent.portal, spot: intent.spot, board: intent.act === "board", talk: intent.talk,
+        });
+        if (plan.route.length) {
+          path.current = plan.route;
+          intent.waiting = plan.waiting;
+          if (!intent.portal && !plan.waiting) intent.point = { ...plan.route[plan.route.length - 1] };
+          routeChanged.current = true;
+        }
+      }
+      // Consume only points actually reached after avoidance. In particular a
+      // detour must not accidentally finish a seat, shelf or portal action.
+      while (path.current.length && samePoint(pos.current, path.current[0])) {
+        const reached = path.current.shift();
+        if (samePoint(reached, announcedEnd.current) && path.current.length) routeChanged.current = true;
+      }
+      if (!path.current.length && !dx && !dy) walkGoal.current = null;
     }
     const mx = pos.current.x - from.x;
     const my = pos.current.y - from.y;
     const moved = Math.hypot(mx, my);
-    if (moved > 0.01) walking = true;
+    const walking = moved > 0.01;
     const me = meRef.current;
     if (moved > 0.01 || dt === 0) me?.place(pos.current.x, pos.current.y);
     // 바라보는 쪽 — 움직인 쪽으로. 방향키를 눌렀는데 막혀서 못 움직였으면 누른 쪽을 봅니다. 앉아 있으면 칠판 쪽.
@@ -655,7 +759,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
       if (pendingSpot.current) {
         const spot = pendingSpot.current;
         pendingSpot.current = null;
-        if (plazaSpotNear(pos.current, PLAZA_NEAR, place)?.id === spot.id) openSpot(spot);
+        if (Math.hypot(pos.current.x - spot.stand.x, pos.current.y - spot.stand.y) <= PLAZA_NEAR) openSpot(spot);
       } else if (pendingAct.current) {
         // 내 책상 · 칠판을 눌러 걸어왔습니다 — 다 왔으면 고르는 단추를 엽니다
         const want = pendingAct.current;
@@ -676,9 +780,15 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     // 방향키를 누른 채 막혀 있으면 선 것으로 봅니다(누른 쪽을 본 채 — 받는 쪽도 그렇게 그림).
     if (dx || dy) stuck.current = moved > 0.01 ? 0 : stuck.current + dt;
     else stuck.current = 0;
-    const mode = dx || dy ? (stuck.current > STUCK_S ? 0 : 2) : path.current.length && !seated ? 1 : 0;
+    // A click detour uses the existing position-update mode while sidestepping;
+    // observers must not keep extrapolating the old straight path through peers.
+    // An occupied passage reports a stop, then reannounces the route on resume.
+    const mode = dx || dy ? (stuck.current > STUCK_S ? 0 : 2) : path.current.length && !seated ? (blocked ? 0 : avoiding ? 2 : 1) : 0;
     walkMode.current = mode;
-    if (mode === 2 ? told.current !== 2 || time - toldAt.current >= PLAZA_LIVE_KEY_MS : mode === 0 && told.current !== 0) tell(time);
+    const due = time - toldAt.current >= PLAZA_LIVE_KEY_MS;
+    if (mode === 2 ? due || ((dx || dy) && told.current !== 2)
+      : mode === 1 ? due && (told.current !== 1 || routeChanged.current)
+        : told.current !== 0) tell(time);
 
     // 펫 — 걷는 동안은 캐릭터가 지나온 길을 조금 뒤에서, 멈추면 곁자리로 옵니다(lib/readingPlazaSprites.js의 plazaPetFollow).
     // 주인이 자리에 앉아 있는 동안에는 그 책상의 러그 귀에서 기다립니다(책상이 한 줄씩이라 양옆이 복도 — 펫이 있는 쪽으로.
@@ -696,7 +806,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
 
     // 함께 있는 친구들(나와 같은 방에 있는 사람만) — 받은 소식대로 걷습니다. 펫은 내 펫과 같은 셈으로 그 뒤를 따릅니다.
     let castBusy = false;
-    for (const friend of cast.current.values()) {
+    for (const [uid, friend] of cast.current) {
       if (friend.room !== hereRef.current) continue;
       const actor = friend.actor;
       const handle = friend.handle;
@@ -704,7 +814,16 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
       const was = { x: actor.x, y: actor.y };
       const sat = friend.seat !== null;
       // 앉아 있는 친구는 걷지 않습니다(의자에 앉아 칠판 쪽을 봄)
-      const step = sat ? { moved: 0, walking: false, busy: false } : plazaRemoteStep(actor, dt, time);
+      const obstacles = people.filter((p) => p.uid !== uid);
+      if (!seated) obstacles.push({ uid: myUid, ...pos.current, moving: walking });
+      const step = sat ? { moved: 0, walking: false, busy: false } : plazaRemoteStep(actor, dt, time, {
+        peers: obstacles, memo: friend.avoidance ??= {}, room: place, id: uid,
+      });
+      // Later actors in this frame must avoid the already drawn new position,
+      // not the old snapshot. Otherwise two received movers can both advance
+      // into the same small gap on a third observer's screen.
+      const drawn = people.find((p) => p.uid === uid);
+      if (drawn) { drawn.x = actor.x; drawn.y = actor.y; drawn.moving = step.walking && actor.queue.length > 0; }
       if (handle && (fresh || step.moved > 0.01)) handle.place(actor.x, actor.y);
       handle?.show(sat ? "up" : actor.facing, plazaShownFrame(step.walking, actor.stride));
       // 이번에 걸었으면 한 프레임 더 — 다 와서 선 자세로 바꿔 그린 뒤에 쉽니다
@@ -800,7 +919,10 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
         friend.state = fixed;
         friend.heard = state;
         friend.heardAt = now;
-        if (!moved && state.room === hereRef.current) plazaRemoteHear(friend.actor, fixed, now, roomRef.current);
+        if (!moved && state.room === hereRef.current) {
+          plazaRemoteHear(friend.actor, fixed, now, roomRef.current);
+          friend.dirty = true;
+        }
         else {
           // 방을 옮겼거나, 내가 보지 않는 방에 있습니다 — 걸어가지 않고 그 자리에 곧바로 세웁니다
           friend.actor = plazaRemoteEnter(fixed, 0, now);
@@ -829,6 +951,7 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
         attaches.delete(uid);
         setFriends((list) => list.filter((f) => f.uid !== uid));
         if (pickRef.current?.uid === uid) setPick(null);
+        wake();
       },
       onStatus(status, why) {
         setLive({ status, why: why || "" });
@@ -1058,11 +1181,18 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   const walkTo = useCallback((point, spot = null, act = null, options = null) => {
     const place = roomRef.current;
     const goal = plazaNearest(point.x, point.y, place);
-    const route = plazaPath(pos.current, goal, place);
     const face = options?.face ?? null;
+    const people = peopleInRoom(cast.current, hereRef.current);
+    const portal = place.portals.some((gate) => samePoint(gate, goal));
+    const plan = routeAroundPeople(pos.current, goal, people, place, { seat: act === "seat" ? mySeatRef.current : null, portal, spot, board: act === "board", talk: !!face });
+    const route = plan.route;
+    // 이미 그 자리면(길이 없음) — 광장 대화는 곧바로 친구를 봅니다
     if (!route.length) { if (face) faceToward(face); return; }
     seatOwed.current = null;
     path.current = route;
+    walkGoal.current = { point: { ...(portal || plan.waiting ? goal : route[route.length - 1]) }, portal, act, spot, talk: !!face, waiting: plan.waiting };
+    avoidance.current = {};
+    replanAt.current = performance.now();
     pendingSpot.current = spot;
     pendingAct.current = act;
     pendingFace.current = face;
@@ -1389,13 +1519,22 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
               ))}
               {room.spots.map((spot) => (
                 <button key={spot.id} type="button" className={`plaza-sign plaza-sign--${spot.place} plaza-sign--${spot.align}${nearId === spot.id ? " is-near" : ""}`}
-                  style={{ left: pct(spot.sign.x, PLAZA_W), top: pct(spot.sign.y, PLAZA_H) }}
+                  style={{ left: pct(spot.place === "stall" ? (spot.rect[0] + spot.rect[2]) / 2 : spot.sign.x, PLAZA_W), top: pct(spot.sign.y, PLAZA_H) }}
                   onClick={() => goSpot(spot)}
-                  aria-label={`${spot.label} — ${PLACE_NAME[spot.place]} ${counts[spot.place]}권${nearId === spot.id ? " · 열기" : " · 걸어가기"}`}>
-                  <span className="plaza-sign-name">{PLACE_NAME[spot.place]}</span>
-                  <b>{counts[spot.place]}</b>
-                  {counts[`${spot.place}Week`] > 0 && <i>이번 주 {counts[`${spot.place}Week`]}</i>}
-                  {nearId === spot.id && <em>눌러서 열기</em>}
+                  aria-label={`${spot.label} — ${PLACE_NAME[spot.place]}${spot.place === "shelf" ? ` ${counts.shelf}권` : ""}${nearId === spot.id ? " · 열기" : " · 걸어가기"}`}>
+                  {spot.place === "stall" ? (
+                    <svg className="plaza-stall-book" viewBox="0 0 32 32" fill="none" aria-hidden="true" focusable="false">
+                      <path d="M3 7c5-2 9-1 13 1 4-2 8-3 13-1v18c-5-2-9-1-13 1-4-2-8-3-13-1V7Z" fill="#77977c" stroke="#5a3a1b" strokeWidth="1.8" strokeLinejoin="round" />
+                      <path d="M5 5c4-1 8 0 11 2 3-2 7-3 11-2v17c-4-1-8 0-11 2-3-2-7-3-11-2V5Z" fill="#fff6df" stroke="#5a3a1b" strokeWidth="1.6" strokeLinejoin="round" />
+                      <path d="M16 7v17" stroke="#5a3a1b" strokeWidth="1.5" />
+                      <path d="m8 10 5 1.5M8 14l5 1.5m6-4 5-1.5m-5 5.5 5-1.5" stroke="#baa88a" strokeWidth="1.4" strokeLinecap="round" />
+                    </svg>
+                  ) : <>
+                    <span className="plaza-sign-name">{PLACE_NAME[spot.place]}</span>
+                    <b>{counts[spot.place]}</b>
+                    {counts[`${spot.place}Week`] > 0 && <i>이번 주 {counts[`${spot.place}Week`]}</i>}
+                    {nearId === spot.id && <em>눌러서 열기</em>}
+                  </>}
                 </button>
               ))}
               {inClass && (

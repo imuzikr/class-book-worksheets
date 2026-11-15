@@ -171,7 +171,7 @@
   .plaza-stage-wrap.has-gather .plaza-live--resting, .plaza-stage-wrap.has-gather .plaza-live--note { top: 94px; }
 }
 
-/* 이름표 — 책꽂이 · 가판대 위에 떠 있는 나무 팻말 */
+/* 책꽂이 팻말 · 가판대 위의 책 말풍선 */
 .plaza-sign {
   position: absolute;
   z-index: 2000;
@@ -201,6 +201,19 @@
 @container plazastage (max-width: 860px) { .plaza-sign i { display: none; } .plaza-sign { padding: 4px 8px 4px 10px; border-radius: 10px; } }
 .plaza-sign.is-near { background: #fff; border-color: #c2622f; animation: plaza-sign-pulse 1.1s ease-in-out infinite; }
 @keyframes plaza-sign-pulse { 0%, 100% { box-shadow: 0 3px 0 #8a5a2b55, 0 0 0 0 #e58a4f66; } 50% { box-shadow: 0 3px 0 #8a5a2b55, 0 0 0 7px #e58a4f00; } }
+/* 수와 발자국 안내는 오른쪽 위에만 둡니다. 가판대에는 책이 든 말풍선을 가운데에 띄워 누를 수 있음을 알립니다. */
+.plaza-sign.plaza-sign--stall {
+  width: clamp(44px, 4cqw, 56px); height: clamp(44px, 4cqw, 56px); min-width: 44px; min-height: 44px;
+  justify-content: center; padding: 7px; border-radius: 14px;
+  transform: translate(-50%, -100%) translateY(-10px);
+}
+.plaza-sign.plaza-sign--stall:hover { transform: translate(-50%, -100%) translateY(-12px); }
+.plaza-sign--stall::after {
+  content: ""; position: absolute; left: calc(50% - 5px); bottom: -7px; width: 10px; height: 10px;
+  transform: rotate(45deg); background: inherit; border-right: 2px solid; border-bottom: 2px solid; border-color: inherit;
+}
+.plaza-sign--stall:focus-visible { outline: 3px solid #478fbd; outline-offset: 4px; }
+.plaza-stall-book { display: block; width: 100%; height: 100%; }
 
 /* 눌러서 갈 곳 — 잠깐 퍼지는 동그라미 */
 .plaza-marker { position: absolute; z-index: 5; width: 3.2%; aspect-ratio: 2 / 1; transform: translate(-50%, -50%); border: 2px solid #ffffffd9; border-radius: 50%; box-shadow: 0 0 0 1px #5a3a1b40; pointer-events: none; animation: plaza-marker .9s ease-out infinite; }

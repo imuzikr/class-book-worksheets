@@ -9,9 +9,10 @@ import {
   plazaAlong, plazaLiveGone, plazaLivePos, plazaLivePrune, plazaLiveWho, plazaPathDecode, plazaPathEncode,
   plazaRemoteEnter, plazaRemoteHear, plazaRemoteStep, plazaRoster, plazaSpawnFor, readPlazaLivePos, readPlazaLiveWho,
 } from "../../lib/readingPlazaLive.js";
-import { PLAZA_H, PLAZA_NEAR, PLAZA_SPAWN, PLAZA_SPOTS, PLAZA_W, plazaPath, plazaWalkable } from "../../lib/readingPlazaMap.js";
+import { CLASSROOM_ROOM, CLASSROOM_SEATS, PLAZA_H, PLAZA_NEAR, PLAZA_ROOM, PLAZA_SPAWN, PLAZA_SPOTS, PLAZA_W, plazaClear, plazaPath, plazaWalkable } from "../../lib/readingPlazaMap.js";
 import { PLAZA_WALK_SPEED, plazaPetHeel } from "../../lib/readingPlazaSprites.js";
 import { characterOf } from "../../lib/readingCharacterCatalog.js";
+import { PLAZA_AVATAR_SEPARATION } from "../../lib/readingPlazaAvoidance.js";
 
 const NOW = 1_800_000_000_000;
 
@@ -328,4 +329,84 @@ test("친구 캐릭터 — 소식의 자리가 분수 건너편이면 가로지�
   const plain = plazaRemoteEnter({ x: 600, y: 300, path: [], mode: 0, facing: "down", reading: false }, 0, 0);
   plazaRemoteHear(plain, { x: 660, y: 310, path: [], mode: 2, facing: "right", reading: false }, 0);
   assert.deepEqual(plain.queue, [{ x: 660, y: 310 }]);
+});
+
+// Optional receiver-side avoidance is local display only. The old three-argument
+// path remains the baseline for every existing wire/seat/interpolation test.
+function remoteWalker(from, goal, mode = 1) {
+  return plazaRemoteEnter({ ...from, path: [goal], mode, facing: "right", reading: false }, 0, 0);
+}
+function sweptDistance(from, to, point) {
+  const dx = to.x - from.x, dy = to.y - from.y;
+  const len = dx * dx + dy * dy;
+  const t = len ? Math.max(0, Math.min(1, ((point.x - from.x) * dx + (point.y - from.y) * dy) / len)) : 0;
+  return Math.hypot(from.x + dx * t - point.x, from.y + dy * t - point.y);
+}
+
+test("친구 화면의 회피 — 가만히 선 나를 통과하지 않고 돌아서 원래 목적지에 도착", () => {
+  const from = { x: 500, y: 750 }, goal = { x: 1100, y: 750 };
+  const actor = remoteWalker(from, goal);
+  const blocker = { uid: "stationary-local", x: 800, y: 750 };
+  const options = { peers: [blocker], memo: {}, room: PLAZA_ROOM, id: "remote-bot" };
+  let detoured = false, finished = false, now = 0;
+  for (let i = 0; i < 1000; i += 1) {
+    const before = { x: actor.x, y: actor.y };
+    const step = plazaRemoteStep(actor, 1 / 60, now += 1000 / 60, options);
+    assert.ok(step.moved <= PLAZA_WALK_SPEED * 1.1 / 60 + 1e-6, "회피해도 프레임 빠르기를 넘지 않음");
+    assert.equal(plazaClear(before, actor), true, "회피 중에도 분수·벽을 통과하지 않음");
+    assert.ok(sweptDistance(before, actor, blocker) >= PLAZA_AVATAR_SEPARATION - 1e-6, "발걸음 사이도 사람을 관통하지 않음");
+    if (Math.abs(actor.y - from.y) > 20) detoured = true;
+    if (Math.hypot(actor.x - goal.x, actor.y - goal.y) < 1e-6 && !actor.queue.length) { finished = true; break; }
+  }
+  assert.equal(detoured, true);
+  assert.equal(finished, true, "회피용 점을 소비한 뒤에도 원래 도착점을 잃지 않음");
+  assert.equal(plazaRemoteStep(actor, 1 / 60, now + 1000, options).walking, false);
+});
+
+test("친구 화면의 회피 — 목적지에 사람이 서 있으면 곁에서 쉬고, 떠나면 남은 길을 다시 걸음", () => {
+  const goal = { x: 800, y: 750 }, actor = remoteWalker({ x: 550, y: 750 }, goal);
+  const blocker = { uid: "local", ...goal };
+  const options = { peers: [blocker], memo: {}, room: PLAZA_ROOM, id: "bot" };
+  let now = 0, stopped = false;
+  for (let i = 0; i < 600; i += 1) {
+    const step = plazaRemoteStep(actor, 1 / 60, now += 1000 / 60, options);
+    assert.ok(Math.hypot(actor.x - blocker.x, actor.y - blocker.y) >= PLAZA_AVATAR_SEPARATION - 1e-6);
+    if (i > 30 && !step.walking && !step.busy) { stopped = true; break; }
+  }
+  assert.equal(stopped, true, "막힌 도착점 옆에서 계속 빙빙 돌지 않음");
+  assert.ok(Math.hypot(actor.x - goal.x, actor.y - goal.y) >= PLAZA_AVATAR_SEPARATION);
+  options.peers = [];
+  for (let i = 0; i < 300 && Math.hypot(actor.x - goal.x, actor.y - goal.y) > 1e-6; i += 1) plazaRemoteStep(actor, 1 / 60, now += 1000 / 60, options);
+  assert.deepEqual({ x: actor.x, y: actor.y }, goal, "도착점이 열리면 새 서버 요청 없이 원래 목표까지 감");
+});
+
+test("친구 화면의 회피 — 새 이동 소식을 받아도 옆으로 피하며 최신 목적지를 따름", () => {
+  const actor = remoteWalker({ x: 580, y: 750 }, { x: 1080, y: 750 });
+  const blocker = { uid: "local", x: 800, y: 750 };
+  const options = { peers: [blocker], memo: {}, room: PLAZA_ROOM, id: "bot" };
+  let now = 0;
+  for (let i = 0; i < 45; i += 1) plazaRemoteStep(actor, 1 / 60, now += 1000 / 60, options);
+  const latestGoal = { x: 1120, y: 790 };
+  plazaRemoteHear(actor, { x: 840, y: 750, path: [latestGoal], mode: 1, facing: "right", reading: false }, now);
+  for (let i = 0; i < 1000; i += 1) {
+    const before = { x: actor.x, y: actor.y };
+    const step = plazaRemoteStep(actor, 1 / 60, now += 1000 / 60, options);
+    assert.ok(sweptDistance(before, actor, blocker) >= PLAZA_AVATAR_SEPARATION - 1e-6);
+    assert.ok(step.moved <= PLAZA_WALK_SPEED * 1.1 / 60 + 1e-6);
+    if (!actor.queue.length && Math.hypot(actor.x - latestGoal.x, actor.y - latestGoal.y) < 1e-6) break;
+  }
+  assert.deepEqual({ x: actor.x, y: actor.y }, latestGoal);
+});
+
+test("친구 화면의 회피 — 선 친구는 저절로 밀리지 않고 앉기·큰 위치 보정은 그대로", () => {
+  const actor = plazaRemoteEnter({ x: 700, y: 750, path: [], mode: 0, facing: "left", reading: false }, 0, 0);
+  const options = { peers: [{ uid: "local", x: 700, y: 750 }], memo: {}, room: PLAZA_ROOM, id: "remote" };
+  for (let i = 0; i < 60; i += 1) assert.equal(plazaRemoteStep(actor, 1 / 60, i * 1000 / 60, options).moved, 0);
+  assert.deepEqual({ x: actor.x, y: actor.y }, { x: 700, y: 750 });
+  const seat = CLASSROOM_SEATS[0];
+  plazaRemoteHear(actor, { ...seat.sit, path: [], mode: 0, facing: "up", reading: false, seat: 0 }, 1000, CLASSROOM_ROOM);
+  assert.deepEqual({ x: actor.x, y: actor.y }, seat.sit, "의자 위치 보정은 회피로 바꾸지 않음");
+  assert.equal(plazaRemoteStep(actor, 1 / 60, 1017, { ...options, room: CLASSROOM_ROOM }).moved, 0);
+  plazaRemoteHear(actor, { x: 1200, y: 820, path: [], mode: 0, facing: "left", reading: false, seat: null }, 1200, CLASSROOM_ROOM);
+  assert.deepEqual({ x: actor.x, y: actor.y }, { x: 1200, y: 820 }, "큰 보정·자리에서 일어섬은 기존 규칙대로");
 });
