@@ -196,7 +196,13 @@
   white-space: nowrap;
 }
 .topbar-book-navigation .topnav-menu .nav-label { font-size: 13px; line-height: 1.2; white-space: nowrap; }
+/* 마지막 이동 메뉴 바로 오른쪽. 좁아지면 문구만 다음 줄로 내려 버튼 너비를 지킵니다. */
+.topbar-book-navigation > .topbar-tagline { order: 2; flex: 0 1 auto; white-space: normal; line-height: 1.5; }
+@media (max-width: 1279px) {
+  .topbar-book-navigation > .topbar-tagline { order: 5; flex: 0 0 100%; }
+}
 @media (max-width: 480px) {
+  .topbar-book-navigation > .topbar-tagline { font-size: 13px; }
   .topbar-book-navigation .topbar-left { gap: 8px; }
   .topbar-book-navigation .topnav-menu > .btn-ghost { height: 36px; padding: 0 9px; }
   .topbar-book-navigation .topnav-menu .nav-label { font-size: 12px; }

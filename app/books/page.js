@@ -105,7 +105,6 @@ import QmarkForm from "@/components/QmarkForm";
 import BrainWriteBoard from "@/components/BrainWriteBoard";
 import BrainWriteForm from "@/components/BrainWriteForm";
 import { IconBook, IconTrophy, IconSettings, IconTrash, IconLockState } from "@/components/StatusIcons";
-import PageTagline from "@/components/PageTagline";
 import ClassManagerModal from "@/components/ClassManagerModal";
 import SeatGroupSetupModal from "@/components/SeatGroupSetupModal";
 import StudyAttendanceModal from "@/components/StudyAttendanceModal";
@@ -223,6 +222,7 @@ function BooksPageInner() {
   const [membershipsLoaded, setMembershipsLoaded] = useState(false);
   const [localSelectedId, setLocalSelectedId] = useState(null);
   const [teacherClassId, setTeacherClassId] = useState(null);
+  const readingClassFocus = useRef(null);
   const [baseGroupAssignment, setBaseGroupAssignment] = useState(null);
   // '멋진 순간' 패널의 자리표 — 공부방과 같은 문서(seatLayouts/default)를 봅니다.
   // 두 화면 중 어디서 자리를 옮기든 서로 어긋나지 않습니다.
@@ -868,6 +868,81 @@ function BooksPageInner() {
       <span className="book-group-class">{activeClassName}</span>
     ) : null;
 
+  // 학생 책 봄에서는 같은 제목 · 반 정보 · 출석 버튼을 카드 안으로 옮깁니다.
+  const inlineReadingHeading = readingOpen && !admin;
+  const pageHeading = (
+    <div className="books-head-main">
+      <h1>
+        {settingsOpen ? <IconSettings size={26} /> : leaderboardOpen ? <IconTrophy size={26} /> : <IconBook size={26} />} {settingsOpen ? "관리자 설정" : leaderboardOpen ? "리더보드" : readingOpen ? "책 봄" : "책방"}
+      </h1>
+      {admin && myClasses.length > 0 && (
+        <select
+          className="study-class-select"
+          aria-label="반 고르기"
+          value={classId ?? ""}
+          onChange={(e) => {
+            setTeacherClassId(e.target.value);
+            setSelectedClassId(e.target.value);
+          }}
+        >
+          {myClasses.map((c) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+      )}
+      {/* 학생이 여러 반에 속해 있으면 직접 고를 수 있게 (한 반이면 이름만) */}
+      {!admin && membershipIds.length > 1 ? (
+        <select
+          className="study-class-select"
+          aria-label="반 고르기"
+          ref={(node) => {
+            // 반을 바꾸면 서재가 새로 서므로 카드 안 고르개에도 초점을 돌려줍니다.
+            if (node && readingClassFocus.current === `${myUid}:${classId}`) {
+              readingClassFocus.current = null;
+              node.focus({ preventScroll: true });
+            }
+          }}
+          value={classId ?? ""}
+          onChange={(e) => {
+            if (inlineReadingHeading && document.activeElement === e.currentTarget && e.target.value !== classId) readingClassFocus.current = `${myUid}:${e.target.value}`;
+            setSelectedClassId(e.target.value);
+          }}
+        >
+          {membershipIds.map((cid) => (
+            <option key={cid} value={cid}>
+              {classes.find((c) => c.id === cid)?.name ?? "우리 반"}
+            </option>
+          ))}
+        </select>
+      ) : (
+        !admin && currentClass && (
+          <span className="books-class-name">{currentClass.name}</span>
+        )
+      )}
+      {admin && (
+        <button className="btn-ghost" onClick={() => setClassManagerOpen(true)}>
+          반 관리하기
+        </button>
+      )}
+      {admin && currentClass && !currentClass.archived && (
+        <button className="btn-ghost" onClick={() => setAttendanceOpen(true)}>
+          출석 관리
+        </button>
+      )}
+      {/* 학생 — 선생님이 오늘 출석을 열었을 때만 섭니다. 칠판에서 출석을 확인한 날에는 서지 않습니다
+          (제자리에 앉아 있어야만 출석 — 선생님 결정) */}
+      {!admin && classId && attendanceOpenToday && !classroomRollDay && (
+        <button
+          className="btn-primary books-attend-btn"
+          onClick={handleAttendance}
+          disabled={attending || attendedToday}
+        >
+          {attendedToday ? "✓ 출석 완료" : attending ? "출석하는 중…" : "출석하기"}
+        </button>
+      )}
+    </div>
+  );
+
   // ── 학생 소속을 아직 확인하는 중 — 입장 화면도 본문도 아직 그리지 않습니다.
   //    (AuthGate의 로그인 대기 화면과 같은 모습이라, 학생 눈에는 스피너
   //     하나가 이어지다 제 화면이 뜨는 것으로 보입니다) ──
@@ -1167,69 +1242,7 @@ function BooksPageInner() {
         />
       ) : (
         <main className="books-main">
-          <div className="books-head">
-            <PageTagline />
-            <div className="books-head-main">
-              <h1>
-                {settingsOpen ? <IconSettings size={26} /> : leaderboardOpen ? <IconTrophy size={26} /> : <IconBook size={26} />} {settingsOpen ? "관리자 설정" : leaderboardOpen ? "리더보드" : readingOpen ? "책 봄" : "책방"}
-              </h1>
-              {admin && myClasses.length > 0 && (
-                <select
-                  className="study-class-select"
-                  aria-label="반 고르기"
-                  value={classId ?? ""}
-                  onChange={(e) => {
-                    setTeacherClassId(e.target.value);
-                    setSelectedClassId(e.target.value);
-                  }}
-                >
-                  {myClasses.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              )}
-              {/* 학생이 여러 반에 속해 있으면 직접 고를 수 있게 (한 반이면 이름만) */}
-              {!admin && membershipIds.length > 1 ? (
-                <select
-                  className="study-class-select"
-                  aria-label="반 고르기"
-                  value={classId ?? ""}
-                  onChange={(e) => setSelectedClassId(e.target.value)}
-                >
-                  {membershipIds.map((cid) => (
-                    <option key={cid} value={cid}>
-                      {classes.find((c) => c.id === cid)?.name ?? "우리 반"}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                !admin && currentClass && (
-                  <span className="books-class-name">{currentClass.name}</span>
-                )
-              )}
-              {admin && (
-                <button className="btn-ghost" onClick={() => setClassManagerOpen(true)}>
-                  반 관리하기
-                </button>
-              )}
-              {admin && currentClass && !currentClass.archived && (
-                <button className="btn-ghost" onClick={() => setAttendanceOpen(true)}>
-                  출석 관리
-                </button>
-              )}
-              {/* 학생 — 선생님이 오늘 출석을 열었을 때만 섭니다. 칠판에서 출석을 확인한 날에는 서지 않습니다
-                  (제자리에 앉아 있어야만 출석 — 선생님 결정) */}
-              {!admin && classId && attendanceOpenToday && !classroomRollDay && (
-                <button
-                  className="btn-primary books-attend-btn"
-                  onClick={handleAttendance}
-                  disabled={attending || attendedToday}
-                >
-                  {attendedToday ? "✓ 출석 완료" : attending ? "출석하는 중…" : "출석하기"}
-                </button>
-              )}
-            </div>
-          </div>
+          {!inlineReadingHeading && <div className="books-head">{pageHeading}</div>}
 
           {settingsOpen ? (
             <AdminSettingsPanel classes={myClasses} onToast={setToast} />
@@ -1246,6 +1259,7 @@ function BooksPageInner() {
               onDisabled={() => patchBooksQuery({ area: null }, { replace: true })} />
           ) : readingOpen ? (
             <ReadingHub key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin} bookSearchOn={bookSearchEnabled(currentClass)} petOn={petOn}
+              introHeading={pageHeading}
               petFeed={petFeed} myFruit={myFruit} petPreview={petPreview}
               plazaOn={plazaOn(currentClass)} hideoutOn={hideoutOn(currentClass)} talkOn={plazaTalkOn(currentClass)} characterOn={characterOn} classroom={classroomProps}
               plazaCall={plazaCall}

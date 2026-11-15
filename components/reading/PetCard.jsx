@@ -123,6 +123,30 @@ function Steps({ steps }) {
   </span>;
 }
 
+// 교사가 고른 학생의 펫 — 명단이 이미 받은 공개 프로필과 서재로만 셉니다(추가 읽기 · 쓰기 없음).
+// 본인용 PetCard의 알 받기 · 축하 · 먹이 주기를 실행하지 않는 읽기 전용 정보입니다.
+export function StudentPetSummary({ mirror, growthXp, feed = null, today = null }) {
+  const progress = growthXp == null ? null : petProgress(mirror, growthXp);
+  if (!progress) return null;
+  const care = feed?.on ? careStatus(mirror, feed, today || kstToday(), progress.stage) : null;
+  const gone = !!care?.away;
+  return <div className={`reading-pet${gone ? " is-away" : ""}`} role="group" aria-label="학생의 펫">
+    <PetFigure species={progress.species} stage={progress.stage} ready={progress.ready && !gone} size={60} className={gone ? "is-away" : ""} />
+    <span className="reading-pet-text">
+      <small>학생의 펫</small>
+      <strong>{petTitle(progress)}</strong>
+      <em>{petStatusLine(progress)}</em>
+      {gone ? <>
+        <em className="reading-pet-gone">{progress.hatched ? "먹이를 찾아 떠났어요" : "따뜻한 곳을 찾아 떠났어요"}</em>
+        <span className="reading-pet-care"><Steps steps={care.steps} /><b>{petCareLine(care, progress.hatched)}</b></span>
+      </> : <>
+        <Bar percent={progress.percent} label={progress.hatched ? "다음 단계까지" : "알이 깨어나기까지"} />
+        {care && <span className="reading-pet-care"><Fullness care={care} /><b>{petCareLine(care, progress.hatched)}</b></span>}
+      </>}
+    </span>
+  </div>;
+}
+
 // level · onLevelCheer — 책 봄의 캐릭터 레벨. 같은 저장에서 펫이 자라며 레벨도 오르면(알을 경험치 0에서
 // 받은 학생은 둘의 기준표가 같아 늘 함께 오름) 축하 한 번에 함께 알리고, 책 봄에 그 레벨을 알려
 // 알림 줄이 같은 말('레벨 n 달성!')을 또 띄우지 않게 합니다.
