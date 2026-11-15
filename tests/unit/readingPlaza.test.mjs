@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { applyReadingAction, deriveReading, featureValue, initialReadingState, plazaNeedsSync, plazaOn, teacherFeatureSettings } from "../../lib/reading.js";
 import {
   PLAZA_BOOK_CAP, PLAZA_COMMENT_EDIT_MAX, PLAZA_COMMENT_MAX, PLAZA_LOG_CAP, PLAZA_SHARE_RULE,
-  plazaCommentEdited, plazaCommentHistory, plazaCommentText, plazaFriends, plazaHasContent, plazaItems, plazaNameLabel,
+  plazaCommentEdited, plazaCommentHistory, plazaCommentText, plazaEntryForPlace, plazaFriends, plazaHasContent, plazaItems, plazaNameLabel,
   plazaProjection, plazaStable, plazaThisWeek, plazaWeekStart,
 } from "../../lib/readingPlaza.js";
 import {
@@ -66,13 +66,14 @@ test("모두 공개 — 그 반에서 쓴 독서 발자국은 언제 썼든 모�
   // 글이 하나도 없는 책(등록만 한 책)은 싣지 않는다
   assert.equal(project(addBook(initialReadingState(), "book7", 40)).entries.length, 0);
   // 기준을 바꾸면 번호를 올린다 — 1은 학생이 고른 글만 싣던 때(그 번호의 사본은 서버가 통째로 다시 씀)
-  assert.ok(Number.isInteger(PLAZA_SHARE_RULE) && PLAZA_SHARE_RULE >= 2);
+  assert.ok(Number.isInteger(PLAZA_SHARE_RULE) && PLAZA_SHARE_RULE >= 3);
 });
 
 test("반 전체를 한 번 맞출 일이 있는가 — 광장을 켠 반인데 지금 기준으로 맞춘 표시가 없을 때만", () => {
   const on = { readingEnabled: true, plazaEnabled: true };
   assert.equal(plazaNeedsSync(on), true, "켠 반 · 아직 맞춘 적 없음");
   assert.equal(plazaNeedsSync({ ...on, plazaSynced: 1 }), true, "옛 기준으로 맞춘 반은 다시");
+  assert.equal(plazaNeedsSync({ ...on, plazaSynced: 2 }), true, "종류별 미리보기가 없는 모두 공개 사본도 다시");
   assert.equal(plazaNeedsSync({ ...on, plazaSynced: PLAZA_SHARE_RULE }), false, "지금 기준으로 맞춘 반");
   // 광장을 끈 반 · 책나눔을 끈 반 · 반을 아직 모를 때는 부탁하지 않는다
   assert.equal(plazaNeedsSync({ readingEnabled: true, plazaEnabled: false }), false);
@@ -100,15 +101,17 @@ test("모두 공개 — 옛 표시(도장 없음 · '발자국 보이기' 끔 ·
   assert.equal(JSON.stringify(p).includes("plazaHidden"), false);
 });
 
-test("완독한 책은 책꽂이에 — 한 권의 책을 쓰기 전에도, 쓴 뒤에도(꽂는 단추가 없음)", () => {
+test("공유 사본은 책 상태를 호환 유지하고, 화면 목록은 발자국과 완독 감상으로 나눈다", () => {
   let s = addBook(initialReadingState(), "book1", 20);
   s = addLog(s, "log00001", "book1", 1, 10);
   assert.equal(project(s).entries[0].place, "stall");
   s = run(s, { type: "addLog", bookId: "book1", date: "2026-11-12", startPage: 11, endPage: 20, notes: "발자국 log00002" }, at("2026-11-12T03:30:00.000Z", "log00002"));
-  // 완독 — 한 권의 책을 아직 안 썼어도 책꽂이로 옮겨 가고, 발자국이 그대로 보인다
+  // 원본 place는 옛 화면 호환을 위해 완독 상태를 유지한다. 새 목록은 previews로 나눈다.
   let p = project(s);
   assert.deepEqual([p.entries[0].place, p.entries[0].rating, p.books.book1.review, p.books.book1.logs.length], ["shelf", null, null, 2]);
   assert.equal(p.entries[0].excerpt, "발자국 log00002");
+  assert.equal(plazaEntryForPlace(p.entries[0], "stall").excerpt, "발자국 log00002");
+  assert.equal(plazaEntryForPlace(p.entries[0], "shelf"), null, "완독만 하고 감상을 아직 안 썼으면 책꽂이에는 없다");
   // 한 권의 책을 쓰면 곧바로 보인다
   s = run(s, { type: "saveReview", bookId: "book1", text: "끝까지 읽었다", rating: 4 }, at("2026-11-12T04:00:00.000Z", "rev00001"));
   assert.equal("shelved" in s.reviews[0], false);
@@ -117,9 +120,60 @@ test("완독한 책은 책꽂이에 — 한 권의 책을 쓰기 전에도, 쓴 
   assert.equal(p.books.book1.review.text, "끝까지 읽었다");
   assert.equal(p.books.book1.logs.length, 2);
   assert.equal(p.entries[0].last, "2026-11-12T04:00:00.000Z");
-  // 한 권의 책을 지워도 책은 책꽂이에 남는다(발자국이 있으므로)
+  assert.equal(plazaEntryForPlace(p.entries[0], "stall").excerpt, "발자국 log00002");
+  assert.equal(plazaEntryForPlace(p.entries[0], "shelf").excerpt, "끝까지 읽었다");
+  // 한 권의 책만 지우면 가판대의 발자국은 남고 책꽂이의 감상만 빠진다.
   s = run(s, { type: "deleteReview", bookId: "book1" }, ctx("x0000001"));
   assert.deepEqual([project(s).entries[0].place, project(s).books.book1.review], ["shelf", null]);
+  assert.ok(plazaEntryForPlace(project(s).entries[0], "stall"));
+  assert.equal(plazaEntryForPlace(project(s).entries[0], "shelf"), null);
+});
+
+test("기록 종류별 목록 — 완독 뒤에도 발자국 유지 · 종류별 시각/글 한 줄 · 공유 사본은 책마다 한 장", () => {
+  let s = addBook(initialReadingState(), "book1", 20);
+  s = run(s, { type: "addLog", bookId: "book1", date: "2026-11-01", startPage: 1, endPage: 20, notes: "지난주 발자국" }, at("2026-11-01T03:00:00.000Z", "log00001"));
+  s = run(s, { type: "saveReview", bookId: "book1", text: "이번 주 완독 감상", rating: 4 }, ctx("review01"));
+  const p = project(s);
+  const shelves = [{ uid: "stu", name: "학생", studentId: "30101", books: p.entries, counts: { book1: 2 } }];
+  assert.equal(p.entries.length, 1);
+  assert.deepEqual(Object.keys(p.books), ["book1"]);
+  const stall = plazaItems(shelves, { place: "stall", now: NOW });
+  const shelf = plazaItems(shelves, { place: "shelf", now: NOW });
+  assert.equal(stall.week.length, 0, "이번 주 감상이 지난주 발자국을 이번 주로 올리지 않는다");
+  assert.deepEqual(stall.earlier.map((b) => [b.place, b.excerpt, b.logs, b.rating, b.comments]), [["stall", "지난주 발자국", 1, null, 2]]);
+  assert.deepEqual(shelf.week.map((b) => [b.place, b.excerpt, b.logs, b.rating, b.comments]), [["shelf", "이번 주 완독 감상", 0, 4, 2]]);
+  assert.deepEqual(plazaFriends(shelves).map((f) => [f.uid, f.stall, f.shelf]), [["stu", 1, 1]]);
+  // 발자국을 정정해 새로 남겨도 감상의 시각/글은 그대로다.
+  s = run(s, { type: "deleteLog", logId: "log00001" }, ctx("delete01"));
+  s = run(s, { type: "addLog", bookId: "book1", date: "2026-11-12", startPage: 1, endPage: 20, notes: "다시 읽은 발자국" }, at("2026-11-12T05:00:00.000Z", "log00002"));
+  const next = project(s).entries[0];
+  assert.equal(plazaEntryForPlace(next, "stall").last, "2026-11-12T05:00:00.000Z");
+  assert.equal(plazaEntryForPlace(next, "shelf").last, NOW);
+  assert.equal(plazaEntryForPlace(next, "shelf").excerpt, "이번 주 완독 감상");
+  // 발자국을 모두 지워도 완독 감상은 책꽂이에 남는다.
+  s = run(s, { type: "deleteLog", logId: "log00002" }, ctx("delete02"));
+  assert.equal(plazaEntryForPlace(project(s).entries[0], "stall"), null);
+  assert.equal(plazaEntryForPlace(project(s).entries[0], "shelf").excerpt, "이번 주 완독 감상");
+});
+
+test("옛 사본은 종류별 글 존재만 복구하고, 반대 종류의 발췌/시각을 섞지 않는다", () => {
+  const old = { id: "book1", place: "shelf", logs: 3, rating: 5, excerpt: "완독 감상", last: NOW };
+  const stall = plazaEntryForPlace(old, "stall");
+  assert.deepEqual([stall.place, stall.logs, stall.rating, stall.excerpt, stall.last], ["stall", 3, null, "", null]);
+  const shelf = plazaEntryForPlace(old, "shelf");
+  assert.deepEqual([shelf.place, shelf.logs, shelf.rating, shelf.excerpt], ["shelf", 0, 5, "완독 감상"]);
+  assert.equal(shelf.last, null, "두 종류가 있는 옛 사본의 혼합 시각으로 감상을 이번 주로 올리지 않는다");
+  assert.equal(plazaItems([{ uid: "stu", books: [old] }], { place: "shelf", now: NOW }).week.length, 0);
+  assert.equal(plazaEntryForPlace({ ...old, logs: 0 }, "shelf").last, NOW, "감상만 있는 옛 사본의 시각은 유지한다");
+  assert.equal(plazaEntryForPlace({ ...old, rating: null }, "shelf"), null, "옛 완독 표시만으로 감상이 있다고 하지 않는다");
+  assert.equal(plazaEntryForPlace({ ...old, logs: 0 }, "stall"), null);
+  assert.equal(plazaEntryForPlace({ ...old, previews: { stall: null, shelf: null } }, "stall"), null);
+  assert.equal(plazaEntryForPlace({ ...old, previews: {} }, "shelf"), null);
+  assert.equal(plazaEntryForPlace(null, "stall"), null);
+  assert.equal(plazaEntryForPlace(old, "elsewhere"), null);
+  const oldReading = { ...old, place: "stall", excerpt: "발자국" };
+  assert.equal(plazaEntryForPlace(oldReading, "stall").excerpt, "발자국");
+  assert.equal(plazaEntryForPlace(oldReading, "shelf").excerpt, "");
 });
 
 test("걷은 요청 — 옛 화면이 보내는 '빼기 · 숨기기'는 까닭을 알려 거절하고, '꽂기 · 보이기'는 아무 일 없이 받는다", () => {
@@ -212,12 +266,12 @@ test("이번 주 — 서울 시각 월요일 0시부터", () => {
 test("목록 — 가판대/책꽂이 · 이번 주가 앞 · 친구별", () => {
   const shelves = [
     { uid: "u2", name: "이도윤", studentId: "30102", counts: { b1: 2, b9: 5 }, books: [
-      { id: "b1", place: "stall", last: "2026-11-11T01:00:00.000Z" },
-      { id: "b2", place: "shelf", last: "2026-10-20T01:00:00.000Z" },
+      { id: "b1", place: "stall", logs: 1, last: "2026-11-11T01:00:00.000Z" },
+      { id: "b2", place: "shelf", rating: 4, last: "2026-10-20T01:00:00.000Z" },
     ] },
     { uid: "u1", name: "김민준", studentId: "30101", books: [
-      { id: "b1", place: "stall", last: "2026-11-01T01:00:00.000Z" },
-      { id: "b3", place: "stall", last: "2026-11-12T01:00:00.000Z" },
+      { id: "b1", place: "stall", logs: 1, last: "2026-11-01T01:00:00.000Z" },
+      { id: "b3", place: "stall", logs: 1, last: "2026-11-12T01:00:00.000Z" },
     ] },
     { uid: "u3", name: "박서준", studentId: "30103", books: [] },
     null,
