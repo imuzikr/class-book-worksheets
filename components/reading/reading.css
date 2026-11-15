@@ -68,8 +68,6 @@
 .reading-intro--student .reading-intro-copy > p { margin-top:7px; font-size:12px; }
 .reading-intro--student > .reading-summary--compact,
 .reading-intro--student > .reading-intro-loading { grid-area:stats; }
-.reading-intro--student .reading-summary--compact > div { gap:5px; padding:6px 8px; }
-.reading-intro--student .reading-summary--compact strong { font-size:23px; }
 .reading-intro--student > .reading-intro-side { grid-area:profile; width:100%; min-width:0; align-items:stretch; justify-content:flex-end; gap:8px; }
 .reading-intro--student .reading-featured,
 .reading-intro--student .reading-character-summary { display:flex; align-items:center; flex:1 1 180px; min-width:0; max-width:280px; min-height:80px; gap:8px; padding:6px 10px; border:1px solid #d8e5db; border-radius:12px; background:#ffffff91; }
@@ -114,6 +112,15 @@
   .reading-summary--compact > div { padding:12px; border-left:0; border-top:1px solid #d9e3d8; }
   .reading-summary--compact > div:nth-child(even) { border-left:1px solid #d9e3d8; }
 }
+/* 상단 통계는 제목·숫자와 보조 정보 두 줄로 표시해 높이를 약 절반으로 줄입니다. */
+.reading-intro .reading-summary--compact { align-self:center; }
+.reading-intro .reading-summary--compact > div { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; align-content:center; min-height:44px; gap:2px 6px; padding:4px 8px; }
+.reading-intro .reading-summary--compact > div > span:first-child { grid-area:1 / 1; font-size:11px; line-height:1.25; }
+.reading-intro .reading-summary--compact strong { grid-area:1 / 2; justify-self:end; font-size:20px; line-height:1.1; white-space:nowrap; }
+.reading-intro .reading-summary--compact strong small { margin:0 2px; font-size:11px; }
+.reading-intro .reading-summary--compact > div > span:last-child { grid-area:2 / 1 / 3 / -1; font-size:10px; line-height:1.25; }
+.reading-intro .reading-summary--compact .reading-level > .reading-progress { grid-area:2 / 1; height:4px; }
+.reading-intro .reading-summary--compact .reading-level > span:last-child { grid-column:2; text-align:right; }
 /* 캐릭터 정보는 이미 받은 프로필과 독서 요약만 크게 보여 줍니다. */
 .reading-character-dialog,
 .reading-character-dialog * { box-sizing:border-box; }

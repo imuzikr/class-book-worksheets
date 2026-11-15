@@ -286,7 +286,6 @@
   user-select: none; font: inherit; overflow: visible;
 }
 .plaza-attendance-record > img { display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; image-rendering: pixelated; }
-.plaza-attendance-record > span { position: absolute; top: 100%; left: 50%; margin-top: 2px; transform: translateX(-50%); font-size: clamp(8px, .7cqw, 11px); font-weight: 800; line-height: 1.2; white-space: nowrap; text-shadow: 0 1px 1px #244735; pointer-events: none; }
 .plaza-attendance-record.is-interactive { pointer-events: auto; cursor: pointer; }
 .plaza-attendance-record.is-interactive:hover > img { filter: brightness(1.06); }
 .plaza-attendance-record:focus-visible { outline: 3px solid #fff0b8; outline-offset: 3px; border-radius: 3px; }

@@ -429,7 +429,7 @@ test("교실 — 출석부 그림만 누를 수 있고 칠판의 나머지 부�
   assert.deepEqual([x0, y0, x1, y1], [x - w / 2, y - h, x + w / 2, y], "보이는 문서와 클릭 범위가 일치");
   assert.ok(x0 > CLASSROOM_BOARD.rect[0] && y0 > CLASSROOM_BOARD.rect[1] && x1 < CLASSROOM_BOARD.rect[2] && y1 < CLASSROOM_BOARD.rect[3], "출석부가 칠판 안에 붙어 있음");
   for (const [px, py] of [[x0, y0], [x1, y1], [x, (y0 + y1) / 2]]) assert.equal(classroomBoardAt(px, py), true);
-  for (const [px, py] of [[836, 150], [500, 150], [1170, 150], [x0 - 1, y0], [x1 + 1, y1], [x, y0 - 1], [x, y1 + 1], [NaN, y], [x, Infinity], [String(x), y]]) assert.equal(classroomBoardAt(px, py), false, `${px}, ${py}`);
+  for (const [px, py] of [[836, 150], [500, 150], [CLASSROOM_BOARD.rect[2] - 2, 150], [x0 - 1, y0], [x1 + 1, y1], [x, y0 - 1], [x, y1 + 1], [NaN, y], [x, Infinity], [String(x), y]]) assert.equal(classroomBoardAt(px, py), false, `${px}, ${py}`);
   assert.ok(mark.y < y0, "물음표는 출석부 위에 뜸");
   assert.deepEqual(classroomBoardMark({ x: 836, y: 292 }), mark);
   assert.deepEqual(classroomBoardMark({ x: 100, y: 420 }), mark, "걷는 위치를 따라 물음표가 옮겨 다니지 않음");

@@ -88,7 +88,7 @@ export default function PlazaClassroom({ teacher = false, desks, names, mySeat =
   const canStop = menu?.kind === "board" && openToday;
   const record = CLASSROOM_ATTENDANCE_RECORD;
   const recordStyle = { left: pct(record.x - record.w / 2, PLAZA_W), top: pct(record.y - record.h, PLAZA_H), width: pct(record.w, PLAZA_W), height: pct(record.h, PLAZA_H) };
-  const recordArt = <><img src={record.src} alt={teacher ? "" : "칠판에 붙인 출석부"} draggable={false} /><span aria-hidden="true">출석부</span></>;
+  const recordArt = <img src={record.src} alt={teacher ? "" : "칠판에 붙인 출석부"} draggable={false} />;
   return (
     <>
       {/* 칠판의 출석부 — 배경을 다시 굽지 않고 문서를 붙입니다. 학생에게는 장식, 선생님에게는 앞으로 걷는 입구입니다. */}
