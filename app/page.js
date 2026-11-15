@@ -1,14 +1,15 @@
 "use client";
 
 // =============================================================
-// 메인 랜딩 페이지(대문) — 화면을 넷으로 나눕니다(선생님 요청)
-//   - 1분면(오른쪽 위): 지금까지의 대문을 줄여 담은 칸 — 상단 바(로고 · 로그인 ·
-//     회원가입 → 모달) · 머리 제목 · 흰 카드(함께 책 읽는 일러스트
-//     public/landing-reading.webp + '생각 적어보기' → 회원가입 창)
-//   - 2분면(왼쪽 위) 책 광장 · 3분면(왼쪽 아래) 교실 · 4분면(오른쪽 아래) 개인 아지트:
-//     체험반에서 찍은 활동 장면과 이름 · 한 줄 설명(목록 lib/landingScenes.js · 그림 public/landing/ —
-//     만들기 scripts/prepare-landing-art.mjs · 찍는 법 public/landing/README.md)
-//   - 좁거나 세로로 긴 화면에서는 1분면이 맨 위, 세 장면이 그 아래(app/styles/01-base-landing-footer.css)
+// 메인 랜딩 페이지(대문) — 사진을 겹쳐 놓은 콜라주(선생님 요청 · 2026년 11월, 한때 화면 4분할)
+//   - 상단 바(로고 · 로그인 · 회원가입 → 모달)
+//   - 왼쪽 글: 머리 제목 · 소개 한 줄 · '생각 적어보기'(회원가입 창) · 가입 안내 한 줄
+//   - 오른쪽 무대(.lp-stage): 함께 책 읽는 일러스트(public/landing-reading.webp)와 체험반에서 찍은
+//     책 광장 · 교실 · 개인 아지트의 장면을 사진처럼 크기 · 기울기를 달리해 겹쳐 놓고, 앱의 포털 그림 둘이
+//     세 공간을 잇습니다(목록 lib/landingScenes.js · 그림 public/landing/ — 만들기
+//     scripts/prepare-landing-art.mjs · 찍는 법 public/landing/README.md). 들어올 때 차례로 놓이고, 둥실
+//     떠 있고, 마우스를 따라 깊이마다 조금씩 움직입니다(--mx · --my — 손가락 화면 · 움직임 줄이기 기기는 안 함).
+//   - 좁은 화면은 글 아래 무대, 폰은 사진이 한 줄에 하나씩 엇갈려 쌓입니다(app/styles/01-base-landing-footer.css)
 // -------------------------------------------------------------
 // 실서비스 모드: 구글 계정 하나로 로그인/회원가입합니다(lib/auth.js).
 // 학교 도메인 제한도 등록 코드도 없습니다 — 반에 들어가는 관문은 로그인 뒤
@@ -27,7 +28,31 @@ import { becomeTeacherWithCode } from "@/lib/store";
 import { isInAppBrowser } from "@/lib/browser";
 import SiteFooter from "@/components/SiteFooter";
 import { IconLogo } from "@/components/StatusIcons";
-import { LANDING_SCENES, LANDING_SCENE_SIZES, landingSceneImage } from "@/lib/landingScenes";
+import { LANDING_READING, LANDING_SCENES, LANDING_SCENE_SIZES, landingSceneImage } from "@/lib/landingScenes";
+
+// 무대의 사진 — 바깥(.lp-shot)은 자리 · 마우스 따라 움직임, 가운데 둘은 들어오기 · 둥실, 안쪽(.lp-print)은
+// 기울기 · 올려놓으면 반듯해지기를 맡습니다(움직임마다 다른 칸이라 서로 덮어쓰지 않음).
+function LandingShot({ kind, index, children }) {
+  return (
+    <div className={`lp-shot lp-shot--${kind}`} style={{ "--i": index }}>
+      <div className="lp-shot-in">
+        <div className="lp-shot-bob">
+          <figure className="lp-print">{children}</figure>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 앱의 포털(금테 그림 + 도는 빛) — 세 공간이 포털로 이어진다는 꾸밈입니다(누르는 곳 아님).
+function LandingPortal({ kind }) {
+  return (
+    <span className={`lp-portal lp-portal--${kind}`} aria-hidden="true">
+      <img className="lp-portal-base" src="/reading-plaza/portal.webp" width={640} height={280} alt="" />
+      <img className="lp-portal-swirl" src="/reading-plaza/portal-swirl.webp" width={384} height={384} alt="" />
+    </span>
+  );
+}
 
 // Firebase 인증 오류 코드를 한국어 메시지로
 function authErrorMessage(code) {
@@ -84,6 +109,41 @@ export default function LandingPage() {
   const [inApp, setInApp] = useState(false);
   useEffect(() => {
     setInApp(isInAppBrowser());
+  }, []);
+
+  // 대문 무대 — 마우스를 따라 사진이 깊이(--depth)마다 조금씩 움직이게 마우스 자리를 -1~1로 적습니다(--mx · --my).
+  // 손가락 화면(올려놓기 없음)과 움직임 줄이기 기기에서는 적지 않습니다. 한 화면에 한 번만 적게 모읍니다(rAF).
+  const heroRef = useRef(null);
+  useEffect(() => {
+    const hero = heroRef.current;
+    if (!hero || typeof window.matchMedia !== "function") return undefined;
+    const fine = window.matchMedia("(hover: hover) and (pointer: fine)");
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let frame = 0;
+    let mx = 0;
+    let my = 0;
+    const paint = () => {
+      frame = 0;
+      hero.style.setProperty("--mx", mx.toFixed(3));
+      hero.style.setProperty("--my", my.toFixed(3));
+    };
+    const queue = () => { if (!frame) frame = requestAnimationFrame(paint); };
+    const onMove = (e) => {
+      if (!fine.matches || still.matches) return;
+      const r = hero.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      mx = Math.max(-1, Math.min(1, ((e.clientX - r.left) / r.width) * 2 - 1));
+      my = Math.max(-1, Math.min(1, ((e.clientY - r.top) / r.height) * 2 - 1));
+      queue();
+    };
+    const onLeave = () => { mx = 0; my = 0; queue(); };
+    hero.addEventListener("pointermove", onMove);
+    hero.addEventListener("pointerleave", onLeave);
+    return () => {
+      hero.removeEventListener("pointermove", onMove);
+      hero.removeEventListener("pointerleave", onLeave);
+      if (frame) cancelAnimationFrame(frame);
+    };
   }, []);
 
   // ── 로그인/회원가입 모달 접근성 ──
@@ -172,74 +232,79 @@ export default function LandingPage() {
   return (
     <>
     <main className="landing">
-      <div className="landing-grid">
-        {/* ── 1분면(오른쪽 위): 지금까지의 대문을 줄여 담은 칸 — 상단 바(로고 · 로그인/회원가입) →
-            머리 제목 → 흰 카드(제목 · 그림 · 단추). 화면을 읽는 차례로는 맨 앞입니다. ── */}
-        <section className="landing-main" aria-labelledby="landing-title">
-          <header className="landing-top">
-            <span className="landing-logo">
-              <IconLogo size={22} /> 책나눔
-            </span>
-            <div className="landing-actions">
-              <button className="btn-outline" onClick={() => switchMode("login")}>
-                로그인
-              </button>
-              <button className="btn-primary" onClick={() => switchMode("signup")}>
-                회원가입
-              </button>
-            </div>
-          </header>
+      {/* ── 상단 바: 로고(왼쪽) · 로그인/회원가입(오른쪽 — 같은 크기 두 칸) ── */}
+      <header className="landing-top">
+        <span className="landing-logo">
+          <IconLogo size={24} /> 책나눔
+        </span>
+        <div className="landing-actions">
+          <button className="btn-outline" onClick={() => switchMode("login")}>
+            로그인
+          </button>
+          <button className="btn-primary" onClick={() => switchMode("signup")}>
+            회원가입
+          </button>
+        </div>
+      </header>
 
-          <div className="hero">
-            <h1 id="landing-title" className="hero-title">책나눔, 함께 읽고 생각을 나누다</h1>
-
-            <div className="hero-card">
-              <h2 className="hero-card-title">함께 읽고 생각을 나누는 공간</h2>
-              <div className="hero-art-box">
-                <img
-                  className="hero-art"
-                  src="/landing-reading.webp"
-                  width={1654}
-                  height={725}
-                  alt="도서관 책상에 둘러앉은 네 친구가 책을 펼쳐 들고 이야기하고, 뒤에서 두 친구가 책장의 책을 고르는 그림"
-                />
-              </div>
-              <button
-                type="button"
-                className="hero-cta"
-                onClick={() => switchMode("signup")}
-              >
-                생각 적어보기 →
-              </button>
-            </div>
+      <section className="lp-hero" ref={heroRef} aria-labelledby="landing-title">
+        {/* ── 왼쪽 글: 제목 · 소개 · '생각 적어보기'(회원가입 창) · 가입 안내 ── */}
+        <div className="lp-copy">
+          <p className="lp-eyebrow">우리 반 독서 공간</p>
+          <h1 id="landing-title" className="lp-title">
+            책나눔, <span className="lp-title-line">함께 읽고 <span className="lp-mark">생각을 나누다</span></span>
+          </h1>
+          <p className="lp-lead">
+            열한 가지 독서 활동으로 생각을 나누고, 책 광장 · 교실 · 나만의 아지트에서 친구들과 함께 읽어요.
+          </p>
+          <div className="lp-cta-row">
+            <button type="button" className="lp-cta" onClick={() => switchMode("signup")}>
+              생각 적어보기 <span className="lp-cta-arrow" aria-hidden="true">→</span>
+            </button>
           </div>
-        </section>
+          <p className="lp-note">구글 계정 하나로 가입해요. 학생은 선생님이 알려 준 참여 코드로 우리 반에 들어가요.</p>
+        </div>
 
-        {/* ── 2 · 3 · 4분면: 책 광장 · 교실 · 개인 아지트의 활동 장면(누르는 곳 없음) ── */}
+        {/* ── 오른쪽 무대: 사진 넷(일러스트 · 책 광장 · 교실 · 개인 아지트)과 포털 둘 — 누르는 곳은 없습니다 ── */}
         {/* loading · sizes · srcSet을 src보다 먼저 적습니다 — 화면에서 새로 만들 때(다른 페이지에서 돌아올 때) 브라우저가
             src를 먼저 받고 나서야 srcset을 알아 큰 그림을 한 번 더 받지 않게 */}
-        {LANDING_SCENES.map((scene) => {
-          const image = landingSceneImage(scene.key);
-          return (
-            <figure key={scene.key} className={`landing-scene landing-scene--${scene.key}`}>
-              <img
-                loading="lazy"
-                decoding="async"
-                sizes={LANDING_SCENE_SIZES}
-                srcSet={image.srcSet}
-                src={image.src}
-                width={scene.width}
-                height={scene.height}
-                alt={scene.alt}
-              />
-              <figcaption className="landing-scene-label">
-                <strong>{scene.name}</strong>
-                <span>{scene.desc}</span>
-              </figcaption>
-            </figure>
-          );
-        })}
-      </div>
+        <div className="lp-stage">
+          <LandingPortal kind="a" />
+          <LandingPortal kind="b" />
+          <LandingShot kind="reading" index={0}>
+            <img
+              decoding="async"
+              sizes={LANDING_READING.sizes}
+              srcSet={LANDING_READING.srcSet}
+              src={LANDING_READING.src}
+              width={LANDING_READING.width}
+              height={LANDING_READING.height}
+              alt={LANDING_READING.alt}
+            />
+          </LandingShot>
+          {LANDING_SCENES.map((scene, i) => {
+            const image = landingSceneImage(scene.key);
+            return (
+              <LandingShot key={scene.key} kind={scene.key} index={i + 1}>
+                <img
+                  loading="lazy"
+                  decoding="async"
+                  sizes={LANDING_SCENE_SIZES}
+                  srcSet={image.srcSet}
+                  src={image.src}
+                  width={scene.width}
+                  height={scene.height}
+                  alt={scene.alt}
+                />
+                <figcaption className="lp-cap">
+                  <strong>{scene.name}</strong>
+                  <span>{scene.desc}</span>
+                </figcaption>
+              </LandingShot>
+            );
+          })}
+        </div>
+      </section>
     </main>
 
       {/* ── 푸터: 브랜드 · 정책 및 약관 · 문의 (배경 이미지 영역 밖) ── */}
