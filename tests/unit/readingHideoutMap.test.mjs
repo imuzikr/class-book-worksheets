@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { HIDEOUT_DEFAULT_LAYOUT, HIDEOUT_SLOTS, HIDEOUT_THEMES } from "../../lib/readingHideout.js";
+import { HIDEOUT_DEFAULT_LAYOUT, HIDEOUT_SCENE, HIDEOUT_SLOTS, HIDEOUT_THEMES } from "../../lib/readingHideout.js";
 import {
   HIDEOUT_RETURN_PORTAL, HIDEOUT_SPAWN, createHideoutWalkMap, hideoutAtReturnPortal,
 } from "../../lib/readingHideoutMap.js";
@@ -30,6 +30,20 @@ test("furniture and the resting pet nook are blocked while center floor remains 
   assert.ok(nav.path(HIDEOUT_SPAWN, nav.nearest(215, 760)).length);
   assert.deepEqual(nav.step(HIDEOUT_SPAWN, Infinity, 1), HIDEOUT_SPAWN);
   assert.deepEqual(nav.path(HIDEOUT_SPAWN, { x: NaN, y: 0 }), []);
+});
+
+test("enlarged return portal stays in the scene and leaves the nearby passage outside its trigger", () => {
+  const portal = HIDEOUT_RETURN_PORTAL;
+  assert.ok(portal.x - portal.width / 2 >= 0 && portal.x + portal.width / 2 <= HIDEOUT_SCENE.width);
+  assert.ok(portal.y - portal.height / 2 >= 0 && portal.y + portal.height / 2 <= HIDEOUT_SCENE.height);
+  const nav = createHideoutWalkMap();
+  const passage = { x: portal.x - portal.rx - 24, y: portal.y };
+  assert.equal(nav.walkable(passage.x, passage.y), true);
+  assert.equal(hideoutAtReturnPortal(passage, 15), false);
+  const inside = { x: portal.x - portal.rx + 16, y: portal.y };
+  assert.equal(nav.walkable(inside.x, inside.y), true);
+  assert.equal(hideoutAtReturnPortal(inside), true);
+  assert.ok(nav.path(passage, inside).length > 0);
 });
 
 test("keyboard movement cannot jump through the desk into the quiet window corner", () => {

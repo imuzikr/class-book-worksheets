@@ -76,7 +76,7 @@ const FEATURES = [
     on: "펫 먹이를 켰어요. 오늘부터 펫이 날마다 배가 고파져요.", off: "펫 먹이를 껐어요. 꺼 둔 동안은 배고파지지 않고 떠난 펫도 곁에 보여요. 다시 켜면 끈 순간의 배부름에서 이어져요.",
     // 켠 날부터 펫이 배고파지고 떠날 수도 있으므로 **켤 때만** 한 번 되묻습니다(끌 때는 곧바로).
     ask: { title: "펫 먹이를 켤까요?", confirmLabel: "켜기", icon: "fruit",
-      description: "켜면 오늘부터 모든 학생의 펫(알 포함)이 날마다 배가 고파져요. 책을 읽지도 과일을 주지도 않으면 열흘쯤 뒤에 펫이 먹이를 찾아 떠나요(책을 읽으면 같은 펫이 돌아와요). 전에 켰다가 끈 적이 있으면 끈 순간의 배부름에서 이어져요. 켜기 전에 학생들에게 먼저 알려 주세요." } },
+      description: "켜면 오늘부터 모든 학생의 펫(알 포함)이 날마다 배가 고파져요. 책을 읽지도 과일을 주지도 않으면 열흘쯤 뒤에 펫이 먹이를 찾아 떠나요(책을 읽으면 같은 펫이 돌아와요)." } },
   { key: "plazaEnabled", label: "책 광장", needs: ["readingEnabled"], needsText: "책나눔 성장 기능을 먼저 켜 주세요",
     hint: "책나눔의 셋째 탭이 ‘우리 반 랭킹’ 대신 ‘책 광장’이 돼요. 켜면 학생들이 이 반에서 쓴 독서 발자국과 ‘한 권의 책’이 모두 반 친구들에게 보이고(켜기 전에 쓴 글도 · 학생이 따로 고르지 않아요) 서로 댓글을 남겨요. 끄면 자기 글은 본인과 선생님만 봐요. 순위는 상단바 리더보드에서 봐요.",
     on: "책 광장을 켰어요. 학생들이 쓴 독서 발자국과 ‘한 권의 책’이 모두 반 친구들에게 보여요.", off: "책 광장을 껐어요. 이제 자기 글은 본인과 선생님만 봐요. 광장의 글과 댓글은 보관되고, 책나눔에는 ‘우리 반 랭킹’ 탭이 다시 서요.",
@@ -232,7 +232,7 @@ export default function AdminSettingsPanel({ classes = [], onToast }) {
         <ConfirmModal
           icon={asking.ask.icon === "fruit" ? <span className="adm-ask-fruit" aria-hidden="true">🍊</span> : <IconGroup size={30} />}
           title={asking.ask.title}
-          description={`${asking.ask.description}${rows.length > 1 ? ` 선생님의 반 ${rows.length}개 모두에 적용돼요.` : ""}`}
+          description={`${asking.ask.description}${rows.length > 1 && asking.key !== "petFeedEnabled" ? ` 선생님의 반 ${rows.length}개 모두에 적용돼요.` : ""}`}
           confirmLabel={asking.ask.confirmLabel}
           onConfirm={() => { const f = asking; setAsking(null); toggle(f, true); }}
           onClose={() => setAsking(null)}
