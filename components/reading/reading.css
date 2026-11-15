@@ -136,6 +136,17 @@
 .reading-review { padding:16px 18px; background:#f3f6ed; border:1px solid #dde6d2; border-radius:10px; }
 .reading-review>p:not(.reading-review-rating) { white-space:pre-wrap; overflow-wrap:anywhere; color:#4d6346; font-size:13px; line-height:1.9; }
 .reading-review-rating { margin:0; color:#8d7941; font-size:11px; font-weight:750; }
+/* 한 번에 완독한 독서 발자국의 감상을 함께 남긴 '한 권의 책'(fromLogId — lib/reading.js의 wholeBookReviewPlan) — 글 아래 한 줄.
+   위 '.reading-review>p' 규칙(13px · 짙은 글자)을 이기게 같은 모양의 선택자로 뒤에 둡니다. */
+.reading-review>p.reading-review-from { margin:8px 0 0; font-size:11px; line-height:1.7; color:#7f8f7d; }
+/* 발자국 창 — 한 번에 완독(1쪽~마지막 쪽)이면 저장할 때 '한 권의 책'을 어떻게 하는지 알리고, 새로 남길 때는 그 별점을 고릅니다.
+   걷는 경우(is-warn)는 붉은 기운으로. '한 권의 책' 창에서도 함께 남긴 글을 고칠 때 같은 모양을 씁니다. */
+.reading-whole-note { display:flex; flex-direction:column; gap:10px; margin:0; padding:11px 13px; border-radius:10px; background:#f2f7ee; border:1px solid #cfe0c6; color:#3c6046; font-size:12.5px; line-height:1.6; word-break:keep-all; }
+.reading-whole-note p { margin:0; }
+.reading-whole-note strong { color:#2f5a3a; }
+.reading-whole-note label { flex-direction:row; align-items:center; gap:10px; }
+.reading-whole-note select { width:auto; min-width:96px; padding:7px 10px; }
+.reading-whole-note.is-warn { background:#fbf3ee; border-color:#ecd2c4; color:#8a4c35; }
 .reading-log-list { padding:0; margin:0; list-style:none; }
 .reading-log-list li { padding:17px 0; border-bottom:1px solid #e6ebdf; }
 .reading-log-list li:last-child { border-bottom:0; }

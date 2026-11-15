@@ -127,6 +127,90 @@ test("완독은 쪽 범위 전체를 채워야 인정하며 상태 조작으로 
   assert.throws(() => applyReadingAction(state, { type: "updateBook", bookId: "book1", totalPages: 99 }, context("x")), /전체 쪽수/);
 });
 
+test("한 번에 완독(1쪽~마지막 쪽 발자국 하나) — 완독으로 셈하고 같은 감상을 '한 권의 책'에도 남김(선생님 요청)", async () => {
+  const { wholeBookReviewPlan, coversWholeBook } = await import("@/lib/reading");
+  let state = book(initialReadingState(), "book1", 114);
+  state = log(state, "whole", 1, 114, "2026-10-29", { notes: "한 번에 다 읽었어요. 마지막 장면이 오래 남아요.", rating: 4 });
+  const summary = deriveReading(state, NOW);
+  assert.equal(summary.books[0].status, "completed"); // 완독은 읽은 쪽으로 저절로
+  assert.equal(summary.totalBooks, 1);
+  assert.equal(state.reviews.length, 1);
+  assert.deepEqual(
+    (({ id, bookId, classId, text, rating, fromLogId }) => ({ id, bookId, classId, text, rating, fromLogId }))(state.reviews[0]),
+    { id: "whole-rv", bookId: "book1", classId: "classA", text: "한 번에 다 읽었어요. 마지막 장면이 오래 남아요.", rating: 4, fromLogId: "whole" },
+  );
+  assert.equal(summary.reviewCount, 1); // '한 권의 책' 70 EXP도 함께(직접 썼을 때와 같은 셈)
+  assert.ok(summary.events.some((e) => e.kind === "review" && e.bookId === "book1" && e.xp === 70));
+  // 별점을 고르지 않으면 5 · 1~5가 아니면 거부
+  const plain = log(book(initialReadingState(), "book1", 30), "w2", 1, 30);
+  assert.equal(plain.reviews[0].rating, 5);
+  assert.throws(() => log(book(initialReadingState(), "book1", 30), "w3", 1, 30, "2026-10-29", { rating: 6 }), /별점/);
+  // 같은 요청을 다시 보내도 하나뿐
+  assert.equal(log(state, "whole", 1, 114).reviews.length, 1);
+  // 셈의 이름표
+  assert.equal(coversWholeBook({ startPage: 1, endPage: 114 }, { totalPages: 114 }), true);
+  assert.equal(coversWholeBook({ startPage: 2, endPage: 114 }, { totalPages: 114 }), false);
+  assert.equal(coversWholeBook({ startPage: 1, endPage: 113 }, { totalPages: 114 }), false);
+  assert.equal(wholeBookReviewPlan({ book: { id: "b", totalPages: 10 }, after: { startPage: 1, endPage: 10 } }), "create");
+  assert.equal(wholeBookReviewPlan({ book: { id: "b", totalPages: 10, archived: true }, after: { startPage: 1, endPage: 10 } }), null);
+  assert.equal(wholeBookReviewPlan({ book: { id: "b", totalPages: 10 }, after: { startPage: 1, endPage: 10 }, reviews: Array.from({ length: 100 }, (_, i) => ({ bookId: `x${i}` })) }), null); // 가득 참
+  assert.equal(wholeBookReviewPlan({ book: null, after: { startPage: 1, endPage: 10 } }), null);
+});
+
+test("한 번에 완독이 아니면(나눠 읽기) '한 권의 책'을 저절로 만들지 않고, 이미 있으면 그대로", () => {
+  // 나눠 읽어 마지막 발자국으로 완독 — 완독은 되지만 '한 권의 책'은 학생이 직접(지금처럼)
+  let split = log(book(initialReadingState(), "book1", 100), "a", 1, 50);
+  split = log(split, "b", 51, 100);
+  assert.equal(deriveReading(split, NOW).books[0].status, "completed");
+  assert.equal(split.reviews.length, 0);
+  // 전에 써 둔 '한 권의 책'이 있으면 새로 만들지도 덮어쓰지도 않음
+  let written = review(book(initialReadingState(), "book1", 20));
+  written = log(written, "whole", 1, 20, "2026-10-29", { notes: "새 감상" });
+  assert.equal(written.reviews.length, 1);
+  assert.equal(written.reviews[0].text, "인물의 선택을 돌아보았어요.");
+  assert.equal(written.reviews[0].fromLogId, undefined);
+  // 발자국을 지워도 그 글은 남음(함께 남긴 글이 아니므로)
+  written = applyReadingAction(written, { type: "deleteLog", logId: "whole" }, context("del"));
+  assert.equal(written.reviews.length, 1);
+});
+
+test("함께 남긴 '한 권의 책'은 발자국을 따라감 — 감상을 고치면 같은 글로, 한 번에 완독이 아니게 고치거나 지우면 함께 걷힘", () => {
+  let state = log(book(initialReadingState(), "book1", 40), "whole", 1, 40, "2026-10-29", { notes: "처음 감상", rating: 3 });
+  // 감상을 고치면 함께 남긴 글도 같은 글로(별점은 그대로)
+  state = applyReadingAction(state, { type: "updateLog", logId: "whole", notes: "고친 감상" }, context("e1"));
+  assert.deepEqual([state.reviews[0].text, state.reviews[0].rating, state.reviews[0].fromLogId], ["고친 감상", 3, "whole"]);
+  // 날짜만 고치면 글은 그대로
+  state = applyReadingAction(state, { type: "updateLog", logId: "whole", date: "2026-10-28" }, context("e2"));
+  assert.equal(state.reviews[0].text, "고친 감상");
+  // 마지막 쪽을 잘못 적었던 것 — 줄이면 완독이 아니고 함께 남긴 글도 걷힘(경험치도 정정)
+  const shrunk = applyReadingAction(state, { type: "updateLog", logId: "whole", endPage: 14 }, context("e3"));
+  assert.equal(shrunk.reviews.length, 0);
+  assert.equal(deriveReading(shrunk, NOW).books[0].status, "reading");
+  assert.equal(deriveReading(shrunk, NOW).reviewCount, 0);
+  // 다시 처음으로 1쪽~마지막 쪽이 되면 새로 남김(고친 창에서 고른 별점)
+  const again = applyReadingAction(shrunk, { type: "updateLog", logId: "whole", endPage: 40, rating: 2 }, context("e4"));
+  assert.deepEqual([again.reviews.length, again.reviews[0].text, again.reviews[0].rating], [1, "고친 감상", 2]);
+  // 발자국을 지우면 함께 남긴 글도
+  const removed = applyReadingAction(again, { type: "deleteLog", logId: "whole" }, context("e5"));
+  assert.deepEqual([removed.logs.length, removed.reviews.length, deriveReading(removed, NOW).xp], [0, 0, 0]);
+});
+
+test("학생이 '한 권의 책'을 직접 고치면 이음이 풀려 따로 — 발자국을 고치거나 지워도 그대로, 지운 뒤에는 다시 만들지 않음", () => {
+  let state = log(book(initialReadingState(), "book1", 40), "whole", 1, 40, "2026-10-29", { notes: "발자국 감상" });
+  state = review(state, "book1", { text: "따로 다듬은 한 권의 책", rating: 5 });
+  assert.equal(state.reviews[0].fromLogId, undefined);
+  assert.equal(state.reviews[0].id, "whole-rv"); // 같은 글을 고친 것 — id는 그대로
+  state = applyReadingAction(state, { type: "updateLog", logId: "whole", notes: "발자국만 고침" }, context("e1"));
+  assert.equal(state.reviews[0].text, "따로 다듬은 한 권의 책");
+  state = applyReadingAction(state, { type: "updateLog", logId: "whole", endPage: 20 }, context("e2"));
+  assert.equal(state.reviews.length, 1); // 학생이 쓴 글은 걷지 않음
+  // 학생이 함께 남긴 글을 지운 뒤 — 한 번에 완독인 채로 발자국을 고쳐도 다시 만들지 않음
+  let deleted = log(book(initialReadingState(), "book1", 40), "whole", 1, 40);
+  deleted = applyReadingAction(deleted, { type: "deleteReview", bookId: "book1" }, context("dr"));
+  deleted = applyReadingAction(deleted, { type: "updateLog", logId: "whole", notes: "감상만 고침" }, context("e3"));
+  assert.equal(deleted.reviews.length, 0);
+});
+
 test("기록 수정·삭제는 XP와 진행률·완독·대표 뱃지까지 함께 정정", () => {
   let state = log(book(initialReadingState(), "book1", 10), "log1", 1, 10);
   state = applyReadingAction(state, { type: "setFeaturedBadge", badgeId: "completion_1" }, context("featured"));

@@ -154,6 +154,36 @@ test("공유 사본은 완독 상태를 보관하고, 발자국과 완독 감상
   assert.deepEqual(notesOf(b), ["빠진 쪽을 채움", "마지막 장", "꺼 둔 동안 쓴 글", "광장 전에 쓴 발자국"]);
 });
 
+test("한 번에 완독한 발자국 — 저장 한 번에 완독 · 같은 감상의 '한 권의 책'이 함께 광장 책꽂이에 서고, 지우면 함께 내려간다", async () => {
+  const BOOK = "plz-bookc-whl1"; // 서버는 요청 번호를 새 기록의 id로 씁니다
+  const entry = async () => (await shelf("c")).books.find((x) => x.id === BOOK);
+  await send("c", BOOK, { type: "addBook", title: "한숨에 읽은 책", author: "지은이", totalPages: 60 });
+  const saved = await send("c", "plz-logc-whl01", { type: "addLog", bookId: BOOK, date: today, startPage: 1, endPage: 60, notes: "한 번에 끝까지 읽었다", rating: 4 });
+  // 서재 정본 — 완독(읽은 쪽으로) · 같은 감상의 '한 권의 책'(그 발자국과 이어짐)
+  assert.equal(saved.summary.books.find((x) => x.id === BOOK).status, "completed");
+  assert.deepEqual(saved.state.reviews.filter((r) => r.bookId === BOOK).map((r) => [r.text, r.rating, r.fromLogId]), [["한 번에 끝까지 읽었다", 4, "plz-logc-whl01"]]);
+  // 공유 사본 — 가판대의 발자국 · 책꽂이의 한 권의 책이 같은 글로
+  let e = await entry();
+  assert.deepEqual([e.place, e.rating], ["shelf", 4]);
+  assert.equal(plazaEntryForPlace(e, "shelf").excerpt, "한 번에 끝까지 읽었다");
+  assert.equal(plazaEntryForPlace(e, "stall").excerpt, "한 번에 끝까지 읽었다");
+  let b = await bookDoc("c", BOOK);
+  assert.equal(b.review.text, "한 번에 끝까지 읽었다");
+  assert.deepEqual(notesOf(b), ["한 번에 끝까지 읽었다"]);
+  // 감상을 고치면 함께 남긴 글도 같은 글로 따라간다
+  await send("c", "plz-logc-whl02", { type: "updateLog", logId: "plz-logc-whl01", notes: "다시 읽어도 좋을 책" });
+  b = await bookDoc("c", BOOK);
+  assert.deepEqual([b.review.text, notesOf(b)], ["다시 읽어도 좋을 책", ["다시 읽어도 좋을 책"]]);
+  // 발자국을 지우면 함께 남긴 '한 권의 책'도 내려간다(광장에서 사라짐 · 다른 책은 그대로)
+  const removed = await send("c", "plz-logc-whl03", { type: "deleteLog", logId: "plz-logc-whl01" });
+  assert.equal(removed.state.logs.some((l) => l.bookId === BOOK), false);
+  assert.equal(removed.state.reviews.some((r) => r.bookId === BOOK), false);
+  b = await bookDoc("c", BOOK);
+  assert.deepEqual([b.review, b.logs], [null, []]);
+  assert.equal(await entry(), undefined);
+  assert.equal((await shelf("c")).books.some((x) => x.id === "plz-bookc-001"), true);
+});
+
 test("댓글 — 같은 반 학생과 담당 교사만, 이름표는 서버가 붙이고 수를 함께 센다", async () => {
   const target = { ownerUid: ids.a, bookId: "plz-book-0001" };
   const first = await act("b", { action: "comment", ...target, text: "  나도 읽어 보고 싶어요  ", requestId: "plz-cmt-00001" });
