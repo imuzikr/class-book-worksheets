@@ -3,7 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   PET_SPECIES, PET_SPECIES_KEYS, PET_STAGES, PET_STAGE_MAX, PET_HATCH_XP,
-  normalizePetMirror, normalizePublicPet, petEnabled, petFeedTimesPatch, petGrowthOfSummary, petGrowthXp,
+  normalizePetMirror, normalizePublicPet, petCareRules, petEnabled, petFeedTimesPatch, petGrowthOfSummary, petGrowthXp, petPreviewOn,
   PET_ART_READY, petCheerKind, petImageSrc, petImageSrcSet, petProgress, petSpecies, petStageName, pickPetSpecies,
   planPetAction, rankingPet,
 } from "@/lib/readingPet";
@@ -246,6 +246,69 @@ test("알 깨우기 — 100이 모여야, 비밀 문서의 종으로, 한 번만
   // 알이 없으면 깨울 수 없음 · 모르는 요청
   assert.equal(planPetAction({ action: "hatch", mirror: null, growthXp: 999 }).error.code, "reading/pet-missing");
   assert.equal(planPetAction({ action: "feed" }).error.status, 400);
+});
+
+test("펫 미리보기 스위치 — 학생 펫이 켜진 반에서, 켠 것만(기본 꺼짐)", () => {
+  assert.equal(petPreviewOn({ readingEnabled: true, petPreviewEnabled: true }), true);
+  assert.equal(petPreviewOn({ readingEnabled: true }), false); // 기본 꺼짐
+  assert.equal(petPreviewOn({ readingEnabled: true, petPreviewEnabled: false }), false);
+  assert.equal(petPreviewOn({ readingEnabled: true, petEnabled: false, petPreviewEnabled: true }), false); // 학생 펫을 끄면 함께
+  assert.equal(petPreviewOn({ readingEnabled: false, petPreviewEnabled: true }), false); // 책나눔을 끄면 함께
+  assert.equal(petPreviewOn({ readingEnabled: true, petPreviewEnabled: true, archived: true }), false);
+  assert.equal(petPreviewOn(null), false);
+});
+
+test("펫 고르기(미리보기) — 알이면 깨어날 친구만 바꾸고(프로필은 그대로), 깨어난 펫은 모습만, 단계 · 바탕은 그대로", () => {
+  // 알이 아직 없으면 고른 종의 알을 받음(바탕은 그때의 누적 경험치)
+  const fresh = planPetAction({ action: "choose", species: "fennec", mirror: null, growthXp: 420, now: 1700000000000 });
+  assert.equal(fresh.event, "chosen");
+  assert.deepEqual(fresh.mirror, { species: null, baseXp: 420, assignedAt: 1700000000000, hatchedAt: null }); // 프로필에는 종 없음(비밀)
+  assert.deepEqual(fresh.secret, { species: "fennec", baseXp: 420, chosen: true });
+  assert.equal(fresh.chosen, "fennec");
+  // 알 — 비밀 문서의 종만 바꾸고, 프로필은 쓰지 않음(반 친구에게는 깨어날 때까지 '신비한 알')
+  const egg = { species: null, baseXp: 300, assignedAt: 1, hatchedAt: null };
+  const picked = planPetAction({ action: "choose", species: "otter", mirror: egg, secretSpecies: "owl", growthXp: 350 });
+  assert.equal(picked.event, "chosen");
+  assert.equal(picked.mirror, null);
+  assert.deepEqual(picked.secret, { species: "otter", baseXp: 300, chosen: true });
+  assert.equal(picked.pet.stage, 1);
+  // 무작위 종과 우연히 같아도 '고른 것'으로 적음(본인에게 알려 주려고) · 이미 고른 종을 다시 고르면 아무것도 안 씀
+  assert.deepEqual(planPetAction({ action: "choose", species: "owl", mirror: egg, secretSpecies: "owl", secretChosen: false, growthXp: 350 }).secret,
+    { species: "owl", baseXp: 300, chosen: true });
+  const same = planPetAction({ action: "choose", species: "owl", mirror: egg, secretSpecies: "owl", secretChosen: true, growthXp: 350 });
+  assert.equal(same.event, null);
+  assert.equal(same.secret, null);
+  // 고른 알이 깨어나면 고른 친구로(알 깨우기는 비밀 문서의 종을 씀)
+  const hatchedEgg = planPetAction({ action: "hatch", mirror: egg, secretSpecies: picked.secret.species, growthXp: 400 });
+  assert.equal(hatchedEgg.mirror.species, "otter");
+  // 깨어난 펫 — 종만 바뀌고 단계 · 바탕 · 깨어난 날 · 배부름은 그대로
+  const pet = { species: "owl", baseXp: 0, assignedAt: 1, hatchedAt: 2, care: { full: 70, day: "2026-11-14", kept: null, away: null, back: 0, fed: null } };
+  const changed = planPetAction({ action: "choose", species: "cat", mirror: pet, secretSpecies: "owl", growthXp: 1600 });
+  assert.equal(changed.event, "changed");
+  assert.deepEqual(changed.mirror, { ...normalizePetMirror(pet), species: "cat" });
+  assert.deepEqual(changed.secret, { species: "cat", baseXp: 0, chosen: true });
+  assert.equal(changed.pet.stage, 6);
+  assert.equal(changed.pet.species, "cat");
+  // 같은 종이면 아무것도 안 씀
+  const unchanged = planPetAction({ action: "choose", species: "owl", mirror: pet, growthXp: 1600 });
+  assert.equal(unchanged.event, null);
+  assert.equal(unchanged.mirror, null);
+  // 모르는 종 · 빈 값은 막힘
+  assert.equal(planPetAction({ action: "choose", species: "dragon", mirror: pet }).error.status, 400);
+  assert.equal(planPetAction({ action: "choose", mirror: pet }).error.code, "reading/invalid-request");
+});
+
+test("펫 고르기 — 먹이를 찾아 떠나 있으면(펫 먹이) 먼저 다시 불러야 함", () => {
+  const rules = petCareRules({ readingEnabled: true, petFeedEnabled: true, petFeedFrom: Date.UTC(2026, 8, 1) });
+  assert.equal(rules.on, true);
+  const awayCare = { full: 0, day: "2026-11-13", kept: null, away: { on: "2026-11-13", days: [], fruit: 0 }, back: 0, fed: null };
+  const gone = planPetAction({ action: "choose", species: "cat", mirror: { species: "owl", baseXp: 0, assignedAt: 1, hatchedAt: 2, care: awayCare },
+    growthXp: 300, care: rules, today: "2026-11-15" });
+  assert.equal(gone.error.code, "reading/pet-away");
+  assert.equal(gone.error.status, 409);
+  const goneEgg = planPetAction({ action: "choose", species: "cat", mirror: { species: null, baseXp: 0, assignedAt: 1, hatchedAt: null, care: awayCare },
+    growthXp: 30, care: rules, today: "2026-11-15" });
+  assert.match(goneEgg.error.message, /알이 따뜻한 곳을 찾아/);
 });
 
 test("데모 반의 펫 — 열 종이 모두 나오고, 알 둘(곧 깨어남 · 따뜻해지는 중)과 아직 알이 없는 학생 하나", () => {

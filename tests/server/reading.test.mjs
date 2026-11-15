@@ -522,6 +522,86 @@ test("독서 펫 — 학생만 알 하나(받을 때의 경험치가 바탕 · �
   await db.doc("classes/api-pet").update({ petEnabled: true });
 });
 
+test("펫 미리보기 — 켠 반에서만 펫을 고르고, 알은 비밀 문서만(본인에게만 알림) · 깨어난 펫은 모습만 바뀌고 리더보드 줄도 함께", async () => {
+  const { getReadingPet, readingPetAction } = await import("../../lib/server/readingService.js");
+  const snapshot = (uid, totalXp) => ({ uid, level: getReadingLevel(totalXp), featuredBadge: null, formula: READING_FORMULA,
+    events: [{ date: today, xp: totalXp }], xpDays: [{ date: today, xp: totalXp }],
+    totalXp, badges: [], totalPages: 0, completedBooks: 0, reviewCount: 0, longestStreak: 0, streakRun: 0,
+    lastReadDate: today, xpReachedOn: today });
+  const batch = db.batch();
+  batch.set(db.doc("classes/api-pick"), { createdBy: ids.teacher, readingEnabled: true, archived: false, petPreviewEnabled: true });
+  batch.set(db.doc("classes/api-pick-off"), { createdBy: ids.teacher, readingEnabled: true, archived: false });
+  const people = {
+    "pick-egg": { species: null, baseXp: 0, assignedAt: Date.now() - 86400000, hatchedAt: null },
+    "pick-pet": { species: "owl", baseXp: 0, assignedAt: Date.now() - 9 * 86400000, hatchedAt: Date.now() - 8 * 86400000 },
+    "pick-new": null,
+  };
+  let n = 0;
+  for (const [uid, readingPet] of Object.entries(people)) {
+    n += 1;
+    batch.set(db.doc(`users/${uid}`), { role: "student", realName: uid, studentId: `5030${n}`, ...(readingPet ? { readingPet } : {}) });
+    batch.set(db.doc(`memberships/${uid}_api-pick`), { uid, classId: "api-pick" });
+    batch.set(db.doc(`memberships/${uid}_api-pick-off`), { uid, classId: "api-pick-off" });
+    batch.set(db.doc(`classes/api-pick/readingMembers/${uid}`), snapshot(uid, uid === "pick-pet" ? 1600 : 60));
+    if (readingPet) batch.set(db.doc(`users/${uid}/reading/pet`), { species: "owl", baseXp: 0, classId: "api-pick" });
+  }
+  await batch.commit();
+  const who = (uid) => ({ uid, roleClaim: null, db });
+
+  // 미리보기를 끈 반 · 선생님 · 모르는 종 · 다른 요청에 끼워 넣은 종은 막힘
+  await assert.rejects(() => readingPetAction(who("pick-egg"), { classId: "api-pick-off", action: "choose", species: "fennec" }),
+    (e) => e.status === 403 && e.code === "reading/pet-preview-disabled");
+  await assert.rejects(() => readingPetAction(principal("teacher"), { classId: "api-pick", action: "choose", species: "fennec" }),
+    (e) => e.status === 403 && e.code === "reading/pet-students-only");
+  await assert.rejects(() => readingPetAction(who("pick-egg"), { classId: "api-pick", action: "choose", species: "dragon" }), (e) => e.status === 400);
+  await assert.rejects(() => readingPetAction(who("pick-egg"), { classId: "api-pick", action: "choose" }), (e) => e.status === 400);
+  await assert.rejects(() => readingPetAction(who("pick-egg"), { classId: "api-pick", action: "hatch", species: "fennec" }), (e) => e.status === 400);
+
+  // 알 — 비밀 문서의 종만 바뀌고(고른 표시), 프로필은 그대로 종 없음 · 본인에게는 고른 종을 알려 줌
+  assert.equal((await getReadingPet(who("pick-egg"), "api-pick")).chosen, null); // 무작위 알은 본인에게도 비밀
+  const egg = await readingPetAction(who("pick-egg"), { classId: "api-pick", action: "choose", species: "fennec" });
+  assert.equal(egg.event, "chosen");
+  assert.equal(egg.chosen, "fennec");
+  assert.equal((await db.doc("users/pick-egg").get()).data().readingPet.species, null);
+  assert.deepEqual(Object.fromEntries(Object.entries((await db.doc("users/pick-egg/reading/pet").get()).data()).filter(([k]) => ["species", "chosen", "baseXp"].includes(k))),
+    { species: "fennec", chosen: true, baseXp: 0 });
+  assert.equal((await getReadingPet(who("pick-egg"), "api-pick")).chosen, "fennec");
+  // 반 친구가 보는 리더보드에는 여전히 '신비한 알'(종 없음)
+  assert.equal((await rankingsNow(principal("teacher"), "api-pick", "all-time")).rankings.find((r) => r.uid === "pick-egg").pet.species, null);
+  // 알이 깨어나면 고른 친구
+  await db.doc("classes/api-pick/readingMembers/pick-egg").set(snapshot("pick-egg", 130));
+  assert.equal((await readingPetAction(who("pick-egg"), { classId: "api-pick", action: "hatch" })).pet.species, "fennec");
+
+  // 깨어난 펫 — 모습만 바뀌고 단계 · 바탕 · 깨어난 날은 그대로, 저장해 둔 반 순위의 그 줄도 곧바로 새 모습
+  const before = (await db.doc("users/pick-pet").get()).data().readingPet;
+  const cached = await getReadingRankings(principal("teacher"), "api-pick", "all-time"); // 반 순위를 한 장에 저장
+  assert.equal(cached.rankings.find((r) => r.uid === "pick-pet").pet.species, "owl");
+  const changed = await readingPetAction(who("pick-pet"), { classId: "api-pick", action: "choose", species: "cat" });
+  assert.equal(changed.event, "changed");
+  assert.equal(changed.pet.stage, 6);
+  const after = (await db.doc("users/pick-pet").get()).data().readingPet;
+  assert.deepEqual(after, { ...before, species: "cat" });
+  // 저장해 둔 반 순위 한 장의 그 줄도 그 자리에서 고침(다시 세지 않아도 새 모습)
+  assert.equal((await db.doc("classes/api-pick/readingRank/current").get()).data().rows["pick-pet"].pet.species, "cat");
+  assert.equal((await getReadingRankings(principal("teacher"), "api-pick", "all-time")).rankings.find((r) => r.uid === "pick-pet").pet.species, "cat");
+  // 같은 종을 다시 고르면 아무것도 안 씀
+  assert.equal((await readingPetAction(who("pick-pet"), { classId: "api-pick", action: "choose", species: "cat" })).event, null);
+
+  // 알을 아직 안 받은 학생 — 고른 종의 알을 받음
+  const fresh = await readingPetAction(who("pick-new"), { classId: "api-pick", action: "choose", species: "otter" });
+  assert.equal(fresh.event, "chosen");
+  assert.equal((await db.doc("users/pick-new").get()).data().readingPet.species, null);
+  assert.equal((await db.doc("users/pick-new/reading/pet").get()).data().species, "otter");
+  // 그 뒤 알 받기(상단바)는 그대로 — 알은 하나
+  assert.equal((await readingPetAction(who("pick-new"), { classId: "api-pick", action: "adopt" })).event, null);
+
+  // 처리 도중 선생님이 미리보기를 끄면(트랜잭션이 다시 읽은 반 문서로) 막힘
+  await db.doc("classes/api-pick").update({ petPreviewEnabled: false });
+  await assert.rejects(() => readingPetAction(who("pick-pet"), { classId: "api-pick", action: "choose", species: "bear" }),
+    (e) => e.code === "reading/pet-preview-disabled");
+  assert.equal((await db.doc("users/pick-pet").get()).data().readingPet.species, "cat"); // 끄면 지금 고른 그대로
+});
+
 // ── 반 순위 저장(10분) — 한 번 셈해 classes/{c}/readingRank/current에 적어 두고 여럿이 그대로 씀(선생님 요청) ──
 // 학생 · 교사 모두 반 전체를 받음(선생님 결정). 아무도 안 보면 세지 않음.
 function rankSnapshot(uid, xp) {

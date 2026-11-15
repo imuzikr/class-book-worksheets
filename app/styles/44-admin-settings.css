@@ -25,6 +25,10 @@
 .adm-feature-text strong { font-size: 14px; color: var(--dark); }
 .adm-feature-text small { font-size: 12px; color: var(--text-faint); line-height: 1.45; word-break: keep-all; }
 .adm-feature-text .adm-feature-mixed { color: var(--primary-dark); }
+/* '펫 미리보기' 카드의 '열 친구 미리 보기' — 스위치가 꺼져 있어도 누릅니다(선생님이 먼저 보고 켤지 정하게). 글자 단추라 카드의
+   모양(설명 → 스위치)을 흔들지 않습니다. */
+.adm-feature-text .adm-feature-peek { align-self: flex-start; margin-top: 2px; padding: 4px 10px; border: 1px solid #e3b48f; border-radius: 999px; background: #fffaf4; color: var(--primary-dark); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.adm-feature-text .adm-feature-peek:hover { background: #fff1e4; }
 .adm-feature .adm-switch { align-self: flex-start; margin-left: -6px; }
 .adm-switch { display: inline-flex; align-items: center; gap: 8px; padding: 4px 6px; border: 0; background: none; cursor: pointer; font-size: 13px; color: var(--text-sub); border-radius: 999px; }
 .adm-switch:disabled { cursor: not-allowed; opacity: .5; }

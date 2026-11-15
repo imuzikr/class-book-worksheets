@@ -6,7 +6,8 @@
 //  · 학생이 가입해 프로필을 만들 때 readingPet을 끼워 넣지 못함(마음에 드는 종 · 단계를 고르는 길)
 //  · 학생 · 교사가 프로필의 readingPet을 고치지 못함(update의 칸 목록에 없음)
 //  · 알 단계의 종을 적어 둔 users/{uid}/reading/pet은 학생 본인도 못 읽음(비밀 — 선생님 결정)
-//  · 관리자 설정의 '학생 펫'(petEnabled)은 참 · 거짓만, 운영 중인 반에서만
+//  · 관리자 설정의 '학생 펫'(petEnabled) · '펫 미리보기'(petPreviewEnabled)는 참 · 거짓만, 운영 중인 반에서만
+//    (미리보기를 켠 반에서 학생이 고르는 펫도 서버만 적음 — 프로필의 readingPet · 비밀 문서는 그대로 못 씀)
 //  · 펫 먹이(lib/petCare.js) — 배부름(readingPet.care)도 서버만 적고(학생이 제 펫을 배부르게 고치지 못함),
 //    반 설정 칸(petFeedEnabled · petFeedFrom · petRests)은 모양이 맞을 때만 담당 교사가
 //    (켠 때 petFeedFrom은 서버 시각만 — 반을 만들 때 끼워 넣어도 같은 검사). 옛 '주말에는 줄지 않아요'(petRestWeekend)는
@@ -82,6 +83,26 @@ describe("독서 펫 — 프로필의 펫과 비밀 문서", () => {
     await assertFails(updateDoc(doc(db, "classes", "c1"), { petEnabled: null }));
     await assertFails(updateDoc(doc(db, "classes", "old"), { petEnabled: false }));
     await assertFails(updateDoc(doc(asStudent(env, "s2").firestore(), "classes", "c1"), { petEnabled: false }));
+  });
+
+  it("관리자 설정 '펫 미리보기'는 참 · 거짓만, 운영 중인 반에서만 · 학생이 고르는 펫도 서버만 적음", async () => {
+    const db = asTeacher(env, "teacherA").firestore();
+    await assertSucceeds(updateDoc(doc(db, "classes", "c1"), { petPreviewEnabled: true }));
+    await assertSucceeds(updateDoc(doc(db, "classes", "c1"), { petPreviewEnabled: false }));
+    await assertFails(updateDoc(doc(db, "classes", "c1"), { petPreviewEnabled: "true" }));
+    await assertFails(updateDoc(doc(db, "classes", "c1"), { petPreviewEnabled: 1 }));
+    await assertFails(updateDoc(doc(db, "classes", "c1"), { petPreviewEnabled: deleteField() }));
+    await assertFails(updateDoc(doc(db, "classes", "old"), { petPreviewEnabled: true })); // 보관된 반
+    await assertFails(updateDoc(doc(asStudent(env, "s2").firestore(), "classes", "c1"), { petPreviewEnabled: true }));
+    // 반을 만들 때도 같은 모양만
+    await assertSucceeds(setDoc(doc(db, "classes", "new1"), { name: "새 반", createdBy: "teacherA", readingEnabled: false, petPreviewEnabled: true }));
+    await assertFails(setDoc(doc(db, "classes", "new2"), { name: "새 반", createdBy: "teacherA", readingEnabled: false, petPreviewEnabled: "yes" }));
+    // 미리보기를 켠 반이어도 학생이 제 펫의 종 · 비밀 문서를 직접 고치지 못함(고르기는 서버 API만)
+    await assertSucceeds(updateDoc(doc(db, "classes", "c1"), { petPreviewEnabled: true }));
+    const mine = asStudent(env, "s2").firestore();
+    await assertFails(updateDoc(doc(mine, "users", "s2"), { "readingPet.species": "fennec" }));
+    await assertFails(setDoc(doc(mine, "users", "s2", "reading", "pet"), { species: "fennec", baseXp: 120, chosen: true }));
+    await assertFails(getDoc(doc(mine, "users", "s2", "reading", "pet")));
   });
 
   it("펫 먹이 — 배부름(readingPet.care)은 학생도 교사도 못 고친다(먹이 · 다시 부르기는 서버만)", async () => {

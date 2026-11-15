@@ -581,7 +581,9 @@ service cloud.firestore {
       allow list: if isAdmin() || (isTeacher() && resource.data.createdBy == uid());
       // 새 반은 기본 꺼짐. 켜기는 운영 중인 반의 담당 교사/관리자만 합니다.
       // 관리자 설정 화면의 스위치(책나눔 성장 · 도서 검색 · 리더보드(rankingEnabled) · 독서 TOP 3 ·
-      // 학생 캐릭터 · 과일 바구니 · 학생 펫 · 펫 먹이 · 책 광장 · 교실 · 개인 아지트)도 같은 판정 — 참·거짓만, 운영 중인 반에서만 바꿉니다.
+      // 학생 캐릭터 · 과일 바구니 · 학생 펫 · 펫 미리보기 · 펫 먹이 · 책 광장 · 교실 · 개인 아지트)도 같은 판정 — 참·거짓만, 운영 중인 반에서만 바꿉니다.
+      // 펫 미리보기(petPreviewEnabled)를 켠 반의 학생이 고르는 펫은 서버만 적습니다(/api/reading/pet — 프로필의 readingPet ·
+      // 비밀 문서 users/{uid}/reading/pet은 아래 users 규칙이 학생 · 교사 모두 못 쓰게 막음).
       // 독서 맵(readingMapTheme)은 대륙 · 모험의 식별자 두 개만 받습니다.
       // 교실의 칠판에서 선생님이 출석을 확인한 때(classroomCallAt — lib/data/classes.js의 callClassroomRoll)는
       // 0 이상의 수만 받습니다(앉아 있던 학생의 화면이 이 값이 바뀌는 것을 보고 출석을 남깁니다).
@@ -610,6 +612,7 @@ service cloud.firestore {
                && (!keys.hasAny(['bookSearchEnabled']) || d.get('bookSearchEnabled', null) is bool)
                && (!keys.hasAny(['fruitBasketEnabled']) || d.get('fruitBasketEnabled', null) is bool)
                && (!keys.hasAny(['petEnabled']) || d.get('petEnabled', null) is bool)
+               && (!keys.hasAny(['petPreviewEnabled']) || d.get('petPreviewEnabled', null) is bool)
                && (!keys.hasAny(['petFeedEnabled']) || d.get('petFeedEnabled', null) is bool)
                && (!keys.hasAny(['petRestWeekend']) || d.get('petRestWeekend', null) is bool)
                && (!keys.hasAny(['petFeedFrom']) || d.get('petFeedFrom', null) == request.time)
@@ -657,7 +660,7 @@ service cloud.firestore {
         return classSettingsShapeOk(request.resource.data, changed)
                && petFeedPauseFlowOk(changed)
                && (!changed.hasAny(['readingEnabled', 'rankingEnabled', 'characterEnabled', 'bookSearchEnabled', 'fruitBasketEnabled', 'petEnabled', 'readingTopEnabled', 'plazaEnabled', 'classroomEnabled', 'hideoutEnabled', 'classroomCallAt', 'readingMapTheme',
-                                    'petFeedEnabled', 'petRestWeekend', 'petRests'])
+                                    'petFeedEnabled', 'petRestWeekend', 'petRests', 'petPreviewEnabled'])
                    || (resource.data.get('archived', false) != true
                        && request.resource.data.get('archived', false) != true));
       }

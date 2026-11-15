@@ -146,7 +146,8 @@ function Modal({ title, onClose, children, wide = false, busy = false }) {
 // plazaCall — 선생님의 '모두 이동'이 10초를 다 세고 모두를 데려오는 신호의 '보낸 때'(책방 페이지가 넘김 · 없으면 0).
 //   이 값이 **이 화면이 떠 있는 동안 바뀌면** 책 광장 탭으로 넘어갑니다(아래).
 // petFeed — 그 반의 펫 먹이 규칙(lib/readingPet.js의 petCareRules — 끈 반이면 on이 거짓) · myFruit — 내가 가진 과일 수(먹이).
-export default function ReadingHub({ classId, user, isTeacher = false, bookSearchOn = false, petOn = false, plazaOn = false, hideoutOn = false, characterOn = true, onDisabled, activities = [], onOpenActivity, initialBookId = null, initialTab = "library", student = null, classroom = null, plazaCall = 0, petFeed = null, myFruit = 0, teacherTools = null }) {
+// petPreview — 관리자 설정의 '펫 미리보기'(lib/readingPet.js의 petPreviewOn) — 켠 반이면 '나의 펫'에서 키울 펫을 고릅니다.
+export default function ReadingHub({ classId, user, isTeacher = false, bookSearchOn = false, petOn = false, plazaOn = false, hideoutOn = false, characterOn = true, onDisabled, activities = [], onOpenActivity, initialBookId = null, initialTab = "library", student = null, classroom = null, plazaCall = 0, petFeed = null, myFruit = 0, petPreview = false, teacherTools = null }) {
   // student가 있으면 교사가 그 학생의 책나눔을 보는 읽기 전용 화면입니다(선생님 결정 — 감상·발자국까지 전부 보임).
   const readOnly = !!student?.uid;
   const viewUid = readOnly ? student.uid : user?.uid;
@@ -327,7 +328,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
         {featured?.earned && <div className="reading-featured"><ReadingBadge badge={featured} size={70} /><span>{readOnly ? "대표 뱃지" : "나의 대표 뱃지"}<strong>{featured.name}</strong></span></div>}
         {/* 나의 펫 — 단계는 이미 받은 서재로 셉니다(lib/readingPet.js). 서재를 받기 전에는 카드도 기다립니다. */}
         {showPet && <PetCard classId={classId} uid={user.uid} growthXp={raw ? petGrowthOfSummary(stats) : null} level={raw ? stats.level : null} onLevelCheer={markPetLevel}
-          feed={petFeed} fruits={myFruit} today={day} />}
+          feed={petFeed} fruits={myFruit} today={day} preview={petPreview} />}
       </div>}
     </div>
     <nav className="reading-tabs" aria-label="책나눔 메뉴" ref={tabsRef}>

@@ -15,6 +15,10 @@
 //   · 학생 캐릭터(characterEnabled — 값이 없으면 켜짐, 책나눔이 켜져 있어야 씀. 리더보드를 꺼도 '내 프로필'에서 고름)
 //   · 과일 바구니(fruitBasketEnabled — 값이 없으면 켜짐, 끄면 떠 있는 동그라미에서도 가림)
 //   · 학생 펫(petEnabled — 값이 없으면 켜짐, 책나눔이 켜져 있어야 씀 · lib/readingPet.js)
+//   · 펫 미리보기(petPreviewEnabled — 기본 꺼짐, 학생 펫이 켜져 있어야 씀 · 선생님 요청). 켜면 학생이 열 가지 펫이 알에서
+//     10단계까지 자라는 모습을 보고 키울 펫을 직접 고릅니다(책나눔의 '나의 펫' — components/reading/PetPreview.jsx). 알이면
+//     깨어날 친구가, 깨어난 펫이면 모습과 이름만 바뀝니다(단계 · 경험치 그대로). 끄면 지금 고른 그대로 · 새 알은 무작위.
+//     카드의 '열 친구 미리 보기'로 선생님도 같은 창을 봅니다(고르는 단추 없이 · 스위치가 꺼져 있어도).
 //   · 펫 먹이(petFeedEnabled — 기본 꺼짐, 학생 펫이 켜져 있어야 씀 · lib/petCare.js). 켜면 그날부터 펫(알 포함)이
 //     날마다 배가 고파지고(하루 10), 과일(1개에 +10)과 독서(그날 발자국 5쪽 · 250자 이상이면 유지)로 돌봅니다.
 //     0이 되면 먹이를 찾아 떠나고 책을 읽어 다시 부릅니다 — 펫이 떠날 수 있는 기능이라 **켤 때만** 한 번 되묻습니다.
@@ -31,12 +35,16 @@
 // 쓰기는 반 문서의 설정 칸이고, 규칙이 값과 보관 안 된 반만 받습니다.
 // =============================================================
 import { Fragment, useId, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { setTeacherFeature, setTeacherReadingMapTheme } from "@/lib/store";
 import { teacherFeatureSettings } from "@/lib/reading";
 import { READING_MAP_THEMES, readingMapThemeSettings } from "@/lib/readingMapCatalog";
 import ConfirmModal from "./ConfirmModal";
 import PetRestSettings from "./PetRestSettings";
 import { IconGroup } from "./StatusIcons";
+
+// '열 친구 미리 보기'를 누를 때만 내려받습니다(책방 첫 화면에 싣지 않게)
+const PetPreviewModal = dynamic(() => import("./reading/PetPreview"), { ssr: false, loading: () => null });
 
 const byName = (a, b) => String(a.name || "").localeCompare(String(b.name || ""), "ko", { numeric: true });
 
@@ -71,6 +79,11 @@ const FEATURES = [
   { key: "petEnabled", label: "학생 펫", needs: ["readingEnabled"], needsText: "책나눔 성장 기능을 먼저 켜 주세요",
     hint: "학생마다 알을 하나씩 받아 독서 경험치로 키워요. 책나눔 · 리더보드 · 내 프로필에 보여요. 선생님은 펫이 없어요.",
     on: "학생 펫을 켰어요. 학생마다 알을 하나씩 받아요.", off: "학생 펫을 껐어요. 키우던 펫은 보관되고, 다시 켜면 그대로 이어져요." },
+  { key: "petPreviewEnabled", label: "펫 미리보기", needs: ["readingEnabled", "petEnabled"], needsText: "학생 펫을 먼저 켜 주세요",
+    hint: "열 가지 펫이 알에서 10단계까지 자라는 모습을 학생이 보고, 키울 펫을 직접 골라요(책나눔의 ‘나의 펫’). 이미 깨어난 펫도 바꿀 수 있고 단계 · 경험치는 그대로예요. 끄면 지금 고른 펫 그대로이고, 새로 받는 알은 다시 무작위예요.",
+    on: "펫 미리보기를 켰어요. 학생이 책나눔의 ‘나의 펫’에서 키울 펫을 골라요.", off: "펫 미리보기를 껐어요. 학생은 지금 고른 펫 그대로 키우고, 새로 받는 알은 다시 무작위예요.",
+    // 카드 안에 '열 친구 미리 보기' — 선생님도 학생과 같은 창을 봅니다(고르는 단추 없이 · 스위치와 상관없이)
+    peek: true },
   { key: "petFeedEnabled", label: "펫 먹이", needs: ["readingEnabled", "petEnabled"], needsText: "학생 펫을 먼저 켜 주세요",
     hint: "펫(알 포함)이 날마다 배가 고파져요(하루에 배부름 10). 과일 1개를 먹이면 +10, 그날 독서 발자국을 5쪽 · 250자 이상 남기면 줄지 않아요. 배부름이 0이 되면 펫이 먹이를 찾아 떠나고, 책을 읽으면 같은 펫이 돌아와요.",
     on: "펫 먹이를 켰어요. 오늘부터 펫이 날마다 배가 고파져요.", off: "펫 먹이를 껐어요. 꺼 둔 동안은 배고파지지 않고 떠난 펫도 곁에 보여요. 다시 켜면 끈 순간의 배부름에서 이어져요.",
@@ -98,7 +111,7 @@ const FEATURES = [
 // 카드 칸은 늘 두 칸 격자라 이 묶음만 카드가 두 줄로 섭니다.
 const GROUPS = [
   { key: "reading", title: "독서 기록", desc: "학생의 책꽂이와 책 정보", keys: ["readingEnabled", "bookSearchEnabled"] },
-  { key: "growth", title: "리더보드 · 꾸미기", desc: "반 친구와 함께 보는 성장 · 캐릭터와 펫", keys: ["rankingEnabled", "readingTopEnabled", "characterEnabled", "petEnabled"] },
+  { key: "growth", title: "리더보드 · 꾸미기", desc: "반 친구와 함께 보는 성장 · 캐릭터와 펫", keys: ["rankingEnabled", "readingTopEnabled", "characterEnabled", "petEnabled", "petPreviewEnabled"] },
   { key: "share", title: "함께 읽기", desc: "책 광장 · 함께 앉는 교실 · 나만의 아지트", keys: ["plazaEnabled", "classroomEnabled", "hideoutEnabled"] },
   { key: "reward", title: "교실 보상", desc: "과일 모으기와 이벤트 · 펫의 먹이", keys: ["fruitBasketEnabled", "petFeedEnabled"] },
 ];
@@ -112,6 +125,8 @@ export default function AdminSettingsPanel({ classes = [], onToast }) {
   const [error, setError] = useState("");
   // 켤 때 한 번 되묻는 스위치(책 광장 — FEATURES의 ask)의 되묻는 창
   const [asking, setAsking] = useState(null);
+  // '펫 미리보기' 카드의 '열 친구 미리 보기' — 선생님이 학생과 같은 창을 봄(고르는 단추 없음)
+  const [peek, setPeek] = useState(false);
 
   async function toggle(f, confirmed = false) {
     if (busy) return;
@@ -171,6 +186,7 @@ export default function AdminSettingsPanel({ classes = [], onToast }) {
                   <strong>{f.label}</strong>
                   <small id={`adm-hint-${f.key}`}>{f.hint}</small>
                   {st.mixed && <small className="adm-feature-mixed">반마다 다르게 켜져 있어요 — 누르면 모든 반을 같게 맞춰요.</small>}
+                  {f.peek && <button type="button" className="adm-feature-peek" onClick={() => setPeek(true)}>열 친구 미리 보기</button>}
                 </div>
                 <Switch on={ready && st.on} disabled={!ready || !!busy} busy={busy === f.key} describedBy={`adm-hint-${f.key}`}
                   label={f.label} onClick={() => toggle(f)} />
@@ -228,6 +244,7 @@ export default function AdminSettingsPanel({ classes = [], onToast }) {
         </div>
       )}
       <p className="adm-settings-foot">보관된 반은 바꿀 수 없어 빼고 적용해요. 새로 만드는 반도 지금 설정을 따라요.</p>
+      {peek && <PetPreviewModal mode="teacher" onClose={() => setPeek(false)} />}
       {asking && (
         <ConfirmModal
           icon={asking.ask.icon === "fruit" ? <span className="adm-ask-fruit" aria-hidden="true">🍊</span> : <IconGroup size={30} />}

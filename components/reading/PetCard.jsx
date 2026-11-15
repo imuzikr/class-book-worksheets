@@ -20,10 +20,17 @@
 // · 30 이하면 펫이 말풍선으로 배고프다고 말합니다. 0이 되면 먹이를 찾아 떠나고, 카드가 '다시 부르기'가 됩니다 —
 //   읽은 날마다 한 걸음 · 과일 2개로도 한 걸음, 다 채우면 **같은 펫**이 돌아와 폭죽이 한 번 터집니다.
 // · 알은 과일을 먹지 않습니다(책을 읽어 지킴).
+//
+// **펫 미리보기**(관리자 설정의 '펫 미리보기'를 켠 반 — preview · 선생님 요청)
+// · 카드 옆 '펫 미리보기'(먹이 주기 · 알 깨우기 · 다시 부르기가 서 있지 않을 때)와 자세히 보기의 칸이 미리보기 창
+//   (PetPreview.jsx)을 엽니다 — 열 친구가 알에서 10단계까지 자라는 모습을 보고 키울 펫을 고릅니다(chooseReadingPet).
+// · 알이면 깨어날 친구가 바뀌고 카드에 '고른 친구 · 쫑긋'이 섭니다(본인에게만 — 반 친구에게는 깨어날 때까지 '신비한 알').
+//   고른 종은 서버만 읽는 자리에 있어, 미리보기를 켠 반의 알이면 카드를 열 때 한 번 묻습니다(fetchMyReadingPet의 chosen).
+// · 깨어난 펫은 모습과 이름만 바뀝니다(단계 · 펫 경험치 · 배부름 그대로 — 프로필 구독으로 곧바로 새 모습).
 // =============================================================
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { callReadingPet, ensureReadingPet, feedReadingPet, fetchMyReadingPet, hatchReadingPet, subscribeMyReadingPet } from "@/lib/data/reading";
+import { callReadingPet, chooseReadingPet, ensureReadingPet, feedReadingPet, fetchMyReadingPet, hatchReadingPet, subscribeMyReadingPet } from "@/lib/data/reading";
 import { getExpForReadingLevel, kstToday } from "@/lib/reading";
 import { PET_HATCH_XP, PET_STAGES, petCheerKind, petProgress, petSpecies } from "@/lib/readingPet";
 import { CARE_DAY_DROP, CARE_FRUIT, CARE_MAX, CARE_READ_CHARS, CARE_READ_PAGES, CARE_RETURN, CARE_STEP_FRUIT, careStatus } from "@/lib/petCare";
@@ -31,8 +38,12 @@ import { iGa } from "@/lib/korean";
 import { backdropClose } from "@/lib/modal";
 import RewardCelebration from "@/components/RewardCelebration";
 import { flyFruits } from "@/components/fruitFly";
+import dynamic from "next/dynamic";
 import PetFigure from "./PetFigure";
 import "./pet.css";
+
+// 펫 미리보기 창은 누를 때만 내려받습니다(책방 · 분석 리포트의 첫 화면에 싣지 않게 — 펫 미리보기를 켠 반의 학생만 씀)
+const PetPreviewModal = dynamic(() => import("./PetPreview"), { ssr: false, loading: () => null });
 
 const number = (v) => Number(v || 0).toLocaleString("ko-KR");
 const seenKey = (uid) => `bookbom.pet.seen.v1:${encodeURIComponent(uid)}`;
@@ -115,7 +126,8 @@ function Steps({ steps }) {
 // 알림 줄이 같은 말('레벨 n 달성!')을 또 띄우지 않게 합니다.
 // feed — 그 반의 먹이 규칙(lib/readingPet.js의 petCareRules — 펫 먹이를 끈 반이면 on이 거짓) · fruits — 내가 가진 과일 수 ·
 // today — 서울 날짜(책나눔이 1분마다 다시 봄 — 자정을 넘기면 배부름이 따라 줄어듦).
-export default function PetCard({ classId, uid, growthXp, level = null, onLevelCheer = null, feed = null, fruits = 0, today = null }) {
+// preview — 관리자 설정의 '펫 미리보기'(lib/readingPet.js의 petPreviewOn) — 켠 반이면 키울 펫을 고르는 창을 엽니다.
+export default function PetCard({ classId, uid, growthXp, level = null, onLevelCheer = null, feed = null, fruits = 0, today = null, preview = false }) {
   const [state, setState] = useState({ loaded: false, mirror: null, fromCache: false, failed: false });
   const [open, setOpen] = useState(false);
   const [cheer, setCheer] = useState(null);
@@ -129,6 +141,12 @@ export default function PetCard({ classId, uid, growthXp, level = null, onLevelC
   const hatching = useRef(false);
   // 깨어나는 장면이 끝날 때까지 카드는 알 모습 그대로 — 창 뒤의 카드가 종을 먼저 알려 주지 않게
   const [frozen, setFrozen] = useState(null);
+  // 펫 미리보기 — 창 · 고르는 중 · 알이면 고른 친구(본인에게만 · 서버가 알려 줌) · 고른 뒤 한 줄
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [pickBusy, setPickBusy] = useState(false);
+  const [pickError, setPickError] = useState("");
+  const [chosen, setChosen] = useState(null);
+  const [notice, setNotice] = useState("");
 
   useEffect(() => {
     setState({ loaded: false, mirror: null, fromCache: false, failed: false });
@@ -147,6 +165,39 @@ export default function PetCard({ classId, uid, growthXp, level = null, onLevelC
   }, [needsEgg, classId, uid]);
 
   const progress = useMemo(() => (growthXp == null ? null : petProgress(state.mirror, growthXp)), [state.mirror, growthXp]);
+  // 미리보기를 켠 반의 알 — 학생이 고른 친구가 있으면 한 번 물어 둡니다(고르지 않은 알은 지금처럼 비밀 · null)
+  const eggKey = state.mirror && !state.mirror.species ? `${state.mirror.baseXp}:${state.mirror.assignedAt ?? ""}` : "";
+  useEffect(() => {
+    setChosen(null);
+    if (!preview || !eggKey || !classId) return undefined;
+    let live = true;
+    fetchMyReadingPet(classId).then((pet) => { if (live) setChosen(pet?.chosen ?? null); }).catch(() => {});
+    return () => { live = false; };
+  }, [preview, eggKey, classId]);
+  useEffect(() => {
+    if (!notice) return undefined;
+    const timer = setTimeout(() => setNotice(""), 6000);
+    return () => clearTimeout(timer);
+  }, [notice]);
+  // 펫 고르기 — 알이면 깨어날 친구, 깨어난 펫이면 모습과 이름(단계 · 경험치 그대로). 고르면 창을 닫고 한 줄로 알립니다.
+  async function choose(species) {
+    if (pickBusy) return;
+    setPickBusy(true);
+    setPickError("");
+    try {
+      const result = await chooseReadingPet(classId, species);
+      const sp = petSpecies(result?.chosen ?? species);
+      if (result?.pet && !result.pet.hatched) setChosen(sp?.key ?? null);
+      setPreviewOpen(false);
+      if (sp && result?.event) {
+        setNotice(result.pet?.hatched ? `${iGa(sp.name)} 나의 펫이 되었어요! 단계와 경험치는 그대로예요.` : `알에서 ${iGa(sp.name)} 깨어날 거예요!`);
+      }
+    } catch (e) {
+      setPickError(e?.message || "펫을 고르지 못했어요. 잠시 뒤 다시 해 볼까요?");
+    } finally {
+      setPickBusy(false);
+    }
+  }
   // 펫 먹이 — 지금 배부름 · 떠났는가(펫 먹이를 끈 반이면 null — 지금까지처럼 늘 곁에 있음)
   const day = today || kstToday();
   const stage = progress?.stage ?? 1;
@@ -241,11 +292,18 @@ export default function PetCard({ classId, uid, growthXp, level = null, onLevelC
   const say = petSay(shownCare, shown.hatched);
   const gone = !!shownCare?.away;
   const who = petCallName(shown);
+  // 미리보기를 켠 반에서 학생이 고른 알의 친구(본인에게만) — 깨어나는 장면 동안에는 감춤
+  const chosenSp = preview && !frozen && !shown.hatched ? petSpecies(chosen) : null;
+  // 카드 옆 '펫 미리보기' — 먹이 주기 · 알 깨우기 · 다시 부르기가 서 있으면 자세히 보기의 칸으로 엽니다(카드가 넘치지 않게)
+  const pickHere = preview && !frozen && !gone && !shown.ready && !(shownCare?.hungry && shown.hatched);
+  const openPreview = () => { setPickError(""); setPreviewOpen(true); };
+  // 카드와 그 아래 한 줄(오류 · 고른 뒤 알림)을 한 기둥으로 — 책나눔 머리말의 줄(flex)에서 카드 옆이 아니라 아래에 섭니다
   return <>
+    <div className="reading-pet-wrap">
     <div className={`reading-pet${shown.ready && !gone ? " is-ready" : ""}${gone ? " is-away" : ""}${say ? " is-hungry" : ""}`}>
       {say && <span className="pet-say" role="status">{say}</span>}
       <button type="button" className="reading-pet-open" onClick={() => setOpen(true)}
-        aria-label={`나의 펫 — ${petTitle(shown)}, ${gone ? `먹이를 찾아 떠났어요. ${petCareLine(shownCare, shown.hatched)}` : `${petStatusLine(shown)}${shownCare ? `, ${petCareLine(shownCare, shown.hatched)}` : ""}`}. 자세히 보기`}>
+        aria-label={`나의 펫 — ${petTitle(shown)}${chosenSp ? `(고른 친구 ${chosenSp.name})` : ""}, ${gone ? `먹이를 찾아 떠났어요. ${petCareLine(shownCare, shown.hatched)}` : `${petStatusLine(shown)}${shownCare ? `, ${petCareLine(shownCare, shown.hatched)}` : ""}`}. 자세히 보기`}>
         <PetFigure species={shown.species} stage={shown.stage} ready={shown.ready && !gone} size={60} className={gone ? "is-away" : ""} />
         <span className="reading-pet-text">
           <small>나의 펫</small>
@@ -255,6 +313,7 @@ export default function PetCard({ classId, uid, growthXp, level = null, onLevelC
             <span className="reading-pet-care"><Steps steps={shownCare.steps} /><b>{shownCare.steps.done} / {shownCare.steps.need}걸음</b></span>
           </> : <>
             <em>{petStatusLine(shown)}</em>
+            {chosenSp && <em className="reading-pet-chosen">고른 친구 · {chosenSp.name}</em>}
             <Bar percent={shown.percent} label={shown.hatched ? "다음 단계까지" : "알이 깨어나기까지"} />
             {shownCare && <span className="reading-pet-care"><Fullness care={shownCare} /><b>{petCareLine(shownCare, shown.hatched)}</b></span>}
           </>}
@@ -263,10 +322,17 @@ export default function PetCard({ classId, uid, growthXp, level = null, onLevelC
       {shown.ready && !gone && <button type="button" className="btn-primary reading-pet-hatch" disabled={busy || !!frozen} onClick={hatch}>{busy || frozen ? "깨우는 중…" : "알 깨우기"}</button>}
       {gone && <button type="button" className="btn-primary reading-pet-hatch" onClick={() => setOpen(true)}>다시 부르기</button>}
       {!gone && shownCare?.hungry && shown.hatched && !shown.ready && <button type="button" className="btn-primary reading-pet-hatch" onClick={() => setOpen(true)}>먹이 주기</button>}
+      {pickHere && <button type="button" className="btn-ghost reading-pet-pick" onClick={openPreview}>펫 미리보기</button>}
     </div>
     {error && !open && <p className="reading-pet-error" role="alert">{error}</p>}
+    {notice && <p className="reading-pet-notice" role="status">{notice}</p>}
+    </div>
     {open && <PetDetailModal progress={shown} busy={busy} error={error} onHatch={hatch} onClose={() => { setOpen(false); setCareError(""); }}
-      care={shownCare} fruits={fruits} careBusy={careBusy} careError={careError} onFeed={(count, fly) => careAct("feed", count, fly)} onCall={(fly) => careAct("call", 0, fly)} />}
+      care={shownCare} fruits={fruits} careBusy={careBusy} careError={careError} onFeed={(count, fly) => careAct("feed", count, fly)} onCall={(fly) => careAct("call", 0, fly)}
+      chosen={chosenSp?.key ?? null} onPreview={preview && !frozen ? openPreview : null} />}
+    {previewOpen && preview && <PetPreviewModal
+      current={{ species: shown.hatched ? shown.species : chosenSp?.key ?? null, hatched: shown.hatched, stage: shown.stage, away: gone }}
+      busy={pickBusy} error={pickError} onChoose={choose} onClose={() => { setPreviewOpen(false); setPickError(""); }} />}
     {cheer && <PetCelebration key={cheer.id} kind={cheer.kind} progress={cheer.progress} level={cheer.level} onDone={() => { setCheer(null); setFrozen(null); }} />}
   </>;
 }
@@ -319,12 +385,14 @@ function PetCareSection({ progress, care, fruits, busy, error, onFeed, onCall, f
 
 /** 펫 자세히 보기 — 큰 그림 · 소개 · 열 단계 · 다음 단계까지. */
 // care — 펫 먹이의 지금 배부름(없으면 그 칸을 그리지 않음 · 펫 먹이를 끈 반) · fruits · onFeed · onCall은 그 칸의 것.
+// chosen — 펫 미리보기를 켠 반에서 학생이 고른 알의 친구(본인에게만) · onPreview — 미리보기 창을 여는 칸(켠 반에서만).
 export function PetDetailModal({ progress, busy = false, error = "", onHatch = null, onClose, ownerLabel = "나의 펫",
-  care = null, fruits = 0, careBusy = false, careError = "", onFeed = null, onCall = null }) {
+  care = null, fruits = 0, careBusy = false, careError = "", onFeed = null, onCall = null, chosen = null, onPreview = null }) {
   const titleId = useId();
   const figureRef = useRef(null);
   const gone = !!care?.away;
   const sp = progress.hatched ? petSpecies(progress.species) : null;
+  const picked = !progress.hatched ? petSpecies(chosen) : null;
   const note = progress.complete ? "독서 여행을 완성했어요! 가장 든든한 길동무가 되었어요."
     : progress.ready ? "알이 깨어나려 해요! 아래 단추를 눌러 깨워 주세요."
       : progress.hatched ? `다음 단계까지 ${number(progress.toNext)} EXP`
@@ -339,7 +407,7 @@ export function PetDetailModal({ progress, busy = false, error = "", onHatch = n
           <div>
             <p className="pet-modal-eyebrow">{ownerLabel}</p>
             <h3 id={titleId}>{sp ? sp.name : "신비한 알"}{sp && <small>{sp.animal}</small>}</h3>
-            <p>{sp ? sp.intro : "어떤 친구가 들어 있을까요? 책을 읽으면 알이 조금씩 따뜻해져요."}</p>
+            <p>{sp ? sp.intro : picked ? `고른 친구 ${picked.name} · ${picked.animal}의 알이에요. 책을 읽으면 알이 조금씩 따뜻해지고, 깨어나면 ${iGa(picked.name)} 나와요.` : "어떤 친구가 들어 있을까요? 책을 읽으면 알이 조금씩 따뜻해져요."}</p>
           </div>
         </div>
         {care && <PetCareSection progress={progress} care={care} fruits={fruits} busy={careBusy} error={careError} onFeed={onFeed} onCall={onCall} figureRef={figureRef} />}
@@ -358,6 +426,10 @@ export function PetDetailModal({ progress, busy = false, error = "", onHatch = n
           })}
         </ol>
         <p className="pet-modal-note">펫은 알을 받은 뒤부터 <b>독서로 얻은 경험치</b>로 자라요. 깨어난 펫은 다시 알로 돌아가지 않아요.</p>
+        {onPreview && <div className="pet-modal-preview">
+          <p>열 친구가 알에서 10단계까지 자라는 모습을 보고 키울 펫을 골라요.{progress.hatched ? " 바꿔도 단계와 경험치는 그대로예요." : ""}</p>
+          <button type="button" className="btn-ghost" onClick={onPreview}>펫 미리보기</button>
+        </div>}
         {error && <p className="form-error" role="alert">{error}</p>}
         {onHatch && progress.ready && !gone && <div className="pet-modal-actions">
           <button type="button" className="btn-primary" disabled={busy} onClick={onHatch}>{busy ? "깨우는 중…" : "알 깨우기"}</button>

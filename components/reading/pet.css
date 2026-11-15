@@ -178,3 +178,65 @@
 .pet-read-note { margin:0; padding:9px 12px; border-radius:10px; background:#fff8ee; border:1px solid #f3d9b8; color:#7a4a1c; font-size:12.5px; line-height:1.5; word-break:keep-all; }
 .pet-read-note b { font-variant-numeric:tabular-nums; }
 .pet-read-note.is-ok { background:#eef7ef; border-color:#bfe0c6; color:#2f6b3f; }
+/* ── 펫 미리보기(PetPreview.jsx — 관리자 설정의 '펫 미리보기') ──
+   위 열 종(같은 단계로 나란히) · 가운데 고른 종의 큰 그림 · 아래 그 종의 열 단계. 자세히 보기 창보다 넓습니다.
+   이어 놓인 칸은 같은 크기(격자 repeat(n, minmax(0, 1fr))) — 종 다섯 칸 두 줄, 단계 열 칸 한 줄(좁으면 다섯 칸 두 줄). */
+.modal.pet-modal.petpv { width:min(840px, 100%); max-width:840px; gap:14px; }
+.petpv-head { padding-right:28px; }
+.petpv-head h3 { margin:2px 0 4px; font-size:20px; color:var(--dark); }
+.petpv-head p { margin:0; font-size:13px; color:var(--text-sub); line-height:1.55; word-break:keep-all; }
+.petpv-species { display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:6px; }
+.petpv-kind { position:relative; display:flex; flex-direction:column; align-items:center; gap:2px; min-width:0; padding:8px 4px 7px; border:1px solid var(--border); border-radius:12px; background:#fff; color:inherit; font:inherit; cursor:pointer; }
+.petpv-kind:hover { border-color:#e3b48f; background:#fffaf4; }
+.petpv-kind strong { font-size:13px; color:var(--dark); line-height:1.25; }
+.petpv-kind small { font-size:11px; color:var(--text-sub); line-height:1.25; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+.petpv-kind.is-on { border-color:#e3905c; background:#fff3e8; box-shadow:0 0 0 2px #f6d2b6 inset; }
+.petpv-kind.is-mine { border-style:dashed; }
+.petpv-kind.is-mine.is-on { border-style:solid; }
+.petpv-mine { position:absolute; top:4px; right:4px; padding:1px 6px; border-radius:999px; background:#e3905c; color:#fff; font-size:10px; font-style:normal; font-weight:700; line-height:1.5; }
+.petpv-hero { display:flex; align-items:center; gap:18px; padding:12px 14px; border-radius:14px; background:#fbf6ec; }
+.petpv-figure { display:inline-flex; flex-shrink:0; }
+.petpv-hero h4 { margin:2px 0 6px; font-size:21px; color:var(--dark); display:flex; align-items:baseline; gap:8px; }
+.petpv-hero h4 small { font-size:13px; font-weight:600; color:var(--text-sub); }
+.petpv-hero p { margin:0; color:var(--text-sub); font-size:13.5px; line-height:1.6; word-break:keep-all; }
+.petpv-hero .petpv-xp { margin-top:6px; font-size:12.5px; color:var(--text-faint); font-variant-numeric:tabular-nums; }
+.petpv-line { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(10, minmax(0, 1fr)); gap:5px; }
+.petpv-line li { min-width:0; }
+.petpv-line button { width:100%; height:100%; display:flex; flex-direction:column; align-items:center; gap:2px; padding:6px 2px; border:1px solid var(--border); border-radius:10px; background:#fff; color:inherit; font:inherit; cursor:pointer; text-align:center; }
+.petpv-line button:hover { border-color:#e3b48f; background:#fffaf4; }
+.petpv-line b { width:19px; height:19px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:10.5px; background:#eee9df; color:var(--text-sub); }
+.petpv-line span { font-size:10.5px; color:var(--text-sub); line-height:1.25; word-break:keep-all; }
+.petpv-line small { font-size:10px; color:var(--text-faint); font-variant-numeric:tabular-nums; }
+.petpv-line button.is-on { border-color:#e3905c; background:#fff3e8; }
+.petpv-line button.is-on b { background:#e3905c; color:#fff; }
+.petpv-line button.is-on span { color:var(--dark); font-weight:700; }
+.petpv-line button.is-now { box-shadow:0 0 0 2px #bfe0c6 inset; }
+/* 아래 줄(안내 · 고르기)은 창 아래에 붙어 있습니다(sticky) — 창이 화면보다 길어 안에서 구르는 낮은 화면(1280×720 · 폰)에서도
+   '○○ 키우기'가 늘 보이게. 창의 안쪽 여백(.modal — 28px, 768px 아래 16px · 아래 36px, 480px 아래 14px · 아래 32px)만큼 양옆 · 아래로
+   넓혀 바탕을 덮고, 붙는 자리도 그 아래 여백만큼 내립니다(bottom 음수) — bottom 0이면 여백만큼 위에 붙어 그 틈으로 뒤의 단계 줄이
+   비쳤습니다(실측 1280×720). */
+.petpv-foot { position:sticky; bottom:-28px; z-index:1; display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px;
+  margin:0 -28px -28px; padding:12px 28px 20px; background:#fff; border-top:1px solid var(--border); }
+.petpv-note { flex:1 1 260px; margin:0; font-size:12.5px; color:var(--text-sub); line-height:1.55; word-break:keep-all; }
+.petpv-foot .form-error { flex-basis:100%; margin:0; }
+.petpv-choose { min-width:180px; height:42px; padding:0 18px; display:inline-flex; align-items:center; justify-content:center; font-size:14px; white-space:nowrap; }
+@media (max-width:768px) { .petpv-foot { bottom:-36px; margin:0 -16px -36px; padding:12px 16px 24px; } }
+@media (max-width:720px) {
+  .petpv-line { grid-template-columns:repeat(5, minmax(0, 1fr)); }
+}
+@media (max-width:480px) { .petpv-foot { bottom:-32px; margin:0 -14px -32px; padding:12px 14px 22px; } }
+@media (max-width:560px) {
+  .petpv-hero { flex-direction:column; text-align:center; }
+  .petpv-hero h4 { justify-content:center; }
+  .petpv-kind { padding:6px 2px 5px; }
+  .petpv-kind small { display:none; }
+  .petpv-choose { flex:1 1 100%; }
+}
+/* 책나눔 '나의 펫' 카드 옆의 '펫 고르기'(펫 미리보기를 켠 반) · 자세히 보기의 미리보기 칸 */
+.reading-pet-pick { padding:7px 11px; font-size:12.5px; white-space:nowrap; }
+.pet-modal-preview { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:11px 14px; border-radius:12px; border:1px dashed #e3b48f; background:#fffaf4; }
+.pet-modal-preview p { margin:0; flex:1 1 220px; font-size:12.5px; color:var(--text-sub); line-height:1.5; word-break:keep-all; }
+.pet-modal-preview button { height:36px; padding:0 14px; display:inline-flex; align-items:center; justify-content:center; font-size:13px; white-space:nowrap; }
+.reading-pet-text .reading-pet-chosen { color:#9a5a33; }
+.reading-pet-wrap { display:flex; flex-direction:column; min-width:0; }
+.reading-pet-notice { margin:8px 0 0; color:#2f6b3f; font-size:12.5px; font-weight:600; text-align:right; word-break:keep-all; }
