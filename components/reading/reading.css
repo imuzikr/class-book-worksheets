@@ -370,6 +370,11 @@
 .reading-teacher-chip.is-low { background: #fde3df; color: #b3392f; }
 .reading-teacher-chip.is-away { background: #ebe8e1; color: #6f675c; }
 /* 고른 학생의 '○○의 독서 여정' 머리 — 댓글 이력 단추(선생님 요청 · components/reading/PlazaCommentHistory.jsx) */
+/* 이력 단추 둘(댓글 이력 · 광장 대화) — 한 줄에 같은 크기, 좁으면 한 줄에 하나 */
+/* (이어 놓인 단추는 같은 크기 — inline-grid의 1fr 두 칸은 글자가 긴 쪽에 맞춰 함께 넓어짐) */
+.reading-teacher-tools { display: inline-grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 10px; max-width: 100%; }
+.reading-teacher-tools .reading-teacher-history { margin-top: 0; justify-content: center; }
+@media (max-width: 560px) { .reading-teacher-tools { grid-template-columns: minmax(0, 1fr); } }
 .reading-teacher-history { display: inline-flex; align-items: center; gap: 7px; margin-top: 10px; padding: 7px 14px 7px 11px; border: 1px solid #cfdccf; border-radius: 999px; background: #fff; color: #2c4c3f; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
 .reading-teacher-history:hover { border-color: #9fbfa6; background: #f6faf3; }
 .reading-teacher-history:focus-visible { outline: 3px solid #478fbd; outline-offset: 2px; }

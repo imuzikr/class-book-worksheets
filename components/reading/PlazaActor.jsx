@@ -20,13 +20,20 @@
 //   무대는 앉은 캐릭터를 seat.sit에 두고 "up"의 정지 그림을 보이게 합니다.
 // checked — 오늘 출석했는가(교실에서 · 선생님 화면의 학생들과 학생 화면의 나). 이름표 앞에 초록 ✓ 동그라미가 붙습니다
 //   (이름표의 바탕색은 그대로 — 내 것 살구 · 친구 남색 · 선생님 초록).
+// 광장 대화(READING_GROWTH.md의 '광장 대화') —
+//   ring  고른 친구의 발밑 선택 타원(몸 뒤 · 캐릭터 크기에 맞춤)
+//   badge 머리 위 표시: "talking"(대화 중) · "group"(셋 이상) · "waiting"(내 요청이 대답을 기다림 — 내 머리 위) ·
+//         "accepted" · "declined" · "expired"(내 요청의 결과 — 상대 머리 위에 잠깐). 이름표 위 5px, 앉아 있으면 머리 위.
+//         내용은 없습니다(무엇을 이야기하는지는 대화에 든 사람의 대화창에만).
 // =============================================================
 import { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { characterImage } from "@/lib/readingCharacterCatalog";
 import { CLASSROOM_DESK, CLASSROOM_SIT_HIDE, PLAZA_BODY, PLAZA_H, PLAZA_W, plazaLayer } from "@/lib/readingPlazaMap";
 import { PLAZA_EGG_SIZE, SPRITE_BODY, SPRITE_CELL, SPRITE_FOOT, plazaCharacterSheet, plazaCharacterSize, plazaPetSheet, plazaPetSize } from "@/lib/readingPlazaSprites";
+import { TALK_ART } from "@/lib/readingPlazaTalk";
 import PetFigure from "./PetFigure";
 import PlazaSprite from "./PlazaSprite";
+import { TalkMarker } from "./PlazaTalk";
 
 const pct = (value, whole) => `${(value / whole * 100).toFixed(3)}%`;
 // 겹치는 차례 — 발이 아래(화면에서)일수록 앞. 교실의 책상·의자도 같은 셈으로 줄마다 섞여 그려집니다(plazaLayer)
@@ -35,7 +42,12 @@ const layer = (y) => String(plazaLayer(y));
 // 칸 크기에 대한 비율이라 화면 배율과 상관없이 같은 자리가 잘립니다.
 const SIT_CLIP = `inset(0 0 ${((SPRITE_CELL - SPRITE_FOOT.y + CLASSROOM_SIT_HIDE / (PLAZA_BODY / SPRITE_BODY)) / SPRITE_CELL * 100).toFixed(2)}% 0)`;
 
-const PlazaActor = forwardRef(function PlazaActor({ character, pet = null, name, scale, at, petAt = null, me = false, teacher = false, reading = false, seat = null, checked = false }, ref) {
+const BADGE_ART = Object.freeze({
+  talking: TALK_ART.talking, group: TALK_ART.group, waiting: TALK_ART.waiting,
+  accepted: TALK_ART.accepted, declined: TALK_ART.declined, expired: TALK_ART.expired,
+});
+
+const PlazaActor = forwardRef(function PlazaActor({ character, pet = null, name, scale, at, petAt = null, me = false, teacher = false, reading = false, seat = null, checked = false, ring = false, badge = null }, ref) {
   const avatarRef = useRef(null);
   const petRef = useRef(null);
   const charSprite = useRef(null);
@@ -90,6 +102,8 @@ const PlazaActor = forwardRef(function PlazaActor({ character, pet = null, name,
       <div ref={avatarRef} className={`plaza-avatar${me ? " is-me" : ""}${teacher ? " is-teacher" : ""}${reading ? " is-reading" : ""}${seat ? " is-seated" : ""}${checked ? " is-checked" : ""}`} aria-hidden="true"
         style={{ left: pct(at.x, PLAZA_W), top: pct(at.y, PLAZA_H), zIndex: layer(at.y) }}>
         {!seat && <span className="plaza-avatar-shadow" style={{ width: body.body * 0.5, height: body.body * 0.15 }} />}
+        {/* 고른 친구 — 발밑의 선택 타원(몸보다 먼저 그려 몸 뒤에 깔림) */}
+        {ring && <TalkMarker art={TALK_ART.ring} className="plaza-talk-ring" scale={(body.body * 0.95) / TALK_ART.ring.w} />}
         {sheet && !spriteMissing
           ? <PlazaSprite ref={charSprite} src={sheet} size={body.cell} style={{ left: -body.footX, top: -body.footY, clipPath: seat ? SIT_CLIP : undefined }} onMissing={() => setSpriteMissing(true)} />
           : <img className="plaza-avatar-img" src={characterImage(character)} alt="" draggable={false}
@@ -110,6 +124,13 @@ const PlazaActor = forwardRef(function PlazaActor({ character, pet = null, name,
           {checked && <i className="plaza-avatar-check">✓</i>}
           {name}
         </span>
+        {/* 머리 위 — 대화 중 말풍선 · 요청의 결과(꼬리 끝이 이름표 위 5px, 앉아 있으면 머리 위) */}
+        {BADGE_ART[badge] && (
+          <span className={`plaza-talk-over${seat ? " is-seated" : ""}${badge === "talking" || badge === "group" ? " is-talking" : ""}`}
+            style={{ "--talk-lift": `${Math.round(body.body) + (seat ? 0 : 5)}px` }}>
+            <TalkMarker key={badge} art={BADGE_ART[badge]} />
+          </span>
+        )}
       </div>
     </>
   );
