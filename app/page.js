@@ -3,7 +3,8 @@
 // =============================================================
 // 메인 랜딩 페이지(대문) — 사진을 겹쳐 놓은 콜라주(선생님 요청 · 2026년 11월, 한때 화면 4분할)
 //   - 상단 바(로고 · 로그인 · 회원가입 → 모달)
-//   - 왼쪽 글: 머리 제목 · 소개 한 줄 · '생각 적어보기'(회원가입 창) · 가입 안내 한 줄
+//   - 왼쪽 글: 꼬리표 · 머리 제목 · 소개 한 줄(가입 · 로그인은 상단 바의 두 단추 — 한때 '생각 적어보기' 단추와
+//     가입 안내 한 줄이 더 있었는데 선생님 요청으로 걷었습니다)
 //   - 오른쪽 무대(.lp-stage): 함께 책 읽는 일러스트(public/landing-reading.webp)와 체험반에서 찍은
 //     책 광장 · 교실 · 개인 아지트의 장면을 사진처럼 크기 · 기울기를 달리해 겹쳐 놓고, 앱의 포털 그림 둘이
 //     세 공간을 잇습니다(목록 lib/landingScenes.js · 그림 public/landing/ — 만들기
@@ -248,7 +249,7 @@ export default function LandingPage() {
       </header>
 
       <section className="lp-hero" ref={heroRef} aria-labelledby="landing-title">
-        {/* ── 왼쪽 글: 제목 · 소개 · '생각 적어보기'(회원가입 창) · 가입 안내 ── */}
+        {/* ── 왼쪽 글: 꼬리표 · 제목 · 소개 ── */}
         <div className="lp-copy">
           <p className="lp-eyebrow">우리 반 독서 공간</p>
           <h1 id="landing-title" className="lp-title">
@@ -257,12 +258,6 @@ export default function LandingPage() {
           <p className="lp-lead">
             열한 가지 독서 활동으로 생각을 나누고, 책 광장 · 교실 · 나만의 아지트에서 친구들과 함께 읽어요.
           </p>
-          <div className="lp-cta-row">
-            <button type="button" className="lp-cta" onClick={() => switchMode("signup")}>
-              생각 적어보기 <span className="lp-cta-arrow" aria-hidden="true">→</span>
-            </button>
-          </div>
-          <p className="lp-note">구글 계정 하나로 가입해요. 학생은 선생님이 알려 준 참여 코드로 우리 반에 들어가요.</p>
         </div>
 
         {/* ── 오른쪽 무대: 사진 넷(일러스트 · 책 광장 · 교실 · 개인 아지트)과 포털 둘 — 누르는 곳은 없습니다 ── */}
