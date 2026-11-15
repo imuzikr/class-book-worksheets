@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   HIDEOUT_DEFAULT_LAYOUT, HIDEOUT_ITEMS, HIDEOUT_OCCUPANTS, HIDEOUT_SCENE, HIDEOUT_SLOTS,
-  hideoutSceneProps, isHideoutItemUnlocked, normalizeHideoutRoom,
+  hideoutPlaqueLabel, hideoutSceneProps, isHideoutItemUnlocked, normalizeHideoutRoom,
 } from "@/lib/readingHideout";
 import {
   HIDEOUT_RETURN_PORTAL, createHideoutWalkMap, hideoutAtReturnPortal,
@@ -295,7 +295,14 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
       {props.map((prop) => <img key={prop.id} src={prop.src} className={`hideout-prop${prop.contactShadow ? " is-grounded" : ""}`}
         data-hideout-slot={prop.category || prop.slot} data-hideout-item={prop.itemId || prop.id} alt="" draggable={false}
         style={{ ...place(prop.x, prop.y, prop.width), zIndex: prop.z }} />)}
-      {props.filter((prop) => prop.category === "door-plaque").map((prop) => <span key={`${prop.id}-label`} className="hideout-plaque-label" style={{ left: `${prop.x / HIDEOUT_SCENE.width * 100}%`, top: `${(prop.y - prop.height * .46) / HIDEOUT_SCENE.height * 100}%` }}>{myName}의 아지트</span>)}
+      {/* 문패 글자는 문패의 크림색 칸 안에만 — 크기는 장면 단위(그림과 함께 커지고 작아짐), 한 줄 · 두 줄 가운데 큰 쪽(hideoutPlaqueLabel) */}
+      {props.filter((prop) => prop.category === "door-plaque").map((prop) => {
+        const label = hideoutPlaqueLabel(prop, myName);
+        return <span key={`${prop.id}-label`} className="hideout-plaque-label" style={{
+          left: `${label.x / HIDEOUT_SCENE.width * 100}%`, top: `${label.y / HIDEOUT_SCENE.height * 100}%`,
+          width: `${label.width / HIDEOUT_SCENE.width * 100}%`, fontSize: `calc(var(--hideout-unit, 1px) * ${label.fontSize})`,
+        }}>{label.lines.map((line) => <span key={line}>{line}</span>)}</span>;
+      })}
       {/* 그림 상자와 누르는 단추(보이는 포털 크기 — portal.hit)를 따로 둡니다: 단추가 그림 상자만 하면 포털 옆의 빈 바닥을 눌러도 포털로 걸어갑니다 */}
       {onExit && !readOnly && <div className="hideout-return-portal-art" aria-hidden="true" style={{ ...place(portal.x, portal.y, portal.width), aspectRatio: `${portal.width}/${portal.height}` }}>
         <img src={portal.src} alt="" draggable={false} /><img className="hideout-portal-swirl" src={portal.swirl} alt="" draggable={false} />

@@ -7,6 +7,7 @@ import path from "node:path";
 import sharp from "sharp";
 import { CLASSROOM_CLOCK, CLASSROOM_DESK, CLASSROOM_RUG, CLASSROOM_SEATS, CLASSROOM_SIT_HIDE, CLASSROOM_ROOM, PORTAL_ART } from "../../lib/readingPlazaMap.js";
 import { HIDEOUT_RETURN_PORTAL } from "../../lib/readingHideoutMap.js";
+import { HIDEOUT_DEFAULT_LAYOUT, HIDEOUT_ITEMS, HIDEOUT_PLAQUE_FONT, HIDEOUT_PLAQUE_PANELS, HIDEOUT_TABLETOP, HIDEOUT_THEMES, hideoutSceneProps } from "../../lib/readingHideout.js";
 
 const file = (src) => path.join(path.resolve("public"), src.replace(/^\//, ""));
 // 그림의 점 가운데 조건에 맞는 것의 상자 [x0, y0, x1, y1](그림 px)
@@ -122,4 +123,112 @@ test("교실 벽시계 — 배경의 빈 시계판(크림)이 CLASSROOM_CLOCK �
     }
   }
   assert.equal(blobs, 13, "점 12개 + 바늘과 축 하나");
+});
+
+// ── 아지트 책상 위 소품 · 문패 (선생님 신고 · 2026년 11월) ──────────────────────────────
+// 그림의 점 하나(장면 좌표 → 그 그림의 점) — 그림 상자는 바닥 가운데(x, y) · 폭 width · 높이 height
+const rawCache = new Map();
+async function raw(src) {
+  if (!rawCache.has(src)) rawCache.set(src, await sharp(file(src)).ensureAlpha().raw().toBuffer({ resolveWithObject: true }));
+  return rawCache.get(src);
+}
+async function scenePixel(prop, sx, sy) {
+  const { data, info } = await raw(prop.src);
+  const ix = Math.floor((sx - (prop.x - prop.width / 2)) / prop.width * info.width);
+  const iy = Math.floor((sy - (prop.y - prop.height)) / prop.height * info.height);
+  if (ix < 0 || iy < 0 || ix >= info.width || iy >= info.height) return [0, 0, 0, 0];
+  const i = (iy * info.width + ix) * 4;
+  return [data[i], data[i + 1], data[i + 2], data[i + 3]];
+}
+// 소품의 보이는 상자(장면 좌표) — 그림에서 불투명한 점의 상자를 그 소품 크기로
+async function visibleBox(prop) {
+  const { b, w, h } = await box(prop.src, opaque);
+  const left = prop.x - prop.width / 2, top = prop.y - prop.height;
+  return [left + b[0] / w * prop.width, top + b[1] / h * prop.height, left + b[2] / w * prop.width, top + b[3] / h * prop.height];
+}
+const area = (r) => Math.max(0, r[2] - r[0]) * Math.max(0, r[3] - r[1]);
+const meet = (a, b) => area([Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.min(a[2], b[2]), Math.min(a[3], b[3])]);
+// 테마 책상 넷의 윗면에 그려진 책(장면 좌표 — 책상 폭 288 · 바닥 (215, 790)에서 잰 상자). 그림이 바뀌었는지는 아래에서 함께 봅니다.
+const DRAWN_BOOK = {
+  "desk-forest": [133, 585, 205, 657], "desk-starlight": [133, 585, 205, 656],
+  "desk-coastal": [135, 586, 205, 657], "desk-explorer": [137, 602, 199, 666],
+};
+const TABLE_SLOTS = ["bookstand", "pencil-caddy", "desk-calendar"];
+
+test("아지트 책상 위 소품 — 바닥이 그 책상의 윗면 위, 그려진 책을 가리지 않고, 소품끼리 가리지 않는다", async () => {
+  const desks = HIDEOUT_ITEMS.filter((item) => item.slot === "desk");
+  assert.equal(desks.length, 5, "기본 + 테마 넷");
+  for (const desk of desks) {
+    assert.ok(HIDEOUT_TABLETOP[desk.id], `${desk.id}의 책상 위 자리가 있어야 합니다`);
+    for (const theme of HIDEOUT_THEMES) {
+      const layout = { ...HIDEOUT_DEFAULT_LAYOUT, desk: desk.id };
+      for (const slot of TABLE_SLOTS) layout[slot] = `${slot}-${theme.id}`;
+      const props = hideoutSceneProps(layout);
+      const deskProp = props.find((p) => p.category === "desk");
+      const items = props.filter((p) => TABLE_SLOTS.includes(p.category));
+      assert.equal(items.length, 3);
+      const boxes = [];
+      for (const item of items) {
+        const where = `${desk.id} · ${item.itemId}`;
+        // 바닥 양 끝(3px 안쪽)과 가운데가 책상 그림의 밝은 윗면 위 — 빈 곳(삐져나옴) · 검은 테두리(가장자리에 걸림)가 아님
+        for (const sx of [item.x - item.width / 2 + 3, item.x, item.x + item.width / 2 - 3]) {
+          const [r, g, b, a] = await scenePixel(deskProp, sx, item.y - 1);
+          assert.ok(a > 200 && r + g + b > 300, `${where} — 바닥 (${sx.toFixed(1)}, ${item.y - 1})이 책상 윗면 밖이거나 테두리 위(${[r, g, b, a]})`);
+          const book = DRAWN_BOOK[desk.id];
+          if (book) assert.ok(!(sx >= book[0] && sx <= book[2] && item.y - 1 >= book[1] && item.y - 1 <= book[3]), `${where} — 그려진 책 위에 섰습니다`);
+        }
+        boxes.push({ item, box: await visibleBox(item) });
+      }
+      // 소품끼리 — 겹치는 넓이가 작은 쪽의 15% 이하
+      for (let i = 0; i < boxes.length; i += 1) {
+        for (let j = i + 1; j < boxes.length; j += 1) {
+          const share = meet(boxes[i].box, boxes[j].box) / Math.min(area(boxes[i].box), area(boxes[j].box));
+          assert.ok(share <= 0.15, `${desk.id} · ${boxes[i].item.category} · ${boxes[j].item.category}가 서로 ${(share * 100).toFixed(0)}% 가립니다`);
+        }
+      }
+      const book = DRAWN_BOOK[desk.id];
+      if (!book) continue;
+      // 그려진 책 — 소품이 가리는 넓이가 책의 15% 이하이고, 책 가운데(잎 · 별 · 나침반 · 조개)는 가리지 않음
+      const hidden = boxes.reduce((sum, entry) => sum + meet(entry.box, book), 0) / area(book);
+      assert.ok(hidden <= 0.15, `${desk.id} — 그려진 책의 ${(hidden * 100).toFixed(0)}%를 가립니다`);
+      const [cx, cy] = [(book[0] + book[2]) / 2, (book[1] + book[3]) / 2];
+      for (const { item, box: r } of boxes) assert.ok(!(cx >= r[0] && cx <= r[2] && cy >= r[1] && cy <= r[3]), `${desk.id} · ${item.category}가 책 가운데를 가립니다`);
+    }
+  }
+  // 재어 둔 '그려진 책' 상자가 그림과 맞는가 — 상자 안의 점 대부분이 나무색(주황)이 아님. 책상 그림이 바뀌면 여기서 걸립니다
+  // (맨 나무 위라면 거의 모두 나무색. 탐험 책은 표지 · 걸쇠가 나무와 비슷한 갈색이라 23%쯤이 나무색으로 잡혀 35%를 기준으로 둠).
+  for (const [deskId, book] of Object.entries(DRAWN_BOOK)) {
+    const deskProp = hideoutSceneProps({ ...HIDEOUT_DEFAULT_LAYOUT, desk: deskId }).find((p) => p.category === "desk");
+    let wood = 0, all = 0;
+    for (let y = book[1] + 2; y < book[3] - 1; y += 2) {
+      for (let x = book[0] + 2; x < book[2] - 1; x += 2) {
+        const [r, g, b] = await scenePixel(deskProp, x, y);
+        all += 1;
+        if (r > 180 && g > 95 && g < 200 && b < 130 && r - b > 90) wood += 1;
+      }
+    }
+    assert.ok(wood / all < 0.35, `${deskId} — 재어 둔 책 상자의 ${(wood / all * 100).toFixed(0)}%가 나무색입니다(책 자리를 다시 재세요)`);
+  }
+});
+
+test("아지트 문패 — 글자를 놓는 띠(HIDEOUT_PLAQUE_PANELS)가 문패 그림의 크림색 칸 안", async () => {
+  const cream = (r, g, b, a) => a > 200 && r > 225 && g > 200 && b > 160;
+  for (const theme of HIDEOUT_THEMES) {
+    const item = HIDEOUT_ITEMS.find((entry) => entry.id === `door-plaque-${theme.id}`);
+    const panel = HIDEOUT_PLAQUE_PANELS[theme.id];
+    assert.ok(item && panel, theme.id);
+    const { data, info } = await raw(item.src);
+    const cy = (panel.top + panel.bottom) / 2 * info.height, ph = (panel.bottom - panel.top) * info.height;
+    for (const [band, share] of [[panel.one, HIDEOUT_PLAQUE_FONT.share.one], [panel.two, HIDEOUT_PLAQUE_FONT.share.two]]) {
+      let ok = 0, all = 0;
+      for (let y = Math.ceil(cy - ph * share / 2); y < cy + ph * share / 2; y += 1) {
+        for (let x = Math.ceil(band[0] * info.width); x < band[1] * info.width; x += 1) {
+          const i = (y * info.width + x) * 4;
+          all += 1;
+          if (cream(data[i], data[i + 1], data[i + 2], data[i + 3])) ok += 1;
+        }
+      }
+      assert.ok(ok / all >= 0.98, `${theme.id} — 글자 띠(${share * 100}% 높이)의 ${((1 - ok / all) * 100).toFixed(1)}%가 크림색 칸 밖`);
+    }
+  }
 });

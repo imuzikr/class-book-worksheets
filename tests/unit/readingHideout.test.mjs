@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  HIDEOUT_ITEMS, HIDEOUT_SLOTS, HIDEOUT_DEFAULT_LAYOUT, HIDEOUT_THEMES,
-  hideoutProgress, isHideoutItemUnlocked, normalizeHideoutRoom, validateHideoutLayout, hideoutSceneProps,
+  HIDEOUT_ITEMS, HIDEOUT_SLOTS, HIDEOUT_DEFAULT_LAYOUT, HIDEOUT_THEMES, HIDEOUT_TABLETOP, HIDEOUT_PLAQUE_PANELS, HIDEOUT_PLAQUE_FONT,
+  hideoutProgress, isHideoutItemUnlocked, normalizeHideoutRoom, validateHideoutLayout, hideoutSceneProps, hideoutPlaqueLabel, hideoutPlaqueTextEm,
 } from "../../lib/readingHideout.js";
 
 test("every student starts with a furnished room and display surfaces before reward shelves unlock", () => {
@@ -105,4 +105,67 @@ test("every full theme uses the approved sizes and supported empty shelves witho
       assert.ok(prop.y - prop.height >= 0 && prop.y <= 1024, prop.itemId);
     }
   }
+});
+
+test("책상 위 소품 — 책상마다 정한 자리에 놓이고, 책상보다 위 · 책상 앞에 선 캐릭터보다 아래, 앞의 소품이 뒤의 소품을 가린다", () => {
+  for (const desk of HIDEOUT_ITEMS.filter((item) => item.slot === "desk")) {
+    const spots = HIDEOUT_TABLETOP[desk.id];
+    assert.ok(spots, desk.id);
+    const layout = { ...HIDEOUT_DEFAULT_LAYOUT, desk: desk.id, bookstand: "bookstand-forest", "pencil-caddy": "pencil-caddy-forest", "desk-calendar": "desk-calendar-forest" };
+    const props = hideoutSceneProps(layout);
+    const deskProp = props.find((p) => p.category === "desk");
+    const items = props.filter((p) => ["bookstand", "pencil-caddy", "desk-calendar"].includes(p.category));
+    assert.equal(items.length, 3);
+    for (const item of items) {
+      assert.deepEqual([item.x, item.y, item.width], [spots[item.category].x, spots[item.category].y, spots[item.category].width], `${desk.id} · ${item.category}`);
+      assert.ok(Number.isInteger(item.z), "z-index는 정수(CSS)");
+      // 걷는 길은 책상 앞 y 853부터 — 그 캐릭터(z = 100 + y)보다 아래
+      assert.ok(item.z > deskProp.z && item.z < 100 + 853, `${desk.id} · ${item.category} z ${item.z}`);
+    }
+    const byDepth = [...items].sort((a, b) => a.y - b.y);
+    for (let i = 1; i < byDepth.length; i += 1) assert.ok(byDepth[i].z >= byDepth[i - 1].z, `${desk.id} — 앞의 소품이 위`);
+  }
+  // 이름이 잘못된 책상(옛 자료 등)이어도 기본 책상의 자리로
+  const odd = hideoutSceneProps({ ...HIDEOUT_DEFAULT_LAYOUT, desk: "no-such-desk", bookstand: "bookstand-forest" }).find((p) => p.category === "bookstand");
+  assert.deepEqual([odd.x, odd.y], [HIDEOUT_TABLETOP["desk-basic"].bookstand.x, HIDEOUT_TABLETOP["desk-basic"].bookstand.y]);
+});
+
+test("문패 글자 — 문패의 크림색 칸(글자 띠) 안에 들고, 한 줄 · 두 줄 가운데 글자가 큰 쪽을 고른다", () => {
+  const plaqueOf = (theme) => hideoutSceneProps({ ...HIDEOUT_DEFAULT_LAYOUT, "door-plaque": `door-plaque-${theme}` }).find((p) => p.category === "door-plaque");
+  for (const theme of HIDEOUT_THEMES) {
+    const prop = plaqueOf(theme.id);
+    const panel = HIDEOUT_PLAQUE_PANELS[theme.id];
+    const panelHeight = (panel.bottom - panel.top) * prop.height;
+    for (const owner of ["나", "선생님", "김민준", "남궁민수", "Alexander Kim", "", null, "  "]) {
+      const label = hideoutPlaqueLabel(prop, owner);
+      const name = String(owner ?? "").trim() || "나";
+      assert.equal(label.lines.join(" "), `${name}의 아지트`, "글자는 '○○의 아지트' 그대로(두 줄이면 '○○의' / '아지트')");
+      assert.ok(label.lines.length === 1 || label.lines.length === 2);
+      const band = label.lines.length === 1 ? panel.one : panel.two, share = HIDEOUT_PLAQUE_FONT.share[label.lines.length === 1 ? "one" : "two"];
+      assert.ok(Math.abs(label.width - (band[1] - band[0]) * prop.width) < 1e-9, "글자 상자 폭 = 그 띠의 폭");
+      assert.ok(label.fontSize >= HIDEOUT_PLAQUE_FONT.min && label.fontSize <= HIDEOUT_PLAQUE_FONT.max);
+      // 어림한 글자 폭이 띠 안 · 줄 높이가 띠의 높이 안(가장 작은 크기까지 줄인 아주 긴 이름은 화면이 말줄임으로 자름)
+      const widest = Math.max(...label.lines.map(hideoutPlaqueTextEm)) * label.fontSize;
+      if (label.fontSize > HIDEOUT_PLAQUE_FONT.min) assert.ok(widest <= label.width, `${theme.id} · ${name} — 글자 폭 ${widest.toFixed(1)} > 띠 ${label.width.toFixed(1)}`);
+      if (/^[가-힣]{1,4}$/.test(name)) assert.ok(label.fontSize > HIDEOUT_PLAQUE_FONT.min, `${theme.id} · ${name} — 네 글자까지의 이름은 줄이지 않아도 든다`);
+      assert.ok(label.lines.length * HIDEOUT_PLAQUE_FONT.lineHeight * label.fontSize <= panelHeight * share + 1e-9, `${theme.id} · ${name} — 높이`);
+      // 가운데가 문패 그림 안
+      assert.ok(label.x > prop.x - prop.width / 2 && label.x < prop.x + prop.width / 2);
+      assert.ok(label.y > prop.y - prop.height && label.y < prop.y);
+    }
+  }
+  const forest = plaqueOf("forest");
+  assert.equal(hideoutPlaqueLabel(forest, "나").lines.length, 1, "짧으면 한 줄");
+  assert.equal(hideoutPlaqueLabel(forest, "남궁민수").lines.length, 2, "길면 두 줄이 더 크게 든다");
+  // 한 줄 · 두 줄 가운데 큰 쪽 — 고르지 않은 쪽으로 쓰면 글자가 더 작거나 같다
+  for (const owner of ["나", "선생님", "남궁민수"]) {
+    const label = hideoutPlaqueLabel(forest, owner);
+    assert.ok(label.fontSize >= 9, `${owner} — 글자가 너무 작아지지 않는다(${label.fontSize})`);
+  }
+  // 글자 폭 어림 — 한글 1 · 띄어쓰기 0.32 · 영어/숫자 0.62
+  assert.equal(hideoutPlaqueTextEm("가나"), 2);
+  assert.ok(Math.abs(hideoutPlaqueTextEm("A1 가") - (0.62 * 2 + 0.32 + 1)) < 1e-9);
+  // 아주 긴 이름도 문패를 넘지 않게 — 가장 작은 크기에서 넘치는 부분은 화면이 말줄임으로 자름
+  const huge = hideoutPlaqueLabel(forest, "아주아주아주긴이름의학생");
+  assert.equal(huge.fontSize, HIDEOUT_PLAQUE_FONT.min);
 });
