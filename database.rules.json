@@ -18,10 +18,82 @@
             "a": { ".validate": "newData.val() === 1" },
             "z": { ".validate": "newData.val() === 1" },
             "s": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 29 && newData.val() % 1 === 0 && newData.parent().child('z').val() === 1" },
+            "k": { ".validate": "newData.isString() && newData.val().length >= 6 && newData.val().length <= 40 && newData.val().matches(/^[A-Za-z0-9_-]+$/)" },
             "g": { ".validate": "newData.val() === 1" },
             "t": { ".validate": "newData.val() === now" },
             "$other": { ".validate": false }
           }
+        }
+      }
+    },
+    "plazaAsk": {
+      "$classId": {
+        "$to": {
+          ".read": "auth != null && auth.uid === $to && root.child('plaza').child($classId).child('who').child(auth.uid).child('exp').val() > now",
+          "$from": {
+            ".read": "auth != null && auth.uid === $from && root.child('plaza').child($classId).child('who').child(auth.uid).child('exp').val() > now",
+            ".write": "auth != null && auth.uid === $from && $from !== $to && root.child('plaza').child($classId).child('who').child(auth.uid).child('exp').val() > now && ((newData.exists() && newData.child('t').val() === now && root.child('plaza').child($classId).child('who').child($to).child('exp').val() > now && (!data.exists() || data.child('t').val() <= now - 15000)) || (!newData.exists() && data.child('t').val() <= now - 15000))",
+            ".validate": "newData.hasChildren(['t', 'i'])",
+            "t": { ".validate": "newData.isNumber()" },
+            "i": { ".validate": "newData.isString() && newData.val().length >= 6 && newData.val().length <= 40 && newData.val().matches(/^[A-Za-z0-9_-]+$/)" },
+            "k": { ".validate": "newData.isString() && newData.val().length >= 6 && newData.val().length <= 40 && newData.val().matches(/^[A-Za-z0-9_-]+$/) && root.child('plazaTalk').child($classId).child(newData.val()).child('m').child(auth.uid).exists()" },
+            "x": {
+              ".write": "auth != null && auth.uid === $from && data.parent().exists()",
+              ".validate": "newData.val() === 1 && auth.uid === $from"
+            },
+            "no": {
+              ".write": "auth != null && auth.uid === $to && data.parent().exists()",
+              ".validate": "newData.val() === 1 && auth.uid === $to"
+            },
+            "ok": { ".validate": false },
+            "$other": { ".validate": false }
+          }
+        }
+      }
+    },
+    "plazaTalk": {
+      "$classId": {
+        "$talkId": {
+          "m": {
+            ".read": "auth != null && data.child(auth.uid).exists()",
+            "$uid": {
+              ".write": "auth != null && auth.uid === $uid && data.exists() && !newData.exists()"
+            }
+          },
+          "n": {
+            ".read": "auth != null && data.parent().child('m').child(auth.uid).exists()"
+          },
+          "a": {
+            ".read": "auth != null && data.parent().child('m').child(auth.uid).exists()"
+          },
+          "l": {
+            ".indexOn": ["t"],
+            ".read": "auth != null && data.parent().child('m').child(auth.uid).exists() && query.orderByChild === 't' && query.startAt === data.parent().child('m').child(auth.uid).child('j').val()",
+            "$lineId": {
+              ".write": "auth != null && !data.exists() && newData.exists() && data.parent().parent().child('m').child(auth.uid).exists() && root.child('plaza').child($classId).child('who').child(auth.uid).child('exp').val() > now",
+              ".validate": "newData.hasChildren(['u', 't']) && newData.child('u').val() === auth.uid && newData.child('t').val() === now && ((newData.child('s').val() === 'leave' && !newData.hasChild('x') && !newData.parent().parent().child('m').child(auth.uid).exists()) || (!newData.hasChild('s') && newData.child('x').isString() && newData.child('x').val().length >= 1 && newData.child('x').val().length <= 400 && newData.parent().parent().child('e').child(auth.uid).val() === now))",
+              "u": { ".validate": "newData.isString()" },
+              "x": { ".validate": "newData.isString()" },
+              "s": { ".validate": "newData.isString()" },
+              "t": { ".validate": "newData.isNumber()" },
+              "$other": { ".validate": false }
+            }
+          },
+          "e": {
+            "$uid": {
+              ".write": "auth != null && auth.uid === $uid && data.parent().parent().child('m').child(auth.uid).exists() && root.child('plaza').child($classId).child('who').child(auth.uid).child('exp').val() > now",
+              ".validate": "newData.val() === now && (!data.exists() || data.val() <= now - 500)"
+            }
+          },
+          "$other": { ".validate": false }
+        }
+      }
+    },
+    "plazaTalkBy": {
+      "$classId": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".indexOn": ".value"
         }
       }
     }

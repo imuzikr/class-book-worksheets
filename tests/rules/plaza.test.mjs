@@ -213,6 +213,9 @@ describe("책 광장 규칙", () => {
     await assertSucceeds(updateDoc(doc(teacher, "classes", "cOff"), { plazaEnabled: true }));
     await assertSucceeds(updateDoc(doc(teacher, "classes", "cOff"), { plazaEnabled: false }));
     await assertFails(updateDoc(doc(teacher, "classes", "cOff"), { plazaEnabled: "yes" }));
+    // 광장 대화 스위치도 참 · 거짓만(관리자 설정 — lib/reading.js의 plazaTalkOn)
+    await assertSucceeds(updateDoc(doc(teacher, "classes", "cOff"), { plazaTalkEnabled: true }));
+    await assertFails(updateDoc(doc(teacher, "classes", "cOff"), { plazaTalkEnabled: "yes" }));
     await assertFails(updateDoc(doc(teacher, "classes", "cOld"), { plazaEnabled: false }));
     await assertFails(updateDoc(doc(asTeacher(env, "teacherB").firestore(), "classes", "cOff"), { plazaEnabled: true }));
     await assertFails(updateDoc(doc(asStudent(env, "s1").firestore(), "classes", "cOff"), { plazaEnabled: true }));

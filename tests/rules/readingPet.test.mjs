@@ -227,7 +227,7 @@ describe("독서 펫 — 프로필의 펫과 비밀 문서", () => {
     await assertSucceeds(make({}));
     await assertSucceeds(make({ petFeedEnabled: true, petFeedFrom: serverTimestamp(), petRestWeekend: false, petRests: [rest] }));
     await assertSucceeds(make({ petRests: Array.from({ length: 20 }, () => rest) }));
-    await assertSucceeds(make({ plazaEnabled: false, classroomEnabled: false, hideoutEnabled: true, readingMapTheme: "continent" }));
+    await assertSucceeds(make({ plazaEnabled: false, plazaTalkEnabled: true, classroomEnabled: false, hideoutEnabled: true, readingMapTheme: "continent" }));
     // 펫 먹이 — 꾸민 켠 때 · 모양이 틀린 칸
     for (const petFeedFrom of [-1, 0, 1, 1e20, Date.now(), true, "2026-11-14", new Date(), null]) {
       await assertFails(make({ petFeedEnabled: true, petFeedFrom }));
@@ -238,6 +238,7 @@ describe("독서 펫 — 프로필의 펫과 비밀 문서", () => {
     await assertFails(make({ petRestWeekend: "no" }));
     // 다른 스위치도 같은 검사(한때 만들 때는 아지트 · 독서 맵만 봄)
     await assertFails(make({ plazaEnabled: "yes" }));
+    await assertFails(make({ plazaTalkEnabled: "yes" }));
     await assertFails(make({ rankingEnabled: 1 }));
     await assertFails(make({ classroomCallAt: -1 }));
     await assertFails(make({ readingMapTheme: "space" }));
