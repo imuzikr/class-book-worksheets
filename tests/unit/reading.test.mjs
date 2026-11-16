@@ -435,8 +435,8 @@ test("관리자 설정은 선생님의 모든 반에 한 값 — 도서 검색 �
   assert.deepEqual(s.petPreviewEnabled, { on: false, mixed: false });
   // 책방은 값이 없으면 켜짐(선생님 요청 — 기본 활성화)
   assert.deepEqual(s.bookActivitiesEnabled, { on: true, mixed: false });
-  // 책방은 반마다 따로라 새 반이 따를 값에 없습니다(새 반은 기본값 — 켜짐)
-  assert.deepEqual(featuresForNewClass(classes), { readingEnabled: true, bookSearchEnabled: false, rankingEnabled: false, readingTopEnabled: true, characterEnabled: true, fruitBasketEnabled: true, petEnabled: true, petPreviewEnabled: false, petFeedEnabled: false, plazaEnabled: false, plazaTalkEnabled: false, classroomEnabled: false, hideoutEnabled: false, readingMapTheme: "cloud-islands", petRests: [] });
+  // 책방 · 펫 미리보기는 반마다 따로라 새 반이 따를 값에 없습니다(새 반은 기본값 — 책방 켜짐 · 펫 미리보기 꺼짐)
+  assert.deepEqual(featuresForNewClass(classes), { readingEnabled: true, bookSearchEnabled: false, rankingEnabled: false, readingTopEnabled: true, characterEnabled: true, fruitBasketEnabled: true, petEnabled: true, petFeedEnabled: false, plazaEnabled: false, plazaTalkEnabled: false, classroomEnabled: false, hideoutEnabled: false, readingMapTheme: "cloud-islands", petRests: [] });
   assert.equal(featuresForNewClass([{ archived: true }]), null);
   assert.equal(teacherFeatureSettings([]).readingEnabled.on, false);
   // 펫 먹이의 '읽은 날' 기준(선생님이 정한 쪽수 · 글자 수)도 새 반이 따름 — 정한 적이 없으면 넘기지 않음(처음 값 5쪽 · 250자)
@@ -523,12 +523,14 @@ test("책방 스위치(bookActivitiesOn) — 값이 없으면 켜짐 · 끈 것�
   assert.equal(bookActivitiesOn({ readingEnabled: true, bookActivitiesEnabled: false }), false);
 });
 
-test("책방만 반마다 따로(선생님 요청 · 2026년 11월) — 새 반은 다른 반의 값과 상관없이 켜진 채 시작", async () => {
+test("책방 · 펫 미리보기만 반마다 따로(선생님 요청 · 2026년 11월) — 새 반은 다른 반의 값과 상관없이 기본값으로 시작", async () => {
   const { PER_CLASS_FEATURES, isPerClassFeature, featureValue, featuresForNewClass, TEACHER_FEATURES } = await import("@/lib/reading");
-  assert.deepEqual([...PER_CLASS_FEATURES], ["bookActivitiesEnabled"]);
+  assert.deepEqual([...PER_CLASS_FEATURES], ["bookActivitiesEnabled", "petPreviewEnabled"]);
   assert.equal(isPerClassFeature("bookActivitiesEnabled"), true);
-  // 나머지 스위치는 그대로 선생님의 모든 반에 한 값(반마다가 아님)
-  for (const key of TEACHER_FEATURES.filter((k) => k !== "bookActivitiesEnabled")) assert.equal(isPerClassFeature(key), false, key);
+  assert.equal(isPerClassFeature("petPreviewEnabled"), true);
+  // 나머지 스위치는 그대로 선생님의 모든 반에 한 값(반마다가 아님) — 펫 먹이(배부름)도(선생님 결정)
+  assert.equal(isPerClassFeature("petFeedEnabled"), false);
+  for (const key of TEACHER_FEATURES.filter((k) => !["bookActivitiesEnabled", "petPreviewEnabled"].includes(k))) assert.equal(isPerClassFeature(key), false, key);
   assert.equal(isPerClassFeature("readingMapTheme"), false);
   assert.equal(isPerClassFeature(""), false);
   assert.throws(() => { PER_CLASS_FEATURES.push("readingEnabled"); }); // 목록은 얼어 있음
@@ -544,6 +546,14 @@ test("책방만 반마다 따로(선생님 요청 · 2026년 11월) — 새 반�
   }
   // 다른 스위치는 지금처럼 모든 반의 값을 따름(한 반이라도 꺼져 있으면 새 반도 꺼짐)
   assert.equal(featuresForNewClass([{ id: "a", fruitBasketEnabled: false }, { id: "b" }]).fruitBasketEnabled, false);
+  // 펫 미리보기 — 반마다 제 값(한 반만 켜도 다른 반은 그대로 꺼짐), 새 반은 모든 반이 켜 두었어도 꺼진 채 시작
+  const previews = [{ id: "a", petPreviewEnabled: true }, { id: "b" }, { id: "c", petPreviewEnabled: false }];
+  assert.deepEqual(previews.map((c) => featureValue(c, "petPreviewEnabled")), [true, false, false]);
+  for (const list of [[{ id: "a", petPreviewEnabled: true }, { id: "b", petPreviewEnabled: true }], previews, [{ id: "a" }]]) {
+    const made = featuresForNewClass(list);
+    assert.equal("petPreviewEnabled" in made, false);
+    assert.equal(featureValue(made, "petPreviewEnabled"), false);
+  }
 });
 
 test("독서 TOP 3 스위치(readingTopOn) — 책 봄이 켜지고 끄지 않았을 때만 · 리더보드 스위치와는 따로(선생님 요청)", async () => {

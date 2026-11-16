@@ -51,6 +51,12 @@
 .adm-class-switch-name { min-width: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; word-break: keep-all; overflow-wrap: anywhere; line-height: 1.35; font-size: 13.5px; font-weight: 600; color: var(--dark); }
 .adm-class-switch:not(.is-on) .adm-class-switch-name { color: var(--text-sub); }
 .adm-feature .adm-class-switch .adm-switch { align-self: center; flex-shrink: 0; margin: 0; }
+/* 다른 카드와 한 묶음에 서는 반마다 카드(펫 미리보기 — '리더보드 · 꾸미기' 묶음의 마지막 · 선생님 요청 2026년 11월)는 두 칸을
+   씁니다 — 한 칸에 반 목록을 넣으면 반 이름이 좁아 두 줄로 접히고 카드만 길어짐. 넓은 설정 칸(세 칸)에서는 '학생 펫' 옆을 채우고,
+   두 칸이면 줄을 다 씀. 한 칸으로 접히는 좁은 설정 칸(420px 아래)에서는 그 한 칸(같은 선택자로 되돌림 — 덜 센 선택자는 짐).
+   카드 하나뿐인 묶음(책방 — adm-group--1)은 그대로 줄을 다 씀. */
+.adm-group:not(.adm-group--1) .adm-feature--per-class { grid-column: span 2; }
+@container admset (max-width: 420px) { .adm-group:not(.adm-group--1) .adm-feature--per-class { grid-column: auto; } }
 
 /* ── 펫 먹이의 '읽은 날' 기준(components/PetReadSettings.jsx) — 쪽수 · 글자 수(선생님이 정함 · 처음 5쪽 · 250자).
    두 칸은 같은 폭(이어 놓인 칸은 같은 크기)이고, 설정 칸이 좁으면 한 줄에 하나. 껍데기 · 안내 · 단추 줄은 '배고파지지 않는 날'과 같은 것. ── */

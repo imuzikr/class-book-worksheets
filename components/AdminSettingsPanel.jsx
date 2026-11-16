@@ -5,9 +5,10 @@
 // 한 줄씩 따로였음). 값은 지금처럼 반 문서마다 적습니다 — 서버 API · 규칙 · 학생 화면이
 // 반 문서를 읽기 때문입니다(setTeacherFeature가 한 묶음으로 씀). 새 반은 만들 때
 // 같은 값을 따릅니다(addClass의 features · lib/reading.js featuresForNewClass).
-// **책방 하나만은 반마다 따로**입니다(선생님 요청 · 2026년 11월 "이 옵션만 반별로 · 기본값은 모든 반이 활성" —
-// lib/reading.js의 PER_CLASS_FEATURES). 그 카드는 운영 중인 반마다 한 칸씩 스위치를 세우고, 누르면 그 반 문서 한 장에만
-// 씁니다(setPerClassFeature). 새 반은 다른 반의 값을 따르지 않고 켜진 채 시작합니다.
+// **책방 · 펫 미리보기 둘만은 반마다 따로**입니다(선생님 요청 · 2026년 11월 — 책방 "이 옵션만 반별로 · 기본값은 모든 반이 활성",
+// 펫 미리보기 "펫 미리보기 하나만 반별 설정을" — lib/reading.js의 PER_CLASS_FEATURES). 그 카드는 운영 중인 반마다 한 칸씩 스위치를
+// 세우고, 누르면 그 반 문서 한 장에만 씁니다(setPerClassFeature). 새 반은 다른 반의 값을 따르지 않고 기본값으로 시작합니다(책방은
+// 켜짐 · 펫 미리보기는 꺼짐). 펫 먹이(배부름)의 스위치 · 독서량 · 쉬는 날은 그대로 모든 반에 한 값입니다(선생님 결정).
 //   · 책방(bookActivitiesEnabled — **값이 없으면 켜짐** · 선생님 요청). 끈 반은 **학생 화면에서** 상단바의 '책방' · 활동 목록 ·
 //     활동(주소로 와도)이 사라지고, 책 봄이 켜져 있으면 그 자리에 책 봄이 섭니다. 선생님 화면은 그대로(그 반 목록 위에 '학생에게는
 //     보이지 않아요' 띠 — 끈 동안에도 활동을 미리 만들고 지난 글을 봄). 글 · 기록은 지우지 않습니다(lib/reading.js의 bookActivitiesOn).
@@ -21,7 +22,7 @@
 //   · 학생 캐릭터(characterEnabled — 값이 없으면 켜짐, 책 봄이 켜져 있어야 씀. 리더보드를 꺼도 '내 프로필'에서 고름)
 //   · 과일 바구니(fruitBasketEnabled — 값이 없으면 켜짐, 끄면 떠 있는 동그라미에서도 가림)
 //   · 학생 펫(petEnabled — 값이 없으면 켜짐, 책 봄이 켜져 있어야 씀 · lib/readingPet.js)
-//   · 펫 미리보기(petPreviewEnabled — 기본 꺼짐, 학생 펫이 켜져 있어야 씀 · 선생님 요청). 켜면 학생이 열 가지 펫이 알에서
+//   · 펫 미리보기(petPreviewEnabled — 기본 꺼짐, 학생 펫이 켜져 있어야 씀 · **반마다 따로** · 선생님 요청). 켜면 학생이 열 가지 펫이 알에서
 //     10단계까지 자라는 모습을 보고 **알일 때** 깨어날 친구를 직접 고릅니다(책 봄의 '나의 펫' — components/reading/PetPreview.jsx).
 //     깨어난 펫은 바꾸지 않습니다(선생님 결정 — 보기만). 끄면 지금 고른 그대로 · 새 알은 무작위.
 //     카드의 '열 친구 미리 보기'로 선생님도 같은 창을 봅니다(고르는 단추 없이 · 스위치가 꺼져 있어도).
@@ -66,27 +67,31 @@ function Switch({ on, disabled, busy, label, describedBy, onClick }) {
   );
 }
 
-// 반마다 따로인 스위치의 카드(책방 — lib/reading.js의 PER_CLASS_FEATURES). 이름 · 설명 아래에 운영 중인 반마다 한 칸씩
-// 반 이름과 스위치가 섭니다(같은 폭의 격자 — 44-admin-settings.css의 adm-class-switches). 이름 옆 '켜진 반 n / N'은 한눈에
+// 반마다 따로인 스위치의 카드(책방 · 펫 미리보기 — lib/reading.js의 PER_CLASS_FEATURES). 이름 · 설명 아래에 운영 중인 반마다
+// 한 칸씩 반 이름과 스위치가 섭니다(같은 폭의 격자 — 44-admin-settings.css의 adm-class-switches). 이름 옆 '켜진 반 n / N'은 한눈에
 // 보는 요약입니다. 스위치마다 그 반 이름을 읽어 줍니다(aria-label — 여럿이 같은 '켜짐'이라 무엇을 켜는지 모름).
-function PerClassSwitches({ feature: f, rows, busy, onToggle }) {
-  const onCount = rows.filter((c) => featureValue(c, f.key)).length;
+// ready — 먼저 켜야 하는 스위치(needs — 모든 반에 한 값: 펫 미리보기는 책 봄 · 학생 펫)가 켜졌는가. 아니면 카드가 쉬고(스위치 꺼짐 ·
+// 누를 수 없음) 저장된 반마다의 값은 그대로 둡니다 — 학생 펫을 다시 켜면 반마다 고른 그대로 돌아옵니다.
+// onPeek — '펫 미리보기'의 '열 친구 미리 보기'(선생님도 학생과 같은 창 · 스위치와 상관없이).
+function PerClassSwitches({ feature: f, rows, busy, ready = true, onToggle, onPeek }) {
+  const onCount = ready ? rows.filter((c) => featureValue(c, f.key)).length : 0;
   return (
-    <li className="adm-feature adm-feature--per-class">
+    <li className={`adm-feature adm-feature--per-class${ready ? "" : " is-off"}`} title={ready ? undefined : f.needsText}>
       <div className="adm-feature-text">
         <span className="adm-feature-title">
           <strong>{f.label}</strong>
-          <span className="adm-feature-count">켜진 반 {onCount} / {rows.length}</span>
+          <span className="adm-feature-count">{ready ? `켜진 반 ${onCount} / ${rows.length}` : f.needsText}</span>
         </span>
         <small id={`adm-hint-${f.key}`}>{f.hint}</small>
+        {f.peek && onPeek && <button type="button" className="adm-feature-peek" onClick={onPeek}>열 친구 미리 보기</button>}
       </div>
       <ul className="adm-class-switches" aria-label={`반마다 ${f.label} 켜고 끄기`}>
         {rows.map((c) => {
-          const on = featureValue(c, f.key);
+          const on = ready && featureValue(c, f.key);
           return (
             <li key={c.id} className={`adm-class-switch${on ? " is-on" : ""}`}>
               <span className="adm-class-switch-name" title={c.name}>{c.name}</span>
-              <Switch on={on} disabled={!!busy} busy={busy === `${f.key}:${c.id}`} describedBy={`adm-hint-${f.key}`}
+              <Switch on={on} disabled={!ready || !!busy} busy={busy === `${f.key}:${c.id}`} describedBy={`adm-hint-${f.key}`}
                 label={`${c.name} ${f.label}`} onClick={() => onToggle(f, c)} />
             </li>
           );
@@ -124,9 +129,13 @@ const FEATURES = [
   { key: "petEnabled", label: "학생 펫", needs: ["readingEnabled"], needsText: "책 봄 성장 기능을 먼저 켜 주세요",
     hint: "학생마다 알을 하나씩 받아 독서 경험치로 키워요. 책 봄 · 리더보드 · 내 프로필에 보여요. 선생님은 펫이 없어요.",
     on: "학생 펫을 켰어요. 학생마다 알을 하나씩 받아요.", off: "학생 펫을 껐어요. 키우던 펫은 보관되고, 다시 켜면 그대로 이어져요." },
+  // 펫 미리보기 — **반마다 따로** 켜고 끕니다(선생님 요청 · 2026년 11월 "펫 미리보기 하나만 반별 설정을" — PER_CLASS_FEATURES).
+  // 카드 안에 반마다 한 칸씩 스위치(PerClassSwitches) · 알림은 그 반의 이름으로(onFor · offFor). 학생 펫(모든 반에 한 값)이 꺼져
+  // 있으면 카드가 쉽니다(needs). 새 반은 다른 반과 상관없이 꺼진 채 시작합니다.
   { key: "petPreviewEnabled", label: "펫 미리보기", needs: ["readingEnabled", "petEnabled"], needsText: "학생 펫을 먼저 켜 주세요",
-    hint: "열 가지 펫이 알에서 10단계까지 자라는 모습을 학생이 보고, 알일 때 깨어날 친구를 직접 골라요(책 봄의 ‘나의 펫’). 이미 깨어난 펫은 바꾸지 않고 보기만 해요. 끄면 지금 고른 펫 그대로이고, 새로 받는 알은 다시 무작위예요.",
-    on: "펫 미리보기를 켰어요. 알을 가진 학생이 책 봄의 ‘나의 펫’에서 깨어날 친구를 골라요.", off: "펫 미리보기를 껐어요. 학생은 지금 고른 펫 그대로 키우고, 새로 받는 알은 다시 무작위예요.",
+    hint: "열 가지 펫이 알에서 10단계까지 자라는 모습을 학생이 보고, 알일 때 깨어날 친구를 직접 골라요(책 봄의 ‘나의 펫’). 반마다 따로 켜고 꺼요. 이미 깨어난 펫은 바꾸지 않고 보기만 해요. 끈 반은 지금 고른 펫 그대로이고, 새로 받는 알은 다시 무작위예요.",
+    onFor: (name) => `‘${name}’의 펫 미리보기를 켰어요. 이 반에서 알을 가진 학생이 책 봄의 ‘나의 펫’에서 깨어날 친구를 골라요.`,
+    offFor: (name) => `‘${name}’의 펫 미리보기를 껐어요. 이 반 학생은 지금 고른 펫 그대로 키우고, 새로 받는 알은 다시 무작위예요.`,
     // 카드 안에 '열 친구 미리 보기' — 선생님도 학생과 같은 창을 봅니다(고르는 단추 없이 · 스위치와 상관없이)
     peek: true },
   { key: "petFeedEnabled", label: "펫 먹이", needs: ["readingEnabled", "petEnabled"], needsText: "학생 펫을 먼저 켜 주세요",
@@ -196,10 +205,10 @@ export default function AdminSettingsPanel({ classes = [], onToast }) {
     }
   }
 
-  // 반마다 따로인 스위치(책방) — 누른 반의 문서 한 장에만 씁니다(lib/data/classes.js의 setPerClassFeature).
-  // c — 쓰기 전의 그 반 문서(화면이 들고 있는 값).
+  // 반마다 따로인 스위치(책방 · 펫 미리보기) — 누른 반의 문서 한 장에만 씁니다(lib/data/classes.js의 setPerClassFeature).
+  // c — 쓰기 전의 그 반 문서(화면이 들고 있는 값). 먼저 켜야 하는 스위치(needs)가 꺼져 있으면 누르지 않습니다(단추도 쉼).
   async function toggleClass(f, c) {
-    if (busy) return;
+    if (busy || !(f.needs || []).every((k) => settings[k].on)) return;
     const enabled = !featureValue(c, f.key);
     setBusy(`${f.key}:${c.id}`);
     setError("");
@@ -230,7 +239,7 @@ export default function AdminSettingsPanel({ classes = [], onToast }) {
   return (
     <section className="adm-settings" aria-label="관리자 설정">
       <p className="adm-settings-lead">
-        <strong>책방</strong>은 반마다 따로 켜고 끄고, 나머지 설정은 선생님의 <strong>모든 반</strong>에 같이 적용돼요. 학생 화면에 곧바로 반영돼요.
+        <strong>책방</strong>과 <strong>펫 미리보기</strong>는 반마다 따로 켜고 끄고, 나머지 설정은 선생님의 <strong>모든 반</strong>에 같이 적용돼요. 학생 화면에 곧바로 반영돼요.
         {rows.length > 0 && <span className="adm-settings-classes"> 적용되는 반: {rows.map((c) => c.name).join(" · ")}</span>}
       </p>
       {error && <p className="form-error" role="alert">{error}</p>}
@@ -245,7 +254,8 @@ export default function AdminSettingsPanel({ classes = [], onToast }) {
               <ul className="adm-features">
           {g.keys.map((k) => FEATURES.find((f) => f.key === k)).map((f) => {
             if (isPerClassFeature(f.key)) {
-              return <PerClassSwitches key={f.key} feature={f} rows={rows} busy={busy} onToggle={toggleClass} />;
+              return <PerClassSwitches key={f.key} feature={f} rows={rows} busy={busy} onToggle={toggleClass}
+                ready={(f.needs || []).every((k) => settings[k].on)} onPeek={f.peek ? () => setPeek(true) : null} />;
             }
             const ready = (f.needs || []).every((k) => settings[k].on);
             const st = settings[f.key];
@@ -316,7 +326,7 @@ export default function AdminSettingsPanel({ classes = [], onToast }) {
           ))}
         </div>
       )}
-      <p className="adm-settings-foot">보관된 반은 바꿀 수 없어 빼고 적용해요. 새로 만드는 반은 책방이 켜진 채 시작하고, 나머지는 지금 설정을 따라요.</p>
+      <p className="adm-settings-foot">보관된 반은 바꿀 수 없어 빼고 적용해요. 새로 만드는 반은 책방이 켜지고 펫 미리보기는 꺼진 채 시작하고, 나머지는 지금 설정을 따라요.</p>
       {peek && <PetPreviewModal mode="teacher" onClose={() => setPeek(false)} />}
       {asking && (
         <ConfirmModal
