@@ -38,6 +38,12 @@
 // 가운데 쪽으로 펼쳐집니다(`is-left` · `is-top`). 옮긴 뒤에는 교사의 '방송 종료'
 // 알약 위로 비키는 것(`lifted`)을 하지 않습니다 — 자리를 고른 것은 선생님입니다.
 //
+// [책 봄에서는 독서로 검색만 — 선생님 요청 · 2026년 11월]
+// 책 봄(?area=reading)에서는 '독서로 검색' 행성만 켜고, 나머지 행성은 흐린 회색으로 그 자리에 세워 둡니다
+// (libraryOnly — aria-disabled · 눌러도 열리지 않고 가운데 해가 까닭을 말함). 안 읽은 말 숫자는 지우지 않고 회색으로
+// (와 있다는 것은 알게). 판정은 lib/hubPlace.js의 hubLibraryOnly(상단바가 넘김) — 책방을 끈 반의 학생은 책 봄이 첫 화면이라
+// 동그라미를 그대로 둡니다. 이미 떠 있던 메신저 창 · 손들기 창의 '메신저 대화'로 여는 메신저는 막지 않습니다.
+//
 // [읽는 문서]
 // 안 읽은 말 배지 때문에 반을 고른 동안은 늘 구독합니다 — 학생은 제 방 둘
 // (등호 질의 둘) + 모둠 문서 + 읽음 표시, 교사는 반의 최근 말 300개 + 모둠
@@ -49,7 +55,7 @@ import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { backdropClose } from "@/lib/modal";
-import { HUB_DRAG_MIN, cleanHubPos, hubPlacement, hubPosFromPoint } from "@/lib/hubPlace";
+import { HUB_DRAG_MIN, cleanHubPos, hubItemOff, hubPlacement, hubPosFromPoint } from "@/lib/hubPlace";
 import {
   subscribeOwnClasses,
   subscribeClassChat,
@@ -119,6 +125,11 @@ const TEACHER_ITEMS = [
   { key: "report", label: "대시보드", hint: "관리자 대시보드 — 학생·학급 분석과 학생 프로필", href: "/dashboard" },
 ];
 
+// 책 봄에서 꺼진 행성의 말(libraryOnly) — 가운데 해 · 행성 툴팁 · 아무것도 안 가리킬 때의 해
+const OFF_HINT = "책 봄에서는 쓸 수 없어요";
+const OFF_TITLE = "책 봄에서는 쓸 수 없어요 — 책방에서 열 수 있어요";
+const LIBRARY_ONLY_HINT = "책 봄에서는 독서로 검색만 열려요";
+
 // 원판 크기(px) — CSS의 `.hub-disc` 폭·높이와 같아야 합니다.
 const DISC = 300;
 const C = DISC / 2;
@@ -154,9 +165,10 @@ function ChatIcon({ size = 26 }) {
 }
 
 // classId — 지금 보는 반(교사는 공부방에서 고른 반, 학생은 소속 반).
+// libraryOnly — 책 봄 화면이면 참(상단바가 hubLibraryOnly로 셈) — '독서로 검색' 말고는 흐린 회색으로 꺼 둡니다.
 // 교사의 메신저는 이와 따로 **창 맨 위에서 반을 고릅니다**(chatClassId) —
 // 어느 화면에서든 원하는 반과 대화하고, 공부방의 반은 안 바뀝니다.
-export default function FloatingHub({ classId: pageClassId, user, isTeacher, fruitOn = true, lifted = false }) {
+export default function FloatingHub({ classId: pageClassId, user, isTeacher, fruitOn = true, lifted = false, libraryOnly = false }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [msgOpen, setMsgOpen] = useState(false);
@@ -414,6 +426,7 @@ export default function FloatingHub({ classId: pageClassId, user, isTeacher, fru
   if (!user || !classId) return null;
 
   const shown = hover != null ? items[hover] : null;
+  const shownOff = !!shown && hubItemOff(shown.key, libraryOnly);
   const fabOpen = menuOpen || msgOpen;
 
   return (
@@ -447,23 +460,26 @@ export default function FloatingHub({ classId: pageClassId, user, isTeacher, fru
         {items.map((it, i) => {
           const [x, y] = pt(R_ORBIT, angleOf(i));
           const Icon = ICONS[it.key];
+          // 책 봄에서 꺼진 행성 — 회색으로 서 있고, 누르면 열지 않고 가운데 해가 까닭을 말합니다(손가락으로 눌러도 보이게)
+          const off = hubItemOff(it.key, libraryOnly);
           return (
             <button
               key={it.key}
               type="button"
-              className={`hub-item${hover === i ? " is-hover" : ""}`}
+              className={`hub-item${hover === i ? " is-hover" : ""}${off ? " is-disabled" : ""}`}
               style={{ left: x, top: y, "--i": i }}
+              aria-disabled={off || undefined}
               onMouseEnter={() => setHover(i)}
               onMouseLeave={() => setHover((h) => (h === i ? null : h))}
               onFocus={() => setHover(i)}
               onBlur={() => setHover((h) => (h === i ? null : h))}
-              onClick={() => pick(it)}
-              title={it.hint}
+              onClick={() => (off ? setHover(i) : pick(it))}
+              title={off ? OFF_TITLE : it.hint}
             >
               <span className="hub-item-icon" aria-hidden="true">{Icon ? <Icon show={opened} /> : null}</span>
               <span className="hub-item-label">{it.label}</span>
               {it.key === "msg" && unread > 0 && (
-                <span className="hub-item-badge" aria-label={`안 읽은 말 ${unread}개`}>
+                <span className={`hub-item-badge${off ? " is-muted" : ""}`} aria-label={`안 읽은 말 ${unread}개`}>
                   {unread > 99 ? "99+" : unread}
                 </span>
               )}
@@ -474,12 +490,12 @@ export default function FloatingHub({ classId: pageClassId, user, isTeacher, fru
         {/* 가운데 — 고른 기능의 그림 · 이름 · 설명. 아무것도 안 고르면 책나눔
             로고와 이름(선생님 요청). 그림은 흰 동그라미에 담습니다 — 앱 아이콘은
             먹빛 선이라 살구빛 해 위에 그대로 두면 안 보입니다. */}
-        <div className="hub-center">
+        <div className={`hub-center${shownOff ? " is-off" : ""}`}>
           <span className="hub-center-badge" aria-hidden="true">
             {shown && ICONS[shown.key] ? ICONS[shown.key]({ show: opened }) : <IconLogo size={22} />}
           </span>
           <strong>{shown ? shown.label : "책나눔"}</strong>
-          <span>{shown ? shown.hint : "무엇을 열까요?"}</span>
+          <span>{shown ? (shownOff ? OFF_HINT : shown.hint) : libraryOnly ? LIBRARY_ONLY_HINT : "무엇을 열까요?"}</span>
         </div>
       </div>
 
@@ -494,22 +510,20 @@ export default function FloatingHub({ classId: pageClassId, user, isTeacher, fru
         onPointerUp={onFabPointerEnd}
         onPointerCancel={onFabPointerEnd}
         aria-expanded={menuOpen}
-        aria-label={msgOpen ? "메신저 닫기" : menuOpen ? "메뉴 닫기" : "메신저와 바로가기 열기"}
+        aria-label={msgOpen ? "메신저 닫기" : menuOpen ? "메뉴 닫기" : libraryOnly ? "바로가기 열기(책 봄에서는 독서로 검색만)" : "메신저와 바로가기 열기"}
         title={
           msgOpen
             ? "메신저 닫기"
             : menuOpen
               ? "닫기"
-              : canDrag
-                ? "메신저 · 바로가기 (끌어서 옮길 수 있어요)"
-                : "메신저 · 바로가기"
+              : `${libraryOnly ? "독서로 검색 · 바로가기" : "메신저 · 바로가기"}${canDrag ? " (끌어서 옮길 수 있어요)" : ""}`
         }
       >
         <span className="hub-fab-icon" aria-hidden="true">
           {fabOpen ? <span className="hub-fab-x">×</span> : <ChatIcon />}
         </span>
         {!fabOpen && unread > 0 && (
-          <span className="hub-fab-badge" aria-label={`안 읽은 말 ${unread}개`}>
+          <span className={`hub-fab-badge${libraryOnly ? " is-muted" : ""}`} aria-label={`안 읽은 말 ${unread}개`}>
             {unread > 99 ? "99+" : unread}
           </span>
         )}

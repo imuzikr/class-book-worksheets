@@ -156,6 +156,22 @@
 }
 .hub-item:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
 .hub-item .hub-item-badge { top: -2px; right: -2px; }
+/* 책 봄에서는 '독서로 검색'만(FloatingHub의 libraryOnly · 선생님 요청) — 나머지 행성은 흐린 회색으로 서 있고 눌리지 않습니다.
+   행성 자체의 opacity는 펼침 움직임(hub-pop, fill both)이 1로 붙잡아 듣지 않으므로 안쪽 그림 · 글자를 흐립니다. */
+.hub-item.is-disabled,
+.hub-item.is-disabled.is-hover {
+  background: #efeeea;
+  box-shadow: 0 2px 8px rgba(46, 36, 26, 0.1), inset 0 0 0 1px #dfddd6;
+  color: var(--text-faint);
+  cursor: not-allowed;
+}
+.hub-item.is-disabled .hub-item-icon { filter: grayscale(1); opacity: 0.4; }
+.hub-item.is-disabled .hub-item-label { color: var(--text-faint); }
+/* 안 읽은 말 숫자 — 책 봄에서는 지우지 않고 회색(와 있다는 것은 알게 · 빨간 재촉은 쉬게) */
+.hub-fab-badge.is-muted,
+.hub-item-badge.is-muted { background: #a8a49b; }
+/* 가운데 해 — 꺼진 행성을 가리키는 동안 그 그림도 회색 */
+.hub-center.is-off .hub-center-badge > * { filter: grayscale(1); opacity: 0.45; }
 /* 출석 — 체크 하나(currentColor)라 '됐다'의 초록으로 */
 .hub-icon-check { color: var(--green-olive); }
 /* 과일 바구니 — 바구니 창의 그림을 작게(흰 바탕을 원판에 녹임) */

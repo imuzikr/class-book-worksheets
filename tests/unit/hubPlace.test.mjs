@@ -1,7 +1,7 @@
 // 떠 있는 동그라미의 자리 셈(lib/hubPlace.js).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cleanHubPos, hubPosFromPoint, hubPlacement, HUB_FAB, HUB_EDGE } from "@/lib/hubPlace";
+import { cleanHubPos, hubPosFromPoint, hubPlacement, hubLibraryOnly, hubItemOff, HUB_FAB, HUB_EDGE } from "@/lib/hubPlace";
 
 test("저장 값 거르기 — 숫자 둘이 아니면 기본 자리, 넘치면 0~1로", () => {
   assert.equal(cleanHubPos(null), null);
@@ -43,4 +43,16 @@ test("화면 밖으로는 안 나감 — 가장자리에서 8px", () => {
 test("저장한 자리가 없으면 null(CSS 기본 자리)", () => {
   assert.equal(hubPlacement(null, 1000, 800), null);
   assert.equal(hubPlacement({ fx: 0.5, fy: 0.5 }, 0, 0), null);
+});
+
+test("책 봄에서는 '독서로 검색'만 — 책방이 열린 반(교사는 늘)", () => {
+  assert.equal(hubLibraryOnly({ readingOpen: true, isTeacher: false, booksOn: true }), true);
+  assert.equal(hubLibraryOnly({ readingOpen: true, isTeacher: true, booksOn: false }), true);   // 교사는 책방이 늘 있음
+  assert.equal(hubLibraryOnly({ readingOpen: false, isTeacher: true, booksOn: true }), false);  // 책방 · 리더보드 · 대시보드
+  // 책방을 끈 반의 학생 — 책 봄이 첫 화면이라 동그라미를 그대로(메신저 · 출석부를 열 곳이 없어지지 않게)
+  assert.equal(hubLibraryOnly({ readingOpen: true, isTeacher: false, booksOn: false }), false);
+  assert.equal(hubLibraryOnly(), false);
+  const keys = ["msg", "library", "attend", "classes", "fruit", "report"];
+  assert.deepEqual(keys.filter((k) => hubItemOff(k, true)), ["msg", "attend", "classes", "fruit", "report"]);
+  assert.deepEqual(keys.filter((k) => hubItemOff(k, false)), []);
 });

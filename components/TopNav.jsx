@@ -35,6 +35,7 @@ import RoleManagerModal from "./RoleManagerModal";
 import PresentationOverlay from "./PresentationOverlay";
 import RewardCelebration from "./RewardCelebration";
 import FloatingHub from "./FloatingHub";
+import { hubLibraryOnly } from "@/lib/hubPlace";
 import ClassTopReaders from "./ClassTopReaders";
 import ClassMoveBanner from "./reading/ClassMoveBanner";
 import PageTagline from "./PageTagline";
@@ -533,7 +534,9 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
     {/* 떠 있는 동그라미 — 메신저 + 자주 여는 기능(components/FloatingHub.jsx).
         상단바처럼 다섯 화면에 다 떠 있어야 해서 여기 답니다. 반은 교사는
         고른 반, 학생은 소속 반(데모 모드는 소속을 안 읽어 고른 반으로).
-        교사 화면에 '방송 종료' 알약이 떠 있으면 그 위로 비켜 섭니다. */}
+        교사 화면에 '방송 종료' 알약이 떠 있으면 그 위로 비켜 섭니다.
+        책 봄에서는 '독서로 검색'만 켜고 나머지는 흐린 회색(선생님 요청 — lib/hubPlace.js의 hubLibraryOnly:
+        책방을 끈 반의 학생은 책 봄이 첫 화면이라 그대로). */}
     {user && (
       <FloatingHub
         classId={hubClassId}
@@ -541,6 +544,7 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
         isTeacher={admin}
         fruitOn={fruitOn}
         lifted={admin && !!broadcast}
+        libraryOnly={hubLibraryOnly({ readingOpen, isTeacher: admin, booksOn })}
       />
     )}
 
