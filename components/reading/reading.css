@@ -382,6 +382,13 @@
 .reading-search-open { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; margin:0 0 18px; padding:11px 14px; border:1px dashed #9fc29f; border-radius:12px; background:#f3f8ef; color:#2f5a3a; font-size:13.5px; font-weight:700; cursor:pointer; }
 .reading-search-open:hover:not(:disabled) { background:#e8f2e1; border-style:solid; }
 .reading-search-open:disabled { opacity:.6; cursor:not-allowed; }
+/* 단추 바로 아래의 안내 — '먼저 검색해 보세요'(선생님 신고 · 2026년 11월: 단추를 지나쳐 모두 직접 적었음). 읽히라고 둔 줄이라
+   다른 안내(.reading-help — 11px 옅은 글자)보다 한 단계 또렷하게, 단추와 한 덩이로 읽히게 바로 붙여 가운데에 둡니다. */
+.reading-search-start { display:grid; gap:8px; margin:0 0 18px; }
+.reading-search-start>.reading-search-open { margin:0; }
+.reading-search-nudge { margin:0; font-size:12px; line-height:1.65; color:#4f6a45; text-align:center; text-wrap:balance; word-break:keep-all; }
+.reading-search-nudge>span { display:block; }   /* 무엇이 채워지나 · 없을 때 — 문장마다 제 줄(넓은 창은 꼭 두 줄) */
+.reading-search-nudge strong { color:#2f5a3a; font-weight:750; }
 .reading-book-search { padding:16px; margin:0 0 20px; border:1px solid #d3e2d2; border-radius:12px; background:#f3f8ef; }
 .reading-search-head { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:12px; }
 .reading-search-head strong { font-size:13px; color:#386043; }

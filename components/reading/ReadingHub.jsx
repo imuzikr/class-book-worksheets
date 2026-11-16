@@ -511,6 +511,7 @@ function BookForm({ book, searchOn = false, activityPick = true, pagesLocked, ac
   // (lib/reading.js의 bookTitleDrifted). 고른 검색 결과에 지은이가 없었는가 — 카카오가 지은이를 주지 않는 책은 직접 적습니다.
   const [metaTitle, setMetaTitle] = useState(book?.title || "");
   const [searchNoAuthor, setSearchNoAuthor] = useState(false);
+  const searchHintId = useId();
   const titleRef = useRef(null);
   const authorRef = useRef(null);
   const pagesRef = useRef(null);
@@ -534,10 +535,15 @@ function BookForm({ book, searchOn = false, activityPick = true, pagesLocked, ac
   return <Modal title={book ? "책 정보 고치기" : "새 책 등록"} onClose={onClose} busy={busy}>
     {!book && searchOn && (searching
       ? <BookSearch busy={busy} autoFocus onSelect={(r) => { selectSearch(r); setSearching(false); }} onManual={() => { setSearching(false); requestAnimationFrame(() => titleRef.current?.focus()); }} />
-      : <button type="button" className="reading-search-open" disabled={busy} onClick={() => setSearching(true)}>
-          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" strokeWidth="2" /><path d="m16 16 4.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
-          도서 검색으로 책 정보 채우기
-        </button>)}
+      : <div className="reading-search-start">
+          <button type="button" className="reading-search-open" disabled={busy} aria-describedby={hasMetadata ? undefined : searchHintId} onClick={() => setSearching(true)}>
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" strokeWidth="2" /><path d="m16 16 4.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+            도서 검색으로 책 정보 채우기
+          </button>
+          {/* 선생님 신고(2026년 11월) — 이 단추를 지나쳐 모두 직접 적었습니다. 고르면 무엇이 채워지는지 단추 바로 아래에서 말해
+              먼저 검색하게 합니다. 쪽수는 검색 결과에 없어 약속하지 않습니다(고른 뒤 '쪽수는 직접' 안내가 따로 섬). */}
+          {!hasMetadata && <p className="reading-search-nudge" id={searchHintId}><span><strong>먼저 검색해 보세요.</strong> 고른 책의 제목&nbsp;·&nbsp;지은이&nbsp;·&nbsp;표지가 한 번에 채워져요.</span> <span>찾는 책이 없을 때만 아래에 직접 적어 주세요.</span></p>}
+        </div>)}
     {hasMetadata && <div className="reading-selected-book">
       <BookCover book={form} />
       <div><strong>{selectedSearch ? "검색에서 선택한 책" : "도서 정보"}</strong>{form.publisher && <span>{form.publisher}</span>}{form.isbn && <span>ISBN {form.isbn}</span>}
