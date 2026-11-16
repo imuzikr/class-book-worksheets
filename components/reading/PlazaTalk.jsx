@@ -9,6 +9,7 @@
 //   PlazaTalkWaiting 대답을 기다리는 내 요청 — '○○님의 대답을 기다려요 · 18초' [요청 거두기]
 //   PlazaTalkPanel   오른쪽 대화창 — 든 사람 · 말 · 쓰는 칸(Enter로 보냄 · Shift+Enter는 줄바꿈 — 선생님 요청) · 접기 · 나가기.
 //                    접어도 대화에서 나가지 않습니다(접기 · 닫기 · 나가기는 서로 다른 일 — 묶음의 규격). 폰에서는 아래쪽 창.
+//                    열려 있는 동안 오른쪽 아래 떠 있는 동그라미를 숨기고 맵 아래 끝까지 섭니다(plaza-talk.css — 선생님 요청).
 // 그림은 선생님이 주신 도트 대화 묶음(public/reading-plaza/talk — 목록과 크기는 lib/readingPlazaTalk.js의 TALK_ART),
 // 모양은 plaza-talk.css. 글자 · 이름 · S/C는 그림에 굽지 않고 여기서 적습니다.
 // =============================================================
@@ -342,7 +343,7 @@ export function PlazaTalkPanel({ talk, myUid, onSend, onLeave, onDismiss, onCove
         <form className="plaza-talk-compose" onSubmit={(e) => { e.preventDefault(); submit(); }}>
           {count < TALK_MAX && <p className="plaza-talk-tip">다른 친구를 누르고 A를 누르면 이 대화에 초대해요 · {TALK_MAX}명까지</p>}
           <div className="plaza-talk-write">
-            <textarea ref={inputRef} value={draft} rows={2} maxLength={TALK_TEXT_MAX * 2} placeholder="이야기를 적어요 (Enter로 보내기 · Shift+Enter 줄바꿈)"
+            <textarea ref={inputRef} value={draft} rows={4} maxLength={TALK_TEXT_MAX * 2} placeholder="이야기를 적어요 (Enter로 보내기 · Shift+Enter 줄바꿈)"
               aria-label="보낼 말" enterKeyHint="send" onChange={(e) => { setDraft(e.target.value); if (error) setError(""); }} onKeyDown={onKeyDown}
               onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={onCompositionEnd} />
             <button type="submit" className="plaza-talk-send" disabled={!draft.trim() || left < 0} aria-label="메시지 보내기" title="보내기 (Enter)">
