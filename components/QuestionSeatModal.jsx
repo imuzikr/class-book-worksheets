@@ -11,7 +11,7 @@
 // 뜹니다(StudentToolsPopover를 공유). 자리 배치는 참여 전광판과 같은 문서를 보되
 // 여기서는 옮기지 않습니다 — 자리 바꾸기는 전광판·출석 관리에서 합니다.
 //
-// 자리표 부품(SeatCell · SeatPickGrid)은 돌발 퀴즈 창도 함께 쓰므로
+// 자리표 부품(SeatCell · SeatPickGrid)은 '멋진 순간' 패널도 함께 쓰므로
 // `SeatPickGrid.jsx`에 따로 있습니다.
 // =============================================================
 import { useEffect, useMemo, useState } from "react";

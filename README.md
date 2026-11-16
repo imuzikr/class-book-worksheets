@@ -273,7 +273,7 @@ npm run deploy             # 규칙 시험 → firestore(rules·indexes) + stora
 
 - **반**은 먼저 **보관**합니다. 보관된 반은 '반 관리하기' 아래 '보관된 반'에서
   **🗑 완전 삭제**를 누르고 반 이름을 그대로 적으면, 그 반의 독서 활동 · 학생 글 ·
-  출석 · 자리표 · 모둠 · 과일 · 메신저 · 손들기 · 돌발 퀴즈 · 공지가 모두 지워집니다
+  출석 · 자리표 · 모둠 · 과일 · 메신저 · 손들기 · 공지(걷은 돌발 퀴즈의 옛 기록도)가 모두 지워집니다
   (되돌릴 수 없음 — 서버 함수 없이 앱이 하나씩 찾아 지웁니다). 지우는 동안 창을 닫지
   마세요. 중간에 멈추면 다시 누르면 남은 것부터 이어서 지웁니다.
 - **학생 탈퇴**는 관리자 대시보드에서 합니다 — 왼쪽 사용자 목록에서 학생을 고르고 개인별
@@ -295,7 +295,7 @@ classes/{cId}               반 (+ attendanceOpen · 관리자 설정 스위치 
   ├ cornellNotes            옛 수업 노트 기록(화면 없음 · 지우지 않고 보존, 반 삭제 · 탈퇴 때 정리)
   ├ rewards · rewardEvents  과일 누적 · 지급 이력
   ├ fruitBasket · fruitEvents  과일 바구니 · 이벤트 기록
-  ├ popQuizzes              돌발 퀴즈
+  ├ popQuizzes              옛 돌발 퀴즈(앱에서 걷음 · 지우지 않고 보존, 반 삭제 · 탈퇴 때 정리)
   └ chatMessages …          메신저
 joinCodes · memberships     입장 코드 · 반 소속
 seatLayouts · groupAssignments  자리표 · 기본 모둠

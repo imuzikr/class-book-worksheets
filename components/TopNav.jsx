@@ -4,7 +4,7 @@
 // 공통 상단 내비게이션
 // -------------------------------------------------------------
 // 왼쪽: 책나눔 로고 ｜ 책방(관리자 설정에서 끈 반의 학생에게는 안 섬 — booksOn) · 책 봄(관리자 설정에서 켰을 때)
-// 오른쪽: 역할 전환(개발용) ｜ 돌발 퀴즈 ｜ 손들기 ｜ 공지 ｜ 알림 ｜ 사용자 프로필(로그아웃은 그 메뉴 안)
+// 오른쪽: 역할 전환(개발용) ｜ 손들기 ｜ 공지 ｜ 알림 ｜ 사용자 프로필(로그아웃은 그 메뉴 안)
 // =============================================================
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
@@ -27,7 +27,6 @@ import { getSelectedClassId } from "@/lib/classroom";
 import { useCurrentUser } from "@/lib/useCurrentUser";
 import UserProfile from "./UserProfile";
 import NotificationBell from "./NotificationBell";
-import PopQuizButton from "./PopQuizButton";
 import QuestionSignalButton from "./QuestionSignalButton";
 import ClassNoticeButton from "./ClassNoticeButton";
 import RoleSwitcher from "./RoleSwitcher";
@@ -141,7 +140,7 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
   // 과일을 받은 순간 터지는 축포 — 상단바에서 한 번만 답니다.
   // -------------------------------------------------------------
   // 예전에는 공부방·책방 페이지가 저마다 달고 있었습니다. 그런데 과일을
-  // 주는 자리는 그 두 화면뿐이 아닙니다 — 상단바의 손바닥('🍊 확인')·돌발 퀴즈('🍊 과일 주기')는
+  // 주는 자리는 그 두 화면뿐이 아닙니다 — 상단바의 손바닥('🍊 확인')은
   // 어느 화면에서든 눌리고, 학생도 질문방·리포트·파이썬 실행기 어디에나 있을
   // 수 있어 페이지에 달아 두면 축포가 안 터지는 일이 잦았습니다.
   // 상단바는 다섯 화면에 모두 떠 있으므로 여기 한 번 달면 어디서 받아도
@@ -154,7 +153,9 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
   // 상단바가 항상 떠 있으므로 여기서 구독하면 앱 전체에 적용됩니다.
   const [broadcast, setBroadcast] = useState(null);
   const broadcastClassId = admin ? sessionClassId : activeClassId;
-  const quizClassId = admin ? sessionClassId : activeClassId ?? (!isFirebaseConfigured ? sessionClassId : null);
+  // 떠 있는 동그라미 · 독서 TOP 3 · 이동 알림 · 첫 만남이 함께 쓰는 반 — 실서비스에서는 broadcastClassId와 같고,
+  // 데모 학생만(소속을 안 읽음) 고른 반으로 메웁니다. 한때 이름이 quizClassId(돌발 퀴즈 조각과 같은 값 — 퀴즈는 걷음).
+  const hubClassId = admin ? sessionClassId : activeClassId ?? (!isFirebaseConfigured ? sessionClassId : null);
   useEffect(() => {
     if (!isFirebaseConfigured || !broadcastClassId) { setBroadcast(null); return; }
     return subscribeBroadcast(broadcastClassId, setBroadcast);
@@ -187,22 +188,22 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
     setPetOn(false);
     setPetFeedKey("");
     setClassInfo(null);
-    if (!quizClassId) return;
+    if (!hubClassId) return;
     // 선생님의 '모두 이동' 신호 — 어느 화면에서든 알림 띠가 뜨게 여기서 먹입니다(lib/classroomMoveStore.js).
     // 보는 동안임을 알려 둡니다(한참 안 보다 다시 본 첫 값은 '이미 있던 신호'로 다룸). 아직 못 받은 문서(null)는 먹이지 않습니다.
-    const unwatch = watchClassroomMove(quizClassId);
-    const off = subscribeClass(quizClassId, (c) => {
-      feedClassroomMove(quizClassId, c);
+    const unwatch = watchClassroomMove(hubClassId);
+    const off = subscribeClass(hubClassId, (c) => {
+      feedClassroomMove(hubClassId, c);
       setFruitOn(fruitBasketOn(c));
       setTopOn(!!c && !c.archived && readingTopOn(c));
       setTopCharacters(!!c && characterChoiceEnabled(c));
       if (!admin) setCharacterOn(!!c && readingEnabled(c) && characterChoiceEnabled(c));
       if (!admin) setPetOn(!!c && petEnabled(c));
       if (!admin) setPetFeedKey(c ? JSON.stringify(petCareRules(c)) : "");
-      if (!admin) setClassInfo({ id: quizClassId, previewOn: !!c && petPreviewOn(c) });
+      if (!admin) setClassInfo({ id: hubClassId, previewOn: !!c && petPreviewOn(c) });
     });
     return () => { off(); unwatch(); };
-  }, [admin, quizClassId]);
+  }, [admin, hubClassId]);
 
   // 알 받기 — 가입한 학생(또는 이 기능이 생긴 뒤 처음 온 학생)에게 알을 한 번 줍니다. 종은 서버가
   // 무작위로 고르고 알 단계 동안 비밀입니다(/api/reading/pet). 내 프로필의 펫(readingPet)을 구독해
@@ -230,16 +231,16 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
       window.removeEventListener("storage", sync);
     };
   }, [admin, myUid]);
-  const welcomeActive = !admin && !!myUid && !!quizClassId && welcome?.classId === quizClassId;
+  const welcomeActive = !admin && !!myUid && !!hubClassId && welcome?.classId === hubClassId;
   const welcomeActiveRef = useRef(false);
   welcomeActiveRef.current = welcomeActive;
   const needsEgg = petOn && myPet.loaded && !myPet.failed && !myPet.fromCache && !myPet.mirror && !welcomeActive;
   useEffect(() => {
-    if (!needsEgg || !quizClassId || !myUid) return;
+    if (!needsEgg || !hubClassId || !myUid) return;
     // 방금 반에 들어와 표시가 막 생긴 순간까지 한 번 더 봅니다(상태가 따라오기 전에 알을 무작위로 받지 않게)
-    if (welcomePending(myUid, quizClassId)) return;
-    ensureReadingPet(quizClassId, myUid).catch((e) => console.warn("[독서 펫] 알을 받지 못했어요:", e?.code || e?.message));
-  }, [needsEgg, quizClassId, myUid]);
+    if (welcomePending(myUid, hubClassId)) return;
+    ensureReadingPet(hubClassId, myUid).catch((e) => console.warn("[독서 펫] 알을 받지 못했어요:", e?.code || e?.message));
+  }, [needsEgg, hubClassId, myUid]);
   // 새로 받은 순간 — 누가 불렀든(이 상단바 · 책 봄의 펫 카드) 한 번 알립니다(lib/data/reading.js의 ensureReadingPet).
   // 첫 만남 중이면 큰 알 화면이 알리므로 한 줄 알림은 띄우지 않습니다.
   useEffect(() => {
@@ -263,7 +264,7 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
   const myPetMirror = myPet.loaded && !myPet.failed ? myPet.mirror : null;
   // 내가 이 반에 들어온 때 — 그날보다 앞의 날은 세지 않습니다(lib/petCare.js의 careRulesFor). 소속을 아직 못 받았으면
   // 알리지 않습니다(들어온 날을 모르는 채로 세면, 반을 미리 만들어 둔 선생님 반에 옮겨 온 학생에게 잘못 알림).
-  const myMembership = admin ? null : memberships.find((m) => m.classId === quizClassId) ?? null;
+  const myMembership = admin ? null : memberships.find((m) => m.classId === hubClassId) ?? null;
   const myJoinedAt = myMembership?.joinedAt ?? null;
   const myFeedKey = useMemo(
     () => (petFeedKey && myMembership ? JSON.stringify(careRulesFor(JSON.parse(petFeedKey), myJoinedAt)) : ""),
@@ -297,7 +298,7 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
     });
   }, [admin, myUid, characterOn]);
   async function saveMyCharacter(next) {
-    const result = await saveReadingCharacter(quizClassId, next);
+    const result = await saveReadingCharacter(hubClassId, next);
     // 리더보드가 떠 있으면 새 캐릭터로 다시 읽게 알립니다(ReadingLeaderboard)
     window.dispatchEvent(new Event("reading-character-change"));
     return result;
@@ -452,10 +453,10 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
           학교 전체에 하나인 전광판(meta/marquee, AppMarquee)이 섰는데 걷었습니다.
           책 봄이 꺼졌거나 독서 TOP 3를 끈 반에서는 빈 칸만 남습니다. */}
       <div className="topbar-mq-slot">
-        <ClassTopReaders classId={quizClassId} enabled={topOn} charactersOn={topCharacters} myUid={myUid} myCharacter={myCharacter} />
+        <ClassTopReaders classId={hubClassId} enabled={topOn} charactersOn={topCharacters} myUid={myUid} myCharacter={myCharacter} />
       </div>
 
-      {/* ④ 오른쪽 끝: 돌발 퀴즈 + 손들기 + 확성기 + 과일 뱃지 + 알림 + 프로필.
+      {/* ④ 오른쪽 끝: 손들기 + 확성기 + 과일 뱃지 + 알림 + 프로필.
           **늘 눈에 띄어야 하는 것들이라 로고와 같은 줄입니다.** 한때 이동
           메뉴와 함께 둘째 줄로 내렸는데, 그러면 첫 줄 오른쪽이 통째로 비어
           전광판의 '가운데'가 오른쪽으로 치우쳤고 아이콘도 메뉴 줄에 얹혀
@@ -463,18 +464,14 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
       <div className="user-area">
         <SampleClassBar />
         {!isFirebaseConfigured && <RoleSwitcher />}
-        {/* 손들기 → 돌발 퀴즈 → 반 공지(교사) → 알림 순 — **교사·학생 같은
-            차례**입니다(선생님 요청). 손들기와 퀴즈는 반 안의 일이라 확성기
-            왼쪽에 두고, 확성기는 그 반에만 보내는 것이라 개인 알림(종) 왼쪽에
-            둡니다 — 왼쪽으로 갈수록 범위가 좁습니다.
-            돌발 퀴즈(교사가 묻는 것)와 손들기(학생이 묻는 것)는 방향이 반대라
-            둘 다 둡니다 — 한때 손들기를 걷고 퀴즈만 두었더니 학생이 수업 중에
-            먼저 물을 길이 없어졌습니다(선생님 요청으로 되살림).
+        {/* 손들기 → 반 공지(교사) → 알림 순 — **교사·학생 같은 차례**입니다(선생님 요청).
+            손들기는 반 안의 일이라 확성기 왼쪽에 두고, 확성기는 그 반에만 보내는 것이라
+            개인 알림(종) 왼쪽에 둡니다 — 왼쪽으로 갈수록 범위가 좁습니다.
             **손바닥이 맨 왼쪽**인 까닭: 교사 화면의 손바닥은 학생이 손을 들었을
             때만 나타나는데(없을 때는 같은 크기의 빈 상자가 자리만 지킴), 줄
-            끝에 있어야 나타나고 사라져도 늘 서 있는 메모지·확성기가 제자리에
-            머뭅니다. 한때 메모지가 손바닥 왼쪽이었습니다. 퀴즈는 학생은 늘
-            보이고(지난 퀴즈를 보는 입구), 교사는 반을 골랐을 때 섭니다. */}
+            끝에 있어야 나타나고 사라져도 늘 서 있는 확성기가 제자리에 머뭅니다.
+            한때 손바닥 오른쪽에 돌발 퀴즈 메모지가 섰는데, 돌발 퀴즈를 앱에서 걷으며
+            함께 걷었습니다(선생님 요청 · 2026년 11월 — 되살리지 마세요). */}
         {user && broadcastClassId && (
           <QuestionSignalButton
             classId={broadcastClassId}
@@ -482,11 +479,6 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
             isTeacher={admin}
             className={noticeClassName}
           />
-        )}
-        {/* 반은 떠 있는 동그라미와 같은 값 — 그 '돌발 퀴즈'가 이 조각의 창을 엽니다.
-            실서비스에서는 broadcastClassId와 같고, 데모 학생만 고른 반으로 메웁니다. */}
-        {user && quizClassId && (
-          <PopQuizButton classId={quizClassId} user={user} isTeacher={admin} indicator />
         )}
         {admin && user && broadcastClassId && (
           <ClassNoticeButton
@@ -521,7 +513,7 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
           onStudyExport={admin ? onStudyExport : null}
           character={characterOn && myUid ? characterOf({ uid: myUid, character: myCharacter }) : null}
           onSaveCharacter={characterOn ? saveMyCharacter : null}
-          pet={petOn && !admin && myPet.mirror ? { classId: quizClassId, mirror: myPet.mirror } : null}
+          pet={petOn && !admin && myPet.mirror ? { classId: hubClassId, mirror: myPet.mirror } : null}
           onLogout={handleLogout}
         />
       </div>
@@ -544,7 +536,7 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
         교사 화면에 '방송 종료' 알약이 떠 있으면 그 위로 비켜 섭니다. */}
     {user && (
       <FloatingHub
-        classId={quizClassId}
+        classId={hubClassId}
         user={user}
         isTeacher={admin}
         fruitOn={fruitOn}
@@ -557,18 +549,18 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
 
     {/* 선생님의 '모두 교실로 · 모두 광장으로' — 화면 위쪽에 알림과 10초 카운트다운(선생님 요청). 다 세면 다른 화면에
         있던 사람도 책 광장 탭으로 데려갑니다. 상단바가 모든 화면에 떠 있어 여기 하나면 어디서나 뜹니다. */}
-    {user && quizClassId && <ClassMoveBanner classId={quizClassId} isTeacher={admin} />}
+    {user && hubClassId && <ClassMoveBanner classId={hubClassId} isTeacher={admin} />}
 
     {/* 첫 만남 — 참여 코드로 반에 막 들어온 학생: 캐릭터 고르기 → 책 친구 알(펫 미리보기를 켠 반은 고르기) → 큰 알 화면.
         이 기기에 표시가 있을 때만 섭니다(lib/readingWelcome.js · 선생님 요청). */}
     {welcomeActive && (
       <StudentWelcome
         uid={myUid}
-        classId={quizClassId}
+        classId={hubClassId}
         welcome={welcome}
         state={{
-          classId: quizClassId,
-          classLoaded: classInfo?.id === quizClassId,
+          classId: hubClassId,
+          classLoaded: classInfo?.id === hubClassId,
           characterOn,
           characterLoaded,
           hasCharacter: !!myCharacter,
@@ -576,7 +568,7 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
           petLoaded: myPet.loaded && !myPet.fromCache,
           hasPet: !!myPet.mirror || myPet.failed,
         }}
-        previewOn={classInfo?.id === quizClassId && classInfo.previewOn}
+        previewOn={classInfo?.id === hubClassId && classInfo.previewOn}
         characterRow={{ uid: myUid, character: myCharacter }}
         onSaveCharacter={saveMyCharacter}
       />

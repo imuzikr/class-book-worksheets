@@ -244,61 +244,6 @@ service cloud.firestore {
              && d.at == request.time;
     }
 
-    // ── 돌발 퀴즈 ─────────────────────────────────────────────
-    // 길이 천장은 lib/popQuiz.js의 QUIZ_*_MAX와 같은 값입니다.
-    function popQuizShapeOk(cId) {
-      let d = request.resource.data;
-      return d.keys().hasOnly(['classId', 'kind', 'title', 'desc', 'boardId', 'boardTitle',
-                               'byUid', 'open', 'createdAt', 'closedAt'])
-             && d.classId == cId
-             && d.kind in ['text', 'code']
-             && d.title is string && d.title.size() > 0 && d.title.size() <= 200
-             && d.desc is string && d.desc.size() <= 5000
-             && (d.boardId == null || d.boardId is string)
-             && d.boardTitle is string && d.boardTitle.size() <= 200
-             && d.byUid == uid()
-             && d.open == true
-             && d.createdAt == request.time
-             && d.closedAt == null;
-    }
-    function popQuizOf(cId, qId) {
-      return get(/databases/$(database)/documents/classes/$(cId)/popQuizzes/$(qId)).data;
-    }
-    // 학생이 보내는 답 — 제 자리에, 그 퀴즈의 종류로, 정해 둔 칸만.
-    function popAnswerShapeOk(cId, qId) {
-      let d = request.resource.data;
-      return d.keys().hasOnly(['classId', 'quizId', 'uid', 'kind', 'text', 'output', 'status',
-                               'submittedAt', 'returnNote', 'reviewedAt', 'reviewedBy', 'history'])
-             && d.classId == cId && d.quizId == qId && d.uid == uid()
-             && d.kind == popQuizOf(cId, qId).kind
-             && d.text is string && d.text.size() > 0 && d.text.size() <= 20000
-             && d.output is string && d.output.size() <= 10000
-             && d.status == 'submitted'
-             && d.submittedAt == request.time;
-    }
-
-    // 반송 → 다시 보내기 때 지난 한 차례(보냈던 답 + 선생님 한 마디)를 이력
-    // 끝에 붙입니다(lib/popQuiz.js의 nextQuizHistory). 앞의 이력은 그대로여야 하고
-    // (가득 차면 맨 앞 하나만 밀려남 — QUIZ_HISTORY_MAX 20), 붙이는 한 줄은
-    // **고치기 전 문서의 값 그대로**여야 합니다 — 학생이 지난 답을 꾸며 넣지 못하게.
-    function popHistoryLastOk(h) {
-      return h.keys().hasOnly(['text', 'output', 'note', 'submittedAt', 'returnedAt'])
-             && h.text == resource.data.text
-             && h.output == resource.data.output
-             && h.note == resource.data.get('returnNote', '')
-             && h.submittedAt == resource.data.submittedAt
-             && h.returnedAt == resource.data.get('reviewedAt', null);
-    }
-    // nw[0:0](빈 자르기)는 평가 오류가 나 첫 차례는 따로 봅니다(실측).
-    function popHistoryOk() {
-      let old = resource.data.get('history', []);
-      let nw = request.resource.data.get('history', []);
-      return nw is list && nw.size() >= 1 && nw.size() <= 20
-             && ((nw.size() == old.size() + 1 && (old.size() == 0 || nw[0:old.size()] == old))
-                 || (old.size() == 20 && nw.size() == 20 && nw[0:19] == old[1:20]))
-             && popHistoryLastOk(nw[nw.size() - 1]);
-    }
-
     // ── 사용자 프로필 ─────────────────────────────────────────
     // 실명·이메일 등 식별 정보(PII)가 여기에만 있으므로, 읽기는 본인+교사로 제한.
     // (질문 게시판은 전체 공유라 교사가 타 반 학생 실명도 확인해야 하므로 교사 전체 허용)
@@ -819,67 +764,20 @@ service cloud.firestore {
         allow delete: if isAdmin() || ownsClassEditable(cId);
       }
 
-      // ── 돌발 퀴즈 ─────────────────────────────────────────
+      // ── 돌발 퀴즈(걷음 — 선생님 요청 · 2026년 11월) ──────────────
       //  · 경로 = classes/{classId}/popQuizzes/{qId} (+ submissions/{학생 uid})
-      //    셈과 모양은 lib/popQuiz.js. 반마다 열린 퀴즈는 하나 — 보낼 때 앞의
-      //    것을 닫는 일은 앱이 한 묶음으로 합니다(규칙은 개수를 셀 수 없음).
-      //  · 퀴즈: 읽기는 반 학생·담당 교사. 만들기·닫기·지우기는 담당 교사.
-      //    고치기는 '닫기'(open → false) 한 가지뿐 — 보낸 물음은 안 바뀝니다.
-      //  · 답: 학생은 **제 자리에, 열린 퀴즈에만**, 처음이거나 반송됐을 때만
-      //    보냅니다(보낸 뒤 · 과일을 받은 뒤에는 못 고침). 교사는 상태 칸만 —
-      //    반송(보낸 답 · 열린 퀴즈) · 완료(보낸 답) · 과일(보낸 답 또는 반송한 답).
-      //    다시 보낼 때 지난 차례가 history에 쌓여 오간 말이 남습니다(popHistoryOk).
-      //    읽기는 그 학생과 담당 교사(목록은 교사만). 시험 tests/rules/popQuiz.test.mjs.
+      //  · 앱에서 걷었습니다(화면 · 자료 함수 · 셈 — 되살리지 마세요). 옛 퀴즈 · 답은 지우지 않고 남겨 두었다가
+      //    반 완전 삭제 · 학생 탈퇴 때 함께 지웁니다(lib/classPurge.js · lib/data/withdraw.js) — 그 길(담당 교사 ·
+      //    관리자의 읽기 · 지우기)만 남기고 만들기 · 고치기는 닫았습니다(presence · signalEvents와 같은 방식).
+      //    학생은 읽지도 못합니다(보는 화면이 없음). 시험 tests/rules/popQuiz.test.mjs.
       match /popQuizzes/{qId} {
-        allow read: if signedIn() && (isAdmin() || ownsClass(cId) || isClassMember(cId));
-        allow create: if signedIn() && (isAdmin() || ownsClassEditable(cId))
-                      && popQuizShapeOk(cId);
-        allow update: if signedIn() && (isAdmin() || ownsClassEditable(cId))
-                      && changedOnly(['open', 'closedAt'])
-                      && request.resource.data.open == false
-                      && request.resource.data.closedAt == request.time;
+        allow read: if signedIn() && (isAdmin() || ownsClass(cId));
+        allow create, update: if false;
         allow delete: if isAdmin() || ownsClassEditable(cId);
 
         match /submissions/{aUid} {
-          allow get: if signedIn() && (isAdmin() || ownsClass(cId) || aUid == uid());
-          allow list: if signedIn() && (isAdmin() || ownsClass(cId));
-          allow create: if signedIn() && aUid == uid() && isClassMember(cId)
-                        && popQuizOf(cId, qId).open == true
-                        && popAnswerShapeOk(cId, qId)
-                        && !request.resource.data.keys().hasAny(['returnNote', 'reviewedAt', 'reviewedBy', 'history']);
-          // 반송된 답을 고쳐 다시 보내기
-          allow update: if signedIn() && aUid == uid() && isClassMember(cId)
-                        && popQuizOf(cId, qId).open == true
-                        && resource.data.status == 'returned'
-                        && changedOnly(['kind', 'text', 'output', 'status', 'submittedAt', 'history'])
-                        && popAnswerShapeOk(cId, qId)
-                        // 이력을 안 건드리는 옛 화면도 그대로 받습니다(배포 사이).
-                        && (request.resource.data.get('history', null) == resource.data.get('history', null)
-                            || popHistoryOk());
-          // 교사 — 반송(한 마디는 선택)
-          allow update: if signedIn() && (isAdmin() || ownsClassEditable(cId))
-                        && resource.data.status == 'submitted'
-                        && popQuizOf(cId, qId).open == true
-                        && changedOnly(['status', 'returnNote', 'reviewedAt', 'reviewedBy'])
-                        && request.resource.data.status == 'returned'
-                        && request.resource.data.returnNote is string
-                        && request.resource.data.returnNote.size() <= 500
-                        && request.resource.data.reviewedAt == request.time
-                        && request.resource.data.reviewedBy == uid();
-          // 교사 — 과일을 줬다(그 학생의 퀴즈는 끝)
-          allow update: if signedIn() && (isAdmin() || ownsClassEditable(cId))
-                        && resource.data.status in ['submitted', 'returned']
-                        && changedOnly(['status', 'reviewedAt', 'reviewedBy'])
-                        && request.resource.data.status == 'rewarded'
-                        && request.resource.data.reviewedAt == request.time
-                        && request.resource.data.reviewedBy == uid();
-          // 교사 — 완료(과일 없이 답을 인정 · 그 학생의 퀴즈는 끝). 보낸 답에만.
-          allow update: if signedIn() && (isAdmin() || ownsClassEditable(cId))
-                        && resource.data.status == 'submitted'
-                        && changedOnly(['status', 'reviewedAt', 'reviewedBy'])
-                        && request.resource.data.status == 'completed'
-                        && request.resource.data.reviewedAt == request.time
-                        && request.resource.data.reviewedBy == uid();
+          allow read: if signedIn() && (isAdmin() || ownsClass(cId));
+          allow create, update: if false;
           allow delete: if isAdmin() || ownsClassEditable(cId);
         }
       }

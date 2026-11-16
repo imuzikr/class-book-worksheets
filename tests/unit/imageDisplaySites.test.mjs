@@ -61,7 +61,6 @@ test("uploadImage를 부르는 곳은 정해진 파일뿐이고, 모두 classId�
 test("서식 편집기를 쓰는 화면은 모두 반 id로 감싸져 있습니다(UploadClassProvider)", () => {
   const hosts = {
     "components/MessengerWindow.jsx": "props.classId",
-    "components/PopQuizStudentModal.jsx": "props.classId",
     "components/RaftForm.jsx": "props.activity?.classId", // 동료 평가(PeerReviewModal)
   };
   for (const [f, expr] of Object.entries(hosts)) {
@@ -71,7 +70,6 @@ test("서식 편집기를 쓰는 화면은 모두 반 id로 감싸져 있습니�
   assert.deepEqual(walkFiles(["app", "components"], /<RichTextEditor\b/), [
     "components/MessengerWindow.jsx",
     "components/PeerReviewModal.jsx",
-    "components/PopQuizStudentModal.jsx",
   ]);
 });
 
@@ -83,11 +81,10 @@ const DIRECT = [
   ["components/MindmapCanvas.jsx", /<SecureImage className="mm-node-img" src=\{n\.image\}/],
   ["components/PresentationOverlay.jsx", /<SecureImage\s+className="broadcast-slide-img"\s+src=\{broadcast\.imageUrl\}/],
 ];
-// 정화한 서식 HTML을 그리는 4곳 — 모두 SecureHtml
+// 정화한 서식 HTML을 그리는 3곳 — 모두 SecureHtml(돌발 퀴즈의 답 칸은 퀴즈와 함께 걷음)
 const RICH = [
   ["components/PeerReviewModal.jsx", /html=\{richHtml\(/, 3],
   ["components/MessengerWindow.jsx", /html=\{sanitizeHtml\(m\.html\)\}/, 1],
-  ["components/PopQuizParts.jsx", /html=\{sanitizeHtml\(/, 1],
   ["components/PresentationOverlay.jsx", /html=\{html\}/, 1],
 ];
 
@@ -99,7 +96,7 @@ test("표시 — 저장된 주소를 그리는 5곳은 SecureImage", () => {
   }
 });
 
-test("표시 — 서식 HTML 4곳은 SecureHtml(개수까지)", () => {
+test("표시 — 서식 HTML 3곳은 SecureHtml(개수까지)", () => {
   for (const [f, re, n] of RICH) {
     const src = read(f);
     assert.equal(src.match(new RegExp(re.source, "g"))?.length ?? 0, n, f);

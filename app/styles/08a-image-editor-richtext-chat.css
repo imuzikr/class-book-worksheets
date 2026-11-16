@@ -172,12 +172,12 @@ code.rte-code-glyph {
 }
 
 /* 코드 블록 — 어두운 배경에 진짜 코드처럼 표시 */
-/* `.study-card-content`·`.study-card-body`가 여기 빠져 있어, 공부방 카드에
+/* `.study-card-body`(발표 화면)가 여기 빠져 있어, 공부방 카드에
    넣은 코드만 밋밋한 글로 나왔습니다 — 에디터에서는 검은 블록이던 것이
-   저장하고 보면 평범한 글이 되니 '서식이 안 먹는다'로 보입니다. */
+   저장하고 보면 평범한 글이 되니 '서식이 안 먹는다'로 보입니다.
+   (`.study-card-content`는 돌발 퀴즈 답이 쓰던 자리라 퀴즈와 함께 걷었습니다.) */
 .rte-area pre,
 .msgr-bubble pre,
-.study-card-content pre,
 .study-card-body pre {
   background: var(--dark);
   color: #e8e5dd;
@@ -201,8 +201,6 @@ pre code {
 .rte-area ol,
 .msgr-bubble ul,
 .msgr-bubble ol,
-.study-card-content ul,
-.study-card-content ol,
 .study-card-body ul,
 .study-card-body ol {
   padding-left: 20px;

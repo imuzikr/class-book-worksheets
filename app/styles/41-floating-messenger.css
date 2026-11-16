@@ -215,6 +215,10 @@
 }
 .hub-center-badge svg { width: 20px; height: 20px; }
 .hub-center-badge .hub-basket-pic { width: 24px; height: 16px; }
+/* 독서로 검색 창의 코드를 내려받는 동안 서는 작은 창(FloatingHub의 LibraryLoading) — 그 창의 CSS는 코드와 함께
+   오므로(components/reading/school-library.css) 이 자리표시만은 늘 실리는 이 파일에 둡니다. */
+.modal.hub-modal-loading { width: min(420px, 100%); display: flex; align-items: center; gap: 12px; }
+.hub-modal-loading p { margin: 0; flex: 1; color: #2f4d66; font-size: 14px; }
 
 /* ── 메신저 창 ── */
 .msgr {

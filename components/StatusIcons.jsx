@@ -367,16 +367,32 @@ export function IconMyPost({ size = 20, className = "" }) {
   );
 }
 
-// 돌발 퀴즈 — 노란 메모지(포스트잇) 한 장. 위에 테이프, 아래 오른쪽 귀가 접혀
-// 있고 물음표 대신 줄 두 개(답을 적는 종이). 상단바(학생은 늘 · 교사는 반을
-// 골랐을 때)와 교사 자리표의 '답 보냄' 칸에 같은 그림을 씁니다.
-export function IconQuizMemo({ size = 20, className = "" }) {
+// 메모 — 노란 메모지(포스트잇) 한 장. 위에 테이프, 아래 오른쪽 귀가 접혀 있고 줄 두 개.
+// RAFT 교사 피드백의 「피드백 n개」 단추 · 메모 목록 · 메모 창이 씁니다(components/RaftFeedback.jsx).
+// 한때 이름이 IconQuizMemo — 돌발 퀴즈의 메모지였는데 퀴즈를 걷으며 이름만 바꿨습니다(그림은 그대로).
+export function IconMemo({ size = 20, className = "" }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
       <path d="M5.4 6.2c0-.8.65-1.45 1.45-1.45h10.3c.8 0 1.45.65 1.45 1.45v8.15l-4.25 4.9H6.85c-.8 0-1.45-.65-1.45-1.45V6.2Z" fill="#FFE9A8" stroke="#3A312E" strokeWidth="1.55" strokeLinejoin="round"/>
       <path d="M18.6 14.35h-3.05c-.8 0-1.2.4-1.2 1.2v3.7" fill="#F5CF6B" stroke="#3A312E" strokeWidth="1.35" strokeLinejoin="round"/>
       <path d="M8.3 9.3h7.4M8.3 12.2h4.6" stroke="#8A6258" strokeWidth="1.3" strokeLinecap="round"/>
       <path d="M9.6 3.6h4.8v2.3H9.6z" fill="#FFFDF9" fillOpacity=".85" stroke="#8A6258" strokeWidth="1.1" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
+// 독서로 검색 — 펼친 책 위에 돋보기(떠 있는 동그라미의 '독서로 검색' 행성 · components/reading/SchoolLibrarySearch.jsx).
+// 책은 IconBook을 왼쪽 위로 작게 옮긴 것이고, 돋보기의 흰 알이 오른쪽 아래 쪽을 덮습니다(그리는 차례가 곧 겹침).
+export function IconLibrarySearch({ size = 20, className = "" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+      <path d="M10.1 6.15C8.66 5.1 6.98 4.64 5.08 4.76c-.6.04-1.08.54-1.08 1.15v7.58c0 .67.58 1.2 1.25 1.14 1.68-.12 3.18.3 4.85 1.3" fill="#FFF7ED" stroke="#3A312E" strokeWidth="1.45" strokeLinejoin="round"/>
+      <path d="M10.1 6.15c1.44-1.05 3.12-1.51 5.02-1.39.6.04 1.08.54 1.08 1.15v7.58c0 .67-.58 1.2-1.25 1.14-1.68-.12-3.18.3-4.85 1.3" fill="#FFFDF9" stroke="#3A312E" strokeWidth="1.45" strokeLinejoin="round"/>
+      <path d="M10.1 6.15v9.83" stroke="#3A312E" strokeWidth="1.3" strokeLinecap="round"/>
+      <path d="M6.05 8.15h2.25M6.05 10.25h1.85" stroke="#8A6258" strokeWidth="1" strokeLinecap="round"/>
+      <circle cx="15.7" cy="15.15" r="3.9" fill="#FFFDF9" stroke="#3A312E" strokeWidth="1.6"/>
+      <path d="M13.85 14.35a2.05 2.05 0 0 1 2.35-1.25" stroke="#8A6258" strokeWidth="1.15" strokeLinecap="round"/>
+      <path d="M18.55 18.05 21 20.5" stroke="#3A312E" strokeWidth="2" strokeLinecap="round"/>
     </svg>
   );
 }

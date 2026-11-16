@@ -1,6 +1,6 @@
 # 책나눔 화면 모양(CSS) 안내
 
-책나눔의 화면 모양 규칙은 모두 이 폴더(`app/styles/`)의 CSS 파일 46개에 있습니다.
+책나눔의 화면 모양 규칙은 모두 이 폴더(`app/styles/`)의 CSS 파일 45개에 있습니다(돌발 퀴즈의 39b-popquiz는 퀴즈와 함께 걷음 · 2026년 11월).
 `app/globals.css`는 이 파일들을 **정해진 순서대로 불러오는 입구**일 뿐입니다.
 
 > 한 줄 요약: **파일 순서를 바꾸지 말고, 고친 뒤에는 `npm run css:fingerprint`로 확인하세요.**
@@ -41,7 +41,6 @@
 | 의견 게시판 | 37-opinion-board |
 | 해시태그 | 38a-hashtag-form-slides, 38b-hashtag-infographic-teacher |
 | 물음표(qmark) | 39a-qmark-activity-examples |
-| 돌발 퀴즈 | 39b-popquiz (일부는 13번) |
 | 가로세로 퀴즈 | 40-crossword, 42a-raft-crossword-signup |
 | 떠 있는 메신저 | 41-floating-messenger |
 | 회원가입 교사 코드 칸 | 42a-raft-crossword-signup |
@@ -49,7 +48,8 @@
 | 낱말 빙고(판 · 낱말 칩 · 부른 낱말 — 뼈대는 가로세로 클래스를 빌려 씀) | 43-bingo |
 
 이 폴더 밖에도 **컴포넌트가 직접 불러오는 CSS**가 몇 개 있습니다(예: `components/dashboard/dashboard.css`,
-`components/reading/reading.css`, `components/demo-classroom.css`). 이것들은 이 폴더와 따로 움직입니다.
+`components/reading/reading.css`, `components/demo-classroom.css`, 독서로 검색 창의 `components/reading/school-library.css`
+— 그 창을 누를 때만 함께 내려받음). 이것들은 이 폴더와 따로 움직입니다.
 
 ## 2. 클래스 이름 앞부분(접두사)으로 찾기
 
@@ -59,7 +59,7 @@
 |---|---|---|
 | `xw-`, `xwg-` | 가로세로 퀴즈 | 40, 42a, 42b |
 | `ht-`, `hts-` | 해시태그 | 38a, 38b, 42b |
-| `pq-` | 돌발 퀴즈 | 13, 39b |
+| `lib-` | 독서로 검색 창 | (이 폴더 밖) components/reading/school-library.css |
 | `mm-` | 마인드맵 | 30 |
 | `bw-` | 브레인 라이팅 | 42b |
 | `bingo-` | 낱말 빙고 | 43 |

@@ -227,9 +227,8 @@
    종·확성기·손들기는 **보이는 상자(main과 같은 ≈28px)는 그대로** 두고
    ::before로 누르는 곳만 넓힙니다 — 상자를 키우면 알림 종이 있을 때
    390폭에서 상단바가 두 줄이 됩니다(검수반장 PR #66).
-   돌발 퀴즈 상단 표시(.pq-btn--indicator)는 누르는 단추가 아니라서 키우지 않습니다.
-   예전에 두었던 .pq-btn:not(.pq-btn--indicator) 규칙은 상단바에서 걸리는 곳이
-   없어 뺐습니다(일반 .pq-btn은 떠 있는 동그라미 쪽에서만 씁니다).
+   (한때 손들기 오른쪽의 돌발 퀴즈 표시 때문에 손들기의 누르는 곳을 오른쪽으로만
+   넓혔는데, 돌발 퀴즈를 걷으며 그 규칙도 걷었습니다.)
    768px 이상은 바꾸지 않습니다. */
 @media (max-width: 767.98px) {
   .topbar-book-navigation .logo-button { min-height: 36px; }
@@ -245,15 +244,6 @@
     content: "";
     position: absolute;
     inset: -4px; /* 28×28 → 36×36. hold 폭은 main과 같이 28px 유지 */
-  }
-  /* 돌발 퀴즈 표시가 오른쪽에 붙어 있으면 손들기가 왼쪽으로 밀려 책 봄과 1~3px까지
-     가까워집니다(학생 400·440폭). 이때는 왼쪽으로 넓히지 않고 오른쪽(누르는 단추가 아닌
-     돌발 퀴즈 표시 위)으로만 8px 넓혀 36×36을 지킵니다. */
-  .topbar-book-navigation .question-signal-wrap:has(+ .pq-btn--indicator) .question-signal-btn {
-    z-index: 1;
-  }
-  .topbar-book-navigation .question-signal-wrap:has(+ .pq-btn--indicator) .question-signal-btn::before {
-    inset: -4px -8px -4px 0;
   }
   .topbar-book-navigation .fruit-total-chip--btn { min-height: 36px; }
 }
@@ -331,7 +321,7 @@
 .opinion-list-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
 
 /* ── 선생님 댓글 — 표식(목록 줄 · 메모지)과 크게 보기 창의 칸 ──
-   색은 이 앱의 '선생님 말' 초록(손들기 · 돌발 퀴즈 대화의 선생님 말과 같은 값). */
+   색은 이 앱의 '선생님 말' 초록(손들기 대화의 선생님 말과 같은 값). */
 .opinion-reply-mark {
   display: inline-flex;
   align-items: center;

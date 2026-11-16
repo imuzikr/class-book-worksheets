@@ -16,7 +16,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { RAFT_FEEDBACK_MAX, splitFeedbackSegments } from "@/lib/raftFeedback";
 import { usePopoverAnchor, usePopoverDismiss } from "@/lib/popover";
-import { IconQuizMemo } from "./StatusIcons";
+import { IconMemo } from "./StatusIcons";
 
 // 새로 고르는 중인 범위의 표시 id(아직 저장 전)
 export const PENDING_ID = "__new";
@@ -94,7 +94,7 @@ export function RaftFeedbackButton({ notes = [], isNew = null, open = false, onT
       aria-haspopup="dialog"
       title={fresh ? `새 피드백 ${fresh}개 — 눌러서 읽기` : "피드백 메모 목록"}
     >
-      <IconQuizMemo size={18} />
+      <IconMemo size={18} />
       피드백 {notes.length}개
       {fresh > 0 && <span className="raft-fb-btn-new">새 {fresh}</span>}
     </button>
@@ -116,7 +116,7 @@ export function RaftFeedbackList({ anchor, notes = [], isNew = null, activeId = 
       style={{ left: pos.x, top: pos.y, maxHeight: pos.maxH }}
     >
       <div className="raft-fb-pop-head">
-        <IconQuizMemo size={18} />
+        <IconMemo size={18} />
         <strong>{title} {notes.length}개</strong>
         <button type="button" className="raft-fb-pop-x" onClick={onClose} aria-label="닫기">×</button>
       </div>
@@ -202,7 +202,7 @@ export function RaftFeedbackPopover({ anchor, note = null, quote = "", canEdit =
       style={{ left: pos.x, top: pos.y, maxHeight: pos.maxH }}
     >
       <div className="raft-fb-pop-head">
-        <IconQuizMemo size={18} />
+        <IconMemo size={18} />
         <strong>{note ? `피드백 ${note.no ?? ""}` : "새 피드백"}</strong>
         <button type="button" className="raft-fb-pop-x" onClick={onClose} aria-label="닫기">×</button>
       </div>

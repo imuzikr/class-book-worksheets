@@ -58,7 +58,7 @@ export default function ClassPurgeModal({ cls, onClose, onDone }) {
         <p className="confirm-preview">"{cls.name}"</p>
         <p className="confirm-desc">
           이 반의 독서 활동과 학생 글, 출석 · 자리표 · 모둠, 과일과 바구니, 메신저 ·
-          손들기 · 돌발 퀴즈, 반 공지가 모두 지워지고 <b>되돌릴 수 없습니다.</b>
+          손들기, 반 공지가 모두 지워지고 <b>되돌릴 수 없습니다.</b>
           <br />
           학생 계정은 다른 반에서도 쓰므로 남습니다.
         </p>

@@ -30,13 +30,12 @@
 // 내려받음). 반 목록은 책방 페이지의 내 반(보관된 반 포함 — 대시보드와 같은 범위)을 ownClasses로 받습니다. 이름 · 학번을 고치면
 // 명단(useClassRoster — 학생 프로필을 구독)이 저절로 따라오고, 빼거나 탈퇴시키면 창을 닫고 알림 한 줄 · 명단의 첫 학생으로 돌아갑니다.
 //
-// **학교 도서관 소장 검색**(선생님 요청): 명단 위의 '학교 도서관 소장 검색' — 한성여자고등학교 도서관(독서로)에서 제목 일부로
-// 소장 여부 · 청구기호 · 자료 상태를 봅니다(SchoolLibrarySearch · /api/library/search — 선생님 · 관리자만).
+// **학교 도서관 소장 검색**은 한때 명단 위의 작은 칸이었습니다 — 모든 사용자의 떠 있는 동그라미 '독서로 검색'으로
+// 옮기며(선생님 요청 · 2026년 11월) 이 칸은 걷었습니다(components/FloatingHub.jsx · reading/SchoolLibrarySearch.jsx).
 // =============================================================
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import ReadingHub, { TeacherPlaza } from "./ReadingHub";
-import SchoolLibrarySearch from "./SchoolLibrarySearch";
 import { IconAnswer, IconStudent } from "@/components/StatusIcons";
 import { backdropClose } from "@/lib/modal";
 import { recallReadingPet, subscribeRosterPets } from "@/lib/data/reading";
@@ -195,8 +194,6 @@ export default function TeacherReadingView({ classId, user, roster = [], ownClas
             <small>{hubProps.classroom?.on ? "광장의 포털로 교실에도 가요" : "학생들의 책과 글을 함께 봐요"}</small>
           </button>
         )}
-        {/* 학교 도서관 소장 검색 — 선생님 화면에만(학생 화면은 이 조각이 없음 · 서버도 선생님만 받음) */}
-        <SchoolLibrarySearch />
         <h3>학생 명단 <span>{roster.length}</span></h3>
         {feedOn && careOf.size > 0 && (
           <p className={`reading-teacher-care${hungryCount || awayCount ? " is-alert" : ""}`}>

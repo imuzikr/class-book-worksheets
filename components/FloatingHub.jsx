@@ -4,8 +4,10 @@
 // 떠 있는 동그라미 — 메신저와 자주 여는 기능을 한 손에
 // -------------------------------------------------------------
 // 화면 오른쪽 아래의 작은 동그라미(56px). 누르면 **큰 원으로 펼쳐지며**
-// 학생은 메신저 · 돌발 퀴즈 · 내 출석부 · 과일 바구니 · 분석 리포트 다섯 개,
+// 학생은 메신저 · 독서로 검색 · 내 출석부 · 과일 바구니 · 분석 리포트 다섯 개,
 // 교사는 출석 관리 · 반 관리가 포함된 여섯 개 기능이 둘레에 섭니다.
+// '독서로 검색'(학교 도서관 소장 검색 — 선생님 요청 · 2026년 11월)은 한때 돌발 퀴즈가 서던 자리입니다 —
+// 돌발 퀴즈는 앱에서 걷었습니다(되살리지 마세요).
 // KWLS 차트는 걷었습니다 — KWLS는 책방의 독서 활동으로만 씁니다.
 //
 // [모양은 행성 궤도]
@@ -15,15 +17,15 @@
 //
 // [그림은 앱의 아이콘 그대로]
 // 이모지 대신 이미 그 기능을 가리키는 그림을 씁니다(components/StatusIcons.jsx)
-// — 메신저는 말풍선(IconAnswer — 로고는 가운데 해의 기본 그림), 돌발 퀴즈는
-// 메모지(IconQuizMemo), 반 관리는 IconBlackboard,
+// — 메신저는 말풍선(IconAnswer — 로고는 가운데 해의 기본 그림), 독서로 검색은
+// 책 위의 돋보기(IconLibrarySearch), 반 관리는 IconBlackboard,
 // 출석은 IconCheck. 과일 바구니는 바구니 창의 그림
 // (`public/fruit-basket.webp`)을 작게 — 원을 펼쳤을 때만 그려 처음 화면에서
 // 그림을 받지 않습니다.
 //
 // [기능은 '그 자리로 데려다 주기']
-// 메신저만 이 자리에서 창을 엽니다. 나머지는 이미 공부방에 있는 창을
-// 주소로 엽니다(`/books?open=attendance|fruit|classes` — 공부방이 열고
+// 메신저와 독서로 검색만 이 자리에서 창을 엽니다(독서로 검색 창은 누를 때만 내려받음 — 아래 dynamic).
+// 나머지는 이미 책방에 있는 창을 주소로 엽니다(`/books?open=attendance|fruit|classes` — 책방이 열고
 // 주소를 지웁니다). 같은 창을 여기에 한 벌 더 만들면 두 곳이 어긋납니다.
 // 분석 리포트(교사는 '관리자 대시보드')는 `/dashboard`에서 현재 반·역할에 맞는 통계를 보여 줍니다.
 //
@@ -42,8 +44,11 @@
 // 문서 + 읽음 표시(+ 교사는 반 목록). 교사의 학생 명단은 **메신저를 열었을
 // 때만** 읽습니다. 교사의 배지는 메신저 창에서 고른 반(처음엔 공부방의 반)의 것입니다.
 // =============================================================
-import { useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
+import { backdropClose } from "@/lib/modal";
 import { HUB_DRAG_MIN, cleanHubPos, hubPlacement, hubPosFromPoint } from "@/lib/hubPlace";
 import {
   subscribeOwnClasses,
@@ -60,10 +65,27 @@ import {
   IconAnswer,
   IconBlackboard,
   IconCheck,
-  IconQuizMemo,
+  IconLibrarySearch,
   IconReport,
 } from "./StatusIcons";
-import { POPQUIZ_OPEN_EVENT } from "./PopQuizButton";
+
+// 독서로 검색 창 — 누를 때만 내려받습니다(창의 CSS도 함께 — 모든 화면의 첫 묶음에 안 실리게).
+// 내려받는 동안에도 같은 자리에 작은 창이 서고 닫힙니다(dynamic의 loading은 props를 못 받아 닫기는 context로).
+const LibraryCloseContext = createContext(() => {});
+function LibraryLoading() {
+  const onClose = useContext(LibraryCloseContext);
+  if (typeof document === "undefined") return null;
+  return createPortal(
+    <div className="modal-backdrop" {...backdropClose(onClose)}>
+      <div className="modal hub-modal-loading" role="dialog" aria-modal="true" aria-label="독서로 검색">
+        <p role="status">독서로 검색 창을 여는 중…</p>
+        <button type="button" className="btn-close" aria-label="닫기" onClick={onClose}>×</button>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+const SchoolLibraryModal = dynamic(() => import("./reading/SchoolLibrarySearch"), { ssr: false, loading: LibraryLoading });
 
 function FruitBasketPic({ show }) {
   if (!show) return <span className="hub-basket-pic" />;
@@ -75,22 +97,22 @@ const ICONS = {
   msg: () => <IconAnswer size={28} />,
   attend: () => <IconCheck size={24} className="hub-icon-check" />,
   classes: () => <IconBlackboard size={27} />,
-  quiz: () => <IconQuizMemo size={26} />,
+  library: () => <IconLibrarySearch size={28} />,
   fruit: ({ show }) => <FruitBasketPic show={show} />,
   report: () => <IconReport size={26} />,
 };
 
 const STUDENT_ITEMS = [
   { key: "msg", label: "메신저", hint: "선생님 · 우리 모둠과 대화해요" },
-  // 상단바 메모지는 알림만 — 창은 여기서(PopQuizButton이 이벤트를 받아 엶)
-  { key: "quiz", label: "돌발 퀴즈", hint: "퀴즈에 답하고 지난 퀴즈를 봐요", event: POPQUIZ_OPEN_EVENT },
+  // 독서로 검색 — 학생 · 교사 같은 행성(이 자리에서 창을 엶). 한때 돌발 퀴즈가 서던 자리입니다.
+  { key: "library", label: "독서로 검색", hint: "우리 학교 도서관에 있는 책인지 찾아봐요" },
   { key: "attend", label: "내 출석부", hint: "내 출석 기록을 봐요", href: "/books?open=attendance" },
   { key: "fruit", label: "과일 바구니", hint: "과일을 담고 이벤트에 응모해요", href: "/books?open=fruit" },
   { key: "report", label: "분석 리포트", hint: "나의 독서 활동과 성장 통계를 봐요", href: "/dashboard" },
 ];
 const TEACHER_ITEMS = [
   { key: "msg", label: "메신저", hint: "학생 · 모둠과 대화해요" },
-  { key: "quiz", label: "돌발 퀴즈", hint: "퀴즈를 보내고 답을 확인해요", event: POPQUIZ_OPEN_EVENT },
+  { key: "library", label: "독서로 검색", hint: "우리 학교 도서관에 있는 책인지 찾아봐요" },
   { key: "attend", label: "출석 관리", hint: "출석을 시작하고 기록을 봐요", href: "/books?open=attendance" },
   { key: "classes", label: "반 관리", hint: "반 · 참여 코드 · 자리와 모둠", href: "/books?open=classes" },
   { key: "fruit", label: "과일 바구니", hint: "바구니 합계와 이벤트 현황", href: "/books?open=fruit" },
@@ -138,6 +160,7 @@ export default function FloatingHub({ classId: pageClassId, user, isTeacher, fru
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [msgOpen, setMsgOpen] = useState(false);
+  const [libOpen, setLibOpen] = useState(false);
   const [hover, setHover] = useState(null);
   // 한 번이라도 펼쳤나 — 바구니 그림은 그때부터 받습니다(닫히는 동안에도 남게).
   const [opened, setOpened] = useState(false);
@@ -369,7 +392,7 @@ export default function FloatingHub({ classId: pageClassId, user, isTeacher, fru
       setMsgOpen(true);
       return;
     }
-    if (item.event) { window.dispatchEvent(new Event(item.event)); return; }
+    if (item.key === "library") { setLibOpen(true); return; }
     if (item.href) router.push(item.href);
   }
 
@@ -381,6 +404,11 @@ export default function FloatingHub({ classId: pageClassId, user, isTeacher, fru
     }
     if (msgOpen) { setMsgOpen(false); return; }
     setMenuOpen((v) => !v);
+  }
+
+  function closeLibrary() {
+    setLibOpen(false);
+    fabRef.current?.focus();
   }
 
   if (!user || !classId) return null;
@@ -502,6 +530,12 @@ export default function FloatingHub({ classId: pageClassId, user, isTeacher, fru
           initialRoom={openReq}
           onClose={() => { setMsgOpen(false); setOpenReq(null); fabRef.current?.focus(); }}
         />
+      )}
+
+      {libOpen && (
+        <LibraryCloseContext.Provider value={closeLibrary}>
+          <SchoolLibraryModal onClose={closeLibrary} />
+        </LibraryCloseContext.Provider>
       )}
     </div>
   );

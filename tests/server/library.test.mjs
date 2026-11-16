@@ -1,5 +1,6 @@
-// 학교 도서관 소장 검색의 로그인 확인 — route(GET /api/library/search)가 쓰는 처리기 그대로(handleLibrarySearch)를 Auth · Firestore 에뮬레이터의 진짜 ID 토큰으로 부릅니다.
-// 학생 · 익명 · 토큰 없음은 독서로에 닿기 전에 거절되어야 합니다(global fetch를 지켜봄). 교사는 독서로 대신 가짜 응답을 받습니다.
+// 독서로 검색(학교 도서관 소장 검색)의 로그인 확인 — route(GET /api/library/search)가 쓰는 처리기 그대로(handleLibrarySearch)를
+// Auth · Firestore 에뮬레이터의 진짜 ID 토큰으로 부릅니다. 로그인한 사용자 모두(학생 · 교사 · 관리자)가 검색하고,
+// 익명 · 토큰 없음 · 프로필 없음 · 사용 중지는 독서로에 닿기 전에 거절되어야 합니다(global fetch를 지켜봄). 독서로 대신 가짜 응답을 받습니다.
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { initializeApp, deleteApp } from "firebase-admin/app";
@@ -29,12 +30,14 @@ const call = async (token, q = "채식") => {
 };
 
 before(async () => {
-  for (const [kind, role] of [["teacher", "teacher"], ["admin", "admin"], ["student", "student"], ["suspendedTeacher", "teacher"]]) {
+  for (const [kind, role] of [["teacher", "teacher"], ["admin", "admin"], ["student", "student"], ["suspendedTeacher", "teacher"], ["suspendedStudent", "student"]]) {
     const who = await signUp({ email: `library-${kind}-${Date.now()}@example.com`, password: "valid-test-password" });
-    await db.doc(`users/${who.localId}`).set({ role, realName: kind, ...(kind === "suspendedTeacher" ? { suspended: true } : {}) });
+    await db.doc(`users/${who.localId}`).set({ role, realName: kind, ...(kind.startsWith("suspended") ? { suspended: true } : {}) });
     tokens[kind] = who.idToken;
   }
   tokens.anonymous = (await signUp({})).idToken;
+  // 앱에 가입하지 않은 계정 — 토큰은 진짜지만 users/{uid} 프로필이 없음
+  tokens.noProfile = (await signUp({ email: `library-noprofile-${Date.now()}@example.com`, password: "valid-test-password" })).idToken;
   // 독서로 대신 — 에뮬레이터로 가는 요청은 그대로, read365로 가는 요청만 기록하고 가짜로 답함
   globalThis.fetch = async (url, init) => {
     const href = String(url);
@@ -48,9 +51,9 @@ before(async () => {
 });
 after(async () => { globalThis.fetch = realFetch; await deleteApp(app); });
 
-test("토큰 없음 · 익명 · 학생 · 사용 중지 교사는 거절되고 독서로에 닿지 않는다", async () => {
+test("토큰 없음 · 익명 · 프로필 없음 · 사용 중지(교사 · 학생)는 거절되고 독서로에 닿지 않는다", async () => {
   upstream = [];
-  for (const [token, status] of [[null, 401], [tokens.anonymous, 401], ["not-a-token", 401], [tokens.student, 403], [tokens.suspendedTeacher, 403]]) {
+  for (const [token, status] of [[null, 401], [tokens.anonymous, 401], ["not-a-token", 401], [tokens.noProfile, 401], [tokens.suspendedTeacher, 403], [tokens.suspendedStudent, 403]]) {
     const response = await call(token);
     assert.equal(response.status, status, `token ${String(token).slice(0, 12)}`);
     const body = await response.json();
@@ -59,9 +62,20 @@ test("토큰 없음 · 익명 · 학생 · 사용 중지 교사는 거절되고 
   assert.deepEqual(upstream, []);
 });
 
-test("학생이 빈 검색어 · 긴 검색어로 불러도 입력 오류가 아니라 권한 거절", async () => {
-  assert.equal((await call(tokens.student, "")).status, 403);
-  assert.equal((await call(tokens.student, "가".repeat(80))).status, 403);
+test("사용 중지된 학생이 빈 검색어 · 긴 검색어로 불러도 입력 오류가 아니라 권한 거절", async () => {
+  assert.equal((await call(tokens.suspendedStudent, "")).status, 403);
+  assert.equal((await call(tokens.suspendedStudent, "가".repeat(80))).status, 403);
+});
+
+test("학생도 검색 결과를 받는다(선생님 요청 — 떠 있는 동그라미의 '독서로 검색') · 빈 검색어는 입력 오류", async () => {
+  upstream = [];
+  const response = await call(tokens.student, "주의자");
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.books[0].copies[0].status, "대출가능");
+  assert.equal(upstream.length, 2);
+  assert.equal((await call(tokens.student, "")).status, 400);
+  assert.equal((await call(tokens.student, "가".repeat(80))).status, 400);
 });
 
 test("교사 · 관리자는 검색 결과를 받는다(소장 · 자료 상태)", async () => {

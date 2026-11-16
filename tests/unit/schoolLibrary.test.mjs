@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  assertLibraryTeacher, createLibraryCache, createLibraryLimiter, createLibrarySearchHandler, LIBRARY,
+  assertLibraryUser, createLibraryCache, createLibraryLimiter, createLibrarySearchHandler, LIBRARY,
   libraryResultUrl, normalizeLibraryState, parseLibraryQuery, searchSchoolLibrary,
 } from "@/lib/server/schoolLibrary";
 
@@ -36,13 +36,15 @@ test("검색어 확인 — 빈 값 · 너무 긴 값 · 틀린 쪽은 거절, �
   assert.deepEqual(parseLibraryQuery("  채식\n  주의자 "), { keyword: "채식 주의자", page: 1 });
 });
 
-test("선생님 · 관리자만 — 학생 · 사용 중지 · 프로필 없음은 거절", () => {
-  assert.doesNotThrow(() => assertLibraryTeacher({ uid: "t", profile: { role: "teacher" } }));
-  assert.doesNotThrow(() => assertLibraryTeacher({ uid: "a", roleClaim: "admin", profile: { role: "student" } }));
-  assert.throws(() => assertLibraryTeacher({ uid: "s", profile: { role: "student" } }), (e) => e.status === 403);
-  assert.throws(() => assertLibraryTeacher({ uid: "s", profile: {} }), (e) => e.status === 403);
-  assert.throws(() => assertLibraryTeacher({ uid: "t", profile: { role: "teacher", suspended: true } }), (e) => e.status === 403);
-  assert.throws(() => assertLibraryTeacher({ uid: "x", profile: null }), (e) => e.status === 401);
+test("로그인한 사용자 모두(학생도) — 사용 중지 · 프로필 없음만 거절", () => {
+  assert.doesNotThrow(() => assertLibraryUser({ uid: "t", profile: { role: "teacher" } }));
+  assert.doesNotThrow(() => assertLibraryUser({ uid: "a", profile: { role: "admin" } }));
+  assert.doesNotThrow(() => assertLibraryUser({ uid: "s", profile: { role: "student" } }));
+  assert.doesNotThrow(() => assertLibraryUser({ uid: "s", profile: {} }));
+  assert.throws(() => assertLibraryUser({ uid: "s", profile: { role: "student", suspended: true } }), (e) => e.status === 403);
+  assert.throws(() => assertLibraryUser({ uid: "t", profile: { role: "teacher", suspended: true } }), (e) => e.status === 403);
+  assert.throws(() => assertLibraryUser({ uid: "x", profile: null }), (e) => e.status === 401);
+  assert.throws(() => assertLibraryUser({ uid: "", profile: { role: "student" } }), (e) => e.status === 401);
 });
 
 test("검색 성공 — 독서로에 보내는 요청 모양과 소장 · 자료 상태를 가른 결과", async () => {
@@ -118,10 +120,10 @@ test("자료 상태만 실패하면 소장은 그대로, 그 권은 '상태 확�
 
 const req = (q, page) => ({ url: `http://x/api/library/search?q=${encodeURIComponent(q)}${page ? `&page=${page}` : ""}` });
 
-test("처리기 — 학생(인증 거절)은 독서로에 닿지 않는다", async () => {
+test("처리기 — 사용 중지된 계정(인증 거절)은 독서로에 닿지 않는다", async () => {
   let searched = 0;
   const handle = createLibrarySearchHandler({
-    authorize: async () => { assertLibraryTeacher({ uid: "s", profile: { role: "student" } }); },
+    authorize: async () => { assertLibraryUser({ uid: "s", profile: { role: "student", suspended: true } }); },
     search: async () => { searched += 1; return {}; },
   });
   const r = await handle(req("채식"));
@@ -130,7 +132,7 @@ test("처리기 — 학생(인증 거절)은 독서로에 닿지 않는다", asy
   assert.equal(searched, 0);
 });
 
-test("처리기 — 교사 검색 · 같은 검색은 기억 · 교사마다 한도", async () => {
+test("처리기 — 검색 · 같은 검색은 기억 · 사람마다 한도", async () => {
   let searched = 0;
   const handle = createLibrarySearchHandler({
     authorize: async () => "teacher-1",

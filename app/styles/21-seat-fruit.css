@@ -42,22 +42,6 @@
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
   animation: attend-hand-wave 1.6s ease-in-out infinite;
 }
-/* 돌발 퀴즈 — 답을 보냈는데 아직 확인 전이면 오른쪽 위에 메모지(퀴즈 창의
-   자리표에는 손바닥을 안 그려 자리가 겹치지 않습니다). 과일을 줬으면 칸 바탕이 초록(출석 '출석'과 같은 값 — 이 앱에서
-   초록은 늘 '됐다'). 반송·미제출은 아무 표시가 없습니다(선생님 요청).
-   자리 칸이 overflow:hidden이라 안쪽 모서리에 둡니다. */
-.attend-seat-quiz {
-  position: absolute;
-  top: 1px;
-  right: 2px;
-  line-height: 0;
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.18));
-}
-.attend-seat.attend-seat--quizdone {
-  background: var(--green-50);
-  border-color: var(--green-200);
-}
-
 /* 실시간 시청 여부 — 출석(배경색)과는 별개 신호라 자리 칸 왼쪽 아래에
    작은 점으로만 얹습니다. 색은 참여 전광판의 상태 색과 맞춥니다. */
 .attend-seat-live {
