@@ -530,7 +530,10 @@
 
 /* 교사의 책 봄 — 왼쪽 학생 명단 · 오른쪽 고른 학생의 책 봄(TeacherReadingView) */
 .reading-teacher { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 18px; align-items: start; }
-.reading-teacher-rail { position: sticky; top: 72px; max-height: calc(100vh - 96px); overflow-y: auto; background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 12px; }
+/* 명단 칸은 화면과 함께 구릅니다(선생님 요청 · 2026년 11월 — 한때 sticky로 화면에 붙어, 페이지를 내려도 혼자 제자리에
+   떠 있었습니다. 다시 붙이지 마세요). 키도 명단만큼이고 칸 안에 따로 구르는 막대를 두지 않습니다 — 칸 안에서만 구르면
+   칸 테두리가 제자리에 선 채 글자만 움직여 다시 '떠 있는' 것처럼 보입니다. 학생이 많으면 페이지가 그만큼 길어집니다. */
+.reading-teacher-rail { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 12px; }
 .reading-teacher-rail h3 { margin: 2px 4px 10px; font-size: 14px; color: var(--text-sub); display: flex; gap: 6px; align-items: baseline; }
 .reading-teacher-rail h3 span { font-size: 12.5px; color: var(--text-faint); }
 .reading-teacher-rail ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
@@ -593,7 +596,6 @@
 .reading-teacher-plaza small { font-size: 12px; font-weight: 500; color: #7a5a3a; line-height: 1.35; }
 @media (max-width: 900px) {
   .reading-teacher { grid-template-columns: minmax(0, 1fr); }
-  .reading-teacher-rail { position: static; max-height: none; }
   .reading-teacher-rail ol { display: flex; gap: 6px; overflow-x: auto; }
   .reading-teacher-rail li { flex: 0 0 auto; }
   .reading-teacher-rail button { width: auto; white-space: nowrap; }
