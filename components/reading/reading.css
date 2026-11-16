@@ -446,7 +446,8 @@
 .rlb-card-head h3 { margin:0; font-size:16px; font-weight:760; letter-spacing:-.02em; }
 .rlb-cols { display:grid; grid-template-columns:minmax(0,1.6fr) minmax(0,1fr); gap:20px; align-items:start; }
 .rlb-cols > .rlb-card { margin-bottom:0; }
-.rlb-cols.is-teacher > .rlb-card + .rlb-card { position:sticky; top:96px; }
+/* 선생님 화면 오른쪽 '우리 반 여정 요약'(ClassSummary)도 순위와 함께 구릅니다(선생님 요청 · 2026년 11월 — 한때 sticky로
+   화면에 붙어 페이지를 내려도 혼자 따라 내려왔습니다. 다시 붙이지 마세요 · 교사 책 봄의 학생 명단 칸과 같은 까닭). */
 .rlb-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
 .rlb-row { width:100%; display:grid; grid-template-columns:auto auto minmax(0,1fr) auto; align-items:center; gap:12px; padding:12px 14px; border:1.5px solid #e3e8df; border-radius:12px; background:#fff; cursor:pointer; text-align:left; font:inherit; color:inherit; }
 .rlb-row:hover { border-color:#f3c9a6; }
@@ -498,7 +499,7 @@
 .rlb-badge-grid li:hover .rlb-tip, .rlb-badge-grid li:focus-visible .rlb-tip { opacity:1; visibility:visible; }
 .rlb-badge-grid li > span { display:flex; flex-direction:column; min-width:0; font-size:12px; font-weight:700; }
 .rlb-badge-grid small { font-weight:400; color:#7c897d; font-size:10.5px; }
-@media (max-width:900px) { .rlb-cols { grid-template-columns:minmax(0,1fr); } .rlb-cols.is-teacher > .rlb-card + .rlb-card { position:static; } }
+@media (max-width:900px) { .rlb-cols { grid-template-columns:minmax(0,1fr); } }
 @media (max-width:600px) {
   .rlb-card { padding:16px 14px; }
   .rlb-row { grid-template-columns:auto minmax(0,1fr) auto; gap:9px; padding:10px; }
