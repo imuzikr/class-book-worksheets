@@ -383,12 +383,14 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
 
   return <ReadingErrorContext.Provider value={error}><section className={`reading-hub${ownPlaza ? " reading-hub--no-tabs" : ""}${tab === "plaza" || tab === "hideout" ? " reading-hub--plaza" : ""}`} aria-label="책 봄 성장 기능" aria-busy={tab === "hideout" ? false : loading || busy}>
     <div className={`reading-intro ${readOnly ? "reading-intro--teacher" : "reading-intro--student"}${ownStudent ? " has-profile" : ""}${showPet ? " has-pet" : ""}`}>
+      <div className="reading-intro-main">
       {readOnly ? <div className="reading-intro-copy"><h2>{student.name || "학생"}의 독서 여정</h2><p>학생이 남긴 책꽂이 · 독서 발자국 · 한 권의 책을 읽기만 합니다.</p></div> : <div className="reading-intro-copy">{introHeading && <div className="reading-intro-heading">{introHeading}</div>}<h2>한 페이지씩, 나의 가능성을 넓히다.</h2><p>읽은 순간을 기록하고 나만의 독서 컬렉션을 완성해 보세요.</p></div>}
       {raw && !loading ? <ReadingSummary stats={stats} compact /> : <p className="reading-intro-loading" role="status">{loading ? "독서 기록을 불러오고 있어요." : "독서 정보를 불러오지 못했어요."}</p>}
+      </div>
       {(ownStudent || hasStudentInfo) && <div className="reading-intro-side">
         {readOnly && featured?.earned && <div className="reading-featured"><ReadingBadge badge={featured} size={54} /><span>대표 뱃지<strong>{featured.name}</strong></span></div>}
         {ownStudent && <div className="reading-featured" role="group" aria-label="대표 뱃지">
-          {featuredReady && featured?.earned ? <ReadingBadge badge={featured} size={44} /> : <IconTrophy size={44} />}
+          {featuredReady && featured?.earned ? <ReadingBadge badge={featured} size={64} /> : <IconTrophy size={64} />}
           <span>대표 뱃지<strong>{featuredReady ? (featured?.earned ? featured.name : "아직 선택하지 않았어요") : loading ? "불러오는 중…" : "확인할 수 없어요"}</strong>{featuredReady && featured?.earned && <em>{tierName(featured.tier)}</em>}</span>
         </div>}
         {showCharacter && <ReadingCharacterSummary uid={user.uid} summary={raw ? stats : null} active={tab === "library" || tab === "ranking"} />}
@@ -412,8 +414,10 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
       <ReadingGrowthSidebar stats={stats} onInspect={(badgeId) => setDialog({ type: "badge", badgeId })} />
       <div className="reading-workspace-main">
       {tab === "library" && <>
+        <div className="reading-library-toolbar">
         <div className="reading-section-head reading-library-head"><div><h3>책꽂이 <span>{books.filter((b) => !b.archived).length}</span></h3><p>책의 마지막 페이지까지, 나의 속도로.</p></div>{readOnly ? teacherTools : ownPlaza ? <div className="reading-library-actions">{plazaEntry}<button type="button" className="btn-primary" onClick={() => setDialog({ type: "book" })}>＋ 책 등록</button></div> : <button type="button" className="btn-primary" onClick={() => setDialog({ type: "book" })}>＋ 책 등록</button>}</div>
         <div className="reading-filters" aria-label="도서 상태 필터">{FILTERS.map(([key, label]) => <button type="button" key={key} className={filter === key ? "active" : ""} aria-pressed={filter === key} onClick={() => setFilter(key)}>{label}</button>)}</div>
+        </div>
         {visibleBooks.length ? <div className="reading-library-grid">{visibleBooks.map((b, i) => <BookCard key={b.id} book={b} index={i} busy={busy} readOnly={readOnly} onOpen={() => setDialog({ type: "detail", bookId: b.id })} onReview={() => setDialog({ type: "review", bookId: b.id })} onLog={() => setDialog({ type: "log", bookId: b.id })} onRestore={() => run({ type: "archiveBook", bookId: b.id, archived: false }, "책을 책꽂이로 돌려놓았어요.")} />)}</div> : <div className="reading-empty"><BookIcon size={44} /><h3>{readOnly ? "아직 이곳에 놓인 책이 없어요." : filter === "all" ? "나의 첫 책을 기다리고 있어요." : "아직 이곳에 놓인 책이 없어요."}</h3>{!readOnly && <p>{filter === "all" ? "읽고 싶은 책을 등록하고 오늘 읽은 순간을 남겨 보세요." : "책을 읽고 기록하면 책꽂이의 풍경도 달라져요."}</p>}{filter === "all" && !readOnly && <button type="button" className="btn-primary" onClick={() => setDialog({ type: "book" })}>첫 책 등록하기</button>}</div>}
       </>}
       {/* 순위는 탭을 열 때 · 기간을 바꿀 때 · 새로고침을 누를 때만 받습니다(한 번에 반 전체를 읽음).
