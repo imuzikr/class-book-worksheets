@@ -71,7 +71,8 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
   const [editing, setEditing] = useState(false);
   const [category, setCategory] = useState("rug");
   const [detail, setDetail] = useState(null);
-  const [exitPending, setExitPending] = useState(false);
+  // 꾸미던 것을 두고 나가려 할 때 되묻는 창 — 어디로 나가려 했나(null: 창 없음 · "origin": 들어온 곳(포털) · "plaza": 머리의 '광장으로')
+  const [exitPending, setExitPending] = useState(null);
   const [resetPending, setResetPending] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -194,11 +195,15 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
     return () => window.removeEventListener("beforeunload", leave);
   }, [dirty, readOnly]);
 
-  function requestExit() {
+  // 나가기 — to: "origin"(들어온 곳 — 포털 · 선생님의 '학생 서재로') 또는 "plaza"(머리의 '광장으로' — 어디서 왔든 책 광장).
+  // 꾸미던 것이 저장 전이면 먼저 되묻습니다(exitPending). 부모의 onExit에는 "plaza"만 건넵니다(없으면 들어온 곳으로).
+  function leaveTo(to) { exitRef.current?.(to === "plaza" ? "plaza" : undefined); }
+  function requestExit(to = "origin") {
     if (saving) return;
     movement.stop();
-    if (!readOnly && dirty) setExitPending(true);
-    else exitRef.current?.();
+    const dest = to === "plaza" ? "plaza" : "origin";
+    if (!readOnly && dirty) setExitPending(dest);
+    else leaveTo(dest);
   }
   requestExitRef.current = requestExit;
 
@@ -230,27 +235,28 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
     setDraft(savedRoom.layout); setEditing(false); setError(""); setNotice("저장된 모습으로 돌아왔어요.");
   }
 
+  // leave — 저장한 뒤 나갈 곳(false: 머묾 · "origin" · "plaza" — 되묻는 창의 '저장하고 …')
   async function finish(leave = false) {
     if (readOnly || saveLock.current || !room) return false;
     if (!dirty) {
-      setEditing(false); setExitPending(false);
-      if (leave) exitRef.current?.(); else setNotice("꾸미기를 마쳤어요.");
+      setEditing(false); setExitPending(null);
+      if (leave) leaveTo(leave); else setNotice("꾸미기를 마쳤어요.");
       return true;
     }
     saveLock.current = true; setSaving(true); setError(""); setNotice("");
     try {
       const result = await saveReadingHideout(classId, { version: 2, layout: shownRoom.layout, revision: room.revision });
       if (!alive.current) return false;
-      setRoom(result.room); setDraft(result.room.layout); setProgress(result.progress); setEditing(false); setExitPending(false);
+      setRoom(result.room); setDraft(result.room.layout); setProgress(result.progress); setEditing(false); setExitPending(null);
       draftSnapshot.current = null;
       keepDraft(draftKey, null);
-      if (leave) exitRef.current?.(); else setNotice("아지트를 저장했어요.");
+      if (leave) leaveTo(leave); else setNotice("아지트를 저장했어요.");
       return true;
     } catch (e) {
       if (!alive.current) return false;
       const conflict = e?.status === 409 || /conflict|revision|stale/.test(String(e?.code || ""));
       setError(conflict ? "다른 창에서 아지트가 바뀌었어요. 저장된 모습을 다시 불러온 뒤 꾸며 주세요." : e?.message || "저장하지 못했어요. 고른 소품은 그대로 있으니 다시 시도해 주세요.");
-      setExitPending(false);
+      setExitPending(null);
       if (disabledError(e)) disabledRef.current?.();
       return false;
     } finally {
@@ -274,13 +280,18 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
           맨 아래에 있어, 패널을 끝까지 굴려야 보였고 꾸미기를 켜면 저장 · 끝내기가 없는 것처럼 보였음). 그 자리로 되돌리지 마세요. */}
       <div className="hideout-actions">
         <span className="hideout-level">{teacherOwn ? "모든 소품 사용 가능" : <>독서 레벨 <strong>{eligibility.level}</strong></>}</span>
-        {!readOnly && !editing && <button type="button" className="hideout-primary" onClick={() => { movement.stop(); setEditing(true); setNotice(""); }}>아지트 꾸미기</button>}
+        {/* '아지트 꾸미기' 오른쪽의 '광장으로'(선생님 요청 — 포털만으로는 나가는 길이 안 보였음): 어디서 들어왔든 책 광장으로 갑니다
+            (광장의 아지트 포털 아래에 섬 · 교실로는 그 광장에서 · 들어온 곳으로는 방의 포털로). 두 단추는 같은 크기(.hideout-head-buttons). */}
+        {!readOnly && !editing && <div className="hideout-head-buttons">
+          <button type="button" className="hideout-primary" onClick={() => { movement.stop(); setEditing(true); setNotice(""); }}>아지트 꾸미기</button>
+          {onExit && <button type="button" className="hideout-to-plaza" onClick={() => requestExit("plaza")} disabled={saving} title="책 광장으로 돌아가요">광장으로</button>}
+        </div>}
         {!readOnly && editing && <>
           <button type="button" onClick={() => setResetPending(true)} disabled={saving}>모든 소품 기본으로</button>
           <button type="button" onClick={cancelEditing} disabled={saving}>꾸미기 취소</button>
           <button type="button" className="hideout-primary" onClick={() => finish()} disabled={saving}>{saving ? "저장 중…" : "꾸미기 완료"}</button>
         </>}
-        {onExit && readOnly && !hideExitButton && <button type="button" onClick={requestExit} disabled={saving}>{exitLabel}</button>}
+        {onExit && readOnly && !hideExitButton && <button type="button" onClick={() => requestExit()} disabled={saving}>{exitLabel}</button>}
       </div>
     </header>}
     {error && <div className="hideout-error" role="alert"><p>{error}</p><button type="button" disabled={saving} onClick={() => { movement.stop(); keepDraft(draftKey, null); draftSnapshot.current = null; setReload((value) => value + 1); }}>저장된 모습 다시 불러오기</button></div>}
@@ -320,7 +331,7 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
       </div>
       {pet && bed && <RestingPet pet={pet} bed={bed} owner={readOnly ? myName : ""} onOpen={() => { movement.stop(); setPetOpen(true); }} />}
     </div>
-    <p className="hideout-walk-help">{readOnly ? "학생 본인만 아지트를 꾸밀 수 있어요." : editing ? `소품을 고른 뒤 위쪽의 ‘꾸미기 완료’나 ‘꾸미기 취소’를 누르면 다시 걷거나 포털로 ${returnPlace}에 돌아갈 수 있어요.` : `빈 바닥을 누르거나 방향키로 걸어요. ${petGone ? "펫은 먹이를 찾아 떠나 있어요(책 봄에서 다시 불러요). " : pet ? "펫은 창가에서 쉬어요. " : ""}오른쪽 포털로 ${returnPlace}에 돌아가요.`}</p>
+    <p className="hideout-walk-help">{readOnly ? "학생 본인만 아지트를 꾸밀 수 있어요." : editing ? `소품을 고른 뒤 위쪽의 ‘꾸미기 완료’나 ‘꾸미기 취소’를 누르면 다시 걷거나 포털로 ${returnPlace}에 돌아갈 수 있어요.` : `빈 바닥을 누르거나 방향키로 걸어요. ${petGone ? "펫은 먹이를 찾아 떠나 있어요(책 봄에서 다시 불러요). " : pet ? "펫은 창가에서 쉬어요. " : ""}${onExit ? (returnRoom === "plaza" ? "오른쪽 포털이나 위의 ‘광장으로’로 책 광장에 돌아가요." : "오른쪽 포털로 교실에, 위의 ‘광장으로’로 책 광장에 돌아가요.") : ""}`}</p>
     </div>
 
     <section className="hideout-editor" aria-label="아지트 소품">
@@ -359,11 +370,11 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
     {detail && <ItemDetail item={detail} unlocked={isHideoutItemUnlocked(detail, eligibility)} teacherOwn={teacherOwn} readOnly={readOnly} saving={saving} selected={shownRoom.layout[detail.slot] === detail.id}
       categoryLabel={selectedSlot.label} position={detailIndex + 1} count={detailChoices.length} onBrowse={browseDetail}
       onClose={() => setDetail(null)} onApply={() => applyItem(detail)} />}
-    {exitPending && <HideoutDialog title="꾸미던 아지트를 저장할까요?" onClose={() => { if (!saving) setExitPending(false); }} busy={saving} alert>
-      <p>고른 소품을 저장하고 {returnTo} 돌아갈 수 있어요.</p><div className="hideout-dialog-actions">
-        <button type="button" onClick={() => setExitPending(false)} disabled={saving}>계속 꾸미기</button>
-        <button type="button" onClick={() => { draftSnapshot.current = null; keepDraft(draftKey, null); setExitPending(false); exitRef.current?.(); }} disabled={saving}>저장하지 않고 돌아가기</button>
-        <button type="button" className="hideout-primary" onClick={() => finish(true)} disabled={saving}>{saving ? "저장 중…" : `저장하고 ${returnTo}`}</button>
+    {exitPending && <HideoutDialog title="꾸미던 아지트를 저장할까요?" onClose={() => { if (!saving) setExitPending(null); }} busy={saving} alert>
+      <p>고른 소품을 저장하고 {exitPending === "plaza" ? "책 광장으로" : returnTo} 돌아갈 수 있어요.</p><div className="hideout-dialog-actions">
+        <button type="button" onClick={() => setExitPending(null)} disabled={saving}>계속 꾸미기</button>
+        <button type="button" onClick={() => { const dest = exitPending; draftSnapshot.current = null; keepDraft(draftKey, null); setExitPending(null); leaveTo(dest); }} disabled={saving}>저장하지 않고 돌아가기</button>
+        <button type="button" className="hideout-primary" onClick={() => finish(exitPending)} disabled={saving}>{saving ? "저장 중…" : `저장하고 ${exitPending === "plaza" ? "책 광장으로" : returnTo}`}</button>
       </div>
     </HideoutDialog>}
     {/* 펫 정보 창 — 방석의 펫을 누르면. 내 방이면 '나의 펫'(먹이 단추까지), 선생님이 학생의 방을 보면 그 학생의 펫을 읽기만 */}

@@ -76,9 +76,11 @@ export function TeacherPlaza({ classId, user, characterOn = true, classroom = nu
   const enterHideout = useCallback((origin = "classroom") => {
     if (canHideout) { setHideoutOrigin(origin === "plaza" ? "plaza" : "classroom"); setOwnHideout(true); }
   }, [canHideout]);
-  const leaveHideout = useCallback(() => {
+  // to — "plaza"면 들어온 곳과 상관없이 책 광장으로(아지트 머리의 '광장으로'), 아니면 들어온 곳(포털 · 그 밖의 나가기)
+  const leaveHideout = useCallback((to) => {
     setOwnHideout(false);
-    setPlazaReturn({ room: classroom?.on && hideoutOrigin === "classroom" ? "classroom" : "plaza", key: `teacher-hideout-return-${++sequence.current}` });
+    const room = to !== "plaza" && classroom?.on && hideoutOrigin === "classroom" ? "classroom" : "plaza";
+    setPlazaReturn({ room, key: `teacher-hideout-return-${++sequence.current}` });
   }, [classroom?.on, hideoutOrigin]);
   useEffect(() => {
     if (ownHideout && !canHideout) leaveHideout();
@@ -209,11 +211,13 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
     setError("");
     setTab("hideout");
   }, [canHideout, readOnly, classroom?.on, onOpenOwnHideout]);
-  const leaveHideout = useCallback(() => {
+  // to — "plaza"면 들어온 곳과 상관없이 책 광장으로(아지트 머리의 '광장으로'), 아니면 들어온 곳(포털 · 그 밖의 나가기)
+  const leaveHideout = useCallback((to) => {
     setPlazaJump(null);
     setDialog(null);
     setError("");
-    setPlazaReturn({ room: classroom?.on && hideoutOrigin === "classroom" ? "classroom" : "plaza", key: `hideout-return-${++returnSequence.current}` });
+    const room = to !== "plaza" && classroom?.on && hideoutOrigin === "classroom" ? "classroom" : "plaza";
+    setPlazaReturn({ room, key: `hideout-return-${++returnSequence.current}` });
     setTab(!readOnly && plazaOn ? "plaza" : "library");
   }, [plazaOn, classroom?.on, readOnly, hideoutOrigin]);
   useEffect(() => {

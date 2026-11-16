@@ -11,6 +11,10 @@
 .hideout-heading h2 { margin: 0; font-size: 25px; line-height: 1.35; }
 .hideout-eyebrow { margin: 0 0 5px; color: #77866f; font-size: 12px; }
 .hideout-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+/* 머리의 '아지트 꾸미기 · 광장으로'(선생님 요청 — 포털만으로는 나가는 길이 안 보였음) — 이어 놓인 두 단추는 같은 크기:
+   열마다 1fr이라 둘 다 긴 쪽 글자의 폭이 됨. 좁은 화면(700px 아래)에서는 독서 레벨 옆 남는 폭을 둘이 반씩 씀(아래). */
+.hideout-head-buttons { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
+.hideout-head-buttons > button { white-space: nowrap; }
 .hideout-level { display: inline-flex; align-items: baseline; gap: 7px; padding: 7px 12px; border-radius: 20px; background: #e9efdf; font-size: 12px; white-space: nowrap; }
 .hideout-level strong { font-size: 17px; }
 .hideout-status { margin: 0 0 10px; min-height: 20px; font-size: 13px; color: #52734b; }
@@ -114,6 +118,7 @@
   .hideout-heading h2 { font-size: 22px; }
   .hideout-heading > .hideout-actions { width: 100%; }
   .hideout-heading > .hideout-actions > button { flex: 1 1 auto; }
+  .hideout-heading > .hideout-actions > .hideout-head-buttons { flex: 1 1 auto; grid-auto-columns: minmax(0, 1fr); }
   .hideout-scene { border-radius: 10px; }
   .hideout-editor { padding: 14px; }
   .hideout-choices { grid-template-columns: repeat(3, minmax(0, 1fr)); }
