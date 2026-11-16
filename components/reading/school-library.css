@@ -21,7 +21,15 @@
 .lib-status { margin: 4px 0 10px; font-size: 14px; color: var(--text); }
 .lib-status-note { color: var(--text-faint); font-size: 12.5px; }
 .lib-results { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-.lib-book { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; background: #fff; }
+.lib-book { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; background: #fff;
+  display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 14px; align-items: start; }
+.lib-book-info { min-width: 0; }
+/* 표지 — 자리는 늘 72 × 101(5:7), 그림은 비율 그대로 안에 맞춤(잘라 내지 않음). 그림이 없거나 안 열리면 기본 표지 */
+.lib-cover { display: flex; align-items: center; justify-content: center; width: 100%; aspect-ratio: 5 / 7;
+  border-radius: 6px; background: #f3f0ea; overflow: hidden; box-shadow: 0 1px 3px rgba(60, 45, 30, .18); }
+.lib-cover img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.lib-cover.is-fallback { background: linear-gradient(160deg, #e9eef4, #d8e2ec); border: 1px solid #cdd8e3; box-shadow: none; }
+.lib-cover.is-fallback span { font-size: 15px; font-weight: 800; color: #6b8299; letter-spacing: .02em; }
 .lib-book-head { display: flex; gap: 10px; align-items: baseline; justify-content: space-between; }
 .lib-book-title { font-size: 15.5px; word-break: keep-all; }
 .lib-own { flex-shrink: 0; padding: 2px 9px; border-radius: 999px; background: #e7eff7; color: #2f5d82; font-size: 12px; font-weight: 700; }
@@ -52,6 +60,7 @@
 .lib-foot a { color: #2f6b96; }
 @media (max-width: 640px) {
   .lib-modal { height: 94vh; }
+  .lib-book { grid-template-columns: 54px minmax(0, 1fr); gap: 10px; padding: 10px 12px; }
   .lib-copies thead { display: none; }
   .lib-copies tr { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; padding: 6px 0; border-bottom: 1px dashed #ece8e0; }
   .lib-copies td { border: 0; padding: 2px 0; }

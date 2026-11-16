@@ -82,7 +82,7 @@ const StudentProfileDialog = dynamic(() => import("./StudentProfileFromBooks"), 
 //   누른 선생님이 세는 동안 광장에서 나와 명단을 보고 있었으면, 다 셌을 때 선생님도 광장으로 돌아갑니다('모두'에는
 //   선생님도 듭니다). 떠 있는 동안 값이 바뀔 때만입니다(처음 받은 값은 기준일 뿐).
 // petOn · petFeed — 학생 펫과 펫 먹이의 규칙(책방 페이지가 넘김 — 끈 반이면 배부름을 그리지 않음) · onToast — 알림 한 줄.
-export default function TeacherReadingView({ classId, user, roster = [], ownClasses = [], studentUid = null, onPickStudent, plazaOn = false, initialTab = "library", plazaCall = 0, petOn = false, petFeed = null, onToast = null, ...hubProps }) {
+export default function TeacherReadingView({ classId, user, roster = [], ownClasses = [], studentUid = null, onPickStudent, plazaOn = false, initialTab = "library", plazaCall = 0, petOn = false, petFeed = null, onToast = null, introHeading = null, ...hubProps }) {
   const student = roster.find((s) => s.uid === studentUid) || roster[0] || null;
   // 펫 먹이 — 학생마다의 배부름(명단이 싣고 온 프로필의 펫으로 셈 · 체험반은 이 브라우저 안의 펫)
   const feedOn = petOn && !!petFeed?.on;
@@ -177,15 +177,20 @@ export default function TeacherReadingView({ classId, user, roster = [], ownClas
   }, [plazaOn, hubProps.hideoutOn, plazaOpen, startInHideout]);
   if (plazaOn && plazaOpen) {
     return (
+      <>
+      {introHeading && <div className="books-head">{introHeading}</div>}
       <div className="reading-teacher">
         <TeacherPlaza key={classId} classId={classId} user={user} characterOn={hubProps.characterOn} classroom={hubProps.classroom} hideoutOn={hubProps.hideoutOn} initialHideout={startInHideout} initialHideoutRoom={startInHideoutRoom} plazaCall={plazaCall} talkOn={plazaOn && !!hubProps.talkOn}
           onExit={() => { setStartInHideout(false); setPlazaOpen(false); }} />
       </div>
+      </>
     );
   }
   // 광장에서 나온 뒤 서는 학생 화면은 첫 탭부터 — 주소에 tab=plaza가 남아 있어도 그 화면이 다시 광장을 열지 않게.
   const hubTab = (plazaOn && initialTab === "plaza") || initialTab === "hideout" ? "library" : initialTab;
   return (
+    <>
+    {introHeading && (galleryActive || !student) && <div className="books-head">{introHeading}</div>}
     <div className={`reading-teacher${galleryActive ? " reading-teacher--hideouts" : ""}`}>
       <aside className="reading-teacher-rail" aria-label="책 광장 입구와 학생 명단">
         {plazaOn && (
@@ -226,7 +231,7 @@ export default function TeacherReadingView({ classId, user, roster = [], ownClas
           </div>
         )}
         {galleryActive ? <TeacherHideoutBrowser key={`${classId}:${user?.uid}`} classId={classId} user={user} roster={roster} characterOn={hubProps.characterOn} petOn={petOn} petFeed={petFeed} onClose={closeGallery} />
-          : student ? <ReadingHub key={`${classId}:${student.uid}`} classId={classId} user={user} isTeacher student={{ uid: student.uid, name: student.name, pet: pets.get(student.uid) ?? null }} plazaOn={plazaOn} petOn={petOn} petFeed={studentFeed} initialTab={hubTab} {...hubProps}
+          : student ? <ReadingHub key={`${classId}:${student.uid}`} classId={classId} user={user} isTeacher student={{ uid: student.uid, name: student.name, pet: pets.get(student.uid) ?? null }} plazaOn={plazaOn} petOn={petOn} petFeed={studentFeed} initialTab={hubTab} introHeading={introHeading} {...hubProps}
           onOpenHideoutGallery={() => { setHistoryFor(null); setGalleryOpen(true); }}
           onOpenOwnHideout={(origin) => { setStartInHideoutRoom(origin === "plaza" ? "plaza" : "classroom"); setStartInHideout(true); setPlazaOpen(true); }}
           teacherTools={(
@@ -260,6 +265,7 @@ export default function TeacherReadingView({ classId, user, roster = [], ownClas
         </HistoryCloseContext.Provider>
       )}
     </div>
+    </>
   );
 }
 

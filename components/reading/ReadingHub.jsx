@@ -183,7 +183,7 @@ function Modal({ title, onClose, children, wide = false, busy = false }) {
 // activitiesOn — 이 반의 책방이 학생에게 열려 있는가(관리자 설정 · lib/reading.js의 bookActivitiesOn). 끈 반의 학생에게는 책 등록 창의
 // '함께할 독서 활동' 칸을 세우지 않습니다(책 상세의 '활동 열기'는 부르는 쪽이 onOpenActivity를 넘기지 않아 사라짐). 이미 이어 둔
 // 활동은 지우지 않습니다 — 칸만 감추고 값은 그대로 저장됩니다(다시 켜면 그대로).
-// introHeading — 학생의 '책 봄' 제목 · 반 표시(고르개) · 출석 버튼. 페이지가 쓰던 내용을 카드 안에서 한 번만 표시합니다.
+// introHeading — 학생·교사 공통 '책 봄' 제목 · 반 표시. 학생은 반 고르개·출석 버튼도 카드 안에 둡니다.
 export default function ReadingHub({ classId, user, isTeacher = false, bookSearchOn = false, petOn = false, plazaOn = false, hideoutOn = false, talkOn = false, characterOn = true, onDisabled, activities = [], onOpenActivity, activitiesOn = true, initialBookId = null, initialTab = "library", student = null, classroom = null, plazaCall = 0, petFeed = null, myFruit = 0, petPreview = false, teacherTools = null, onOpenOwnHideout = null, onOpenHideoutGallery = null, introHeading = null }) {
   // student가 있으면 교사가 그 학생의 책 봄을 보는 읽기 전용 화면입니다(선생님 결정 — 감상·발자국까지 전부 보임).
   const readOnly = !!student?.uid;
@@ -347,10 +347,9 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
   const inspectedBadge = dialog?.type === "badge" ? stats.badges.find((b) => b.id === dialog.badgeId) : null;
   const featured = (stats.badges || []).find((b) => b.id === (stats.featuredBadge?.id || stats.featuredBadge));
   const showPet = petOn && ownStudent;
-  const showCharacter = characterOn && ownStudent;
+  const showCharacter = characterOn && (ownStudent || readOnly);
   const featuredReady = !!raw && !loading;
   const showStudentPet = petOn && readOnly && !!student.pet;
-  const hasStudentInfo = readOnly && (featured?.earned || showStudentPet);
   // 펫 먹이를 켠 반의 학생 — 발자국 창이 '오늘의 읽기'(쪽 · 글자 수)를 보여 줍니다(lib/petCare.js의 readingDayProof)
   const feedOn = showPet && !!petFeed?.on;
   // '읽은 날'의 기준은 그 반의 것(선생님이 관리자 설정에서 정한 쪽수 · 글자 수 — petFeed.read · 결과의 need)
@@ -385,19 +384,18 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
     hasReview: stats.reviews.some((review) => review.bookId === bookId && review.classId === classId),
   });
 
-  return <ReadingErrorContext.Provider value={error}><section className={`reading-hub${ownPlaza ? " reading-hub--no-tabs" : ""}${tab === "plaza" || tab === "hideout" ? " reading-hub--plaza" : ""}`} aria-label="책 봄 성장 기능" aria-busy={tab === "hideout" ? false : loading || busy}>
-    <div className={`reading-intro ${readOnly ? "reading-intro--teacher" : "reading-intro--student"}${ownStudent ? " has-profile" : ""}${showPet ? " has-pet" : ""}`}>
+  return <ReadingErrorContext.Provider value={error}><section className={`reading-hub${ownPlaza ? " reading-hub--no-tabs" : ""}${tab === "plaza" || tab === "hideout" ? " reading-hub--plaza" : ""}`} aria-label={readOnly ? `${student.name || "학생"}의 책 봄` : "책 봄 성장 기능"} aria-busy={tab === "hideout" ? false : loading || busy}>
+    <div className={`reading-intro reading-intro--profile ${readOnly ? "reading-intro--teacher" : "reading-intro--student"}${ownStudent ? " has-profile" : ""}${showPet ? " has-pet" : ""}`}>
       <div className="reading-intro-main">
-      {readOnly ? <div className="reading-intro-copy"><h2>{student.name || "학생"}의 독서 여정</h2><p>학생이 남긴 책꽂이 · 독서 발자국 · 한 권의 책을 읽기만 합니다.</p></div> : <div className="reading-intro-copy">{introHeading && <div className="reading-intro-heading">{introHeading}</div>}<h2>한 페이지씩, 나의 가능성을 넓히다.</h2><p>읽은 순간을 기록하고 나만의 독서 컬렉션을 완성해 보세요.</p></div>}
+      <div className="reading-intro-copy">{introHeading && <div className="reading-intro-heading">{introHeading}</div>}<h2>한 페이지씩, 나의 가능성을 넓히다.</h2><p>읽은 순간을 기록하고 나만의 독서 컬렉션을 완성해 보세요.</p></div>
       {raw && !loading ? <ReadingSummary stats={stats} compact /> : <p className="reading-intro-loading" role="status">{loading ? "독서 기록을 불러오고 있어요." : "독서 정보를 불러오지 못했어요."}</p>}
       </div>
-      {(ownStudent || hasStudentInfo) && <div className="reading-intro-side">
-        {readOnly && featured?.earned && <div className="reading-featured"><ReadingBadge badge={featured} size={54} /><span>대표 뱃지<strong>{featured.name}</strong></span></div>}
-        {ownStudent && <div className="reading-featured" role="group" aria-label="대표 뱃지">
+      {(ownStudent || readOnly) && <div className="reading-intro-side">
+        <div className="reading-featured" role="group" aria-label="대표 뱃지">
           {featuredReady && featured?.earned ? <ReadingBadge badge={featured} size={64} /> : <IconTrophy size={64} />}
           <span>대표 뱃지<strong>{featuredReady ? (featured?.earned ? featured.name : "아직 선택하지 않았어요") : loading ? "불러오는 중…" : "확인할 수 없어요"}</strong>{featuredReady && featured?.earned && <em>{tierName(featured.tier)}</em>}</span>
-        </div>}
-        {showCharacter && <ReadingCharacterSummary uid={user.uid} summary={raw ? stats : null} active={tab === "library" || tab === "ranking"} />}
+        </div>
+        {showCharacter && <ReadingCharacterSummary uid={viewUid} summary={raw && !loading ? stats : null} readOnly={readOnly} active={tab === "library" || tab === "ranking"} />}
         {showStudentPet && <StudentPetSummary mirror={student.pet} growthXp={raw ? petGrowthOfSummary(stats) : null} feed={petFeed} today={day} />}
         {/* 나의 펫 — 단계는 이미 받은 서재로 셉니다(lib/readingPet.js). 서재를 받기 전에는 카드도 기다립니다. */}
         {showPet && <PetCard classId={classId} uid={user.uid} growthXp={raw ? petGrowthOfSummary(stats) : null} level={raw ? stats.level : null} onLevelCheer={markPetLevel}
