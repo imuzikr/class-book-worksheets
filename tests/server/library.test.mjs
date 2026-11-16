@@ -4,7 +4,7 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { initializeApp, deleteApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
-import { handleLibrarySearch } from "../../lib/server/libraryAuth.js";
+import { handleLibraryCover, handleLibrarySearch } from "../../lib/server/libraryAuth.js";
 
 const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID || "demo-reading-api";
 if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST || !projectId.startsWith("demo-")) {
@@ -38,6 +38,7 @@ before(async () => {
   // 독서로 대신 — 에뮬레이터로 가는 요청은 그대로, read365로 가는 요청만 기록하고 가짜로 답함
   globalThis.fetch = async (url, init) => {
     const href = String(url);
+    if (href.startsWith("https://dapi.kakao.com/")) { upstream.push(href); return new Response("{}", { status: 500 }); }
     if (!href.startsWith("https://read365.edunet.net/")) return realFetch(url, init);
     upstream.push(href);
     const body = href.endsWith("/alpasq/api/search")
@@ -75,4 +76,42 @@ test("교사 · 관리자는 검색 결과를 받는다(소장 · 자료 상태)
   const admin = await call(tokens.admin, "소년");
   assert.equal(admin.status, 200);
   assert.equal((await call(tokens.teacher, "")).status, 400);
+});
+
+const cover = async (token, isbn = "9788936433598") => handleLibraryCover(new Request(`http://test/api/library/cover?isbn=${encodeURIComponent(isbn)}`,
+  token ? { headers: { Authorization: `Bearer ${token}` } } : {}));
+
+test("표지 보완 — 토큰 없음 · 익명 · 학생 · 사용 중지 교사는 거절, 카카오에 닿지 않음", async () => {
+  upstream = [];
+  for (const [token, status] of [[null, 401], [tokens.anonymous, 401], ["not-a-token", 401], [tokens.student, 403], [tokens.suspendedTeacher, 403]]) {
+    const r = await cover(token);
+    assert.equal(r.status, status);
+    assert.equal(r.body.cover, undefined);
+  }
+  assert.equal((await cover(tokens.student, "abc")).status, 403);   // 입력 오류보다 권한 거절이 먼저
+  assert.deepEqual(upstream, []);
+});
+
+test("표지 보완 — 교사는 받는다(키가 없으면 묻지 않고 기본 표지 · 틀린 ISBN 400)", async () => {
+  const saved = process.env.KAKAO_REST_API_KEY;
+  delete process.env.KAKAO_REST_API_KEY;
+  upstream = [];
+  try {
+    const r = await cover(tokens.teacher);
+    assert.deepEqual([r.status, r.body.cover, r.body.reason], [200, "", "not-configured"]);
+    assert.equal((await cover(tokens.admin, "8936433598")).status, 200);
+    assert.equal((await cover(tokens.teacher, "123")).status, 400);
+    assert.deepEqual(upstream, []);
+  } finally { if (saved !== undefined) process.env.KAKAO_REST_API_KEY = saved; }
+});
+
+test("표지 보완 — 키가 있어도 카카오 실패는 502(화면은 기본 표지), 소장 검색과 무관", async () => {
+  process.env.KAKAO_REST_API_KEY = "test-key";
+  upstream = [];
+  try {
+    const r = await cover(tokens.teacher, "9788932028705");
+    assert.deepEqual([r.status, r.body.code], [502, "library/cover-unavailable"]);
+    assert.equal(upstream.length, 1);
+    assert.equal((await call(tokens.teacher, "봄")).status, 200);
+  } finally { delete process.env.KAKAO_REST_API_KEY; }
 });

@@ -13,10 +13,30 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { backdropClose } from "@/lib/modal";
-import { searchSchoolLibrary } from "@/lib/data/schoolLibrary";
+import { fetchLibraryCover, searchSchoolLibrary } from "@/lib/data/schoolLibrary";
 import { LIBRARY, libraryResultUrl } from "@/lib/schoolLibraryLink";
 
 const KEYWORD_MAX = 50;
+const COVER_LOOKUPS = 2;   // 카카오 표지 보완은 한 번에 둘까지(독서로에 표지가 없는 책만)
+
+// 표지 — 독서로(알라딘 그림 서버) → 없으면 카카오(ISBN 정확히 일치) → 그래도 없거나 그림이 안 열리면 기본 표지.
+// 비율은 그림 그대로(object-fit: contain) · 자리는 늘 같은 크기라 그림이 늦게 와도 줄이 흔들리지 않습니다.
+// 부르는 쪽이 key={src}로 다시 그려, 주소가 바뀌면 '못 열림' 표시도 새로 시작합니다.
+function LibraryCover({ title, src }) {
+  const [failed, setFailed] = useState(false);
+  if (src && !failed) {
+    return (
+      <span className="lib-cover">
+        <img src={src} alt={`${title} 표지`} loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setFailed(true)} />
+      </span>
+    );
+  }
+  return (
+    <span className="lib-cover is-fallback" role="img" aria-label={`${title} — 표지 이미지 없음`}>
+      <span aria-hidden="true">책</span>
+    </span>
+  );
+}
 
 function StatusBadge({ copy }) {
   if (!copy.stateKnown) return <span className="lib-state is-unknown" title="자료 상태를 받아 오지 못했어요 — 소장은 확인됐어요">상태 확인 실패</span>;
@@ -48,6 +68,36 @@ export default function SchoolLibrarySearch() {
   const modalInput = useRef(null);
   const railId = useId();
   const modalId = useId();
+  // 카카오로 보완한 표지(ISBN-13 → 주소, ""는 '맞는 표지 없음 · 실패') — 이 칸이 떠 있는 동안만 기억
+  const [extraCovers, setExtraCovers] = useState({});
+  const askedCovers = useRef(new Set());
+
+  // 결과가 오면 독서로에 표지가 없는 책만 하나씩 묻습니다(소장 결과는 이미 화면에 섬 — 기다리지 않음)
+  useEffect(() => {
+    if (phase !== "done" || !result?.books?.length) return undefined;
+    const asked = askedCovers.current;
+    const queue = [...new Set(result.books.filter((b) => !b.cover && b.isbn13).map((b) => b.isbn13))]
+      .filter((isbn) => !asked.has(isbn));
+    if (!queue.length) return undefined;
+    queue.forEach((isbn) => asked.add(isbn));
+    const controller = new AbortController();
+    const worker = async () => {
+      while (queue.length && !controller.signal.aborted) {
+        const isbn = queue.shift();
+        try {
+          const cover = await fetchLibraryCover(isbn, { signal: controller.signal });
+          setExtraCovers((m) => ({ ...m, [isbn]: cover }));
+        } catch {
+          asked.delete(isbn);   // 중간에 닫힘 — 다음에 다시 물을 수 있게
+        }
+      }
+    };
+    Array.from({ length: Math.min(COVER_LOOKUPS, queue.length) }, worker);
+    return () => {
+      controller.abort();
+      queue.forEach((isbn) => asked.delete(isbn));
+    };
+  }, [phase, result]);
 
   useEffect(() => () => { generation.current += 1; requestRef.current?.abort(); }, []);
 
@@ -134,6 +184,8 @@ export default function SchoolLibrarySearch() {
                   <ul className="lib-results">
                     {result.books.map((book) => (
                       <li key={book.key} className="lib-book">
+                        <LibraryCover key={book.cover || extraCovers[book.isbn13] || "none"} title={book.title} src={book.cover || extraCovers[book.isbn13] || ""} />
+                        <div className="lib-book-info">
                         <div className="lib-book-head">
                           <strong className="lib-book-title">{book.title}</strong>
                           <span className="lib-own">소장 {book.copies.length}권</span>
@@ -152,6 +204,7 @@ export default function SchoolLibrarySearch() {
                             ))}
                           </tbody>
                         </table>
+                        </div>
                       </li>
                     ))}
                   </ul>
@@ -166,7 +219,7 @@ export default function SchoolLibrarySearch() {
               ))}
             </div>
             <p className="lib-foot">
-              자동 확인 — 독서로 ‘우리학교 도서검색’에서 받아 왔어요{result?.cached && phase === "done" ? "(5분 안의 같은 검색은 잠시 기억한 결과)" : ""}. 정확한 내용은{" "}
+              자동 확인 — 독서로 ‘우리학교 도서검색’에서 받아 왔어요{result?.cached && phase === "done" ? "(5분 안의 같은 검색은 잠시 기억한 결과)" : ""}. 표지는 독서로가 주는 그림이고, 없으면 ISBN이 같은 판본의 표지(카카오)를 붙여요. 정확한 내용은{" "}
               <a href={libraryResultUrl(keywordShown || draft.trim())} target="_blank" rel="noopener noreferrer">독서로 원본 검색 결과</a>에서 확인할 수 있어요.
             </p>
           </div>

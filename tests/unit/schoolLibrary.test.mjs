@@ -69,7 +69,7 @@ test("검색 성공 — 독서로에 보내는 요청 모양과 소장 · 자료
 test("'대출가능'만 대출 가능 — 소장 여부와 따로", () => {
   assert.equal(normalizeLibraryState(stateBody("대출가능")).available, true);
   assert.equal(normalizeLibraryState(stateBody("정리중")).available, false);
-  assert.deepEqual(normalizeLibraryState({ status: "FAIL" }), { status: "", available: null, returnPlanDate: "", reservable: null, location: "", known: false });
+  assert.deepEqual(normalizeLibraryState({ status: "FAIL" }), { status: "", available: null, returnPlanDate: "", reservable: null, location: "", known: false, cover: "" });
 });
 
 test("검색 결과 없음 — 0권은 빈 결과(오류 아님)", async () => {
