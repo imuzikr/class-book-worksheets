@@ -25,10 +25,14 @@
 // 책방 첫 화면 묶음이 그만큼 커집니다(광장의 코드는 쓸 때만 — CLAUDE.md). 내려받는 동안에도 같은 자리에 창이 서고 닫힙니다.
 // **광장 대화**(선생님 결정 — 대화 기록을 남기고 담당 교사 · 관리자가 봄): 같은 머리에 '광장 대화' — 그 학생이 책 광장 · 교실에서
 // 든 대화의 말 전체(PlazaTalkHistory · 서버가 담당 교사인지 확인). 댓글 이력과 같은 약속으로 광장 대화를 꺼 둔 반에서도 섭니다.
+//
+// **학교 도서관 소장 검색**(선생님 요청): 명단 위의 '학교 도서관 소장 검색' — 한성여자고등학교 도서관(독서로)에서 제목 일부로
+// 소장 여부 · 청구기호 · 자료 상태를 봅니다(SchoolLibrarySearch · /api/library/search — 선생님 · 관리자만).
 // =============================================================
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import ReadingHub, { TeacherPlaza } from "./ReadingHub";
+import SchoolLibrarySearch from "./SchoolLibrarySearch";
 import { IconAnswer } from "@/components/StatusIcons";
 import { backdropClose } from "@/lib/modal";
 import { recallReadingPet, subscribeRosterPets } from "@/lib/data/reading";
@@ -161,6 +165,8 @@ export default function TeacherReadingView({ classId, user, roster = [], student
             <small>{hubProps.classroom?.on ? "광장의 포털로 교실에도 가요" : "학생들의 책과 글을 함께 봐요"}</small>
           </button>
         )}
+        {/* 학교 도서관 소장 검색 — 선생님 화면에만(학생 화면은 이 조각이 없음 · 서버도 선생님만 받음) */}
+        <SchoolLibrarySearch />
         <h3>학생 명단 <span>{roster.length}</span></h3>
         {feedOn && careOf.size > 0 && (
           <p className={`reading-teacher-care${hungryCount || awayCount ? " is-alert" : ""}`}>
