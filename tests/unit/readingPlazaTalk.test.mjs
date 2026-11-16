@@ -7,7 +7,7 @@ import {
   TALK_ART, TALK_ASK_AGAIN_MS, TALK_ASK_MS, TALK_GAP, TALK_MAX, TALK_STALE_MS, TALK_TEXT_MAX,
   plazaTalkHistory, plazaTalkSpot, readTalkAsk, readTalkLine, readTalkMembers, sortTalkLines, talkInProgress,
   talkArtBox, talkAskAcceptable, talkAskAgainIn, talkAskTitle, talkBubbles, talkCallName, talkChoice, talkIdOk, talkIncoming,
-  talkNewId, talkStale, talkTextOf, talkUnread,
+  talkNewId, talkStale, talkTextOf, talkUnread, talkEnterKey, talkLineBreak, talkEnterStillWaiting, TALK_ENTER_WAIT_MS,
 } from "@/lib/readingPlazaTalk";
 import { CLASSROOM_ROOM, PLAZA_ROOM, PLAZA_SPAWN, plazaPortalAt, plazaWalkable } from "@/lib/readingPlazaMap";
 import { classroomSeatSide } from "@/lib/readingClassroom";
@@ -116,6 +116,42 @@ test("말 — 앞뒤 빈칸 · 빈 줄 정리, 200자까지", () => {
   assert.equal(talkTextOf("가".repeat(TALK_TEXT_MAX)).error, "");
   assert.equal(talkTextOf("가".repeat(TALK_TEXT_MAX + 1)).error, "한 마디는 200자까지 쓸 수 있어요.");
   assert.equal(talkTextOf("😀".repeat(TALK_TEXT_MAX)).error, "", "그림 글자도 한 글자");
+});
+
+test("쓰는 칸의 Enter — Enter는 보내기 · Shift+Enter는 줄바꿈 · 한글 조합 중이면 조합이 끝난 뒤(선생님 요청)", () => {
+  assert.equal(talkEnterKey({ key: "Enter" }), "send");
+  assert.equal(talkEnterKey({ key: "Enter", code: "NumpadEnter" }), "send", "숫자 자판의 Enter");
+  assert.equal(talkEnterKey({ key: "Enter", shiftKey: true }), "newline", "Shift+Enter는 줄바꿈 그대로");
+  assert.equal(talkEnterKey({ key: "Enter", shiftKey: true, composing: true }), "newline");
+  assert.equal(talkEnterKey({ key: "Enter", composing: true }), "later", "맥 · 조합 중의 Enter — 조합이 끝나면 보냄(걸러 내기만 하면 첫 Enter가 먹힘)");
+  assert.equal(talkEnterKey({ key: "Process", code: "Enter", composing: true }), "later", "윈도 — 입력기가 받은 키는 key가 'Process', code로 Enter를 알아봄");
+  assert.equal(talkEnterKey({ key: "Enter", code: "Enter" }), "send", "조합을 마친 뒤 한 번 더 오는 Enter(맥 크롬) — 보내되 이미 빈 칸이라 아무 일 없음");
+  assert.equal(talkEnterKey({ key: "a", code: "KeyA" }), null);
+  assert.equal(talkEnterKey({ key: "Process", code: "KeyA", composing: true }), null);
+  assert.equal(talkEnterKey(), null);
+  assert.equal(talkEnterKey({ key: "Enter", ctrlKey: true }), "send", "Ctrl+Enter도 보냄(예전 손버릇)");
+});
+
+test("쓰는 칸의 줄바꿈(beforeinput) — Shift+Enter가 연 것만 들이고 나머지는 막고 보냄", () => {
+  assert.equal(talkLineBreak({ inputType: "insertLineBreak" }), "send", "keydown 없이 줄바꿈만 오는 휴대폰 자판");
+  assert.equal(talkLineBreak({ inputType: "insertParagraph" }), "send");
+  assert.equal(talkLineBreak({ inputType: "insertLineBreak", newlineOk: true }), "allow", "Shift+Enter");
+  assert.equal(talkLineBreak({ inputType: "insertLineBreak", composing: true }), "later");
+  assert.equal(talkLineBreak({ inputType: "insertText" }), null, "글자는 그대로");
+  assert.equal(talkLineBreak({ inputType: "insertFromPaste" }), null, "붙여 넣은 여러 줄은 그대로");
+  assert.equal(talkLineBreak({ inputType: "insertCompositionText" }), null);
+  assert.equal(talkLineBreak(), null);
+});
+
+test("조합 중에 누른 Enter — 조합이 곧 끝날 때만 지켜 줌", () => {
+  const at = 1_000_000;
+  assert.equal(talkEnterStillWaiting(at, at), true);
+  assert.equal(talkEnterStillWaiting(at, at + 30), true);
+  assert.equal(talkEnterStillWaiting(at, at + TALK_ENTER_WAIT_MS - 1), true);
+  assert.equal(talkEnterStillWaiting(at, at + TALK_ENTER_WAIT_MS), false, "늦게 끝난 조합은 다음 말의 것 — 보내지 않음");
+  assert.equal(talkEnterStillWaiting(0, at), false, "누른 적 없음");
+  assert.equal(talkEnterStillWaiting(at, at - 5), false, "시계가 뒤로 감");
+  assert.equal(talkEnterStillWaiting(NaN, at), false);
 });
 
 test("말 — 받은 한 줄(말 · 들어옴 · 나감)과 차례", () => {

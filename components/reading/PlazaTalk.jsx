@@ -7,7 +7,7 @@
 //   PlazaTalkAsk     나에게 온 요청 — '○○님이 대화를 요청합니다' [승인(S) · 취소(C)] · 남은 시간. 책 보기 창(1200) 위에 뜨게
 //                    body에 띄웁니다(1300). S · C는 무대 · 이 창 · 아무 데도 초점이 없을 때만 듣습니다(글 칸에 쓰는 중에는 안 들음).
 //   PlazaTalkWaiting 대답을 기다리는 내 요청 — '○○님의 대답을 기다려요 · 18초' [요청 거두기]
-//   PlazaTalkPanel   오른쪽 대화창 — 든 사람 · 말 · 쓰는 칸(Ctrl/⌘+Enter로 보냄 · Enter는 줄바꿈) · 접기 · 나가기.
+//   PlazaTalkPanel   오른쪽 대화창 — 든 사람 · 말 · 쓰는 칸(Enter로 보냄 · Shift+Enter는 줄바꿈 — 선생님 요청) · 접기 · 나가기.
 //                    접어도 대화에서 나가지 않습니다(접기 · 닫기 · 나가기는 서로 다른 일 — 묶음의 규격). 폰에서는 아래쪽 창.
 // 그림은 선생님이 주신 도트 대화 묶음(public/reading-plaza/talk — 목록과 크기는 lib/readingPlazaTalk.js의 TALK_ART),
 // 모양은 plaza-talk.css. 글자 · 이름 · S/C는 그림에 굽지 않고 여기서 적습니다.
@@ -16,7 +16,7 @@ import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useMemo, u
 import { createPortal } from "react-dom";
 import { PLAZA_H, PLAZA_W } from "@/lib/readingPlazaMap";
 import { plazaLetterKey } from "@/lib/readingClassroom";
-import { TALK_ART, TALK_MAX, TALK_TEXT_MAX, talkArtBox, talkUnread } from "@/lib/readingPlazaTalk";
+import { TALK_ART, TALK_MAX, TALK_TEXT_MAX, talkArtBox, talkEnterKey, talkEnterStillWaiting, talkLineBreak, talkTextOf, talkUnread } from "@/lib/readingPlazaTalk";
 import "./plaza-talk.css";
 
 const pct = (value, whole) => `${(value / whole * 100).toFixed(3)}%`;
@@ -164,10 +164,13 @@ export function PlazaTalkPanel({ talk, myUid, onSend, onLeave, onDismiss, onCove
   const [folded, setFolded] = useState(false);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState("");
-  const [sending, setSending] = useState(false);
   const [seenAt, setSeenAt] = useState(0);
   const listRef = useRef(null);
   const inputRef = useRef(null);
+  // Enter로 보내기(선생님 요청 — lib/readingPlazaTalk.js의 talkEnterKey · talkLineBreak)
+  const composingRef = useRef(false);  // 한글을 조합하는 중인가(compositionstart ~ end)
+  const enterAt = useRef(0);           // 조합 중에 누른 Enter의 때 — 조합이 끝나면 보냄
+  const newlineOk = useRef(false);     // 방금 누른 것이 Shift+Enter — 그 줄바꿈만 들임
   const panelRef = useRef(null);
   const nearBottom = useRef(true);
   const lines = talk.lines;
@@ -219,20 +222,68 @@ export function PlazaTalkPanel({ talk, myUid, onSend, onLeave, onDismiss, onCove
     return () => { observer?.disconnect(); onCover({ right: 0, bottom: 0 }); };
   }, [folded, onCover]);
 
-  async function submit() {
-    if (sending || talk.ended) return;
-    setSending(true);
+  // 보내기 — 칸의 글을 곧바로 비우고 보냅니다. 그래서 Enter가 두 번 와도(맥 크롬 · 줄바꿈까지 넣는 입력기) 둘째는 빈 칸이라
+  // 아무 일도 없고, 앞 말이 가는 동안에도 다음 말을 이어 적어 보냅니다(0.5초 간격은 usePlazaTalk의 send가 맞춤).
+  // 글은 칸(DOM)에서 읽습니다 — 조합을 막 마친 마지막 글자가 아직 상태(draft)에 안 들었을 수 있어서.
+  function submit() {
+    if (talk.ended) return;
+    const el = inputRef.current;
+    const raw = el ? el.value : draft;
+    const { text, error: problem } = talkTextOf(raw);
+    if (problem) { setError(problem); return; }
+    if (!text) return;
+    if (el) el.value = "";   // 곧바로 비움 — 다음 Enter가 같은 글을 또 읽지 않게(상태는 아래에서 맞춤)
+    setDraft("");
     setError("");
-    const result = await onSend(draft);
-    setSending(false);
-    if (result?.ok) { setDraft(""); nearBottom.current = true; inputRef.current?.focus({ preventScroll: true }); }
-    else if (result?.error) setError(result.error);
+    nearBottom.current = true;
+    el?.focus({ preventScroll: true });
+    Promise.resolve()
+      .then(() => onSend(text))
+      .catch(() => ({ error: "보내지 못했어요. 잠시 뒤 다시 보내 주세요." }))
+      .then((result) => {
+        if (result?.ok || !result?.error) return;
+        setError(result.error);
+        setDraft((now) => now || raw);   // 보내지 못한 말은 칸이 비어 있으면 되돌려 둡니다(다시 보내기 쉽게)
+      });
   }
+  const submitRef = useRef(submit);
+  submitRef.current = submit;
+  // Enter로 보냅니다 · Shift+Enter는 줄바꿈 · Ctrl/⌘+Enter도 보냄(예전 손버릇). 한글을 조합하는 중의 Enter는 조합이 끝난 뒤
+  // 보냅니다 — 걸러 내기만 하면 첫 Enter가 먹히고, 막으면(preventDefault) 마지막 글자가 칸에 안 들어갈 수 있어 기본 동작은 둡니다.
   function onKeyDown(e) {
-    // Ctrl/⌘+Enter로 보냅니다(Enter는 줄바꿈 — 앱의 채팅 칸과 같음). 한글을 조합하는 중에는 기다립니다.
-    if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !e.nativeEvent.isComposing) { e.preventDefault(); submit(); return; }
+    const act = talkEnterKey({ key: e.key, code: e.code, shiftKey: e.shiftKey, composing: e.nativeEvent.isComposing || composingRef.current });
+    if (act) {
+      newlineOk.current = act === "newline";
+      if (act === "later") enterAt.current = Date.now();
+      if (act === "send") { e.preventDefault(); enterAt.current = 0; submit(); }
+      return;
+    }
     if (e.key === "Escape") { e.preventDefault(); setFolded(true); }
   }
+  function onCompositionEnd() {
+    composingRef.current = false;
+    const pressed = enterAt.current;
+    enterAt.current = 0;
+    // 조합 중에 누른 Enter — 마지막 글자가 칸에 들어간 뒤(브라우저에 따라 compositionend 뒤에 input이 한 번 더 옴) 보냅니다
+    if (talkEnterStillWaiting(pressed, Date.now())) setTimeout(() => submitRef.current(), 0);
+  }
+  // 줄바꿈이 keydown 없이 오는 길 — 조합을 마치며 줄바꿈까지 넣는 입력기 · 휴대폰 자판. Shift+Enter가 연 것만 들이고, 나머지는 막고
+  // 보냅니다(React의 onBeforeInput은 inputType을 몰라 칸에 직접 겁니다 — 칸은 접기 · 끝남에 따라 새로 섬).
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return undefined;
+    const onBeforeInput = (e) => {
+      const act = talkLineBreak({ inputType: e.inputType, newlineOk: newlineOk.current, composing: composingRef.current || e.isComposing });
+      if (!act) return;
+      newlineOk.current = false;
+      if (act === "allow") return;
+      e.preventDefault();
+      if (act === "later") enterAt.current = Date.now();
+      else submitRef.current();
+    };
+    el.addEventListener("beforeinput", onBeforeInput);
+    return () => el.removeEventListener("beforeinput", onBeforeInput);
+  }, [folded, talk.ended, talk.id]);
   const count = members.length;
   // 든 사람 — 나를 맨 앞에, 그다음 들어온 차례
   const people = useMemo(() => members.map((m) => ({ ...m, me: m.uid === myUid })).sort((a, b) => Number(b.me) - Number(a.me)), [members, myUid]);
@@ -291,9 +342,10 @@ export function PlazaTalkPanel({ talk, myUid, onSend, onLeave, onDismiss, onCove
         <form className="plaza-talk-compose" onSubmit={(e) => { e.preventDefault(); submit(); }}>
           {count < TALK_MAX && <p className="plaza-talk-tip">다른 친구를 누르고 A를 누르면 이 대화에 초대해요 · {TALK_MAX}명까지</p>}
           <div className="plaza-talk-write">
-            <textarea ref={inputRef} value={draft} rows={2} maxLength={TALK_TEXT_MAX * 2} placeholder="이야기를 적어요 (Ctrl+Enter로 보내기)"
-              aria-label="보낼 말" onChange={(e) => { setDraft(e.target.value); if (error) setError(""); }} onKeyDown={onKeyDown} />
-            <button type="submit" className="plaza-talk-send" disabled={sending || !draft.trim() || left < 0} aria-label="메시지 보내기" title="보내기 (Ctrl+Enter)">
+            <textarea ref={inputRef} value={draft} rows={2} maxLength={TALK_TEXT_MAX * 2} placeholder="이야기를 적어요 (Enter로 보내기 · Shift+Enter 줄바꿈)"
+              aria-label="보낼 말" enterKeyHint="send" onChange={(e) => { setDraft(e.target.value); if (error) setError(""); }} onKeyDown={onKeyDown}
+              onCompositionStart={() => { composingRef.current = true; }} onCompositionEnd={onCompositionEnd} />
+            <button type="submit" className="plaza-talk-send" disabled={!draft.trim() || left < 0} aria-label="메시지 보내기" title="보내기 (Enter)">
               <img src={TALK_ART.iconSend.src} alt="" width="22" height="19" />
             </button>
           </div>
