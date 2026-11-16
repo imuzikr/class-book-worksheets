@@ -614,3 +614,63 @@
   .reading-teacher-rail li { flex: 0 0 auto; }
   .reading-teacher-rail button { width: auto; white-space: nowrap; }
 }
+
+/* 학교 도서관 소장 검색(교사 책 봄 · SchoolLibrarySearch) — 명단 위의 작은 칸 + 결과 창.
+   명단의 단추 규칙(.reading-teacher-rail button)에 지지 않게 선택자를 겹쳐 씁니다. 결과 창은 body에 포털. */
+.lib-rail { margin: 0 0 12px; padding: 10px; border: 1px solid #d6e0ea; border-radius: 12px; background: #f6f9fc; display: grid; gap: 6px; }
+.reading-teacher-rail .lib-rail h3 { margin: 0 2px; font-size: 13px; color: #2f4d66; }
+.lib-rail-note { font-size: 11.5px; color: var(--text-faint); margin: 0 2px; }
+.lib-search-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+.lib-search-form input { min-width: 0; height: 38px; padding: 0 10px; border: 1px solid var(--border); border-radius: 9px; background: #fff; font: inherit; font-size: 14px; }
+.lib-search-form input:focus { outline: 2px solid #478fbd; outline-offset: 0; border-color: #478fbd; }
+.lib-search-form button, .reading-teacher-rail .lib-search-form button {
+  width: auto; height: 38px; padding: 0 14px; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid #2f6b96; border-radius: 9px; background: #2f6b96; color: #fff; font: inherit; font-size: 14px; font-weight: 700; white-space: nowrap; cursor: pointer;
+}
+.lib-search-form button:hover:not(:disabled), .reading-teacher-rail .lib-search-form button:hover:not(:disabled) { background: #245a80; }
+.lib-search-form button:disabled, .reading-teacher-rail .lib-search-form button:disabled { opacity: .6; cursor: wait; }
+.lib-search-form.is-compact input { height: 34px; font-size: 13.5px; }
+.reading-teacher-rail .lib-search-form.is-compact button { height: 34px; padding: 0 11px; font-size: 13px; }
+.lib-hint { margin: 0 2px; font-size: 12.5px; color: #b3392f; }
+.lib-modal { width: min(860px, 96vw); max-width: 860px; height: min(780px, 90vh); display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+.lib-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.lib-head h3 { margin: 0; font-size: 18px; }
+.lib-head p { margin: 3px 0 0; font-size: 13px; color: var(--text-sub); }
+.lib-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: 2px; }
+.lib-status { margin: 4px 0 10px; font-size: 14px; color: var(--text); }
+.lib-status-note { color: var(--text-faint); font-size: 12.5px; }
+.lib-results { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.lib-book { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; background: #fff; }
+.lib-book-head { display: flex; gap: 10px; align-items: baseline; justify-content: space-between; }
+.lib-book-title { font-size: 15.5px; word-break: keep-all; }
+.lib-own { flex-shrink: 0; padding: 2px 9px; border-radius: 999px; background: #e7eff7; color: #2f5d82; font-size: 12px; font-weight: 700; }
+.lib-book-meta { margin: 4px 0 8px; font-size: 13px; color: var(--text-sub); }
+.lib-copies { width: 100%; border-collapse: collapse; font-size: 13px; }
+.lib-copies th { text-align: left; font-weight: 600; color: var(--text-faint); font-size: 12px; padding: 4px 6px; border-bottom: 1px solid var(--border); }
+.lib-copies td { padding: 6px; border-bottom: 1px dashed #ece8e0; vertical-align: middle; }
+.lib-copies tr:last-child td { border-bottom: 0; }
+.lib-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.lib-vol { color: var(--text-sub); }
+.lib-state { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #efece6; color: #5f574c; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.lib-state.is-available { background: #e3f1e6; color: #2f6b43; }
+.lib-state.is-loaned { background: #fdeed9; color: #a85a22; }
+.lib-state.is-unknown { background: #fff; border: 1px dashed #c9c2b6; color: #7a7266; font-weight: 600; }
+.lib-return { color: var(--text-sub); font-size: 12px; }
+.lib-empty, .lib-error { padding: 16px; border-radius: 12px; display: grid; gap: 6px; justify-items: start; }
+.lib-empty { background: #f7f5f0; border: 1px solid #e3ddd1; }
+.lib-error { background: #fdf1ef; border: 1px solid #efc9c1; }
+.lib-empty p, .lib-error p { margin: 0; font-size: 13.5px; color: var(--text-sub); }
+.lib-error-note { font-weight: 600; color: #8a3a2c !important; }
+.lib-error-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
+.lib-origin { font-size: 13.5px; font-weight: 700; color: #2f6b96; }
+.lib-pager { display: flex; gap: 12px; align-items: center; justify-content: center; margin: 12px 0 4px; font-size: 13px; }
+.lib-foot { margin: 0; font-size: 12px; color: var(--text-faint); }
+.lib-foot a { color: #2f6b96; }
+@media (max-width: 640px) {
+  .lib-modal { height: 94vh; }
+  .lib-copies thead { display: none; }
+  .lib-copies tr { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; padding: 6px 0; border-bottom: 1px dashed #ece8e0; }
+  .lib-copies td { border: 0; padding: 2px 0; }
+  .lib-copies td::before { content: attr(data-label) " "; color: var(--text-faint); font-size: 11.5px; }
+}
+@media (max-width: 900px) { .lib-rail { max-width: 420px; } }
