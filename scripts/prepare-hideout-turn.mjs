@@ -18,7 +18,10 @@
 // 자르기: 칸 안의 불투명 점(알파 128 이상)을 모두 담는 상자로 자르고(칸마다 가구 하나 — 칸 경계에 닿으면 멈춤),
 // 작은 얼룩(이어진 점 50개 아래)은 걷습니다. 알파는 0 또는 255로 — 시트에 반투명 점이 없음을 확인했습니다.
 // 크기는 시트의 원래 크기(줄이지 않음). 끝에 찍는 크기를 lib/readingHideoutTurn.js에 옮겨 적습니다
-// (tests/unit/readingHideoutTurn.test.mjs가 그림 크기와 견줌).
+// (tests/unit/readingHideoutArrange.test.mjs가 그림 크기와 견줌).
+// 책상·의자만 자른 뒤 좌우로 DESK_WIDEN_PX씩 넓힙니다(선생님 요청 · 2026년 11월 — 옆모습 책상보다 짧아 보였음,
+// 의자는 그대로 · 셈은 scripts/hideout-desk-widen.mjs). 자르는 칸 표(DESK_WIDEN)는 시트 그림을 보고 잰 값이라
+// 시트를 바꾸면 다시 재세요 — 칸이 비어 있으면 스크립트가 멈춥니다.
 // sharp는 next가 함께 설치합니다(따로 설치 없음).
 // =============================================================
 import fs from "node:fs/promises";
@@ -27,6 +30,7 @@ import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 import { WEBP_ALPHA } from "./hideout-furniture-art.mjs";
+import { widenTurnedDesk } from "./hideout-desk-widen.mjs";
 
 const ROOT = fileURLToPath(new URL("../", import.meta.url));
 const TARGET = path.join(ROOT, "public", "reading-hideout");
@@ -41,6 +45,22 @@ const TURN_SHEETS = [
   { file: "chest-turn.png", slot: "chest", folder: "chest", label: "독서 보물함" },
   { file: "aquarium-turn.png", slot: "badge-display", folder: "aquarium", label: "스탠드 어항" },
 ];
+
+// 돌린 책상 넓히기 — 한쪽에 32px(좌우 합쳐 그림 폭의 4분의 1 남짓). 자르는 칸: 다리가 나오기 전 줄(윗면 · 앞 띠)에서
+// [이 줄 앞까지, [[칸, 몫], …]] — 비스듬한 윤곽 · 책 · 의자 등받이 · 금속 장식을 비켜 가는 나무 칸(시트에서 자른 그림의 좌표).
+// 100줄 위(윗면)와 아래(앞 띠)를 나눈 것은 윗면 모서리 · 의자 등받이를 함께 비켜 가는 칸이 없어서입니다.
+// 탐험가는 앞 띠의 금속 장식을 리벳 양옆에서 반씩 벌립니다(리벳이 장식 가운데에 남게).
+const DESK_WIDEN_PX = 32;
+const DESK_WIDEN = Object.freeze({
+  basic: { L: [[100, [[56, 1]]], [Infinity, [[40, 1]]]], R: [[100, [[195, 1]]], [Infinity, [[211, 1]]]] },
+  forest: { L: [[100, [[56, 1]]], [Infinity, [[40, 1]]]], R: [[100, [[183, 1]]], [Infinity, [[199, 1]]]] },
+  starlight: { L: [[100, [[56, 1]]], [Infinity, [[40, 1]]]], R: [[100, [[184, 1]]], [Infinity, [[200, 1]]]] },
+  coastal: { L: [[100, [[56, 1]]], [Infinity, [[40, 1]]]], R: [[100, [[186, 1]]], [Infinity, [[202, 1]]]] },
+  explorer: {
+    L: [[42, [[77, 1]]], [113, [[45, 1]]], [Infinity, [[22, 0.5], [36, 0.5]]]],
+    R: [[20, [[166, 1]]], [38, [[170, 1]]], [113, [[200, 1]]], [Infinity, [[211, 0.5], [223, 0.5]]]],
+  },
+});
 
 const [packArg] = process.argv.slice(2);
 if (!packArg) {
@@ -111,14 +131,21 @@ for (const sheet of TURN_SHEETS) {
       if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
     }
     if (x0 === 0 || y0 === 0 || x1 === CELL - 1 || y1 === CELL - 1) throw Error(`${sheet.file}: 칸 ${cell + 1}(${theme})의 그림이 칸 경계에 닿아요 — 묶음을 확인하세요`);
-    const bw = x1 - x0 + 1, bh = y1 - y0 + 1, pixels = Buffer.alloc(bw * bh * 4);
+    let bw = x1 - x0 + 1, pixels = Buffer.alloc(bw * (y1 - y0 + 1) * 4);
+    const bh = y1 - y0 + 1;
     for (const points of parts) for (const p of points) {
       const x = p % CELL, y = (p - x) / CELL;
       const s = ((cy + y) * W + cx + x) * 4, d = ((y - y0) * bw + (x - x0)) * 4;
       pixels[d] = data[s]; pixels[d + 1] = data[s + 1]; pixels[d + 2] = data[s + 2]; pixels[d + 3] = 255;
     }
+    let widened = 0;
+    if (sheet.slot === "desk") {
+      const wide = widenTurnedDesk(pixels, bw, bh, DESK_WIDEN[theme], DESK_WIDEN_PX);
+      widened = wide.width - bw;
+      pixels = wide.pixels; bw = wide.width;
+    }
     const rel = theme === "basic" ? `${sheet.basic}-turn.webp` : `items/${sheet.folder}/${theme}-turn.webp`;
-    cuts.push({ ...sheet, theme, rel, width: bw, height: bh, pixels, parts: parts.length });
+    cuts.push({ ...sheet, theme, rel, width: bw, height: bh, pixels, parts: parts.length, widened });
   }
 }
 
@@ -146,6 +173,6 @@ for (const sheet of TURN_SHEETS) {
   const scale = scales[sheet.slot];
   console.log(`  ${sheet.label}(${sheet.slot}) refScale ${Math.round(scale * 10000) / 10000}`);
   for (const cut of cuts.filter((entry) => entry.slot === sheet.slot)) {
-    console.log(`    ${cut.rel}: ${cut.width}×${cut.height}${cut.parts > 1 ? ` (덩어리 ${cut.parts})` : ""} · 앞모습 단위 ${Math.round(cut.width / scale)}×${Math.round(cut.height / scale)} · ${kb(cut.bytes)}`);
+    console.log(`    ${cut.rel}: ${cut.width}×${cut.height}${cut.parts > 1 ? ` (덩어리 ${cut.parts})` : ""}${cut.widened ? ` (좌우로 ${cut.widened}px 넓힘)` : ""} · 앞모습 단위 ${Math.round(cut.width / scale)}×${Math.round(cut.height / scale)} · ${kb(cut.bytes)}`);
   }
 }

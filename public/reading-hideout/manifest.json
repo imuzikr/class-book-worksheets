@@ -728,28 +728,28 @@
     },
     {
       "path": "items/desk/forest-turn.webp",
-      "bytes": 11878,
-      "sha256": "070272444ece9aa62643910d804dd486d11bbabd693ac545f7596a23478902e0"
+      "bytes": 12552,
+      "sha256": "12c519960d7280baf6545f0049dfca6490d8d69540e87309f3b53270b0f36ff2"
     },
     {
       "path": "items/desk/starlight-turn.webp",
-      "bytes": 11746,
-      "sha256": "d2eba283dc2eb12285c56ab54d4948400baec0476715238d52f6f5dd0d88dc36"
+      "bytes": 12452,
+      "sha256": "befe169469799171662df67f57715f9cd202edd4559d6b225b293c42a8390878"
     },
     {
       "path": "items/desk/explorer-turn.webp",
-      "bytes": 14136,
-      "sha256": "abac2336a3695ebe468821b69ce251b2c384b1c474e9bfc8252e35a7ac4e25eb"
+      "bytes": 15274,
+      "sha256": "67a7bbc6d93c907e11cc0e143b8d62bbe78504b9f797eeb3682779f70a036ca6"
     },
     {
       "path": "items/desk/coastal-turn.webp",
-      "bytes": 12410,
-      "sha256": "f7dad79c56211c975d6dac3a01161fd0ca0c1e91b394c15a9d659b8016048854"
+      "bytes": 13440,
+      "sha256": "ef5c54c7588fe8208457cf39638eba76b5fa02fdaba342cabd8971ebb814e501"
     },
     {
       "path": "desk-basic-turn.webp",
-      "bytes": 9672,
-      "sha256": "6867088a0e07819ae610e06268e7fa5482348bf74dfd4f4a1670c0200f0f71cd"
+      "bytes": 10544,
+      "sha256": "a34dc7addd6c5b58254242ac2c54f1e86d3df9a1713b777e69a7812956e2271e"
     },
     {
       "path": "items/shelf/forest-turn.webp",

@@ -85,6 +85,19 @@ test("배치가 없으면 지금까지와 똑같은 방 — 자리 · 폭 · 그
   }
 });
 
+test("돌린 책상 — 책 받침대의 바닥 줄이 책상 윗면(밝은 나무) 위에 있다(넓힌 그림과 견줌)", async () => {
+  for (const [deskId, spots] of Object.entries(HIDEOUT_TURN_TABLETOP)) {
+    const art = hideoutTurnArt(deskId), { x, y, width } = spots.bookstand;
+    const { data, info } = await sharp(file(art.src)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const row = y - 2;
+    for (let px = Math.round(x - width / 2); px <= Math.round(x + width / 2); px += 1) {
+      const i = (row * info.width + px) * 4;
+      const lum = (data[i] * 299 + data[i + 1] * 587 + data[i + 2] * 114) / 1000;
+      assert.ok(data[i + 3] >= 128 && lum >= 120, `${deskId} — 받침대 바닥(${px}, ${row})이 책상 윗면이 아님`);
+    }
+  }
+});
+
 test("책상을 옮기고 뒤집고 돌리면 책 받침대가 따라간다 · 벽 선반을 옮기면 위의 소품이 따라간다", () => {
   const layout = { ...LAYOUTS.forest };
   const home = hideoutSceneProps(layout);
