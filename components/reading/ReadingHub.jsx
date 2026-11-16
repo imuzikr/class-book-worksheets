@@ -2,8 +2,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { bookInfoUrl, bookTitleDrifted, coversWholeBook, deriveReading, initialReadingState, kstToday, READING_BADGES, wholeBookReviewPlan } from "@/lib/reading";
-import { subscribeReadingState, mutateReading, fetchReadingRankings } from "@/lib/data/reading";
+import { bookInfoUrl, bookPagesFloor, bookTitleDrifted, coversWholeBook, deriveReading, initialReadingState, kstToday, READING_BADGES, wholeBookReviewPlan } from "@/lib/reading";
+import { subscribeReadingState, mutateReading, mutateStudentBook, fetchReadingRankings } from "@/lib/data/reading";
 import { rankingAsOf, rankingsForPeriod } from "@/lib/readingJourney";
 import { petGrowthOfSummary } from "@/lib/readingPet";
 import { careReadLabel, readingDayProof } from "@/lib/petCare";
@@ -188,6 +188,9 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
   // student가 있으면 교사가 그 학생의 책 봄을 보는 읽기 전용 화면입니다(선생님 결정 — 감상·발자국까지 전부 보임).
   const readOnly = !!student?.uid;
   const viewUid = readOnly ? student.uid : user?.uid;
+  // [교사] 읽기 전용 화면에서 하나만 고칩니다 — 학생 책의 정보(제목 · 지은이 · 쪽수 · 출판사 · ISBN · 표지 · 도서 정보 주소,
+  // 선생님 요청 · 2026년 11월). 저장은 mutateStudentBook(서버가 담당 교사 · 그 반 학생 · 책 정보만인지 다시 확인).
+  const teacherEdit = readOnly && !!isTeacher;
   const ownStudent = !readOnly && !isTeacher && !!user?.uid;
   const [raw, setRaw] = useState(null);
   const [error, setError] = useState("");
@@ -325,7 +328,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
     if (busy) return false;
     setBusy(true); setError("");
     try {
-      const result = await mutateReading(classId, action);
+      const result = readOnly ? await mutateStudentBook(classId, student.uid, action) : await mutateReading(classId, action);
       if (result?.state) setRaw(result.state);
       else if (Array.isArray(result?.books) && Array.isArray(result?.logs)) setRaw(result);
       const done = typeof success === "function" ? success(result?.state ?? result) : success;
@@ -430,8 +433,11 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
     </div></div>}
 
     {inspectedBadge && <BadgeDetail badge={inspectedBadge} featured={featured?.id === inspectedBadge.id} busy={busy} readOnly={readOnly} onClose={() => setDialog(null)} onSelect={() => run({ type: "setFeaturedBadge", badgeId: inspectedBadge.id }, "대표 뱃지를 바꿨어요.")} />}
-    {dialog?.type === "book" && <BookForm key={selected?.id || "new"} book={selected} searchOn={bookSearchOn} activityPick={activitiesOn && BOOK_ACTIVITY_LINK_READY} pagesLocked={!!selected && [...(raw?.logs || []), ...(raw?.reviews || [])].some((r) => r.bookId === selected.id)} activities={activities} busy={busy} onClose={() => setDialog(null)} onSave={async (values) => { const ok = await run({ type: selected ? "updateBook" : "addBook", ...(selected ? { bookId: selected.id } : {}), ...values }, selected ? "책 정보를 고쳤어요." : "새 책을 책꽂이에 놓았어요."); if (ok) setDialog(null); }} />}
-    {dialog?.type === "detail" && selected && <BookDetail book={selected} classId={classId} readOnly={readOnly} activity={activities.find((a) => a.id === selected.activityId)} onOpenActivity={BOOK_ACTIVITY_LINK_READY ? onOpenActivity : undefined} logs={(stats.logs || raw?.logs || []).filter((l) => l.bookId === selected.id)} review={(stats.reviews || raw?.reviews || []).find((r) => r.bookId === selected.id)} busy={busy} onClose={() => setDialog(null)} onEdit={() => setDialog({ type: "book", bookId: selected.id })} onLog={(log) => setDialog({ type: "log", bookId: selected.id, log, from: "detail" })} onReview={() => setDialog({ type: "review", bookId: selected.id, from: "detail" })} onDeleteLog={(log) => ask((raw?.reviews || []).some((r) => r.bookId === log.bookId && r.fromLogId === log.id) ? "이 독서 기록을 삭제할까요? 경험치와 달성 기록도 다시 계산해요. 함께 남긴 ‘한 권의 책’은 지워지지 않고 그대로 남아요." : "이 독서 기록을 삭제할까요? 경험치와 달성 기록도 다시 계산해요.", { type: "deleteLog", logId: log.id })} onArchive={() => ask(selected.archived ? "이 책을 책꽂이로 돌려놓을까요?" : "이 책을 보관함으로 옮길까요? 독서 기록은 그대로 남아요.", { type: "archiveBook", bookId: selected.id, archived: !selected.archived })}
+    {dialog?.type === "book" && (!readOnly || (teacherEdit && selected)) && (() => {
+      const recorded = !!selected && [...(raw?.logs || []), ...(raw?.reviews || [])].some((r) => r.bookId === selected.id);
+      return <BookForm key={selected?.id || "new"} book={selected} searchOn={bookSearchOn} teacherFor={teacherEdit ? (student.name || "학생") : null} recorded={recorded} pagesFloor={selected ? bookPagesFloor(raw, selected.id) : 0} activityPick={!teacherEdit && activitiesOn && BOOK_ACTIVITY_LINK_READY} pagesLocked={!teacherEdit && recorded} activities={activities} busy={busy} onClose={() => setDialog(null)} onSave={async (values) => { const ok = await run({ type: selected ? "updateBook" : "addBook", ...(selected ? { bookId: selected.id } : {}), ...values }, selected ? (teacherEdit ? `${student.name || "학생"}의 책 정보를 고쳤어요.` : "책 정보를 고쳤어요.") : "새 책을 책꽂이에 놓았어요."); if (ok) setDialog(null); }} />;
+    })()}
+    {dialog?.type === "detail" && selected && <BookDetail book={selected} classId={classId} readOnly={readOnly} teacherEdit={teacherEdit} activity={activities.find((a) => a.id === selected.activityId)} onOpenActivity={BOOK_ACTIVITY_LINK_READY ? onOpenActivity : undefined} logs={(stats.logs || raw?.logs || []).filter((l) => l.bookId === selected.id)} review={(stats.reviews || raw?.reviews || []).find((r) => r.bookId === selected.id)} busy={busy} onClose={() => setDialog(null)} onEdit={() => setDialog({ type: "book", bookId: selected.id })} onLog={(log) => setDialog({ type: "log", bookId: selected.id, log, from: "detail" })} onReview={() => setDialog({ type: "review", bookId: selected.id, from: "detail" })} onDeleteLog={(log) => ask((raw?.reviews || []).some((r) => r.bookId === log.bookId && r.fromLogId === log.id) ? "이 독서 기록을 삭제할까요? 경험치와 달성 기록도 다시 계산해요. 함께 남긴 ‘한 권의 책’은 지워지지 않고 그대로 남아요." : "이 독서 기록을 삭제할까요? 경험치와 달성 기록도 다시 계산해요.", { type: "deleteLog", logId: log.id })} onArchive={() => ask(selected.archived ? "이 책을 책꽂이로 돌려놓을까요?" : "이 책을 보관함으로 옮길까요? 독서 기록은 그대로 남아요.", { type: "archiveBook", bookId: selected.id, archived: !selected.archived })}
       plaza={ownPlaza ? plazaInfo(selected.id) : null}
       onOpenPlaza={(place) => { setDialog(null); setError(""); setPlazaJump({ uid: viewUid, bookId: selected.id, place, key: `jump-${Date.now()}` }); setTab("plaza"); }} />}
     {dialog?.type === "log" && selected && <LogForm key={dialog.log?.id || selected.id} book={selected} log={dialog.log} reviews={raw?.reviews || []} today={day} busy={busy} petRead={readToday} plaza={ownPlaza ? "shown" : null} onClose={() => setDialog(formBack(dialog))} onSave={async (values, plan) => { const bookId = selected.id; const back = formBack(dialog); const ok = await run({ type: dialog.log ? "updateLog" : "addLog", bookId, ...(dialog.log ? { logId: dialog.log.id } : {}), ...values }, (state) => logSavedNotice(plan, state, bookId, !!dialog.log)); if (ok) setDialog(back); }} />}
@@ -503,7 +509,12 @@ function BookCover({ book }) {
 
 // 새 책 등록 — 관리자 설정의 '도서 검색'이 켜져 있으면 맨 위에 '도서 검색' 단추가 서고,
 // 누르면 카카오 책 검색 칸이 펼쳐집니다(직접 입력하기로 접힘). 꺼져 있으면 직접 입력만.
-function BookForm({ book, searchOn = false, activityPick = true, pagesLocked, activities, busy, onSave, onClose }) {
+// teacherFor — [교사] 학생의 책 정보 고치기(학생 이름 · 선생님 요청 · 2026년 11월). 학생과 다른 점: 기록이 있어도 쪽수를 고치고
+// (pagesFloor — 독서 발자국이 닿은 쪽 아래로는 못 줄임 · recorded면 '다시 셈' 안내), 읽기 상태는 학생의 것이라 칸이 없고,
+// 도서 검색으로 표지 · ISBN까지 바꿀 수 있습니다(고르면 제목 · 지은이 · 표지가 그 책으로 · 쪽수는 그대로).
+function BookForm({ book, searchOn = false, teacherFor = null, recorded = false, pagesFloor = 0, activityPick = true, pagesLocked, activities, busy, onSave, onClose }) {
+  const teacher = !!book && !!teacherFor;
+  const canSearch = searchOn && (!book || teacher);
   const [searching, setSearching] = useState(false);
   const [form, setForm] = useState({ title: book?.title || "", author: book?.author || "", totalPages: book?.totalPages || "", status: book?.status === "paused" ? "paused" : "reading", activityId: book?.activityId || "", publisher: book?.publisher || "", isbn: book?.isbn || "", coverImage: book?.coverImage || "", bookLink: book?.bookLink || "" });
   const [selectedSearch, setSelectedSearch] = useState(false);
@@ -523,7 +534,8 @@ function BookForm({ book, searchOn = false, activityPick = true, pagesLocked, ac
     setForm((p) => ({ ...p, [key]: value }));
   }
   function selectSearch(result) {
-    setForm((p) => ({ ...p, title: result.title || "", author: result.author || "", totalPages: "",
+    // 고치는 중이면(선생님) 쪽수는 그대로 둡니다 — 검색 결과에는 쪽수가 없어요
+    setForm((p) => ({ ...p, title: result.title || "", author: result.author || "", totalPages: book ? p.totalPages : "",
       publisher: result.publisher || "", isbn: result.isbn || "", coverImage: result.coverImage || "", bookLink: result.link || "" }));
     setSelectedSearch(true);
     setMetaTitle(result.title || "");
@@ -532,17 +544,19 @@ function BookForm({ book, searchOn = false, activityPick = true, pagesLocked, ac
     // 지은이가 비어 왔으면 지은이 칸으로(채워야 담을 수 있음), 아니면 쪽수 칸으로
     requestAnimationFrame(() => (noAuthor ? authorRef : pagesRef).current?.focus());
   }
-  return <Modal title={book ? "책 정보 고치기" : "새 책 등록"} onClose={onClose} busy={busy}>
-    {!book && searchOn && (searching
+  return <Modal title={teacher ? `${teacherFor}의 책 정보 고치기` : book ? "책 정보 고치기" : "새 책 등록"} onClose={onClose} busy={busy}>
+    {canSearch && (searching
       ? <BookSearch busy={busy} autoFocus onSelect={(r) => { selectSearch(r); setSearching(false); }} onManual={() => { setSearching(false); requestAnimationFrame(() => titleRef.current?.focus()); }} />
       : <div className="reading-search-start">
-          <button type="button" className="reading-search-open" disabled={busy} aria-describedby={hasMetadata ? undefined : searchHintId} onClick={() => setSearching(true)}>
+          <button type="button" className="reading-search-open" disabled={busy} aria-describedby={teacher || !hasMetadata ? searchHintId : undefined} onClick={() => setSearching(true)}>
             <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" strokeWidth="2" /><path d="m16 16 4.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
-            도서 검색으로 책 정보 채우기
+            {teacher ? "도서 검색으로 책 정보 바꾸기" : "도서 검색으로 책 정보 채우기"}
           </button>
           {/* 선생님 신고(2026년 11월) — 이 단추를 지나쳐 모두 직접 적었습니다. 고르면 무엇이 채워지는지 단추 바로 아래에서 말해
               먼저 검색하게 합니다. 쪽수는 검색 결과에 없어 약속하지 않습니다(고른 뒤 '쪽수는 직접' 안내가 따로 섬). */}
-          {!hasMetadata && <p className="reading-search-nudge" id={searchHintId}><span><strong>먼저 검색해 보세요.</strong> 고른 책의 제목&nbsp;·&nbsp;지은이&nbsp;·&nbsp;표지가 한 번에 채워져요.</span> <span>찾는 책이 없을 때만 아래에 직접 적어 주세요.</span></p>}
+          {teacher
+            ? <p className="reading-search-nudge" id={searchHintId}><span>검색에서 책을 고르면 제목&nbsp;·&nbsp;지은이&nbsp;·&nbsp;표지가 그 책으로 바뀌어요.</span> <span>전체 쪽수는 그대로 남아요.</span></p>
+            : !hasMetadata && <p className="reading-search-nudge" id={searchHintId}><span><strong>먼저 검색해 보세요.</strong> 고른 책의 제목&nbsp;·&nbsp;지은이&nbsp;·&nbsp;표지가 한 번에 채워져요.</span> <span>찾는 책이 없을 때만 아래에 직접 적어 주세요.</span></p>}
         </div>)}
     {hasMetadata && <div className="reading-selected-book">
       <BookCover book={form} />
@@ -554,11 +568,17 @@ function BookForm({ book, searchOn = false, activityPick = true, pagesLocked, ac
     <form className="reading-form" onSubmit={(e) => { e.preventDefault(); onSave({ ...form, title: form.title.trim(), author: form.author.trim(), totalPages: Number(form.totalPages) }); }}>
       <label>책 제목<input ref={titleRef} data-initial-focus={book ? true : undefined} required maxLength={150} value={form.title} onChange={(e) => change("title", e.target.value)} placeholder="책 제목을 적어 주세요" disabled={busy} /></label>
       <label>지은이<input ref={authorRef} required maxLength={100} value={form.author} onChange={(e) => change("author", e.target.value)} placeholder="저자 이름" disabled={busy} /></label>
-      <div className="reading-form-row"><label>전체 쪽수<input ref={pagesRef} required type="number" min={1} max={100000} step={1} disabled={pagesLocked || busy} value={form.totalPages} onChange={(e) => change("totalPages", e.target.value)} inputMode="numeric" /></label>{book && <label>읽기 상태<select value={form.status} onChange={(e) => change("status", e.target.value)} disabled={busy}><option value="reading">읽는 중</option><option value="paused">잠시 멈춤</option></select></label>}</div>
-      {selectedSearch && <p className="reading-search-pages-help" role="status">{searchNoAuthor ? "검색 결과에 지은이와 쪽수가 없어 직접 입력해 주세요." : "검색 결과에 쪽수가 없어 직접 입력해 주세요."}</p>}
+      <div className="reading-form-row"><label>전체 쪽수<input ref={pagesRef} required type="number" min={Math.max(1, pagesFloor)} max={100000} step={1} disabled={pagesLocked || busy} value={form.totalPages} onChange={(e) => change("totalPages", e.target.value)} inputMode="numeric" /></label>{book && !teacher && <label>읽기 상태<select value={form.status} onChange={(e) => change("status", e.target.value)} disabled={busy}><option value="reading">읽는 중</option><option value="paused">잠시 멈춤</option></select></label>}</div>
+      {selectedSearch && <p className="reading-search-pages-help" role="status">{book
+        ? (searchNoAuthor ? "검색 결과에 지은이가 없어 직접 입력해 주세요. 전체 쪽수는 그대로 두었어요." : "전체 쪽수는 그대로 두었어요. 실제 책과 다르면 고쳐 주세요.")
+        : (searchNoAuthor ? "검색 결과에 지은이와 쪽수가 없어 직접 입력해 주세요." : "검색 결과에 쪽수가 없어 직접 입력해 주세요.")}</p>}
+      {/* [교사] 기록이 있는 책 — 쪽수를 바꾸면 완독 · 경험치 · 뱃지를 새 쪽수로 다시 셉니다(lib/reading.js의 updateBook byTeacher) */}
+      {teacher && recorded && <p className="reading-search-pages-help reading-teacher-edit-note">독서 기록이 있는 책이에요. 전체 쪽수를 바꾸면 {teacherFor}의 완독 · 경험치 · 뱃지를 새 쪽수로 다시 셈해요.{pagesFloor > 0 ? ` 독서 발자국이 ${number(pagesFloor)}쪽까지 있어 그보다 적게는 바꿀 수 없어요.` : ""}</p>}
       {pagesLocked && <p className="reading-help">독서 발자국이나 ‘한 권의 책’이 있는 책의 전체 쪽수는 고정돼요. 잘못 입력한 기록은 먼저 정정해 주세요.</p>}
       {activityPick && <label>함께할 독서 활동 <span className="reading-optional">선택</span><select value={form.activityId} onChange={(e) => change("activityId", e.target.value)} disabled={busy}><option value="">연결하지 않음</option>{form.activityId && !activities.some((a) => a.id === form.activityId) && <option value={form.activityId}>이전에 연결한 활동</option>}{activities.filter((a) => !a.deleted).map((a) => <option key={a.id} value={a.id}>{a.title}</option>)}</select></label>}
-      <p className="reading-help">완독 여부는 읽은 페이지 기록으로 확인해요. 같은 책은 중복으로 등록할 수 없어요.</p>
+      <p className="reading-help">{teacher
+        ? `선생님이 고친 책 정보는 ${teacherFor}의 책꽂이에 곧바로 반영돼요. 읽기 상태(읽는 중 · 잠시 멈춤)는 학생이 정해요.`
+        : "완독 여부는 읽은 페이지 기록으로 확인해요. 같은 책은 중복으로 등록할 수 없어요."}</p>
       <div className="reading-form-actions"><button type="button" className="btn-ghost" onClick={onClose} disabled={busy}>취소</button><button type="submit" className="btn-primary" disabled={busy || !form.title.trim() || !form.author.trim()}>{busy ? "저장 중…" : book ? "변경 저장" : "책꽂이에 담기"}</button></div>
     </form>
   </Modal>;
@@ -641,7 +661,7 @@ function ReviewForm({ book, review, busy, plaza = null, onSave, onClose }) {
   </Modal>;
 }
 
-function BookDetail({ book, classId, readOnly = false, activity, onOpenActivity, logs, review, busy, onClose, onEdit, onLog, onReview, onDeleteLog, onArchive, plaza = null, onOpenPlaza }) {
+function BookDetail({ book, classId, readOnly = false, teacherEdit = false, activity, onOpenActivity, logs, review, busy, onClose, onEdit, onLog, onReview, onDeleteLog, onArchive, plaza = null, onOpenPlaza }) {
   const sorted = [...logs].sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.createdAt).localeCompare(String(a.createdAt)));
   const infoUrl = bookInfoUrl(book);
   // 책 광장 단추 둘 — 광장을 켠 반의 학생 본인 · 그 반에서 남긴 글이 광장에 올라가 있을 때만(plaza.entry), 실제 남긴 글에 맞게.
@@ -651,6 +671,8 @@ function BookDetail({ book, classId, readOnly = false, activity, onOpenActivity,
   const onPlaza = !!(plaza?.entry && !readOnly && !book.archived);
   return <Modal title={book.title} wide busy={busy} onClose={onClose}>
     <div className="reading-detail-overview"><BookCover book={book} /><div className="reading-detail-meta"><span>{book.author}</span>{book.publisher && <span>{book.publisher}</span>}{book.isbn && <span>ISBN {book.isbn}</span>}<span>{number(book.pagesRead ?? book.currentPage)} / {number(book.totalPages)}쪽 읽음</span><span>{book.status === "completed" ? "완독" : book.status === "paused" ? "잠시 멈춤" : "읽는 중"}</span>{infoUrl && <a href={infoUrl} target="_blank" rel="noopener noreferrer">도서 정보 보기 ↗</a>}</div></div>
+    {/* [교사] 학생 책의 정보만 고칩니다 — 학생 화면과 같은 자리 · 같은 크기의 단추 하나(보관된 책은 학생처럼 고치지 않음) */}
+    {readOnly && teacherEdit && !book.archived && <div className="reading-detail-tools"><button type="button" className="btn-ghost" disabled={busy} onClick={onEdit}>책 정보 고치기</button></div>}
     {!readOnly && <div className="reading-detail-tools"><button type="button" className="btn-ghost" disabled={busy} onClick={onEdit}>책 정보 고치기</button><button type="button" className="btn-ghost" disabled={busy} onClick={onArchive}>{book.archived ? "책꽂이로 복원" : "보관함으로"}</button>{onPlaza && plaza.hasLogs && <button type="button" className="btn-ghost" disabled={busy} onClick={() => onOpenPlaza("stall")}>가판대에서 발자국 보기</button>}{onPlaza && plaza.hasReview && <button type="button" className="btn-ghost" disabled={busy} onClick={() => onOpenPlaza("shelf")}>책꽂이에서 감상 보기</button>}</div>}
     {activity && onOpenActivity && !readOnly && <div className="reading-linked-activity"><div><span>함께 연결한 독서 활동</span><strong>{activity.title}</strong></div><button type="button" className="btn-ghost" disabled={busy} onClick={() => onOpenActivity(activity)}>활동 열기 →</button></div>}
     <section className="reading-detail-section"><header><h3>한 권의 책</h3>{!book.archived && !readOnly && <div className="reading-detail-section-actions">{book.status === "completed" && !review && <button type="button" className="btn-ghost" disabled={busy} onClick={onReview}>한 권의 책</button>}<button type="button" className="btn-primary" disabled={busy} onClick={() => onLog(null)}>독서 발자국</button></div>}</header>{review ? <article className="reading-review"><p className="reading-review-rating">{readOnly ? "별점" : "나의 별점"} {review.rating} / 5</p><p>{review.text}</p>{review.fromLogId && <p className="reading-help reading-review-from">한 번에 완독한 독서 발자국의 감상을 함께 남긴 글이에요.{!readOnly && " ‘고쳐쓰기’로 고치면 그때부터 발자국과 따로 남아요."}</p>}{!readOnly && review.classId !== classId && <p className="reading-help">다른 반에서 작성한 ‘한 권의 책’이에요. 작성한 반에서 고쳐 쓸 수 있어요.</p>}{!readOnly && !book.archived && <button type="button" className="btn-ghost reading-review-edit" disabled={busy || review.classId !== classId} onClick={onReview}>고쳐쓰기</button>}</article> : readOnly ? <p className="reading-muted">아직 ‘한 권의 책’을 남기지 않았어요.</p> : <p className="reading-muted">{book.status === "completed" ? "다 읽은 책에 대한 나의 총평을 ‘한 권의 책’으로 남겨 보세요." : "책을 끝까지 읽으면 총평 ‘한 권의 책’을 쓸 수 있어요. 읽은 날마다 ‘독서 발자국’을 남겨 보세요."}</p>}</section>

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   initialReadingState, applyReadingAction, deriveReading, READING_BADGES,
   kstToday, readingPeriodKey, readingEnabled, getExpForReadingLevel, getReadingLevel, READING_LEVEL_MAX,
+  teacherBookAction, bookPagesFloor, TEACHER_BOOK_FIELDS,
 } from "../../lib/reading.js";
 
 const NOW = "2026-10-29T03:00:00.000Z";
@@ -378,6 +379,69 @@ test("감상문만 있는 책도 전체 쪽수를 고정하고 아직 기록 없
   assert.equal(resized.books[0].totalPages, 120);
   const reviewed = review(empty);
   assert.throws(() => applyReadingAction(reviewed, { type: "updateBook", bookId: "book1", totalPages: 120 }, context("edit")), /전체 쪽수/);
+});
+
+// 선생님 고치기(context.byTeacher — 담당 교사가 학생의 책 정보를 고칠 때 · 선생님 요청 · 2026년 11월)
+const teacherCtx = (id, extra = {}) => context(id, { byTeacher: true, ...extra });
+
+test("선생님 고치기 — 기록이 있어도 쪽수 · 제목 · 지은이를 고치고, 완독 · 경험치는 새 쪽수로 다시 셈", () => {
+  // 240쪽 책을 24쪽으로 잘못 적고 1~24쪽을 읽어 '완독' · 한 번에 완독의 '한 권의 책'까지 생긴 학생
+  let state = book(initialReadingState(), "book1", 24, "싯타르타");
+  state = log(state, "whole", 1, 24, "2026-10-29", { rating: 5 });
+  const before = deriveReading(state, NOW);
+  assert.equal(before.totalBooks, 1);
+  assert.equal(state.reviews[0].fromLogId, "whole");
+  // 학생은 여전히 막힘
+  assert.throws(() => applyReadingAction(state, { type: "updateBook", bookId: "book1", totalPages: 240 }, context("edit")), /전체 쪽수/);
+  // 선생님은 고침 — 완독이 풀리고(10%) '한 권의 책'은 그대로 남되 발자국과의 이음만 풀림
+  const fixed = applyReadingAction(state, teacherBookAction({ type: "updateBook", bookId: "book1", title: "싯다르타", author: "헤르만 헤세", totalPages: 240 }), teacherCtx("t-edit"));
+  const after = deriveReading(fixed, NOW);
+  assert.deepEqual([fixed.books[0].title, fixed.books[0].author, fixed.books[0].totalPages], ["싯다르타", "헤르만 헤세", 240]);
+  assert.equal(after.totalBooks, 0);
+  assert.deepEqual([after.books[0].status, after.books[0].progress], ["reading", 10]);
+  assert.equal(fixed.reviews.length, 1);
+  assert.equal(fixed.reviews[0].text, state.reviews[0].text);
+  assert.equal(fixed.reviews[0].fromLogId, undefined);
+  assert.equal(fixed.logs.length, 1);
+  assert.ok(after.xp < before.xp, "완독 뱃지 경험치가 빠짐(읽은 쪽 · 감상 경험치는 그대로)");
+  // 기록한 마지막 쪽 아래로는 못 줄임 — 몇 쪽까지인지 알려 줌
+  assert.equal(bookPagesFloor(fixed, "book1"), 24);
+  assert.equal(bookPagesFloor(fixed, "nothing"), 0);
+  assert.throws(() => applyReadingAction(fixed, teacherBookAction({ type: "updateBook", bookId: "book1", totalPages: 20 }), teacherCtx("t-cut")), /24쪽까지/);
+  // 다시 24쪽으로 되돌리면 완독 — 이음은 다시 걸지 않음(새 글도 만들지 않음)
+  const back = applyReadingAction(fixed, teacherBookAction({ type: "updateBook", bookId: "book1", totalPages: 24 }), teacherCtx("t-back"));
+  assert.equal(deriveReading(back, NOW).totalBooks, 1);
+  assert.equal(back.reviews.length, 1);
+  assert.equal(back.reviews[0].fromLogId, undefined);
+});
+
+test("선생님 고치기 — 쪽수가 그대로면 '한 번에 완독'의 이음도 그대로", () => {
+  let state = book(initialReadingState(), "book1", 30);
+  state = log(state, "whole", 1, 30);
+  const titled = applyReadingAction(state, teacherBookAction({ type: "updateBook", bookId: "book1", title: "바른 제목", totalPages: 30 }), teacherCtx("t-title"));
+  assert.equal(titled.reviews[0].fromLogId, "whole");
+  assert.equal(deriveReading(titled, NOW).xp, deriveReading(state, NOW).xp);
+});
+
+test("선생님 고치기 — 읽기 상태 · 활동 연결은 받지 않고, 책 정보 말고 다른 요청은 거절", () => {
+  assert.deepEqual([...TEACHER_BOOK_FIELDS], ["title", "author", "totalPages", "publisher", "isbn", "coverImage", "bookLink"]);
+  assert.deepEqual(
+    teacherBookAction({ type: "updateBook", bookId: "book1", title: "새 제목", totalPages: 50, status: "paused", activityId: "a1", archived: true, extra: 1 }),
+    { type: "updateBook", bookId: "book1", title: "새 제목", totalPages: 50 },
+  );
+  for (const type of ["addBook", "addLog", "updateLog", "deleteLog", "saveReview", "archiveBook", "setFeaturedBadge", "deleteReview"]) {
+    assert.throws(() => teacherBookAction({ type, bookId: "book1" }), /책 정보만/);
+  }
+  assert.throws(() => teacherBookAction(null), /책 정보만/);
+  // 셈도 선생님 갈래에서는 status · activityId를 읽지 않음(체험반이 곧바로 부를 때를 위한 이중 확인)
+  const state = book(initialReadingState(), "book1", 100);
+  const edited = applyReadingAction(state, { type: "updateBook", bookId: "book1", status: "paused", activityId: "a1", title: "바뀐 제목" }, teacherCtx("t"));
+  assert.deepEqual([edited.books[0].status, edited.books[0].activityId, edited.books[0].title], ["reading", undefined, "바뀐 제목"]);
+  // 같은 책(제목 · 지은이 · ISBN)으로 바꾸는 것은 선생님도 막힘 · 보관된 책은 못 고침
+  const two = applyReadingAction(state, { type: "addBook", title: "다른 책", author: "작가", totalPages: 50 }, context("book2"));
+  assert.throws(() => applyReadingAction(two, { type: "updateBook", bookId: "book2", title: "book1" }, teacherCtx("t2")), /같은 책/);
+  const archived = applyReadingAction(two, { type: "archiveBook", bookId: "book2", archived: true }, context("arch"));
+  assert.throws(() => applyReadingAction(archived, { type: "updateBook", bookId: "book2", title: "새" }, teacherCtx("t3")), /보관된 책/);
 });
 
 test("검색한 도서 정보(카카오 · 옛 네이버)는 서재 저장·수정 후에도 유지되고 메타데이터만으로 보상하지 않음", () => {

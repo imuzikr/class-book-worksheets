@@ -726,3 +726,56 @@ test("반 순위 저장 — 저장한 뒤 반에 들어온 학생은 1분이 지
   assert.deepEqual([mine.rank, mine.xp], [1, 500]);
   // (서울 날짜가 바뀌면 10분 안이어도 다시 세는 것은 단위 시험이 봄 — tests/unit/readingJourney.test.mjs)
 });
+
+test("선생님의 책 정보 고치기 — 담당 교사만 · 그 반 학생의 책 정보만, 기록이 있어도 쪽수를 고치고 반 집계 · 광장 사본도 함께(선생님 요청)", async () => {
+  const cls = "api-edit-class";
+  const pupil = "api-edit-student";
+  const stranger = "api-edit-other-teacher";
+  const seed = db.batch();
+  seed.set(db.doc(`classes/${cls}`), { createdBy: ids.teacher, readingEnabled: true, archived: false, plazaEnabled: true });
+  seed.set(db.doc(`users/${pupil}`), { role: "student", realName: "책학생", studentId: "30101" });
+  seed.set(db.doc(`users/${stranger}`), { role: "teacher", realName: "다른선생님" });
+  seed.set(db.doc(`memberships/${pupil}_${cls}`), { uid: pupil, classId: cls });
+  await seed.commit();
+  const student = { uid: pupil, roleClaim: null, db };
+  const teacher = principal("teacher");
+  const book = "edit-book-0001";
+  // 240쪽 책을 24쪽으로 잘못 적고 1~24쪽을 읽은 학생 — 완독 · 한 번에 완독의 '한 권의 책'까지
+  await mutateReading(student, { classId: cls, requestId: book, action: { type: "addBook", title: "싯타르타", author: "헤르만헤세", totalPages: 24 } });
+  const read = await mutateReading(student, { classId: cls, requestId: "edit-log-0001", action: { type: "addLog", bookId: book, date: today, startPage: 1, endPage: 24, notes: "한 번에 다 읽었어요.", rating: 5 } });
+  assert.equal(read.summary.totalBooks, 1);
+  assert.equal(read.state.reviews[0].fromLogId, "edit-log-0001");
+  // 학생 본인은 기록이 생긴 책의 쪽수를 못 바꿈(그대로)
+  await assert.rejects(() => mutateReading(student, { classId: cls, requestId: "edit-self-0001", action: { type: "updateBook", bookId: book, totalPages: 240 } }), /전체 쪽수/);
+
+  const edit = { type: "updateBook", bookId: book, title: "싯다르타", author: "헤르만 헤세", totalPages: 240, status: "paused", activityId: "x1" };
+  const fixed = await mutateReading(teacher, { classId: cls, requestId: "teacher-edit-0001", uid: pupil, action: edit });
+  const saved = fixed.state.books[0];
+  assert.deepEqual([saved.title, saved.author, saved.totalPages, saved.status, saved.activityId], ["싯다르타", "헤르만 헤세", 240, "reading", undefined]);
+  assert.equal(fixed.summary.totalBooks, 0);
+  assert.equal(fixed.state.reviews.length, 1);
+  assert.equal(fixed.state.reviews[0].fromLogId, undefined);
+  // 학생이 다시 읽어 와도 같은 값 · 반 집계(리더보드)와 책 광장 사본도 같은 트랜잭션에서 맞춤
+  const mine = await getReading(student, cls);
+  assert.equal(mine.state.books[0].title, "싯다르타");
+  const member = (await db.doc(`classes/${cls}/readingMembers/${pupil}`).get()).data();
+  assert.deepEqual([member.completedBooks, member.totalXp], [0, fixed.summary.xp]);
+  const shelf = (await db.doc(`classes/${cls}/plazaShelves/${pupil}`).get()).data();
+  assert.deepEqual([shelf.name, shelf.books[0].title, shelf.books[0].total, shelf.books[0].place], ["책학생", "싯다르타", 240, "stall"]);
+  const receipt = (await db.doc(`users/${pupil}/readingRequests/teacher-edit-0001`).get()).data();
+  assert.equal(receipt.by, ids.teacher);
+  // 같은 요청은 한 번만 · 같은 식별자로 다른 내용은 거절
+  assert.equal((await mutateReading(teacher, { classId: cls, requestId: "teacher-edit-0001", uid: pupil, action: edit })).replayed, true);
+  await assert.rejects(() => mutateReading(teacher, { classId: cls, requestId: "teacher-edit-0001", uid: pupil, action: { ...edit, title: "다른 제목" } }), (e) => e.status === 409);
+  // 기록한 마지막 쪽 아래로는 못 줄임
+  await assert.rejects(() => mutateReading(teacher, { classId: cls, requestId: "teacher-edit-0002", uid: pupil, action: { type: "updateBook", bookId: book, totalPages: 20 } }), /24쪽까지/);
+  // 책 정보 말고 다른 요청 · 다른 선생님 · 학생이 남의 책 · 반에 없는 학생은 거절
+  await assert.rejects(() => mutateReading(teacher, { classId: cls, requestId: "teacher-log-0001", uid: pupil, action: { type: "addLog", bookId: book, date: today, startPage: 25, endPage: 30, notes: "대신 쓰기" } }), (e) => e.status === 403);
+  await assert.rejects(() => mutateReading({ uid: stranger, roleClaim: null, db }, { classId: cls, requestId: "stranger-edit-0001", uid: pupil, action: edit }), (e) => e.status === 403);
+  await assert.rejects(() => mutateReading(principal("student"), { classId: "api-class", requestId: "peer-edit-0001", uid: pupil, action: edit }), (e) => e.status === 403);
+  await assert.rejects(() => mutateReading(teacher, { classId: cls, requestId: "teacher-edit-0003", uid: ids.other, action: edit }), (e) => e.code === "reading/not-member");
+  // 관리자도 고침
+  const admin = await mutateReading(principal("admin"), { classId: cls, requestId: "admin-edit-0001", uid: pupil, action: { type: "updateBook", bookId: book, totalPages: 24 } });
+  assert.equal(admin.summary.totalBooks, 1);
+  assert.equal((await getReading(student, cls)).state.logs.length, 1);
+});
