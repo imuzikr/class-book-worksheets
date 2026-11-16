@@ -725,6 +725,136 @@
       "path": "items/aquarium/coastal.webp",
       "bytes": 24938,
       "sha256": "8e652808e2118bb6b4b0ba191cd2e33a46f9e87cc0adeee61b364401072d8608"
+    },
+    {
+      "path": "items/desk/forest-turn.webp",
+      "bytes": 11878,
+      "sha256": "070272444ece9aa62643910d804dd486d11bbabd693ac545f7596a23478902e0"
+    },
+    {
+      "path": "items/desk/starlight-turn.webp",
+      "bytes": 11746,
+      "sha256": "d2eba283dc2eb12285c56ab54d4948400baec0476715238d52f6f5dd0d88dc36"
+    },
+    {
+      "path": "items/desk/explorer-turn.webp",
+      "bytes": 14136,
+      "sha256": "abac2336a3695ebe468821b69ce251b2c384b1c474e9bfc8252e35a7ac4e25eb"
+    },
+    {
+      "path": "items/desk/coastal-turn.webp",
+      "bytes": 12410,
+      "sha256": "f7dad79c56211c975d6dac3a01161fd0ca0c1e91b394c15a9d659b8016048854"
+    },
+    {
+      "path": "desk-basic-turn.webp",
+      "bytes": 9672,
+      "sha256": "6867088a0e07819ae610e06268e7fa5482348bf74dfd4f4a1670c0200f0f71cd"
+    },
+    {
+      "path": "items/shelf/forest-turn.webp",
+      "bytes": 11502,
+      "sha256": "5efbc4f8ffc4f5fe7705efd75be267fa67bdbb5eaac3a71822dff8b044d4f336"
+    },
+    {
+      "path": "items/shelf/starlight-turn.webp",
+      "bytes": 8982,
+      "sha256": "39eb3ce978e97d67d8a775f5533a27c1bf5d1bc74746fbfddf5337eda49bfea3"
+    },
+    {
+      "path": "items/shelf/explorer-turn.webp",
+      "bytes": 9436,
+      "sha256": "beb4a4efce38edc4efa85f6a390ebdfd897a9f344468950ed57280d00074d23a"
+    },
+    {
+      "path": "items/shelf/coastal-turn.webp",
+      "bytes": 8782,
+      "sha256": "96a0b335108e4bfdec2cf3f2e60d437f7ad2110d23c7c722669d0115c80554c4"
+    },
+    {
+      "path": "shelf-low-turn.webp",
+      "bytes": 7656,
+      "sha256": "9e0da3b8a66f41c4e4281f91a7eecf63d3892af6e27ecad09dd694712454a1cd"
+    },
+    {
+      "path": "items/reading-chair/forest-turn.webp",
+      "bytes": 10410,
+      "sha256": "e15eda5618b80e41b26dd15eb3e399ba32b5c4d07658291dfb2478974e1cd75c"
+    },
+    {
+      "path": "items/reading-chair/starlight-turn.webp",
+      "bytes": 11946,
+      "sha256": "8d102c97de46080abf7b62bf518ae4c83793a555f4952e210f719f8e2efa56d6"
+    },
+    {
+      "path": "items/reading-chair/explorer-turn.webp",
+      "bytes": 11894,
+      "sha256": "c7a1dfebe07a76d66493703723d33e25b1990d6a6b8e5bbdefab47f3eecbc30a"
+    },
+    {
+      "path": "items/reading-chair/coastal-turn.webp",
+      "bytes": 11798,
+      "sha256": "ff11017999ae32d22e73591ebebc5c6d7686c539860cc41970ad56b79552e1d4"
+    },
+    {
+      "path": "items/reading-bed/forest-turn.webp",
+      "bytes": 13592,
+      "sha256": "6d8294336e85c8434db611c9700ac49ee6391ba68ad74342ff70a58ee9e0fe7b"
+    },
+    {
+      "path": "items/reading-bed/starlight-turn.webp",
+      "bytes": 14446,
+      "sha256": "d235297dbd4cc191bb8cece870d92830fb02cca33dd62eda4a69b285307cd26c"
+    },
+    {
+      "path": "items/reading-bed/explorer-turn.webp",
+      "bytes": 14668,
+      "sha256": "20a64438dc6511d12978fea14845143eb86db55e2bb9fcc4f2ab75a4e1451df8"
+    },
+    {
+      "path": "items/reading-bed/coastal-turn.webp",
+      "bytes": 15318,
+      "sha256": "a105e937b794cf35a0b1a71faf3173b02ba199a4d65de5308cdf58d1feb01045"
+    },
+    {
+      "path": "items/chest/forest-turn.webp",
+      "bytes": 15330,
+      "sha256": "b6ed8c0e14fea6fdcfc319536d3e28b3d842d10edf511657d81cc1a8978bff12"
+    },
+    {
+      "path": "items/chest/starlight-turn.webp",
+      "bytes": 16660,
+      "sha256": "26bc02b14ba67589c4d8c9d3b66096ef4f919cfd33f8da1a90d94e5ac5a8942f"
+    },
+    {
+      "path": "items/chest/explorer-turn.webp",
+      "bytes": 19100,
+      "sha256": "695220472f92905eaef6f8d1ae49b43b06f1671354a92753f69a0b098874a9d4"
+    },
+    {
+      "path": "items/chest/coastal-turn.webp",
+      "bytes": 18450,
+      "sha256": "e8dc5b2a5786f705964ac486160f57bd0ba4c656c4c293000b140e6b65879236"
+    },
+    {
+      "path": "items/aquarium/forest-turn.webp",
+      "bytes": 10074,
+      "sha256": "c6cba6e2c5dd86e2daf910d600d03e502ebdc5e441959055191664e9947fc34a"
+    },
+    {
+      "path": "items/aquarium/starlight-turn.webp",
+      "bytes": 10846,
+      "sha256": "647941b32bef4e2917f55e9cc035a6f2a710302ff2d4bff1bd1381e2b3d2f660"
+    },
+    {
+      "path": "items/aquarium/explorer-turn.webp",
+      "bytes": 10754,
+      "sha256": "47cf1fff837725e5f4e31a99aabbeafdacf01a39ddcd581583ce76163c9118d7"
+    },
+    {
+      "path": "items/aquarium/coastal-turn.webp",
+      "bytes": 11050,
+      "sha256": "1fa02af21050ba6020e8a55053d1d8372b49ddada9afb445e6a6801e04735ef4"
     }
   ],
   "art": "pixel-style-1",
@@ -738,5 +868,17 @@
       "coastal": "55eca6f203e1709a07007f09e130cc4a9445aae5631f5bcb89a577ef6cffc3bc"
     }
   },
-  "doorRemoved": true
+  "doorRemoved": true,
+  "turnArt": {
+    "pack": "hideout-turn-received-zip",
+    "designs": 26,
+    "sheets": {
+      "desk-turn.png": "16196256a05158f835e868bc141556e939cd76e0b205c5ddac80f8eaab019f63",
+      "shelf-turn.png": "6d8e8cd333e0757848855ef9f196c27933ee1f7bc31313bdbc608725a9a6fa1d",
+      "reading-chair-turn.png": "483da9e4139aa9b808e4f0c75e0e3ceceb6f5695250bc0bfc354cd96b442545f",
+      "reading-bed-turn.png": "2b334b0f905e500f2d3475ee728de389e7eb42ad9b9adb76b852a29cb48eaad3",
+      "chest-turn.png": "943bdd9750a7735e7b42d00d59a635e9f777e235f472e6964d31a414de5b8951",
+      "aquarium-turn.png": "0e48a15e001fe5b49ea0c362165b98a58f16ce75ee7811ab843547525bc2cd50"
+    }
+  }
 }

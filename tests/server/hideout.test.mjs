@@ -17,7 +17,7 @@ const ids = { student: "hideout-student", peer: "hideout-peer", outsider: "hideo
 const who = (kind) => ({ uid: ids[kind], roleClaim: null, db });
 const mainRef = db.doc(`users/${ids.student}/reading/main`);
 const roomRef = db.doc(`users/${ids.student}/reading/hideout`);
-const room = (layout = {}, revision = 0) => ({ version: 2, layout: { ...HIDEOUT_DEFAULT_LAYOUT, ...layout }, revision });
+const room = (layout = {}, revision = 0, arrange = {}) => ({ version: 2, layout: { ...HIDEOUT_DEFAULT_LAYOUT, ...layout }, arrange, revision });
 const payload = (value = room()) => ({ classId, room: value });
 const highState = () => ({
   ...initialReadingState(),
@@ -127,7 +127,7 @@ test("teachers and admins decorate only their own private room without reading X
     assert.deepEqual(saved.room, { ...next, revision: 1 });
     assert.deepEqual(saved.progress, first.progress);
     assert.deepEqual((await getReadingHideout(who(kind), classId)).room, saved.room);
-    assert.deepEqual(Object.keys((await ownRoom.get()).data()).sort(), ["layout", "revision", "updatedAt", "version"]);
+    assert.deepEqual(Object.keys((await ownRoom.get()).data()).sort(), ["arrange", "layout", "revision", "updatedAt", "version"]);
     assert.equal((await ownMain.get()).exists, false, "decor access never creates a reading ledger");
     assert.equal((await ownRank.get()).exists, false, "decor access never writes a ranking snapshot");
     await assert.rejects(() => saveReadingHideout(who(kind), { ...payload(saved.room), uid: ids.student }), (e) => e.status === 400);
@@ -193,7 +193,7 @@ test("saving unlocked decor stores only slot IDs and leaves reading records, XP 
   const saved = await saveReadingHideout(who("student"), payload(next));
   assert.deepEqual(saved.room, { ...next, revision: 1 });
   const stored = (await roomRef.get()).data();
-  assert.deepEqual(Object.keys(stored).sort(), ["layout", "revision", "updatedAt", "version"]);
+  assert.deepEqual(Object.keys(stored).sort(), ["arrange", "layout", "revision", "updatedAt", "version"]);
   assert.deepEqual(stored.layout, next.layout);
   assert.ok(typeof stored.updatedAt.toMillis() === "number");
   assert.deepEqual((await mainRef.get()).data(), { state });
@@ -272,4 +272,33 @@ test("방 주인의 누적 경험치가 방과 함께 옵니다 — 선생님이
   assert.equal(JSON.stringify(studentView).includes("이 제목은 아지트에 복사되지 않아요"), false);
   // 선생님 본인의 방에는 펫이 없어 싣지 않습니다
   assert.equal("petGrowthXp" in (await getReadingHideout(who("teacher"), classId)), false);
+});
+
+test("배치(아지트 2단계) — 자리 · 뒤집기 · 돌리기를 저장하고 다시 읽으며, 문제가 있으면 그 까닭으로 거절하고, 배치를 모르는 옛 요청은 옮긴 자리를 지우지 않음", async () => {
+  const arrange = { desk: { x: 400, y: 880, flip: true, turn: true }, plant: { x: 600, y: 640 } };
+  const saved = await saveReadingHideout(who("student"), payload(room({}, 0, arrange)));
+  assert.equal(saved.room.revision, 1);
+  assert.deepEqual(saved.room.arrange, arrange);
+  assert.deepEqual((await roomRef.get()).data().arrange, arrange);
+  assert.deepEqual((await getReadingHideout(who("student"), classId)).room.arrange, arrange);
+  // 선생님의 읽기 전용 보기에도 같은 배치
+  assert.deepEqual((await getReadingHideout(who("teacher"), classId, ids.student)).room.arrange, arrange);
+  // 배치만 바꿔도 저장 · 같은 것을 다시 보내면 쓰지 않음
+  const moved = await saveReadingHideout(who("student"), payload(room({}, 1, { ...arrange, plant: { x: 640, y: 640 } })));
+  assert.equal(moved.room.revision, 2);
+  assert.equal((await saveReadingHideout(who("student"), payload(moved.room))).room.revision, 2);
+  // 포털을 가림 · 모르는 소품 · 정수가 아닌 자리 · 빈 자리의 소품 · 돌린 그림이 없는 소품 → 400(저장된 방은 그대로)
+  await assert.rejects(() => saveReadingHideout(who("student"), payload(room({}, 2, { plant: { x: 1416, y: 864 } }))),
+    (e) => e.status === 400 && e.code === "reading/hideout-arrange" && /포털/.test(e.message));
+  for (const bad of [{ nope: { x: 1, y: 1 } }, { desk: { x: 1.5, y: 2 } }, { chest: { x: 100, y: 900 } }, { plant: { x: 600, y: 640, turn: true } }, [1]]) {
+    await assert.rejects(() => saveReadingHideout(who("student"), payload(room({}, 2, bad))), (e) => e.status === 400, JSON.stringify(bad));
+  }
+  assert.equal((await roomRef.get()).data().revision, 2);
+  // 배치 칸이 없는 옛 요청 — 소품만 바꾸고 옮긴 자리는 그대로
+  const { arrange: _old, ...legacy } = room({ rug: "rug-linen" }, 2);
+  const kept = await saveReadingHideout(who("student"), payload({ ...legacy, layout: { ...legacy.layout, plant: "plant-leafy" } }));
+  assert.deepEqual(kept.room.arrange, moved.room.arrange);
+  // 저장된 배치가 (예전 그림 등으로) 맞지 않게 되면 읽을 때 그 소품만 제자리로
+  await roomRef.set({ ...room({}, 5), arrange: { desk: { x: 1415, y: 820 }, plant: { x: 600, y: 640 } } });
+  assert.deepEqual((await getReadingHideout(who("student"), classId)).room.arrange, { plant: { x: 600, y: 640 } });
 });

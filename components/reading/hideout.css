@@ -29,6 +29,17 @@
 .hideout-background { display: block; width: 100%; height: 100%; pointer-events: none; }
 .hideout-prop { position: absolute; height: auto; max-width: none; transform: translate(-50%, -100%); pointer-events: none; }
 .hideout-prop.is-grounded { filter: drop-shadow(0 calc(var(--hideout-unit, 1px) * 3) calc(var(--hideout-unit, 1px) * 2) #50301838); }
+/* 아지트 2단계(옮기기 · 뒤집기 · 돌리기) — 좌우로 뒤집은 소품은 바닥 가운데를 그대로 두고 거울로. 고른 소품은 흰 테 + 살구빛,
+   끄는 소품은 살짝 비쳐 뒤의 가구가 보이게. 땅 그림자(is-grounded)와 함께 둡니다(filter는 하나만 서므로 둘을 이어 적음). */
+.hideout-prop.is-flipped { transform: translate(-50%, -100%) scaleX(-1); }
+/* 고른 소품의 테 — 도트 그림에 맞춰 번지지 않는 흰 테(네 방향) + 살구빛. 작은 화면에서도 1.5px보다 가늘어지지 않게 */
+.hideout-scene { --hideout-ring: max(1.5px, calc(var(--hideout-unit, 1px) * 3)); }
+.hideout-scene.is-arranging .hideout-prop.is-selected { filter: drop-shadow(var(--hideout-ring) 0 0 #fffdf4) drop-shadow(calc(var(--hideout-ring) * -1) 0 0 #fffdf4)
+  drop-shadow(0 var(--hideout-ring) 0 #fffdf4) drop-shadow(0 calc(var(--hideout-ring) * -1) 0 #fffdf4) drop-shadow(0 0 calc(var(--hideout-ring) * 1.5) #d9733f); }
+.hideout-scene.is-arranging .hideout-prop.is-dragging { opacity: .82; }
+/* 누르는 칸(꾸미는 동안만 — 보이는 상자) — 여기서만 touch-action을 꺼 폰에서도 끌고, 빈 바닥을 쓸면 화면이 구릅니다 */
+.hideout-hit { position: absolute; cursor: grab; touch-action: none; }
+.hideout-scene.is-dragging, .hideout-scene.is-dragging .hideout-hit { cursor: grabbing; }
 /* 문패 글자 — 자리 · 폭 · 크기는 hideoutPlaqueLabel이 문패의 크림색 칸에 맞춰 정합니다(글자 크기를 화면 폭 vw로 정하던 때는
    그림이 작게 보이는 화면에서 '선생님의 아지트'가 문패 밖으로 넘쳤음). 어림이 빗나가도 칸을 넘지 않게 줄마다 말줄임.
    line-height는 lib/readingHideout.js의 HIDEOUT_PLAQUE_FONT.lineHeight와 같아야 합니다(글자 크기를 그 값으로 셈). */
@@ -46,6 +57,8 @@
 .hideout .hideout-pet { position: absolute; transform: translate(-50%, -50%); min-height: 0; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 12px; }
 .hideout .hideout-pet:hover:not(:disabled) { background: none; filter: drop-shadow(0 0 3px rgba(255, 244, 214, .95)) drop-shadow(0 2px 4px rgba(64, 45, 30, .35)); }
 .hideout .hideout-pet:focus-visible { outline: 3px solid var(--primary, #e08a5f); outline-offset: 2px; }
+/* 꾸미는 동안의 펫은 누르지 않습니다 — 방석(펫 소품)을 끌어 옮기면 펫이 함께 따라갑니다 */
+.hideout .hideout-pet.is-passive { pointer-events: none; }
 .hideout-pet > img { width: 100%; height: 100%; display: block; object-fit: contain; image-rendering: pixelated; }
 .hideout-pet .pet-figure { width: 100% !important; height: 100% !important; }
 .hideout-pet .pet-figure > img, .hideout-pet .pet-egg { width: 100%; height: 100%; object-fit: contain; }
@@ -76,6 +89,13 @@
 .hideout-preview-heading { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; margin: 0 0 12px; }
 .hideout-preview-heading h4 { margin: 0 auto 0 0; font-size: 15px; }
 .hideout .hideout-clear-slot { min-height: 34px; padding: 4px 12px; border-radius: 999px; font-size: 12px; }
+/* 고른 종류의 자리 · 방향(아지트 2단계) — 이어 놓인 단추는 같은 크기(격자 · --tools칸). 벽 선반은 위에 두 선반 고르기 줄. */
+.hideout-arrange { display: grid; gap: 8px; margin: 0 0 12px; padding: 10px; border: 1px solid #e3e6d6; border-radius: 12px; background: #f2f4ea; }
+.hideout-arrange-tools { display: grid; grid-template-columns: repeat(var(--tools, 3), minmax(0, 1fr)); gap: 6px; }
+.hideout .hideout-arrange-tools > button { min-height: 38px; padding: 6px 8px; font-size: 12px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hideout .hideout-arrange-tools > button[aria-pressed="true"] { background: #e6eddc; border-color: #648354; }
+.hideout-arrange-hint { margin: 0 0 12px; color: #75816e; font-size: 12px; line-height: 1.6; }
+.hideout-arrange .hideout-arrange-hint { margin: 0; }
 .hideout-preview-heading > span { color: #78836f; font-size: 11px; }
 /* 기본형과 네 테마를 작은 썸네일 한 줄에 — 확대는 상세 창에서 합니다(선생님 요청). */
 .hideout-choices { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }

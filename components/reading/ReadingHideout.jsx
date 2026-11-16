@@ -2,12 +2,16 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
-  HIDEOUT_DEFAULT_LAYOUT, HIDEOUT_ITEMS, HIDEOUT_OCCUPANTS, HIDEOUT_SCENE, HIDEOUT_SLOTS,
-  hideoutPlaqueLabel, hideoutSceneProps, isHideoutItemUnlocked, normalizeHideoutRoom,
+  HIDEOUT_DEFAULT_ANCHORS, HIDEOUT_DEFAULT_LAYOUT, HIDEOUT_ITEMS, HIDEOUT_OCCUPANTS, HIDEOUT_SCENE, HIDEOUT_SLOTS, HIDEOUT_UNITS,
+  hideoutArtBox, hideoutPlaqueLabel, hideoutSceneProps, hideoutUnitCategory, hideoutUnitFlips, isHideoutItemUnlocked, normalizeHideoutRoom, sameHideoutArrange,
 } from "@/lib/readingHideout";
 import {
   HIDEOUT_RETURN_PORTAL, createHideoutWalkMap, hideoutAtReturnPortal,
 } from "@/lib/readingHideoutMap";
+import {
+  HIDEOUT_GRID, hideoutArrangeProblem, hideoutFindSpot, hideoutNudge, hideoutSnap, hideoutUnitPlacement, hideoutWithEntry, settleHideoutArrange,
+} from "@/lib/readingHideoutArrange";
+import { hideoutTurnArt } from "@/lib/readingHideoutTurn";
 import { getHideoutRestPet, hideoutEggRestPosition, hideoutPetRestPosition } from "@/lib/readingHideoutPets";
 import { fetchReadingHideout, saveReadingHideout } from "@/lib/data/readingHideout";
 import { subscribeMyReadingCharacter, subscribeMyReadingPet } from "@/lib/data/reading";
@@ -32,6 +36,20 @@ function keepDraft(key, value) {
   while (UNSAVED_DRAFTS.size > 20) UNSAVED_DRAFTS.delete(UNSAVED_DRAFTS.keys().next().value);
 }
 const sameLayout = (a, b) => HIDEOUT_SLOTS.every(({ id }) => a?.[id] === b?.[id]);
+// 아지트 2단계(2026년 11월 · 선생님 요청) — 꾸미는 동안 소품을 끌어 옮기고(칸에 맞춰 붙음) 방향키로 한 칸씩 옮기며,
+// 좌우로 뒤집고 돌립니다. 판정(바닥 · 벽 안 · 겹침 · 창문 · 포털 · 길)은 lib/readingHideoutArrange.js — 서버가 저장할 때 다시 봅니다.
+// 끌어 놓은 자리가 안 되면 이 반지름 안의 가까운 빈자리에 놓고(장면 px), 그 안에 없으면 원래 자리로 돌아갑니다.
+const DROP_SNAP_RADIUS = 64;
+const ARROW_KEYS = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
+// 따로 옮기지 않는 소품 — 받치는 가구 · 창문을 따라갑니다(꾸미기 패널의 안내)
+const FOLLOW_NOTES = {
+  bookstand: "책상 위에 놓여 책상과 함께 움직여요. 책상을 옮겨 보세요.",
+  bookends: "벽 선반 위에 놓여 선반과 함께 움직여요. 선반을 옮겨 보세요.",
+  "music-box": "벽 선반 위에 놓여 선반과 함께 움직여요. 선반을 옮겨 보세요.",
+  "mood-light": "아래 진열 선반 위에 놓여 선반과 함께 움직여요. 선반을 옮겨 보세요.",
+  "book-trophy": "아래 진열 선반 위에 놓여 선반과 함께 움직여요. 선반을 옮겨 보세요.",
+  garland: "창문에 걸려 있어 옮길 수 없어요.",
+};
 const place = (x, y, width) => ({ left: `${x / HIDEOUT_SCENE.width * 100}%`, top: `${y / HIDEOUT_SCENE.height * 100}%`, width: `${width / HIDEOUT_SCENE.width * 100}%` });
 const disabledError = (error) => /disabled|reading-off/.test(String(error?.code || ""));
 const themeName = (item) => ({ forest: "숲속", starlight: "별빛", explorer: "탐험", coastal: "바닷가" }[item.theme] || "기본");
@@ -68,6 +86,11 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
   const returnTo = returnRoom === "plaza" ? "책 광장으로" : "교실로";
   const [room, setRoom] = useState(null);
   const [draft, setDraft] = useState(null);
+  // 꾸미는 동안의 배치(아지트 2단계 — 소품마다 자리 · 뒤집기 · 돌리기) · 고른 벽 선반(둘 가운데) · 끄는 중인 소품의 자리
+  const [arrange, setArrange] = useState(null);
+  const [ledge, setLedge] = useState("ledge-left");
+  const [drag, setDrag] = useState(null);
+  const dragRef = useRef(null);
   const [progress, setProgress] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -109,7 +132,7 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   useEffect(() => {
     let current = true;
-    setLoading(true); setRoom(null); setDraft(null); setProgress(null); setOwnerGrowth(null); setError(""); setNotice(""); setEditing(false); setDetail(null);
+    setLoading(true); setRoom(null); setDraft(null); setArrange(null); setDrag(null); setProgress(null); setOwnerGrowth(null); setError(""); setNotice(""); setEditing(false); setDetail(null);
     if (!classId || !viewUid) { setLoading(false); return undefined; }
     const initial = initialViewRef.current;
     const cached = readOnly && reload === 0 && initial?.classId === classId && initial?.uid === viewUid && initial?.value?.room && initial?.value?.progress ? initial.value : null;
@@ -118,10 +141,11 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
       loadedRef.current?.(viewUid, value);
       const remembered = !readOnly ? UNSAVED_DRAFTS.get(draftKey) : null;
       const restore = remembered?.revision === value.room.revision;
-      const restored = restore ? normalizeHideoutRoom({ ...value.room, layout: remembered.layout }, value.progress) : value.room;
-      setRoom(value.room); setDraft(restored.layout); setProgress(value.progress); setLoading(false);
+      const restored = restore ? normalizeHideoutRoom({ ...value.room, layout: remembered.layout, arrange: remembered.arrange }, value.progress) : value.room;
+      const restoredArrange = settleHideoutArrange(restored.layout, restored.arrange);
+      setRoom(value.room); setDraft(restored.layout); setArrange(restoredArrange); setProgress(value.progress); setLoading(false);
       setOwnerGrowth(Number.isFinite(value.petGrowthXp) ? value.petGrowthXp : null);
-      if (restore && !sameLayout(restored.layout, value.room.layout)) { setEditing(true); setNotice("이 탭에서 꾸미던 모습을 다시 열었어요. 마음에 들면 저장해 주세요."); }
+      if (restore && (!sameLayout(restored.layout, value.room.layout) || !sameHideoutArrange(restoredArrange, value.room.arrange))) { setEditing(true); setNotice("이 탭에서 꾸미던 모습을 다시 열었어요. 마음에 들면 저장해 주세요."); }
       else if (remembered) { keepDraft(draftKey, null); setNotice("저장된 방이 바뀌어 최신 모습을 열었어요."); }
     }).catch((e) => {
       if (!current) return;
@@ -153,11 +177,13 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
     teacher: teacherOwn,
   }), [summary?.level, summary?.earnedBadges, progress, teacherOwn]);
   const savedRoom = useMemo(() => normalizeHideoutRoom(room, eligibility), [room, eligibility]);
-  const shownRoom = useMemo(() => normalizeHideoutRoom({ ...room, layout: draft }, eligibility), [room, draft, eligibility]);
-  const props = useMemo(() => hideoutSceneProps(shownRoom.layout), [shownRoom.layout]);
-  const map = useMemo(() => createHideoutWalkMap(shownRoom.layout), [shownRoom.layout]);
-  const dirty = !!room && !sameLayout(savedRoom.layout, shownRoom.layout);
-  draftSnapshot.current = room ? (!readOnly && dirty ? { revision: room.revision, layout: { ...shownRoom.layout } } : null) : undefined;
+  const shownRoom = useMemo(() => normalizeHideoutRoom({ ...room, layout: draft, arrange: arrange ?? room?.arrange }, eligibility), [room, draft, arrange, eligibility]);
+  // 끄는 동안에는 그 소품만 손가락(마우스)을 따라 그립니다 — 놓을 때 판정해 배치에 넣거나 되돌림
+  const liveArrange = useMemo(() => drag ? hideoutWithEntry(shownRoom.arrange, drag.unit, { ...hideoutUnitPlacement(shownRoom.arrange, drag.unit), x: drag.x, y: drag.y }) : shownRoom.arrange, [drag, shownRoom.arrange]);
+  const props = useMemo(() => hideoutSceneProps(shownRoom.layout, liveArrange), [shownRoom.layout, liveArrange]);
+  const map = useMemo(() => createHideoutWalkMap(shownRoom.layout, shownRoom.arrange), [shownRoom.layout, shownRoom.arrange]);
+  const dirty = !!room && (!sameLayout(savedRoom.layout, shownRoom.layout) || !sameHideoutArrange(savedRoom.arrange, shownRoom.arrange));
+  draftSnapshot.current = room ? (!readOnly && dirty ? { revision: room.revision, layout: { ...shownRoom.layout }, arrange: { ...shownRoom.arrange } } : null) : undefined;
   useEffect(() => () => { if (!readOnly && draftSnapshot.current !== undefined) keepDraft(draftKey, draftSnapshot.current); }, [draftKey, readOnly]);
   const selectedSlot = HIDEOUT_SLOTS.find((slot) => slot.id === category) || HIDEOUT_SLOTS[0];
   const selectedGroup = ITEM_GROUPS.find((group) => group.slots.includes(category)) || ITEM_GROUPS[0];
@@ -171,6 +197,12 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
   const growth = summary ? petGrowthOfSummary(summary) : ownerGrowth;
   const pet = petOn && !petGone ? petProgress(petMirror, growth) : null;
   const bed = props.find((prop) => prop.category === "bed");
+  // ── 아지트 2단계: 꾸미는 동안 소품의 자리 · 방향 바꾸기 ──
+  const arranging = !readOnly && editing && !saving && !detail && !exitPending && !resetPending && !petOpen;
+  // 패널에서 고른 종류가 가리키는 소품(벽 선반은 둘 가운데 고른 것) — 책상 위 · 선반 위 소품은 받치는 가구를 가리킴
+  const categoryUnit = category === "wall-shelf" ? ledge : HIDEOUT_UNITS.includes(category) ? category : null;
+  const categoryProp = props.find((prop) => prop.category === category && (category !== "wall-shelf" || prop.unit === ledge));
+  const selectedUnit = categoryProp ? (categoryProp.unit ?? categoryProp.parentUnit) : null;
   const movement = useMovement({
     enabled: !!room && !loading && !readOnly && !editing && !saving && !detail && !exitPending && !resetPending && !petOpen,
     map, spriteRef, onPortal: () => requestExitRef.current?.(),
@@ -178,6 +210,7 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
   // 들어오자마자 방향키로 걷게 무대에 초점을 둡니다 — 교실의 포털로 들어오면 광장의 무대가 사라져 초점이 본문으로
   // 떨어지고, 그때는 방을 한 번 눌러야 방향키가 들었습니다(선생님 신고). 꾸미기를 마치거나 거둔 뒤에도(꾸미던 단추가
   // 사라짐). 소품 창 · 되묻는 창을 닫을 때는 그 창이 초점을 돌려주므로 건드리지 않습니다(walkReady가 그대로).
+  useEffect(() => { if (!arranging) { dragRef.current = null; setDrag(null); } }, [arranging]);
   const walkReady = !!room && !loading && !readOnly && !editing;
   const { focusStage } = movement;
   useEffect(() => { if (walkReady) focusStage(); }, [walkReady, focusStage]);
@@ -227,15 +260,110 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
   }
   function applyItem(item) {
     if (readOnly || saving || !isHideoutItemUnlocked(item, eligibility)) return;
-    setDraft({ ...shownRoom.layout, [item.slot]: item.id }); setEditing(true); setDetail(null); setNotice(`${eulReul(item.name)} 놓았어요. ‘꾸미기 완료’를 누르면 저장돼요.`);
+    const layout = { ...shownRoom.layout, [item.slot]: item.id };
+    // 옮겨 둔 자리 · 뒤집기는 그대로(돌린 그림이 없는 소품이면 앞모습으로). 그 자리를 다른 가구가 차지했으면(크기가 다른 소품 ·
+    // 비어 있던 자리를 옮긴 가구가 차지함) 가까운 빈자리에 놓고, 빈자리가 없으면 놓지 않고 까닭을 알립니다.
+    let next = shownRoom.arrange;
+    if (HIDEOUT_UNITS.includes(item.slot)) {
+      const now = hideoutUnitPlacement(next, item.slot);
+      const patch = { ...now, turn: now.turn && !!hideoutTurnArt(item.id) };
+      next = hideoutWithEntry(next, item.slot, patch);
+      if (hideoutArrangeProblem(layout, next)) {
+        const spot = hideoutFindSpot(layout, shownRoom.arrange, item.slot, { from: now, patch: { flip: patch.flip, turn: patch.turn } });
+        if (!spot) { setDetail(null); setNotice(`${eulReul(item.name)} 놓을 빈자리가 없어요. 다른 가구를 옮겨 자리를 만든 뒤 다시 놓아 주세요.`); return; }
+        next = hideoutWithEntry(shownRoom.arrange, item.slot, { ...patch, ...spot });
+      }
+    }
+    setDraft(layout); setArrange(settleHideoutArrange(layout, next)); setEditing(true); setDetail(null);
+    setNotice(`${eulReul(item.name)} 놓았어요. ‘꾸미기 완료’를 누르면 저장돼요.`);
   }
   function clearSlot() {
     if (readOnly || saving || HIDEOUT_DEFAULT_LAYOUT[category] != null) return;
-    setDraft({ ...shownRoom.layout, [category]: null }); setEditing(true); setNotice("");
+    const layout = { ...shownRoom.layout, [category]: null };
+    setDraft(layout); setArrange(settleHideoutArrange(layout, hideoutWithEntry(shownRoom.arrange, category, null))); setEditing(true); setNotice("");
   }
   function cancelEditing() {
     if (saving) return;
-    setDraft(savedRoom.layout); setEditing(false); setError(""); setNotice("저장된 모습으로 돌아왔어요.");
+    setDraft(savedRoom.layout); setArrange(savedRoom.arrange); setEditing(false); setError(""); setNotice("저장된 모습으로 돌아왔어요.");
+  }
+
+  const unitLabel = (unit) => unit === "ledge-left" ? "작은 벽 선반" : unit === "ledge-right" ? "아래 진열 선반"
+    : HIDEOUT_SLOTS.find((entry) => entry.id === unit)?.label ?? "소품";
+  // 한 소품을 patch(자리 · 뒤집기 · 돌리기)대로 놓습니다 — 안 되면 radius 안의 가까운 빈자리, 그래도 없으면 그대로 두고 까닭을 알림.
+  // full이면 방 전체를 봄(제자리로 — 그 자리를 옮긴 다른 가구가 차지했을 수 있음).
+  function placeUnit(unit, patch, { radius = 0, full = false, done = "" } = {}) {
+    const layout = shownRoom.layout, current = shownRoom.arrange;
+    const candidate = hideoutWithEntry(current, unit, patch);
+    const issue = hideoutArrangeProblem(layout, candidate, full ? {} : { only: unit });
+    if (!issue) { setArrange(candidate); setNotice(done); return true; }
+    const spot = radius > 0 ? hideoutFindSpot(layout, current, unit, { from: patch, patch: { flip: !!patch.flip, turn: !!patch.turn }, radius }) : null;
+    if (spot) { setArrange(hideoutWithEntry(current, unit, { ...patch, ...spot })); setNotice(`${done} 그 자리가 막혀 가까운 빈자리에 놓았어요.`); return true; }
+    setNotice(issue.message);
+    return false;
+  }
+  function flipUnit(unit) {
+    const now = hideoutUnitPlacement(shownRoom.arrange, unit);
+    placeUnit(unit, { ...now, flip: !now.flip }, { radius: 240, done: `${eulReul(unitLabel(unit))} 좌우로 뒤집었어요.` });
+  }
+  function turnUnit(unit) {
+    const now = hideoutUnitPlacement(shownRoom.arrange, unit);
+    placeUnit(unit, { ...now, turn: !now.turn }, { radius: 400, done: `${eulReul(unitLabel(unit))} 돌렸어요.` });
+  }
+  function homeUnit(unit) {
+    placeUnit(unit, { ...HIDEOUT_DEFAULT_ANCHORS[unit], flip: false, turn: false }, { radius: 720, full: true, done: `${eulReul(unitLabel(unit))} 제자리로 옮겼어요.` });
+  }
+  // 방 그림에서 소품을 누르면 그 종류를 고르고(패널이 따라감 — 책상 위 · 선반 위 소품은 그 소품의 종류), 끌면 손가락을
+  // 따라 그리다가 놓을 때 판정합니다.
+  function pickUnit(unit, picked = hideoutUnitCategory(unit)) {
+    if (unit === "ledge-left" || unit === "ledge-right") setLedge(unit);
+    setCategory(picked);
+  }
+  const scenePoint = (e) => {
+    const r = movement.stageRef.current.getBoundingClientRect();
+    return { x: (e.clientX - r.left) / r.width * HIDEOUT_SCENE.width, y: (e.clientY - r.top) / r.height * HIDEOUT_SCENE.height };
+  };
+  function arrangeDown(e) {
+    const target = e.target.closest?.("[data-unit]");
+    if (e.button !== 0 || !target) return;
+    e.preventDefault();
+    const unit = target.dataset.unit;
+    pickUnit(unit, target.dataset.category || undefined);
+    movement.stageRef.current?.focus({ preventScroll: true });
+    const point = scenePoint(e), now = hideoutUnitPlacement(shownRoom.arrange, unit);
+    dragRef.current = { unit, id: e.pointerId, ox: now.x - point.x, oy: now.y - point.y, start: point, moved: false, last: null };
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  }
+  function arrangeMove(e) {
+    const current = dragRef.current;
+    if (!current || current.id !== e.pointerId) return;
+    const point = scenePoint(e);
+    if (!current.moved && Math.hypot(point.x - current.start.x, point.y - current.start.y) < 6) return;
+    current.moved = true;
+    const next = hideoutSnap({ x: Math.min(HIDEOUT_SCENE.width, Math.max(0, point.x + current.ox)), y: Math.min(HIDEOUT_SCENE.height, Math.max(0, point.y + current.oy)) });
+    current.last = next;
+    setDrag((before) => before?.unit === current.unit && before.x === next.x && before.y === next.y ? before : { unit: current.unit, ...next });
+  }
+  function arrangeUp(e) {
+    const current = dragRef.current;
+    if (!current || current.id !== e.pointerId) return;
+    dragRef.current = null; setDrag(null);
+    if (e.currentTarget.hasPointerCapture?.(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+    if (!current.moved || !current.last) return;
+    const now = hideoutUnitPlacement(shownRoom.arrange, current.unit);
+    if (now.x === current.last.x && now.y === current.last.y) return;
+    placeUnit(current.unit, { ...now, ...current.last }, { radius: DROP_SNAP_RADIUS, done: `${eulReul(unitLabel(current.unit))} 옮겼어요.` });
+  }
+  function arrangeCancel() { dragRef.current = null; setDrag(null); }
+  // 방향키로 한 칸(8px) · Shift는 네 칸 — 다른 가구에 막히면 그 너머의 빈자리로 건너뜁니다.
+  function arrangeKey(e) {
+    const dir = ARROW_KEYS[e.code];
+    if (!dir || !selectedUnit || e.altKey || e.ctrlKey || e.metaKey || e.isComposing) return;
+    e.preventDefault();
+    const next = hideoutNudge(shownRoom.layout, shownRoom.arrange, selectedUnit, dir[0], dir[1], e.shiftKey ? HIDEOUT_GRID * 4 : HIDEOUT_GRID);
+    if (!next) { setNotice("그쪽으로는 더 옮길 수 없어요."); return; }
+    const now = hideoutUnitPlacement(shownRoom.arrange, selectedUnit);
+    setArrange(hideoutWithEntry(shownRoom.arrange, selectedUnit, { ...now, ...next }));
+    setNotice(`${eulReul(unitLabel(selectedUnit))} 옮겼어요.`);
   }
 
   // leave — 저장한 뒤 나갈 곳(false: 머묾 · "origin" · "plaza" — 되묻는 창의 '저장하고 …')
@@ -248,9 +376,9 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
     }
     saveLock.current = true; setSaving(true); setError(""); setNotice("");
     try {
-      const result = await saveReadingHideout(classId, { version: 2, layout: shownRoom.layout, revision: room.revision });
+      const result = await saveReadingHideout(classId, { version: 2, layout: shownRoom.layout, arrange: shownRoom.arrange, revision: room.revision });
       if (!alive.current) return false;
-      setRoom(result.room); setDraft(result.room.layout); setProgress(result.progress); setEditing(false); setExitPending(null);
+      setRoom(result.room); setDraft(result.room.layout); setArrange(result.room.arrange ?? {}); setProgress(result.progress); setEditing(false); setExitPending(null);
       draftSnapshot.current = null;
       keepDraft(draftKey, null);
       if (leave) leaveTo(leave); else setNotice("아지트를 저장했어요.");
@@ -301,14 +429,34 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
     <p className="hideout-status" role="status" aria-live="polite">{notice}</p>
     <div className="hideout-layout">
     <div className="hideout-room">
-    <div className="hideout-scene" ref={movement.stageRef} style={{ "--hideout-unit": `${sceneWidth / HIDEOUT_SCENE.width}px` }} tabIndex={readOnly || editing ? -1 : 0} role={readOnly ? "group" : "application"}
-      aria-label={readOnly ? "학생 아지트 미리보기. 이동하거나 꾸밀 수 없습니다." : `나의 아지트. 누른 곳으로 걸어가고 방향키로도 걷습니다. 오른쪽 포털로 ${returnPlace}에 돌아갑니다.`}
-      onClick={movement.onClick} onKeyDown={movement.onKeyDown} onBlur={movement.stop}
-      onPointerDown={movement.onPointerDown} onPointerMove={movement.onPointerMove} onPointerUp={movement.onPointerUp} onPointerCancel={movement.onPointerCancel}>
+    <div className={`hideout-scene${arranging ? " is-arranging" : ""}${drag ? " is-dragging" : ""}`} ref={movement.stageRef} style={{ "--hideout-unit": `${sceneWidth / HIDEOUT_SCENE.width}px` }} tabIndex={readOnly ? -1 : 0} role={readOnly ? "group" : "application"}
+      aria-label={readOnly ? "학생 아지트 미리보기. 이동하거나 꾸밀 수 없습니다."
+        : editing ? "아지트 꾸미기. 소품을 끌어 옮기거나, 고른 소품을 방향키로 한 칸씩(Shift는 네 칸) 옮깁니다."
+        : `나의 아지트. 누른 곳으로 걸어가고 방향키로도 걷습니다. 오른쪽 포털로 ${returnPlace}에 돌아갑니다.`}
+      onClick={movement.onClick} onKeyDown={(e) => { if (arranging) { if (e.target === e.currentTarget) arrangeKey(e); } else movement.onKeyDown(e); }} onBlur={movement.stop}
+      onPointerDown={arranging ? arrangeDown : movement.onPointerDown} onPointerMove={arranging ? arrangeMove : movement.onPointerMove}
+      onPointerUp={arranging ? arrangeUp : movement.onPointerUp} onPointerCancel={arranging ? arrangeCancel : movement.onPointerCancel}>
       <img className="hideout-background" src={HIDEOUT_SCENE.background} width={HIDEOUT_SCENE.width} height={HIDEOUT_SCENE.height} alt="창가와 나무 바닥이 있는 아늑한 독서방" draggable={false} />
-      {props.map((prop) => <img key={prop.id} src={prop.src} className={`hideout-prop${prop.contactShadow ? " is-grounded" : ""}`}
-        data-hideout-slot={prop.category || prop.slot} data-hideout-item={prop.itemId || prop.id} alt="" draggable={false}
-        style={{ ...place(prop.x, prop.y, prop.width), zIndex: prop.z }} />)}
+      {props.map((prop) => {
+        // 꾸미는 동안 고른 소품(책상 위 · 선반 위 소품은 받치는 가구와 함께)은 테두리 빛, 끄는 소품은 살짝 비침
+        const unit = prop.unit ?? prop.parentUnit;
+        const lit = arranging && !!unit && unit === selectedUnit;
+        return <img key={prop.id} src={prop.src} className={`hideout-prop${prop.contactShadow ? " is-grounded" : ""}${prop.flip ? " is-flipped" : ""}${lit ? " is-selected" : ""}${drag && unit === drag.unit ? " is-dragging" : ""}`}
+          data-hideout-slot={prop.category || prop.slot} data-hideout-item={prop.itemId || prop.id} alt="" draggable={false}
+          style={{ ...place(prop.x, prop.y, prop.width), zIndex: Math.round(prop.z) }} />;
+      })}
+      {/* 누르는 칸(꾸미는 동안만) — 그림 상자가 아니라 보이는 상자(투명 여백을 뺀 — hideoutArtBox)만 합니다. 그림 상자로 누르면
+          옆 소품의 빈 여백을 눌러도 그 소품이 잡혔습니다. 앞뒤 차례는 그림과 같고, 여기서만 touch-action을 꺼서 폰에서도 끌어
+          옮기고 빈 바닥을 쓸면 화면이 구릅니다. 책상 위 · 선반 위 소품을 끌면 받치는 가구가 함께 옮겨 갑니다(data-unit). */}
+      {arranging && props.map((prop) => {
+        const unit = prop.unit ?? prop.parentUnit;
+        if (!unit) return null;
+        const box = hideoutArtBox(prop);
+        return <span key={`${prop.id}-hit`} className="hideout-hit" data-unit={unit} data-category={prop.category} aria-hidden="true" style={{
+          left: `${box.x0 / HIDEOUT_SCENE.width * 100}%`, top: `${box.y0 / HIDEOUT_SCENE.height * 100}%`,
+          width: `${(box.x1 - box.x0) / HIDEOUT_SCENE.width * 100}%`, height: `${(box.y1 - box.y0) / HIDEOUT_SCENE.height * 100}%`, zIndex: Math.round(prop.z),
+        }} />;
+      })}
       {/* 문패 글자는 문패의 크림색 칸 안에만 — 크기는 장면 단위(그림과 함께 커지고 작아짐), 한 줄 · 두 줄 가운데 큰 쪽(hideoutPlaqueLabel) */}
       {props.filter((prop) => prop.category === "door-plaque").map((prop) => {
         const label = hideoutPlaqueLabel(prop, myName);
@@ -332,9 +480,9 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
           : <img className="hideout-character-fallback" src={characterImage(appearance)} alt="" draggable={false} style={{ width: actorSize, height: actorSize, left: -actorSize / 2, top: -actorSize * .92 }} />}
         <span className="hideout-resident-name" style={{ bottom: Math.round(actorSize * (spriteSrc && !spriteMissing ? SPRITE_BODY / SPRITE_CELL : .92)) + 5 }}>{myName}</span>
       </div>
-      {pet && bed && <RestingPet pet={pet} bed={bed} owner={readOnly ? myName : ""} onOpen={() => { movement.stop(); setPetOpen(true); }} />}
+      {pet && bed && <RestingPet pet={pet} bed={bed} owner={readOnly ? myName : ""} passive={arranging} onOpen={() => { movement.stop(); setPetOpen(true); }} />}
     </div>
-    <p className="hideout-walk-help">{readOnly ? "학생 본인만 아지트를 꾸밀 수 있어요." : editing ? `소품을 고른 뒤 위쪽의 ‘꾸미기 완료’나 ‘꾸미기 취소’를 누르면 다시 걷거나 포털로 ${returnPlace}에 돌아갈 수 있어요.` : `빈 바닥을 누르거나 방향키로 걸어요. ${petGone ? "펫은 먹이를 찾아 떠나 있어요(책 봄에서 다시 불러요). " : pet ? "펫은 창가에서 쉬어요. " : ""}${onExit ? (returnRoom === "plaza" ? "오른쪽 포털이나 위의 ‘광장으로’로 책 광장에 돌아가요." : "오른쪽 포털로 교실에, 위의 ‘광장으로’로 책 광장에 돌아가요.") : ""}`}</p>
+    <p className="hideout-walk-help">{readOnly ? "학생 본인만 아지트를 꾸밀 수 있어요." : editing ? `방 그림에서 소품을 끌어 옮기거나, 누른 뒤 방향키로 한 칸씩 옮겨요. 다 꾸몄으면 위쪽의 ‘꾸미기 완료’나 ‘꾸미기 취소’를 누르면 다시 걷거나 포털로 ${returnPlace}에 돌아갈 수 있어요.` : `빈 바닥을 누르거나 방향키로 걸어요. ${petGone ? "펫은 먹이를 찾아 떠나 있어요(책 봄에서 다시 불러요). " : pet ? "펫은 창가에서 쉬어요. " : ""}${onExit ? (returnRoom === "plaza" ? "오른쪽 포털이나 위의 ‘광장으로’로 책 광장에 돌아가요." : "오른쪽 포털로 교실에, 위의 ‘광장으로’로 책 광장에 돌아가요.") : ""}`}</p>
     </div>
 
     <section className="hideout-editor" aria-label="아지트 소품">
@@ -356,6 +504,10 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
         {!readOnly && editing && HIDEOUT_DEFAULT_LAYOUT[category] == null && <button type="button" className="hideout-clear-slot" onClick={clearSlot}
           disabled={saving || shownRoom.layout[category] == null}>이 자리 비우기</button>}
       </div>
+      {!readOnly && editing && <ArrangeTools category={category} unit={categoryUnit && categoryProp ? categoryUnit : null} itemId={shownRoom.layout[category]}
+        placement={categoryUnit ? hideoutUnitPlacement(shownRoom.arrange, categoryUnit) : null} moved={!!categoryUnit && Object.hasOwn(shownRoom.arrange, categoryUnit)}
+        ledge={ledge} onLedge={setLedge} label={categoryUnit ? unitLabel(categoryUnit) : ""} busy={saving}
+        onFlip={flipUnit} onTurn={turnUnit} onHome={homeUnit} />}
       <div className="hideout-choices">{choices.map((item) => {
         const chosen = shownRoom.layout[item.slot] === item.id;
         const unlocked = isHideoutItemUnlocked(item, eligibility);
@@ -385,11 +537,35 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
       care={petFeed?.on ? careStatus(petMirror, petFeed, kstToday(), pet.stage) : null} read={petFeed?.read} fruits={fruits}
       onClose={() => { setPetOpen(false); if (!readOnly) focusStage(); }} />}
     {resetPending && <HideoutDialog title="기본 소품으로 바꿀까요?" onClose={() => setResetPending(false)} alert>
-      <p>기본 가구를 놓고 추가 소품은 치워요. 열린 소품은 다시 고를 수 있어요.</p><div className="hideout-dialog-actions">
-        <button type="button" onClick={() => setResetPending(false)}>계속 꾸미기</button><button type="button" className="hideout-primary" onClick={() => { setDraft({ ...HIDEOUT_DEFAULT_LAYOUT }); setResetPending(false); setNotice("기본 소품을 놓았어요. ‘꾸미기 완료’를 누르면 저장돼요."); }}>기본 소품 놓기</button>
+      <p>기본 가구를 놓고 추가 소품은 치워요. 옮긴 자리와 방향도 처음으로 돌아가요. 열린 소품은 다시 고를 수 있어요.</p><div className="hideout-dialog-actions">
+        <button type="button" onClick={() => setResetPending(false)}>계속 꾸미기</button><button type="button" className="hideout-primary" onClick={() => { setDraft({ ...HIDEOUT_DEFAULT_LAYOUT }); setArrange({}); setResetPending(false); setNotice("기본 소품을 놓았어요. ‘꾸미기 완료’를 누르면 저장돼요."); }}>기본 소품 놓기</button>
       </div>
     </HideoutDialog>}
   </section>;
+}
+
+// 돌리기 단추의 말 — 돌린 모습의 종류마다(lib/readingHideoutTurn.js의 look) [돌리기 전, 돌린 뒤]
+const TURN_LABELS = { side: ["옆모습으로 돌리기", "앞모습으로 돌리기"], "chair-front": ["의자를 앞으로", "의자를 옆으로"], lengthwise: ["세로로 놓기", "가로로 놓기"] };
+// 꾸미기 패널 — 고른 종류의 자리 · 방향(아지트 2단계). 같은 크기의 단추들(좌우 뒤집기 · 돌리기 · 제자리로)과 한 줄 안내.
+// 따로 옮기지 않는 소품(책상 위 · 선반 위 · 창가 장식)은 안내만 섭니다.
+function ArrangeTools({ category, unit, itemId, placement, moved, ledge, onLedge, label, busy, onFlip, onTurn, onHome }) {
+  if (!itemId) return null;
+  if (!unit) return FOLLOW_NOTES[category] ? <p className="hideout-arrange-hint">{FOLLOW_NOTES[category]}</p> : null;
+  const turn = hideoutTurnArt(itemId);
+  const labels = turn ? TURN_LABELS[turn.look] ?? TURN_LABELS.side : null;
+  const buttons = [
+    hideoutUnitFlips(unit) && <button type="button" key="flip" aria-pressed={placement.flip} onClick={() => onFlip(unit)} disabled={busy}>좌우 뒤집기</button>,
+    labels && <button type="button" key="turn" aria-pressed={placement.turn} onClick={() => onTurn(unit)} disabled={busy}>{labels[placement.turn ? 1 : 0]}</button>,
+    <button type="button" key="home" onClick={() => onHome(unit)} disabled={busy || !moved}>제자리로</button>,
+  ].filter(Boolean);
+  return <div className="hideout-arrange" role="group" aria-label={`${label}의 자리와 방향`}>
+    {category === "wall-shelf" && <div className="hideout-arrange-tools" role="group" aria-label="옮길 선반" style={{ "--tools": 2 }}>
+      {["ledge-left", "ledge-right"].map((side) => <button type="button" key={side} aria-pressed={ledge === side} className={ledge === side ? "is-selected" : ""}
+        onClick={() => onLedge(side)} disabled={busy}>{side === "ledge-left" ? "작은 벽 선반" : "아래 진열 선반"}</button>)}
+    </div>}
+    <div className="hideout-arrange-tools" style={{ "--tools": buttons.length }}>{buttons}</div>
+    <p className="hideout-arrange-hint">{category === "wall-shelf" ? "선반 위의 소품도 함께 움직여요. " : ""}방 그림에서 끌어 옮기거나, 방 그림을 누른 뒤 방향키로 한 칸씩(Shift는 네 칸) 옮겨요.</p>
+  </div>;
 }
 
 function ItemDetail({ item, unlocked, teacherOwn = false, readOnly, saving, selected, categoryLabel, position, count, onBrowse, onApply, onClose }) {
@@ -446,13 +622,13 @@ function HideoutDialog({ title, onClose, busy = false, alert = false, children }
 
 // 방석에서 쉬는 펫 — 누르면 펫 정보 창(onOpen · 선생님 요청). 단추라 바닥을 누른 것으로 읽히지 않습니다(useMovement의 onClick이
 // 단추를 비켜 감) · owner — 선생님이 학생의 방을 볼 때 그 학생의 이름(읽어 주는 이름에 씀).
-function RestingPet({ pet, bed, owner = "", onOpen }) {
+function RestingPet({ pet, bed, owner = "", passive = false, onOpen }) {
   const rest = getHideoutRestPet(pet), egg = pet.hatched !== true || pet.stage === 1;
   const [missing, setMissing] = useState(null);
   const placement = egg ? hideoutEggRestPosition(bed, bed.itemId || bed.id) : hideoutPetRestPosition(bed, bed.itemId || bed.id, rest?.contentBox);
   if (!placement) return null;
   const whose = owner ? `${owner}의 ` : "";
-  return <button type="button" className={`hideout-pet${egg ? " hideout-pet--egg" : " hideout-pet--resting"}`} data-pet-pose={egg ? "egg" : "rest"} data-resting-pet={egg ? undefined : rest?.species}
+  return <button type="button" className={`hideout-pet${egg ? " hideout-pet--egg" : " hideout-pet--resting"}${passive ? " is-passive" : ""}`} tabIndex={passive ? -1 : undefined} data-pet-pose={egg ? "egg" : "rest"} data-resting-pet={egg ? undefined : rest?.species}
     style={{ ...place(placement.x, placement.y, placement.width), aspectRatio: "1", zIndex: 102 + bed.y }} onClick={(e) => { e.stopPropagation(); onOpen?.(); }}
     aria-label={egg ? `창가 방석에서 쉬는 ${whose}신비한 알 — 펫 정보 보기` : `창가 방석에 앉아 쉬는 ${whose}펫 — 펫 정보 보기`} title="펫 정보 보기">
     {egg ? <PetFigure species={null} stage={1} ready={false} size={placement.width} pixelEgg /> : rest && missing !== rest.src ? <img src={rest.src} alt="" width={rest.cell || 96} height={rest.cell || 96} draggable={false} onError={() => setMissing(rest.src)} />

@@ -21,7 +21,9 @@ export async function POST(request) {
   try {
     const principal = await readingPrincipal(request);
     const raw = await request.text();
-    // Only the thirty fixed slot IDs and a revision travel here. Coordinates,
+    // Only the thirty fixed slot IDs, the arrangement (each movable piece's
+    // integer floor/wall anchor plus flip/turn — re-validated on the server by
+    // lib/readingHideoutArrange.js) and a revision travel here. Walking positions,
     // image URLs and reading/achievement data are never accepted in this route.
     if (Buffer.byteLength(raw, "utf8") > 8192) throw new ReadingHttpError("입력 내용이 너무 큽니다.", 413, "reading/payload-too-large");
     let body;

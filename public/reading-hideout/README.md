@@ -11,11 +11,13 @@ PNG 원본을 `scripts/import-pixel-art.mjs`로 **같은 이름 · 같은 크기
 - `pets/rest-{종}.webp`: 열 종의96×96 휴식 전용 도트 그림. 펫은 이 방에서 움직이지 않습니다. 알은 도트 알(`public/reading-pets/egg-pixel.webp` — 카드 · 리더보드 · 독서 맵은 예전 알 `egg.webp`, 선생님 결정)을 씁니다. 쉬는 펫 그림은 도트 묶음에서도 예전 파일 그대로입니다.
 - `items/clock/{테마}.webp`: 꾸미기 벽시계 4종은 **숫자 없는 시계**(작은 점 12개 · 10시 10분 바늘)입니다 — 처음 묶음의 굵은 눈금이 로마 숫자 Ⅰ처럼 보여 다시 그린 수정본(`bookbom-numberless-wall-clocks`)을 덧씌웠습니다. 교실 벽시계의 시계판도 이 그림에서 떠냅니다(`scripts/prepare-classroom-clock.mjs`).
 - `background.webp`: 1536×1024 아지트 배경. **오른쪽 벽의 문을 지운 그림**입니다(선생님 요청 · 2026년 11월 — 도트 묶음의 무손실 원본에서 `scripts/hideout-furniture-art.mjs`의 `removeHideoutDoor`로 채움, `import-pixel-art.mjs`로 다시 구워도 지움). 문을 다시 그려 넣지 마세요.
-- `manifest.json`: 각 파일의 크기·SHA-256(`import-pixel-art.mjs` · `prepare-hideout-furniture.mjs`가 새로 씀 — `tests/unit/readingHideoutPetAssets.test.mjs`가 봄). `floorFurniture`에 가구 묶음의 시트 SHA-256을 적어 둡니다.
+- `items/{desk,shelf,reading-chair,reading-bed,chest,aquarium}/{테마}-turn.webp` · `desk-basic-turn.webp` · `shelf-low-turn.webp`: **돌린 모습 26장**(아지트 2단계 — 책상은 의자가 앞에, 책장 · 1인 독서 소파 · 독서 보물함 · 스탠드 어항은 옆모습, 독서 침대는 세로). 선생님이 그림 AI로 받아 주신 시트 여섯 장을 `node scripts/prepare-hideout-turn.mjs <시트 폴더>`가 잘라 구웠습니다 — 끝에 찍는 크기를 `lib/readingHideoutTurn.js`에 옮겨 적으세요(시험이 그림과 견줌).
+- `manifest.json`: 각 파일의 크기·SHA-256(`import-pixel-art.mjs` · `prepare-hideout-furniture.mjs` · `prepare-hideout-turn.mjs`가 새로 씀 — `tests/unit/readingHideoutPetAssets.test.mjs`가 봄). `floorFurniture`에 가구 묶음의 시트 SHA-256, `turnArt`에 돌린 모습 시트의 SHA-256을 적어 둡니다.
+- **보이는 상자 표**(`lib/readingHideoutBoxes.js` — 그림마다 투명 여백의 비율): 소품을 옮길 때의 겹침 · 누르는 범위를 셉니다. 아지트 그림을 바꾸면 `node scripts/measure-hideout-boxes.mjs`로 다시 만드세요(시험이 표와 그림을 견줌).
 
 승인된 책상·의자 폭288, 러그432, 캐릭터 프레임252, 펫 프레임 최대120을 유지합니다. 보물함은 왼쪽 아래의 `(145,970)`, 폭135입니다. 트로피는 폭72로 오른쪽 전시 선반에 올립니다. 작은 소품은 그림 속 픽셀만 누르게 하지 않고 큰 목록·상세에서 고릅니다.
 
-소품의 책·배지는 장식입니다. 학생이 읽은 실제 책이나 획득 배지를 그 안에 합성한 그림은 아닙니다. 문패의 이름은 앱에서 별도 글자로, 문패 그림의 크림색 칸 안에 맞춰 그립니다(`HIDEOUT_PLAQUE_PANELS` — 문패 그림을 바꾸면 그 띠를 다시 재세요). 책상 위 소품(책 받침대)의 자리는 책상마다 따로입니다(`lib/readingHideout.js`의 `HIDEOUT_TABLETOP` — 책상 그림을 바꾸면 다시 재세요, `HIDEOUT.md`). 방 안 좌표와 미리보기는 서버에 저장하지 않고 선택한 소품 ID만 저장합니다.
+소품의 책·배지는 장식입니다. 학생이 읽은 실제 책이나 획득 배지를 그 안에 합성한 그림은 아닙니다. 문패의 이름은 앱에서 별도 글자로, 문패 그림의 크림색 칸 안에 맞춰 그립니다(`HIDEOUT_PLAQUE_PANELS` — 문패 그림을 바꾸면 그 띠를 다시 재세요). 책상 위 소품(책 받침대)의 자리는 책상마다 따로입니다(`lib/readingHideout.js`의 `HIDEOUT_TABLETOP` — 책상 그림을 바꾸면 다시 재세요, `HIDEOUT.md`). 서버에는 고른 소품 ID와, 학생이 옮긴 소품의 자리 · 뒤집기 · 돌리기(`arrange` — 아지트 2단계, `HIDEOUT.md`의 '소품 옮기기 · 뒤집기 · 돌리기')만 저장합니다. 캐릭터의 위치 · 꾸미기 미리보기는 저장하지 않습니다.
 
 카탈로그·고정 배치는 `lib/readingHideoutCatalog.js`, 공통 검증은 `lib/readingHideout.js`에 있습니다.
 

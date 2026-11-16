@@ -130,10 +130,11 @@ function RoomCard({ student, result, onSelect, onRetry }) {
 }
 
 function RoomPreview({ room, name }) {
-  const props = useMemo(() => hideoutSceneProps(room.layout), [room.layout]);
+  // 학생이 옮긴 자리 · 뒤집기 · 돌리기(아지트 2단계)까지 그대로 — 서버가 맞춰 보낸 배치(room.arrange)
+  const props = useMemo(() => hideoutSceneProps(room.layout, room.arrange), [room.layout, room.arrange]);
   return <span className="teacher-hideout-gallery-scene" role="img" aria-label={`${name}이 꾸민 아지트 미리보기`}>
     <img className="teacher-hideout-gallery-background" src={HIDEOUT_SCENE.background} width={HIDEOUT_SCENE.width} height={HIDEOUT_SCENE.height} alt="" loading="lazy" draggable={false} />
-    {props.map((prop) => <img key={prop.id} className="teacher-hideout-gallery-prop" src={prop.src} alt="" loading="lazy" draggable={false}
+    {props.map((prop) => <img key={prop.id} className={`teacher-hideout-gallery-prop${prop.flip ? " is-flipped" : ""}`} src={prop.src} alt="" loading="lazy" draggable={false}
       style={{ left: `${prop.x / HIDEOUT_SCENE.width * 100}%`, top: `${prop.y / HIDEOUT_SCENE.height * 100}%`, width: `${prop.width / HIDEOUT_SCENE.width * 100}%`, zIndex: prop.z }} />)}
   </span>;
 }

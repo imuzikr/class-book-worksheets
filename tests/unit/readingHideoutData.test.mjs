@@ -2,7 +2,8 @@ import test, { after } from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { deriveReading, hideoutOn, initialReadingState, kstToday } from "../../lib/reading.js";
-import { hideoutProgress, normalizeHideoutRoom, validateHideoutLayout } from "../../lib/readingHideout.js";
+import { hideoutProgress, normalizeHideoutRoom, sameHideoutArrange, validateHideoutLayout } from "../../lib/readingHideout.js";
+import { settleHideoutArrange, validateHideoutArrange } from "../../lib/readingHideoutArrange.js";
 import { petGrowthOfSummary } from "../../lib/readingPet.js";
 
 // 실제 자료 모듈을 실행하되 Firebase/로그인/서재 경계만 바꿉니다. 실제 네트워크는 호출하지 않습니다.
@@ -33,6 +34,7 @@ async function demo({ lowLevel = false } = {}) {
     demoSuspendedSet: () => suspended,
     isTeacher: (value) => value.role === "teacher" || value.role === "admin",
     deriveReading, hideoutProgress, normalizeHideoutRoom, validateHideoutLayout, petGrowthOfSummary,
+    sameHideoutArrange, settleHideoutArrange, validateHideoutArrange,
     demoReadingAccess: (classId, targetUid) => {
       const selected = mock.classes.find((entry) => entry.id === classId);
       if (!selected || !selected.readingEnabled || selected.archived) throw Object.assign(new Error("Disabled"), { code: "reading-disabled" });
@@ -44,7 +46,7 @@ async function demo({ lowLevel = false } = {}) {
     demoReadingState: (uid) => { stateReads.push(uid); return state; },
     readingRequest: () => { throw new Error("Unexpected network request"); },
   };
-  const injected = `const { isFirebaseConfigured, mock, hideoutOn, demoSuspendedSet, isTeacher, deriveReading, hideoutProgress, normalizeHideoutRoom, validateHideoutLayout, petGrowthOfSummary, demoReadingAccess, demoReadingState, readingRequest } = globalThis.__hideoutDataFixture;\n`
+  const injected = `const { isFirebaseConfigured, mock, hideoutOn, demoSuspendedSet, isTeacher, deriveReading, hideoutProgress, normalizeHideoutRoom, validateHideoutLayout, petGrowthOfSummary, sameHideoutArrange, settleHideoutArrange, validateHideoutArrange, demoReadingAccess, demoReadingState, readingRequest } = globalThis.__hideoutDataFixture;\n`
     + source.replace(/^import .+ from "[^"]+";\n/gm, "") + `\n// instance ${serial++}`;
   const module = await import(`data:text/javascript;base64,${Buffer.from(injected).toString("base64")}`);
   return { module, values, cls, mock, suspended, stateReads, blockWrite: (on) => { blockWrite = on; }, switchUser: (uid, role = "student") => { user = { uid, role }; } };
@@ -227,4 +229,27 @@ test("teacher demo lookup reads the selected student's room while peers and non-
   await assert.rejects(() => env.module.fetchReadingHideout("class", "../other"), (e) => e.code === "reading/invalid-hideout");
   env.mock.demoUsers[0].role = "teacher";
   await assert.rejects(() => env.module.fetchReadingHideout("class", "student-a"), (e) => e.code === "reading/not-member");
+});
+
+test("체험반 — 배치(아지트 2단계: 자리 · 뒤집기 · 돌리기)를 저장하고 다시 읽으며, 문제가 있는 배치는 거절하고, 배치를 모르는 옛 요청은 옮겨 둔 자리를 지우지 않음", async () => {
+  const env = await demo();
+  const { module: data } = env;
+  const first = await data.fetchReadingHideout("class");
+  assert.deepEqual(first.room.arrange, {});
+  const arranged = await data.saveReadingHideout("class", { ...first.room, arrange: { plant: { x: 600, y: 640 }, desk: { x: 400, y: 880, flip: true, turn: true } } });
+  assert.equal(arranged.room.revision, 1);
+  assert.deepEqual(arranged.room.arrange, { desk: { x: 400, y: 880, flip: true, turn: true }, plant: { x: 600, y: 640 } });
+  assert.deepEqual((await data.fetchReadingHideout("class")).room.arrange, arranged.room.arrange);
+  // 배치만 바꿔도 저장(revision이 오름) · 같은 배치를 다시 보내면 쓰지 않음
+  const moved = await data.saveReadingHideout("class", { ...arranged.room, arrange: { ...arranged.room.arrange, plant: { x: 640, y: 640 } } });
+  assert.equal(moved.room.revision, 2);
+  assert.equal((await data.saveReadingHideout("class", moved.room)).room.revision, 2);
+  // 포털을 가리거나 다른 가구와 겹치는 배치는 그 까닭으로 거절(저장된 방은 그대로)
+  await assert.rejects(() => data.saveReadingHideout("class", { ...moved.room, arrange: { plant: { x: 1416, y: 864 } } }), (e) => e.code === "reading/hideout-arrange" && /포털/.test(e.message));
+  await assert.rejects(() => data.saveReadingHideout("class", { ...moved.room, arrange: { nope: { x: 1, y: 1 } } }), (e) => e.code === "reading/invalid-hideout");
+  // 배치를 모르는 옛 화면의 요청 — 소품만 바꾸고 옮겨 둔 자리는 그대로
+  const { arrange: _old, ...legacy } = moved.room;
+  const kept = await data.saveReadingHideout("class", { ...legacy, layout: { ...moved.room.layout, rug: "rug-starlight" } });
+  assert.equal(kept.room.layout.rug, "rug-starlight");
+  assert.deepEqual(kept.room.arrange, moved.room.arrange);
 });

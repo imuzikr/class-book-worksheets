@@ -15,6 +15,8 @@
 .teacher-hideout-gallery-scene { position: relative; display: block; width: 100%; aspect-ratio: 1536 / 1024; overflow: hidden; isolation: isolate; background: #e6c8a0; }
 .teacher-hideout-gallery-background { display: block; width: 100%; height: 100%; pointer-events: none; }
 .teacher-hideout-gallery-prop { position: absolute; height: auto; max-width: none; transform: translate(-50%, -100%); pointer-events: none; }
+/* 좌우로 뒤집은 소품(아지트 2단계) — 바닥 가운데는 그대로 두고 그림만 거울로 */
+.teacher-hideout-gallery-prop.is-flipped { transform: translate(-50%, -100%) scaleX(-1); }
 .teacher-hideout-gallery-caption { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 48px; padding: 10px; }
 .teacher-hideout-gallery-student { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 6px; min-width: 0; }
 .teacher-hideout-gallery-student small { color: #7a8573; font-size: 10px; }
