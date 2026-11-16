@@ -1344,17 +1344,6 @@ service cloud.firestore {
       allow delete: if resource.data.classId != null && canPurgeClass(resource.data.classId);
     }
 
-    // ── 공부방 보드(옛 기록) ──────────────────────────────────
-    //  책나눔에는 공부방 화면이 없습니다. 한때 반을 만들 때 '선생님 보드' 한 장을
-    //  함께 만들었는데 그 길을 걷어, 앱이 더는 만들거나 고치지 않습니다.
-    //  이미 있는 문서는 반 삭제 때 지우므로(lib/classPurge.js) 읽기 · 지우기만 남깁니다.
-    //  그 아래 학생 카드(cards)의 규칙은 걷었습니다 — 하위 문서는 아무도 못 씁니다.
-    match /studyBoards/{bId} {
-      allow read: if signedIn();
-      allow delete: if isAdmin() || ownsClassEditable(resource.data.classId);
-      allow delete: if canPurgeClass(resource.data.classId);
-    }
-
     // ── 책방 활동 — 닿소리 채우기 (반별) ──────────────────────
     //  · 활동 문서: 반 구성원 읽기, 반 소유 교사/관리자만 쓰기
     //  · 모둠 메타: 반 구성원 모두 읽기(대시보드에 전체 모둠 카드 표시).

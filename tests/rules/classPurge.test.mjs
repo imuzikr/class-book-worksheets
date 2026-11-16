@@ -36,7 +36,6 @@ describe("반 완전 삭제 규칙", () => {
         await setDoc(doc(db, "rewards", `${id}_stu1`), { uid: "stu1", classId: id, count: 2 });
         await setDoc(doc(db, "presence", `stu1_${id}`), { uid: "stu1", classId: id, visible: true });
         await setDoc(doc(db, "studentNotes", `n_${id}`), { classId: id, teacherId: "teacherA", studentUid: "stu1" });
-        await setDoc(doc(db, "studyBoards", `b_${id}`), { classId: id, type: "notice" });
         await setDoc(doc(db, "kwl", `k_${id}`), { classId: id, userId: "stu1", date: "d" });
         await setDoc(doc(db, "broadcasts", id), { mode: "entry" });
       }
@@ -66,7 +65,7 @@ describe("반 완전 삭제 규칙", () => {
 
   it("보관된 반의 담당 교사 — 반 바깥 기록을 질의로 찾아 지우고, 마지막에 반 문서", async () => {
     const t = asTeacher(env, "teacherA").firestore();
-    for (const name of ["memberships", "rewards", "presence", "studentNotes", "studyBoards", "kwl"]) {
+    for (const name of ["memberships", "rewards", "presence", "studentNotes", "kwl"]) {
       const snap = await assertSucceeds(getDocs(query(collection(t, name), where("classId", "==", "cOld"))));
       for (const d of snap.docs) await assertSucceeds(deleteDoc(d.ref));
     }
