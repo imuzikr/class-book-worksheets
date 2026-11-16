@@ -40,7 +40,7 @@ Java가 설치되어 있어야 합니다(에뮬레이터 요구사항). 운영 �
 | `helpers.mjs` | 에뮬레이터 연결, 학생/교사/관리자 로그인 컨텍스트, 사전 데이터 심기 |
 | `attendance.test.mjs` | 출석부 (`classes/{cId}/attendanceRecords`) |
 | `questionSignals.test.mjs` | 손들기 (`classes/{cId}/questionSignals`) |
-| `studyBoards.test.mjs` · `presence.test.mjs` · `signalEvents.test.mjs` | 옛 기록(공부방 보드 · 참여 상태 · 손들기 확인 이력) — 새로 못 만들고, 반 삭제 · 탈퇴 정리 길만 열림 |
+| `presence.test.mjs` · `signalEvents.test.mjs` | 옛 기록(참여 상태 · 손들기 확인 이력) — 새로 못 만들고, 반 삭제 · 탈퇴 정리 길만 열림 |
 | `seatGroups.test.mjs` | 자리표·반 기본 모둠 (교사 전용 자산) |
 | `bookEntries.test.mjs` | 개인 활동 제출물 (곁텍스트·RAFT·KWLS·마인드맵 공용) |
 

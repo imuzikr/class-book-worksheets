@@ -91,20 +91,20 @@
     `KwlSemesterHeatmap` · `UploadProgress`도 지웠습니다.
 - 알림 벨은 반 공지 · '내 생각은요' 댓글 · RAFT 피드백을 받습니다(질문 답변 · 모둠 메모로 옮겨 갈 화면이 없음).
 - **배움나눔에서 따라온 코드 중 화면이 안 쓰는 것은 걷었습니다**(2026년 11월 정리) — 수업 노트(코넬)
-  서랍 일체 · 질문방 · 공부방(프로젝트 · 카드 · 선생님 보드 만들기) · 수업 메모 · 모둠 메모 · 키워드 ·
+  서랍 일체 · 질문방 · 공부방(프로젝트 · 카드) · 수업 메모 · 모둠 메모 · 키워드 ·
   옛 상단 전광판 · KWLS 차트의 자료 함수와 CSS, 데모 자료의 화학 수업 예시, 아무도 안 읽던 기록
   (수업 화면을 띄우는 동안 20초마다 쓰던 접속 표시 `presence` · 손들기 '확인' 이력 `signalEvents`).
   **되살리지 마세요** — 되살리려면 선생님께 먼저 여쭙니다(배움나눔 저장소와 git 기록에 그대로 있습니다).
   이미 쌓인 옛 문서는 지우지 않고, 반 완전 삭제 · 학생 탈퇴 때 함께 지웁니다.
 - **규칙(`firestore.rules`)은 지금 화면이 쓰는 컬렉션만 남겼습니다**(2,006 → 1,600줄 남짓).
   걷은 것: 질문방(`questions` · `answers` · `notices` · `keywords`) · 모둠 메모(`groupMemos`) ·
-  수업 자료(`lessons`) · 프로젝트 원본(`studyTemplates`) · 공부방 카드(`studyBoards/*/cards`) ·
+  수업 자료(`lessons`) · 프로젝트 원본(`studyTemplates`) ·
   수업 메모(`lessonMemos`) · 수업 노트(`classes/*/cornellNotes`), 그 규칙만 쓰던 도우미와 시험.
   - match가 없으면 아무도 못 읽고 못 씁니다 — **문서는 지워지지 않습니다**(옛 수업 노트 등은
     그대로 남아 콘솔에서 보입니다).
-  - **`studyBoards` · `presence` · `signalEvents`는 읽기 · 지우기만 남깁니다** — 앱이 더는 만들지
+  - **`presence` · `signalEvents`는 읽기 · 지우기만 남깁니다** — 앱이 더는 만들지
     않고, 반 완전 삭제 · 학생 탈퇴가 옛 문서를 찾아 지울 길만 둡니다(만들기 · 고치기는 닫음).
-    시험 `tests/rules/studyBoards.test.mjs` · `presence.test.mjs` · `signalEvents.test.mjs`.
+    시험 `tests/rules/presence.test.mjs` · `signalEvents.test.mjs`.
   - 옛 전광판이 쓰던 `meta` 규칙도 걷었습니다(아무도 안 씀).
   - 화면이 부르는 함수에서 위 컬렉션을 다시 쓰게 되면 규칙을 되살리고 배포한 뒤에 올리세요.
   - 아래 원본 기록에 나오는 `tests/rules/` 시험 가운데 `questions` · `answerEdit` ·
@@ -305,7 +305,7 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
   `ClassPurgeModal` — 반 이름을 그대로 적어야 지워짐). 웹 SDK에는 '아래까지 통째로
   지우기'가 없어, 앱이 컬렉션마다 찾아 지웁니다(`lib/data/classes.js`의 `purgeClass`).
   - 차례: 독서 활동(`purgeBookActivity` — 학생 글 · 낱말 · 메모 …) → 반 아래 기록 →
-    반 바깥 기록(`memberships` · `rewards` · `presence` · `studentNotes` · `studyBoards` ·
+    반 바깥 기록(`memberships` · `rewards` · `presence` · `studentNotes` ·
     `kwl` · 참여 코드 · 방송) → **반 문서는 맨 마지막**. 규칙 판정(`canPurgeClass`)이 반
     문서를 읽고, 중간에 끊겨도 반이 남아 다시 누르면 남은 것부터 이어 지웁니다.
   - **지울 목록은 `lib/classPurge.js` 한 곳**입니다. **반에 딸린 컬렉션을 새로 만들면
@@ -510,9 +510,6 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
 
 ## 데이터 모델 (Firestore 컬렉션)
 
-- `studyBoards` — 배움나눔 공부방의 **옛 기록**입니다. 책나눔에는 공부방 화면이 없고, 한때 반을 만들 때
-  '선생님 보드' 한 장을 함께 만들던 길(`addClass` → `ensureDefaultStudyBoard`)도 걷었습니다.
-  규칙은 읽기 · 지우기만 남겨, 반 완전 삭제가 옛 문서를 지웁니다(`lib/classPurge.js`).
 - `kwl` — **KWLS 기록** (classId, userId, date, answers{know,want,learned,still} + 옛 K/W/L/S 칸)
   - 책방 'KWLS로 성찰하기' 활동의 학생 글: ID = `uid_classId_act_활동id` + `activityId` · `topic`.
     활동의 `entries/{uid}`에도 함께 적고(`saveKwlsActivityEntry`), 교사 화면(`KwlsBoard`)은
