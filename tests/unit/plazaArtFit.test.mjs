@@ -153,7 +153,8 @@ const DRAWN_BOOK = {
   "desk-forest": [133, 585, 205, 657], "desk-starlight": [133, 585, 205, 656],
   "desk-coastal": [135, 586, 205, 657], "desk-explorer": [137, 602, 199, 666],
 };
-const TABLE_SLOTS = ["bookstand", "pencil-caddy", "desk-calendar"];
+// 책상 위에 서는 소품 — 한때 필기구 정리함 · 탁상 달력도 있었는데 2026년 11월에 바닥 가구로 바뀌었습니다.
+const TABLE_SLOTS = ["bookstand"];
 
 test("아지트 책상 위 소품 — 바닥이 그 책상의 윗면 위, 그려진 책을 가리지 않고, 소품끼리 가리지 않는다", async () => {
   const desks = HIDEOUT_ITEMS.filter((item) => item.slot === "desk");
@@ -166,7 +167,7 @@ test("아지트 책상 위 소품 — 바닥이 그 책상의 윗면 위, 그려
       const props = hideoutSceneProps(layout);
       const deskProp = props.find((p) => p.category === "desk");
       const items = props.filter((p) => TABLE_SLOTS.includes(p.category));
-      assert.equal(items.length, 3);
+      assert.equal(items.length, TABLE_SLOTS.length);
       const boxes = [];
       for (const item of items) {
         const where = `${desk.id} · ${item.itemId}`;

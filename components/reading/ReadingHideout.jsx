@@ -36,13 +36,16 @@ const place = (x, y, width) => ({ left: `${x / HIDEOUT_SCENE.width * 100}%`, top
 const disabledError = (error) => /disabled|reading-off/.test(String(error?.code || ""));
 const themeName = (item) => ({ forest: "숲속", starlight: "별빛", explorer: "탐험", coastal: "바닷가" }[item.theme] || "기본");
 const unlockLevel = (item) => item.unlock?.level || item.unlockStage || item.sampleUnlockStage || 0;
+// 소품 묶음 — 2026년 11월에 작은 소품 여섯을 바닥 가구로 바꾸며 다시 묶었습니다(자리 이름은 예전 그대로):
+// 1인 독서 소파(pencil-caddy) · 독서 침대(desk-calendar)는 가구, 독서 텐트(pet-water) · 지구본 스탠드(hourglass)는 독서 도구,
+// 스탠드 어항(badge-display)은 펫 소품, 큰 나무 화분(cover-display)은 정원.
 const ITEM_GROUPS = [
-  { id: "furniture", label: "가구·러그", slots: ["rug", "cushion", "desk", "shelf", "wall-shelf"] },
-  { id: "reading", label: "독서 도구", slots: ["bookmark-rack", "bookstand", "pencil-caddy", "bookends", "cover-display"] },
-  { id: "pet", label: "펫 소품", slots: ["bed", "pet-water", "pet-toys"] },
-  { id: "garden", label: "조명·정원", slots: ["lamp", "mood-light", "plant", "terrarium", "hanging-planter"] },
-  { id: "wall", label: "벽·시간", slots: ["wall", "memo-board", "clock", "hourglass", "desk-calendar"] },
-  { id: "keepsakes", label: "보물·기념", slots: ["music-box", "chest", "badge-display", "travel-case", "garland", "book-trophy", "door-plaque"] },
+  { id: "furniture", label: "가구·러그", slots: ["rug", "cushion", "desk", "pencil-caddy", "shelf", "wall-shelf", "desk-calendar"] },
+  { id: "reading", label: "독서 도구", slots: ["bookmark-rack", "bookstand", "bookends", "pet-water", "hourglass"] },
+  { id: "pet", label: "펫 소품", slots: ["bed", "pet-toys", "badge-display"] },
+  { id: "garden", label: "조명·정원", slots: ["lamp", "mood-light", "plant", "cover-display", "terrarium", "hanging-planter"] },
+  { id: "wall", label: "벽·시간", slots: ["wall", "memo-board", "clock"] },
+  { id: "keepsakes", label: "보물·기념", slots: ["music-box", "chest", "travel-case", "garland", "book-trophy", "door-plaque"] },
 ];
 // 걷는 키는 방향키뿐 — 책 광장 · 교실과 같게(선생님 결정: 그 두 방에서 A는 행동 · S와 C는 고르는 키라, 아지트에서만
 // W A S D로 걸면 같은 키가 방마다 다른 일을 합니다. 한때 아지트만 W A S D로도 걸었습니다 — 되살리지 마세요).

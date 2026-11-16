@@ -569,13 +569,24 @@
 /* 학생 책꽂이 도구 — 제목 영역을 비우고 댓글 이력 · 광장 대화를 책꽂이 제목 옆에 둡니다. */
 /* 이력 단추 둘(댓글 이력 · 광장 대화) — 한 줄에 같은 크기, 좁으면 한 줄에 하나 */
 /* (이어 놓인 단추는 같은 크기 — inline-grid의 1fr 두 칸은 글자가 긴 쪽에 맞춰 함께 넓어짐) */
-.reading-teacher-tools { display: inline-grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; min-width: 0; max-width: 100%; }
+/* 책꽂이 제목 옆의 선생님 단추 셋(댓글 이력 · 광장 대화 · 프로필 편집) — 넓으면 한 줄에 같은 크기 셋, 책꽂이 칸이 좁으면
+   (양옆에 명단 · 성장 칸 · '멋진 순간'이 서는 1440px 화면 등) 같은 폭으로 세로로 쌓아 설명이 한 줄에 들게 합니다.
+   접는 기준은 창 폭이 아니라 책꽂이 칸의 폭(readinglib) — 셋을 나란히 두면 1024 · 1440px에서 설명이 두세 줄로 쪼개졌습니다. */
+.reading-library-toolbar { container: readinglib / inline-size; }
+.reading-teacher-tools { display: inline-grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; min-width: 0; max-width: 100%; }
+@container readinglib (max-width: 1080px) {
+  .reading-teacher-tools { grid-template-columns: minmax(0, 1fr); }
+  .reading-teacher-tools .reading-teacher-history { justify-content: flex-start; }
+}
 .reading-teacher-tools .reading-teacher-history { margin-top: 0; justify-content: center; }
 @media (max-width: 560px) { .reading-teacher-tools { grid-template-columns: minmax(0, 1fr); } }
 .reading-teacher-history { display: inline-flex; align-items: center; flex-wrap:wrap; justify-content:center; gap: 7px; padding: 7px 14px 7px 11px; border: 1px solid #cfdccf; border-radius: 999px; background: #fff; color: #2c4c3f; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
 .reading-teacher-history:hover { border-color: #9fbfa6; background: #f6faf3; }
 .reading-teacher-history:focus-visible { outline: 3px solid #478fbd; outline-offset: 2px; }
 .reading-teacher-history small { color: #6f8276; font-size: 11.5px; font-weight: 600; }
+/* 학생 프로필 창을 내려받는 동안의 한 줄(그 뒤에는 대시보드의 창이 섬) */
+.modal.reading-teacher-profile-loading { width: min(420px, 100%); display: flex; align-items: center; gap: 12px; }
+.reading-teacher-profile-loading p { margin: 0; flex: 1; color: #2c4c3f; font-size: 14px; }
 .reading-teacher-recall { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; padding: 12px 14px; border: 1px solid #d9d4c8; border-radius: 14px; background: #f7f5f0; }
 .reading-teacher-recall span { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1 1 280px; }
 .reading-teacher-recall strong { font-size: 14px; color: var(--dark); }

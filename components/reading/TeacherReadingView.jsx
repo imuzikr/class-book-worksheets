@@ -25,11 +25,15 @@
 // 책방 첫 화면 묶음이 그만큼 커집니다(광장의 코드는 쓸 때만 — CLAUDE.md). 내려받는 동안에도 같은 자리에 창이 서고 닫힙니다.
 // **광장 대화**(선생님 결정 — 대화 기록을 남기고 담당 교사 · 관리자가 봄): 같은 머리에 '광장 대화' — 그 학생이 책 광장 · 교실에서
 // 든 대화의 말 전체(PlazaTalkHistory · 서버가 담당 교사인지 확인). 댓글 이력과 같은 약속으로 광장 대화를 꺼 둔 반에서도 섭니다.
+// **프로필 편집**(선생님 요청 · 2026년 11월 — "학생 프로필 편집 버튼이 없는 것 같은데요?"): 같은 줄의 셋째 단추. 관리자 대시보드의
+// 학생 프로필 창을 그대로 엽니다(이름 · 학번 · 이메일 편집 · 이 반에서 빼기 · 사용 중지 · 탈퇴 — StudentProfileFromBooks · 누를 때만
+// 내려받음). 반 목록은 책방 페이지의 내 반(보관된 반 포함 — 대시보드와 같은 범위)을 ownClasses로 받습니다. 이름 · 학번을 고치면
+// 명단(useClassRoster — 학생 프로필을 구독)이 저절로 따라오고, 빼거나 탈퇴시키면 창을 닫고 알림 한 줄 · 명단의 첫 학생으로 돌아갑니다.
 // =============================================================
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import ReadingHub, { TeacherPlaza } from "./ReadingHub";
-import { IconAnswer } from "@/components/StatusIcons";
+import { IconAnswer, IconStudent } from "@/components/StatusIcons";
 import { backdropClose } from "@/lib/modal";
 import { recallReadingPet, subscribeRosterPets } from "@/lib/data/reading";
 import { careRulesFor, careStatus } from "@/lib/petCare";
@@ -55,6 +59,19 @@ function HistoryLoading() {
 const PlazaCommentHistory = dynamic(() => import("./PlazaCommentHistory"), { ssr: false, loading: HistoryLoading });
 const TeacherHideoutBrowser = dynamic(() => import("./TeacherHideoutBrowser"), { ssr: false, loading: () => <p className="reading-loading" role="status">학생들의 아지트를 펼치고 있어요.</p> });
 const PlazaTalkHistory = dynamic(() => import("./PlazaTalkHistory"), { ssr: false, loading: HistoryLoading });
+// 학생 프로필 창(관리자 대시보드와 같은 창) — 누를 때만 내려받습니다(대시보드의 CSS를 함께 끌어옴). 내려받는 동안에는 같은 자리에 한 줄.
+function ProfileLoading() {
+  const { onClose } = useContext(HistoryCloseContext);
+  return (
+    <div className="modal-backdrop" {...backdropClose(onClose)}>
+      <div className="modal reading-teacher-profile-loading" role="dialog" aria-modal="true" aria-label="학생 프로필">
+        <p role="status">학생 프로필 창을 여는 중이에요.</p>
+        <button type="button" className="btn-close" aria-label="닫기" onClick={onClose}>×</button>
+      </div>
+    </div>
+  );
+}
+const StudentProfileDialog = dynamic(() => import("./StudentProfileFromBooks"), { ssr: false, loading: ProfileLoading });
 
 // 고른 학생은 주소(?student=)가 듭니다 — 리더보드의 '책꽂이로 이동'이 그 학생을 짚어 열고,
 // 새로고침해도 그 학생입니다. 명단을 누르면 주소만 바꿉니다(replace).
@@ -62,7 +79,7 @@ const PlazaTalkHistory = dynamic(() => import("./PlazaTalkHistory"), { ssr: fals
 //   누른 선생님이 세는 동안 광장에서 나와 명단을 보고 있었으면, 다 셌을 때 선생님도 광장으로 돌아갑니다('모두'에는
 //   선생님도 듭니다). 떠 있는 동안 값이 바뀔 때만입니다(처음 받은 값은 기준일 뿐).
 // petOn · petFeed — 학생 펫과 펫 먹이의 규칙(책방 페이지가 넘김 — 끈 반이면 배부름을 그리지 않음) · onToast — 알림 한 줄.
-export default function TeacherReadingView({ classId, user, roster = [], studentUid = null, onPickStudent, plazaOn = false, initialTab = "library", plazaCall = 0, petOn = false, petFeed = null, onToast = null, ...hubProps }) {
+export default function TeacherReadingView({ classId, user, roster = [], ownClasses = [], studentUid = null, onPickStudent, plazaOn = false, initialTab = "library", plazaCall = 0, petOn = false, petFeed = null, onToast = null, ...hubProps }) {
   const student = roster.find((s) => s.uid === studentUid) || roster[0] || null;
   // 펫 먹이 — 학생마다의 배부름(명단이 싣고 온 프로필의 펫으로 셈 · 체험반은 이 브라우저 안의 펫)
   const feedOn = petOn && !!petFeed?.on;
@@ -84,6 +101,19 @@ export default function TeacherReadingView({ classId, user, roster = [], student
   const awayCount = [...careOf.values()].filter((c) => c.status?.away).length;
   const [historyFor, setHistoryFor] = useState(null);   // 댓글 이력 · 광장 대화 창을 연 학생과 창({ student, kind: "comments" | "talk" })
   const closeHistory = () => setHistoryFor(null);
+  // 학생 프로필 창을 연 학생(대시보드의 명단 한 줄과 같은 모양 — 지금 보는 반을 맨 앞에: 그 반에서 빼기 · 이름 맞추기의 기준)
+  const [profileFor, setProfileFor] = useState(null);
+  const closeProfile = () => setProfileFor(null);
+  const thisClass = ownClasses.find((c) => c.id === classId) || null;
+  function openProfile(target) {
+    setHistoryFor(null);
+    setProfileFor({ uid: target.uid, name: target.name, studentId: target.studentId || "", classes: [{ id: classId, name: thisClass?.name || "" }] });
+  }
+  function profileGone(message) {
+    setProfileFor(null);
+    onToast?.(message);
+    onPickStudent?.(null); // 빠진 학생 대신 명단의 첫 학생으로(주소의 ?student=를 지움)
+  }
   const [recalling, setRecalling] = useState(false);
   const [recallError, setRecallError] = useState("");
   useEffect(() => { setRecallError(""); }, [student?.uid]);
@@ -204,6 +234,10 @@ export default function TeacherReadingView({ classId, user, roster = [], student
               <button type="button" className="reading-teacher-history" onClick={() => setHistoryFor({ student, kind: "talk" })}>
                 <IconAnswer size={17} /><span>광장 대화</span><small>친구들과 나눈 말</small>
               </button>
+              <button type="button" className="reading-teacher-history" aria-haspopup="dialog" onClick={() => openProfile(student)}
+                aria-label={`${student.name} 프로필 편집 — 이름 · 학번 · 이메일, 이 반에서 빼기 · 사용 중지 · 탈퇴`}>
+                <IconStudent size={17} /><span>프로필 편집</span><small>이름 · 학번 · 이메일</small>
+              </button>
             </div>
           )} />
           : <div className="reading-empty"><h3>학생을 기다리고 있어요.</h3><p>학생이 참여 코드로 들어오면 이곳에서 학생마다의 책 봄을 볼 수 있어요.{plazaOn ? " 책 광장은 지금도 ‘책 광장 들어가기’로 둘러볼 수 있어요." : ""}</p></div>}
@@ -213,6 +247,13 @@ export default function TeacherReadingView({ classId, user, roster = [], student
           {historyFor.kind === "talk"
             ? <PlazaTalkHistory classId={classId} student={historyFor.student} onClose={closeHistory} />
             : <PlazaCommentHistory classId={classId} student={historyFor.student} roster={roster} onClose={closeHistory} />}
+        </HistoryCloseContext.Provider>
+      )}
+      {profileFor && (
+        <HistoryCloseContext.Provider value={{ onClose: closeProfile, title: "학생 프로필" }}>
+          <StudentProfileDialog key={profileFor.uid} student={profileFor} myClasses={ownClasses} onClose={closeProfile}
+            onWithdrawn={(name) => profileGone(`${name || "학생"}을(를) 탈퇴시켰어요. 기록과 프로필이 지워졌습니다.`)}
+            onRemoved={(name, className) => profileGone(`${name || "학생"}을(를) ${className || "이 반"}에서 뺐어요. 남긴 글 · 과일 · 출석 기록은 그대로입니다.`)} />
         </HistoryCloseContext.Provider>
       )}
     </div>

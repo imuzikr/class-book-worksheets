@@ -54,3 +54,22 @@ test("keyboard movement cannot jump through the desk into the quiet window corne
   assert.ok(here.x > 400);
   assert.equal(hideoutAtReturnPortal({ x: NaN, y: 820 }), false);
 });
+
+test("바닥 가구(2026년 11월)의 발자리는 막히고, 여섯을 모두 놓아도 가운데 바닥 · 포털까지의 길은 열려 있다", () => {
+  for (const theme of HIDEOUT_THEMES) {
+    const layout = Object.fromEntries(HIDEOUT_SLOTS.map((slot) => [slot.id, `${slot.id}-${theme.id}`]));
+    const nav = createHideoutWalkMap(layout);
+    const ids = nav.colliders.map((entry) => entry.id);
+    for (const id of ["pencil-caddy", "cover-display", "pet-water", "hourglass", "desk-calendar", "badge-display"]) assert.ok(ids.includes(id), `${theme.id} · ${id}`);
+    assert.equal(nav.walkable(1370, 650), false, `${theme.id} — 독서 침대 위`);
+    assert.equal(nav.walkable(835, 690), false, `${theme.id} — 스탠드 어항 앞`);
+    assert.equal(nav.walkable(1150, 815), false, `${theme.id} — 독서 텐트 안`);
+    assert.equal(nav.walkable(482, 684), false, `${theme.id} — 지구본 스탠드 다리`);
+    assert.equal(nav.walkable(628, 940), false, `${theme.id} — 1인 독서 소파 뒤에 바짝`);
+    assert.equal(nav.walkable(HIDEOUT_SPAWN.x, HIDEOUT_SPAWN.y), true);
+    // 텐트와 포털 사이 · 소파와 나무 사이로 걸어 지나갈 수 있음
+    assert.equal(nav.walkable(1320, 820), true, `${theme.id} — 텐트와 포털 사이`);
+    assert.ok(nav.path(HIDEOUT_SPAWN, { x: 1320, y: 820 }).length > 0);
+    assert.ok(nav.path(HIDEOUT_SPAWN, nav.nearest(560, 640)).length > 0, `${theme.id} — 지구본과 어항 사이 안쪽`);
+  }
+});

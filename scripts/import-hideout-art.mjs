@@ -3,6 +3,8 @@
 // 주의(2026년 11월): 아지트 그림은 도트 그림(1번 스타일)으로 바꿨고 scripts/import-pixel-art.mjs로 넣습니다.
 // 이 스크립트는 옛 그림(refined-v2)을 함께 복사하므로 그대로 돌리면 그림이 예전 것으로 돌아갑니다 —
 // 배치(lib/readingHideoutCatalog.js)만 다시 만들 때 쓰고, 그 뒤 import-pixel-art.mjs를 다시 돌리세요.
+// 또 2026년 11월에 작은 소품 여섯을 바닥 가구로 바꿨으므로(scripts/prepare-hideout-furniture.mjs), 이 스크립트로 카탈로그를 다시
+// 만들면 그 여섯 종류(이름 · 그림 · 크기 · slots의 자리)와 옮긴 소품 자리가 예전으로 돌아갑니다 — 카탈로그 맨 위의 안내대로 다시 맞추세요.
 import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";

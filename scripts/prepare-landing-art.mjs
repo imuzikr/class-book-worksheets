@@ -2,6 +2,7 @@
 // 대문(첫 화면 /)의 활동 그림 세 장 — 체험반에서 찍은 장면을 대문용 WebP로
 // -------------------------------------------------------------
 //   node scripts/prepare-landing-art.mjs <광장 PNG> <교실 PNG> <아지트 PNG>
+//   (한 장만 다시 찍었으면 나머지 자리에 '-' — 예: node scripts/prepare-landing-art.mjs - - hideout.png · 그 장면은 그대로 둠)
 //
 // 대문은 오른쪽 무대에 책 광장 · 교실 · 개인 아지트의 장면을 사진처럼 기울여 겹쳐 놓습니다(app/page.js · 함께 책 읽는
 // 일러스트와 함께 — 배치는 app/styles/01-base-landing-footer.css의 '대문'). 장면은 체험반을 띄워 무대만 찍은 PNG입니다 —
@@ -29,13 +30,14 @@ const WIDTHS = [{ width: 1440, suffix: "" }, { width: 800, suffix: "-800" }];
 const QUALITY = 80;
 
 const files = process.argv.slice(2);
-if (files.length !== SCENES.length || files.some((file) => !existsSync(file))) {
-  console.error("사용법: node scripts/prepare-landing-art.mjs <광장 PNG> <교실 PNG> <아지트 PNG>");
+if (files.length !== SCENES.length || files.some((file) => file !== "-" && !existsSync(file)) || files.every((file) => file === "-")) {
+  console.error("사용법: node scripts/prepare-landing-art.mjs <광장 PNG> <교실 PNG> <아지트 PNG>  (그대로 둘 장면은 '-')");
   process.exit(1);
 }
 mkdirSync(OUT, { recursive: true });
 
 for (const [i, scene] of SCENES.entries()) {
+  if (files[i] === "-") continue; // 이 장면은 그대로
   const meta = await sharp(files[i]).metadata();
   const box = { left: scene.trim, top: scene.trim, width: meta.width - scene.trim * 2, height: meta.height - scene.trim * 2 };
   for (const { width, suffix } of WIDTHS) {

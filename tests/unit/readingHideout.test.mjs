@@ -107,27 +107,68 @@ test("every full theme uses the approved sizes and supported empty shelves witho
   }
 });
 
-test("책상 위 소품 — 책상마다 정한 자리에 놓이고, 책상보다 위 · 책상 앞에 선 캐릭터보다 아래, 앞의 소품이 뒤의 소품을 가린다", () => {
+test("책상 위 소품(책 받침대) — 책상마다 정한 자리에 놓이고, 책상보다 위 · 책상 앞에 선 캐릭터보다 아래", () => {
   for (const desk of HIDEOUT_ITEMS.filter((item) => item.slot === "desk")) {
     const spots = HIDEOUT_TABLETOP[desk.id];
     assert.ok(spots, desk.id);
-    const layout = { ...HIDEOUT_DEFAULT_LAYOUT, desk: desk.id, bookstand: "bookstand-forest", "pencil-caddy": "pencil-caddy-forest", "desk-calendar": "desk-calendar-forest" };
-    const props = hideoutSceneProps(layout);
+    assert.deepEqual(Object.keys(spots), ["bookstand"], `${desk.id} — 책상 위에는 받침대만(필기구 정리함 · 탁상 달력은 바닥 가구로 바뀜)`);
+    const props = hideoutSceneProps({ ...HIDEOUT_DEFAULT_LAYOUT, desk: desk.id, bookstand: "bookstand-forest" });
     const deskProp = props.find((p) => p.category === "desk");
-    const items = props.filter((p) => ["bookstand", "pencil-caddy", "desk-calendar"].includes(p.category));
-    assert.equal(items.length, 3);
+    const items = props.filter((p) => p.category === "bookstand");
+    assert.equal(items.length, 1);
     for (const item of items) {
-      assert.deepEqual([item.x, item.y, item.width], [spots[item.category].x, spots[item.category].y, spots[item.category].width], `${desk.id} · ${item.category}`);
+      assert.deepEqual([item.x, item.y, item.width], [spots.bookstand.x, spots.bookstand.y, spots.bookstand.width], desk.id);
       assert.ok(Number.isInteger(item.z), "z-index는 정수(CSS)");
       // 걷는 길은 책상 앞 y 853부터 — 그 캐릭터(z = 100 + y)보다 아래
       assert.ok(item.z > deskProp.z && item.z < 100 + 853, `${desk.id} · ${item.category} z ${item.z}`);
     }
-    const byDepth = [...items].sort((a, b) => a.y - b.y);
-    for (let i = 1; i < byDepth.length; i += 1) assert.ok(byDepth[i].z >= byDepth[i - 1].z, `${desk.id} — 앞의 소품이 위`);
   }
   // 이름이 잘못된 책상(옛 자료 등)이어도 기본 책상의 자리로
   const odd = hideoutSceneProps({ ...HIDEOUT_DEFAULT_LAYOUT, desk: "no-such-desk", bookstand: "bookstand-forest" }).find((p) => p.category === "bookstand");
   assert.deepEqual([odd.x, odd.y], [HIDEOUT_TABLETOP["desk-basic"].bookstand.x, HIDEOUT_TABLETOP["desk-basic"].bookstand.y]);
+});
+
+// 2026년 11월 — 작고 눈에 안 들어오던 소품 여섯을 바닥 가구로(선생님 요청). 자리 이름 · 소품 id · 열리는 레벨은 그대로라
+// 이미 그 소품을 고른 학생의 저장된 방이 그대로 새 가구로 보입니다.
+const FLOOR_FURNITURE = {
+  "pencil-caddy": { label: "1인 독서 소파", stage: 2, folder: "reading-chair" },
+  "cover-display": { label: "큰 나무 화분", stage: 3, folder: "big-tree" },
+  "pet-water": { label: "독서 텐트", stage: 4, folder: "reading-tent" },
+  hourglass: { label: "지구본 스탠드", stage: 8, folder: "globe-stand" },
+  "desk-calendar": { label: "독서 침대", stage: 8, folder: "reading-bed" },
+  "badge-display": { label: "스탠드 어항", stage: 9, folder: "aquarium" },
+};
+test("바닥 가구 여섯 — 예전 자리 이름 · 레벨 그대로, 바닥에 서서(책상 · 선반 위가 아님) 앞뒤 차례로 겹치고 바닥 그림자", () => {
+  for (const [slotId, want] of Object.entries(FLOOR_FURNITURE)) {
+    const slot = HIDEOUT_SLOTS.find((entry) => entry.id === slotId);
+    assert.deepEqual([slot.label, slot.stage, slot.placement], [want.label, want.stage, "floor"], slotId);
+    assert.equal(slot.support, undefined, `${slotId} — 선반 위가 아님`);
+    assert.ok(!HIDEOUT_TABLETOP["desk-basic"][slotId], `${slotId} — 책상 위가 아님`);
+    for (const theme of HIDEOUT_THEMES) {
+      const item = HIDEOUT_ITEMS.find((entry) => entry.id === `${slotId}-${theme.id}`);
+      assert.equal(item.name, `${theme.name} ${want.label}`);
+      assert.equal(item.src, `/reading-hideout/items/${want.folder}/${theme.id}.webp`);
+      assert.equal(isHideoutItemUnlocked(item.id, { level: want.stage }), true);
+      assert.equal(isHideoutItemUnlocked(item.id, { level: want.stage - 1 }), false);
+    }
+  }
+  for (const theme of HIDEOUT_THEMES) {
+    const layout = Object.fromEntries(HIDEOUT_SLOTS.map((entry) => [entry.id, `${entry.id}-${theme.id}`]));
+    const props = hideoutSceneProps(layout);
+    for (const slotId of Object.keys(FLOOR_FURNITURE)) {
+      const prop = props.find((p) => p.category === slotId);
+      assert.ok(prop, `${theme.id} · ${slotId}`);
+      assert.equal(prop.z, 100 + prop.y, `${theme.id} · ${slotId} — 바닥의 앞뒤 차례(캐릭터와 같은 셈)`);
+      assert.equal(prop.contactShadow, true);
+      assert.ok(prop.x - prop.width / 2 >= 0 && prop.x + prop.width / 2 <= 1536 && prop.y - prop.height >= 0 && prop.y <= 1024, `${theme.id} · ${slotId}`);
+    }
+  }
+  // 저장해 둔 옛 방(예전 소품 id) — 그대로 받아 새 가구로
+  const saved = { layout: { ...HIDEOUT_DEFAULT_LAYOUT, "pencil-caddy": "pencil-caddy-forest", "desk-calendar": "desk-calendar-coastal" }, revision: 3 };
+  const room = normalizeHideoutRoom(saved, { level: 8 });
+  assert.equal(room.layout["pencil-caddy"], "pencil-caddy-forest");
+  assert.equal(room.layout["desk-calendar"], "desk-calendar-coastal");
+  assert.equal(room.revision, 3);
 });
 
 test("문패 글자 — 문패의 크림색 칸(글자 띠) 안에 들고, 한 줄 · 두 줄 가운데 글자가 큰 쪽을 고른다", () => {
