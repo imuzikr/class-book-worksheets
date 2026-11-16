@@ -868,13 +868,10 @@ function BooksPageInner() {
       <span className="book-group-class">{activeClassName}</span>
     ) : null;
 
-  // 학생 책 봄에서는 같은 제목 · 반 정보 · 출석 버튼을 카드 안으로 옮깁니다.
+  // 학생은 반 선택·출석도 카드 안에 둡니다. 교사 관리 도구는 별도 줄에 유지합니다.
   const inlineReadingHeading = readingOpen && !admin;
-  const pageHeading = (
-    <div className="books-head-main">
-      <h1>
-        {settingsOpen ? <IconSettings size={26} /> : leaderboardOpen ? <IconTrophy size={26} /> : <IconBook size={26} />} {settingsOpen ? "관리자 설정" : leaderboardOpen ? "리더보드" : readingOpen ? "책 봄" : "책방"}
-      </h1>
+  const pageClassControls = (
+    <>
       {admin && myClasses.length > 0 && (
         <select
           className="study-class-select"
@@ -940,6 +937,20 @@ function BooksPageInner() {
           {attendedToday ? "✓ 출석 완료" : attending ? "출석하는 중…" : "출석하기"}
         </button>
       )}
+    </>
+  );
+  const pageHeading = (
+    <div className="books-head-main">
+      <h1>
+        {settingsOpen ? <IconSettings size={26} /> : leaderboardOpen ? <IconTrophy size={26} /> : <IconBook size={26} />} {settingsOpen ? "관리자 설정" : leaderboardOpen ? "리더보드" : readingOpen ? "책 봄" : "책방"}
+      </h1>
+      {pageClassControls}
+    </div>
+  );
+  const teacherReadingHeading = (
+    <div className="books-head-main">
+      <h1><IconBook size={26} /> 책 봄</h1>
+      {currentClass && <span className="books-class-name">{currentClass.name}</span>}
     </div>
   );
 
@@ -1242,7 +1253,7 @@ function BooksPageInner() {
         />
       ) : (
         <main className="books-main">
-          {!inlineReadingHeading && <div className="books-head">{pageHeading}</div>}
+          {!inlineReadingHeading && <div className="books-head">{readingOpen && admin ? <div className="books-head-main">{pageClassControls}</div> : pageHeading}</div>}
 
           {settingsOpen ? (
             <AdminSettingsPanel classes={myClasses} onToast={setToast} />
@@ -1252,6 +1263,7 @@ function BooksPageInner() {
               onDisabled={() => patchBooksQuery({ area: null }, { replace: true })} />
           ) : readingOpen && admin ? (
             <TeacherReadingView classId={classId} user={user} roster={roster} ownClasses={myClassesAll}
+              introHeading={teacherReadingHeading}
               studentUid={searchParams.get("student")} onPickStudent={(uid) => patchBooksQuery({ student: uid }, { replace: true })} bookSearchOn={bookSearchEnabled(currentClass)}
               plazaOn={plazaOn(currentClass)} hideoutOn={hideoutOn(currentClass)} talkOn={plazaTalkOn(currentClass)} characterOn={characterOn} initialTab={searchParams.get("tab") || "library"} classroom={classroomProps}
               plazaCall={plazaCall} petOn={petOn} petFeed={petFeed} onToast={setToast}

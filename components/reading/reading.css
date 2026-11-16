@@ -29,9 +29,6 @@
 .reading-summary strong small { font-size:14px; font-weight:600; margin:0 3px; color:#657f73; letter-spacing:0; }
 .reading-summary>div>span:last-child { font-size:10px; color:#657d70; }
 .reading-summary .reading-level { background:#f0f5ed; }
-/* 교사 학생 화면은 제목 옆에 이미 받은 독서 요약을 함께 표시합니다. */
-.reading-intro--teacher { flex-wrap:wrap; gap:16px; }
-.reading-intro--teacher > .reading-intro-main { display:contents; }
 .reading-intro-copy { flex:1 1 240px; min-width:0; }
 .reading-intro-copy h2 { font-size:clamp(19px,2vw,25px); overflow-wrap:anywhere; }
 .reading-intro-heading { margin-bottom:16px; }
@@ -45,48 +42,34 @@
 .reading-summary--compact > div > span { overflow-wrap:anywhere; }
 .reading-summary--compact strong { font-size:27px; }
 .reading-intro-loading { flex:2 1 460px; color:#657d70; }
-/* 교사는 실제 본문 너비에 따라 기존 줄을 접어 제목이 지나치게 좁아지지 않게 합니다. */
-.reading-intro--teacher > .reading-intro-side { width:auto; max-width:100%; min-width:0; margin-left:auto; align-items:stretch; }
-.reading-intro--teacher .reading-featured { display:flex; min-width:0; max-width:100%; }
-.reading-intro--teacher .reading-featured span { min-width:0; overflow-wrap:anywhere; }
-.reading-intro--teacher .reading-pet { min-width:0; max-width:100%; }
-.reading-intro--teacher .reading-pet-text { min-width:0; }
-.reading-intro--teacher .reading-pet-care { flex-wrap:wrap; }
-.reading-intro--teacher .reading-pet-care b { white-space:normal; }
-@media (max-width:1100px) {
-  .reading-intro--teacher .reading-summary--compact { grid-template-columns:repeat(2,minmax(0,1fr)); }
-}
-@media (max-width:700px) {
-  .reading-intro--teacher > .reading-intro-side { margin-left:0; justify-content:flex-start; }
-}
-/* 학생 머리말 — 제목·작은 통계는 왼쪽, 큰 정보 카드는 같은 줄 오른쪽에 둡니다. */
-.reading-intro--student { display:flex; flex-wrap:wrap; align-items:stretch; gap:18px 22px; }
-.reading-intro.reading-intro--student { padding:16px 20px; }
-.reading-intro--student > .reading-intro-main { display:flex; flex:1 1 300px; min-width:0; flex-direction:column; gap:10px; }
-.reading-intro--student .reading-intro-main > .reading-intro-copy { flex:none; }
-.reading-intro--student .reading-intro-copy h2 { font-size:clamp(18px,2.1vw,24px); }
-.reading-intro--student .reading-intro-heading { margin-bottom:8px; }
-.reading-intro--student .reading-intro-copy > p { margin-top:7px; font-size:12px; }
-.reading-intro--student .reading-intro-main > .reading-summary--compact { flex:none; width:100%; max-width:500px; align-self:flex-start; grid-template-columns:repeat(2,minmax(0,1fr)); }
-.reading-intro--student .reading-intro-main > .reading-intro-loading { flex:none; margin:0; }
-.reading-intro--student .reading-intro-main .reading-summary--compact > div { min-height:36px; padding:3px 6px; border-left:0; border-top:0; }
-.reading-intro--student .reading-intro-main .reading-summary--compact > div:nth-child(even) { border-left:1px solid #d9e3d8; }
-.reading-intro--student .reading-intro-main .reading-summary--compact > div:nth-child(n+3) { border-top:1px solid #d9e3d8; }
-.reading-intro--student .reading-intro-main .reading-summary--compact > div > span:first-child { font-size:10px; }
-.reading-intro--student .reading-intro-main .reading-summary--compact strong { font-size:18px; }
-.reading-intro--student .reading-intro-main .reading-summary--compact strong small { font-size:10px; }
-.reading-intro--student > .reading-intro-side { display:flex; flex:2 1 740px; width:auto; min-width:0; align-items:stretch; justify-content:flex-start; gap:12px; }
-.reading-intro--student .reading-featured,
-.reading-intro--student .reading-character-summary { display:flex; align-items:center; flex:1 1 180px; min-width:0; max-width:none; min-height:160px; gap:12px; padding:12px; border:1px solid #d8e5db; border-radius:14px; background:#ffffff91; }
-.reading-intro--student .reading-character-summary { flex:1.2 1 220px; }
-.reading-intro--student .reading-featured > svg { flex-shrink:0; color:#99aa9d; }
-.reading-intro--student .reading-featured > span { min-width:0; overflow-wrap:anywhere; }
-.reading-intro--student .reading-featured strong { font-size:14px; }
-.reading-intro--student .reading-featured em { color:#567066; font-size:11px; font-style:normal; }
+/* 학생·교사 열람 공통 머리말 — 제목·작은 통계는 왼쪽, 큰 정보 카드는 같은 줄 오른쪽에 둡니다. */
+.reading-intro--profile { display:flex; flex-wrap:wrap; align-items:stretch; gap:18px 22px; }
+.reading-intro.reading-intro--profile { padding:16px 20px; }
+.reading-intro--profile > .reading-intro-main { display:flex; flex:1 1 300px; min-width:0; flex-direction:column; gap:10px; }
+.reading-intro--profile .reading-intro-main > .reading-intro-copy { flex:none; }
+.reading-intro--profile .reading-intro-copy h2 { font-size:clamp(18px,2.1vw,24px); }
+.reading-intro--profile .reading-intro-heading { margin-bottom:8px; }
+.reading-intro--profile .reading-intro-copy > p { margin-top:7px; font-size:12px; }
+.reading-intro--profile .reading-intro-main > .reading-summary--compact { flex:none; width:100%; max-width:500px; align-self:flex-start; grid-template-columns:repeat(2,minmax(0,1fr)); }
+.reading-intro--profile .reading-intro-main > .reading-intro-loading { flex:none; margin:0; }
+.reading-intro--profile .reading-intro-main .reading-summary--compact > div { min-height:36px; padding:3px 6px; border-left:0; border-top:0; }
+.reading-intro--profile .reading-intro-main .reading-summary--compact > div:nth-child(even) { border-left:1px solid #d9e3d8; }
+.reading-intro--profile .reading-intro-main .reading-summary--compact > div:nth-child(n+3) { border-top:1px solid #d9e3d8; }
+.reading-intro--profile .reading-intro-main .reading-summary--compact > div > span:first-child { font-size:10px; }
+.reading-intro--profile .reading-intro-main .reading-summary--compact strong { font-size:18px; }
+.reading-intro--profile .reading-intro-main .reading-summary--compact strong small { font-size:10px; }
+.reading-intro--profile > .reading-intro-side { display:flex; flex:2 1 740px; width:auto; min-width:0; align-items:stretch; justify-content:flex-start; gap:12px; }
+.reading-intro--profile .reading-featured,
+.reading-intro--profile .reading-character-summary { display:flex; align-items:center; flex:1 1 180px; min-width:0; max-width:none; min-height:160px; gap:12px; padding:12px; border:1px solid #d8e5db; border-radius:14px; background:#ffffff91; }
+.reading-intro--profile .reading-character-summary { flex:1.2 1 220px; }
+.reading-intro--profile .reading-featured > svg { flex-shrink:0; color:#99aa9d; }
+.reading-intro--profile .reading-featured > span { min-width:0; overflow-wrap:anywhere; }
+.reading-intro--profile .reading-featured strong { font-size:14px; }
+.reading-intro--profile .reading-featured em { color:#567066; font-size:11px; font-style:normal; }
 .reading-character-summary > img,
 .reading-character-placeholder { flex-shrink:0; width:72px; height:72px; object-fit:contain; }
 .reading-character-summary { font:inherit; text-align:left; color:inherit; cursor:pointer; }
-.reading-intro--student .reading-character-summary:hover:not(:disabled) { border-color:#99b6a3; background:#f7faf4; }
+.reading-intro--profile .reading-character-summary:hover:not(:disabled) { border-color:#99b6a3; background:#f7faf4; }
 .reading-character-summary:disabled { cursor:default; }
 .reading-character-placeholder { border-radius:12px; background:#e9efe6; }
 .reading-character-info { display:flex; flex:1; flex-direction:column; min-width:0; gap:4px; overflow-wrap:anywhere; }
@@ -99,30 +82,31 @@
 .reading-character-growth-track { display:block; width:100%; height:6px; overflow:hidden; border-radius:999px; background:#e2eade; }
 .reading-character-growth-track > i { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#79ad91,#3d7e68); }
 .reading-character-xp { color:#597365; font-size:11px; line-height:1.4; font-variant-numeric:tabular-nums; }
-.reading-intro--student .reading-pet-wrap,
-.reading-intro--student > .reading-intro-side > .reading-pet { flex:1.4 1 280px; min-width:0; max-width:none; }
-.reading-intro--student .reading-pet-wrap { display:flex; flex-direction:column; }
-.reading-intro--student .reading-pet { min-width:0; min-height:160px; flex-wrap:wrap; gap:10px; padding:12px; border-radius:14px; }
-.reading-intro--student .pet-say { position:relative; left:auto; bottom:auto; flex:0 0 100%; max-width:100%; box-shadow:none; }
-.reading-intro--student .reading-pet-wrap > .reading-pet { flex:1; }
-.reading-intro--student .reading-pet-open { flex:1 1 200px; min-width:0; gap:10px; }
-.reading-intro--student .reading-pet-open > .pet-figure { width:72px !important; height:72px !important; }
-.reading-intro--student .reading-pet-text { min-width:0; gap:4px; }
-.reading-intro--student .reading-pet-text strong { font-size:14px; }
-.reading-intro--student .reading-pet-care { flex-wrap:wrap; }
-.reading-intro--student .reading-pet-care b { white-space:normal; }
+.reading-intro--profile .reading-pet-wrap,
+.reading-intro--profile > .reading-intro-side > .reading-pet { flex:1.4 1 280px; min-width:0; max-width:none; }
+.reading-intro--profile .reading-pet-wrap { display:flex; flex-direction:column; }
+.reading-intro--profile .reading-pet { min-width:0; min-height:160px; flex-wrap:wrap; gap:10px; padding:12px; border-radius:14px; }
+.reading-intro--profile .pet-say { position:relative; left:auto; bottom:auto; flex:0 0 100%; max-width:100%; box-shadow:none; }
+.reading-intro--profile .reading-pet-wrap > .reading-pet { flex:1; }
+.reading-intro--profile .reading-pet-open { flex:1 1 200px; min-width:0; gap:10px; }
+.reading-intro--profile .reading-pet-open > .pet-figure,
+.reading-intro--profile .reading-pet > .pet-figure { width:72px !important; height:72px !important; }
+.reading-intro--profile .reading-pet-text { flex:1; min-width:0; gap:4px; }
+.reading-intro--profile .reading-pet-text strong { font-size:14px; }
+.reading-intro--profile .reading-pet-care { flex-wrap:wrap; }
+.reading-intro--profile .reading-pet-care b { white-space:normal; }
 @media (max-width:700px) {
-  .reading-intro--student > .reading-intro-main,
-  .reading-intro--student > .reading-intro-side { flex-basis:100%; }
-  .reading-intro--student .reading-featured { flex-basis:130px; min-height:140px; padding:10px; }
-  .reading-intro--student .reading-character-summary { flex-basis:180px; min-height:140px; padding:10px; gap:10px; }
+  .reading-intro--profile > .reading-intro-main,
+  .reading-intro--profile > .reading-intro-side { flex-basis:100%; }
+  .reading-intro--profile .reading-featured { flex-basis:130px; min-height:140px; padding:10px; }
+  .reading-intro--profile .reading-character-summary { flex-basis:180px; min-height:140px; padding:10px; gap:10px; }
   .reading-character-summary > img,
   .reading-character-placeholder { width:64px; height:64px; }
-  .reading-intro--student .reading-pet { min-height:140px; }
-  .reading-intro--student .reading-pet-open > .pet-figure { width:64px !important; height:64px !important; }
+  .reading-intro--profile .reading-pet { min-height:140px; }
+  .reading-intro--profile .reading-pet-open > .pet-figure,
+  .reading-intro--profile .reading-pet > .pet-figure { width:64px !important; height:64px !important; }
 }
 @media (max-width:600px) {
-  .reading-intro--teacher .reading-summary--compact { flex-basis:100%; grid-template-columns:repeat(2,minmax(0,1fr)); }
   .reading-summary--compact > div { padding:12px; border-left:0; border-top:1px solid #d9e3d8; }
   .reading-summary--compact > div:nth-child(even) { border-left:1px solid #d9e3d8; }
 }

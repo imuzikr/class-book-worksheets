@@ -8,7 +8,7 @@ import ReadingCharacterInfoModal from "./ReadingCharacterInfoModal";
 const number = (value) => value.toLocaleString("ko-KR");
 const nonnegative = (value) => Number.isFinite(value) && value >= 0;
 
-export default function ReadingCharacterSummary({ uid, summary = null, active = true }) {
+export default function ReadingCharacterSummary({ uid, summary = null, active = true, readOnly = false }) {
   const [profile, setProfile] = useState({ ownerUid: null, loaded: false, character: null });
   const [openUid, setOpenUid] = useState(null);
 
@@ -36,13 +36,14 @@ export default function ReadingCharacterSummary({ uid, summary = null, active = 
   const xpLabel = hasXp ? summary?.maxLevel ? `${number(xp)} EXP · 최고 레벨` : hasNextXp ? `${number(xp)} / ${number(summary.nextXp)} EXP` : `${number(xp)} EXP` : "";
 
   const open = active && loaded && openUid === uid;
+  const ownerLabel = readOnly ? "학생의 캐릭터" : "나의 캐릭터";
   return <>
-    <button type="button" className="reading-character-summary" aria-label={loaded ? `${characterName(character)}${hasGrowth ? ` · 독서 레벨 ${summary.level}${xpLabel ? ` · ${xpLabel}` : ""}` : ""} · 나의 캐릭터 자세히 보기` : "나의 캐릭터 불러오는 중"}
+    <button type="button" className="reading-character-summary" aria-label={loaded ? `${characterName(character)}${hasGrowth ? ` · 독서 레벨 ${summary.level}${xpLabel ? ` · ${xpLabel}` : ""}` : ""} · ${ownerLabel} 자세히 보기` : `${ownerLabel} 불러오는 중`}
       aria-haspopup="dialog" aria-expanded={open} disabled={!loaded || !active} onClick={() => { if (loaded && active) setOpenUid(uid); }}>
       {loaded ? <img src={characterImage(character)} width={60} height={60} alt="" draggable={false} />
         : <span className="reading-character-placeholder" aria-hidden="true" />}
       <span className="reading-character-info">
-        <small>나의 캐릭터</small>
+        <small>{ownerLabel}</small>
         <strong>{loaded ? characterName(character) : "불러오는 중…"}</strong>
         {loaded && profile.character === null && <em>기본 캐릭터</em>}
         <span className="reading-character-growth">
@@ -56,6 +57,6 @@ export default function ReadingCharacterSummary({ uid, summary = null, active = 
         </span>
       </span>
     </button>
-    {open && <ReadingCharacterInfoModal key={uid} uid={uid} character={profile.character} isDefault={profile.character === null} summary={summary} onClose={() => setOpenUid(null)} />}
+    {open && <ReadingCharacterInfoModal key={uid} uid={uid} character={profile.character} isDefault={profile.character === null} summary={summary} readOnly={readOnly} onClose={() => setOpenUid(null)} />}
   </>;
 }
