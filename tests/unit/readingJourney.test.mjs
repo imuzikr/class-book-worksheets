@@ -210,7 +210,7 @@ test("순위 — 한 번 받은 네 기간의 경험치로 기간 단추마다 �
   assert.deepEqual(rankingsForPeriod(undefined, "weekly"), []);
 });
 
-test("순위에 서는 학생 — 교사 · 관리자와 사용 중지된 학생(전학 등)은 빼고, 역할이 비어 있으면 학생", () => {
+test("순위에 서는 학생 — 교사 · 관리자와 사용 중지된 학생은 빼고, 역할이 비어 있으면 학생", () => {
   assert.equal(isRankedStudent({ role: "student" }), true);
   assert.equal(isRankedStudent({}), true); // 옛 계정 — 역할 칸이 없으면 학생
   assert.equal(isRankedStudent({ role: "student", suspended: false }), true);

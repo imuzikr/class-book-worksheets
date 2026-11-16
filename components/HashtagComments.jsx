@@ -52,7 +52,7 @@ export default function HashtagComments({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [confirmDel, setConfirmDel] = useState(null);
-  // 글 주인이 사용 중지(전학 등)된 학생이면 학생은 댓글을 달 수 없습니다(읽기만 — 규칙도 막음)
+  // 글 주인이 사용 중지된 학생이면 학생은 댓글을 달 수 없습니다(읽기만 — 규칙도 막음)
   const [ownerSuspended, setOwnerSuspended] = useState(false);
   useEffect(() => {
     let alive = true;

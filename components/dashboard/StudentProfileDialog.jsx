@@ -6,9 +6,12 @@
 // users/{uid} 한 건을 읽어 이름 · 학번 · 이메일 · 닉네임 · 소속 반을 보여 주고,
 // '편집'으로 이름 · 학번 · 이메일을 고칩니다(updateStudentProfile — 프로필 한 장만).
 // 아래 한 줄의 단추 넷 — 편집 · 이 반에서 빼기 · 사용 중지 · 탈퇴(가벼운 일에서 무거운 일 차례).
-//   · 이 반에서 빼기 — 지금 보는 반 하나에서만(lib/data/removeFromClass.js). 기록은 남고
-//     참여 코드로 다시 들어오면 이어집니다. 다른 선생님 반에도 있는 학생도 뺄 수 있습니다.
-//   · 사용 중지 · 탈퇴 — 계정 전체(lib/data/suspend.js · withdraw.js). 그 학생의 반이 모두
+//   · 이 반에서 빼기 — 전학 · 반 옮김처럼 이 반을 떠날 때. 지금 보는 반 하나에서만(lib/data/removeFromClass.js) —
+//     명단 · 자리표 · 모둠에서 빠지고 기록은 남으며, 참여 코드로 다시 들어오면 이어집니다. 다른 선생님 반에도 있는 학생도 뺄 수 있습니다.
+//   · 사용 중지 — 반에는 그대로 두고 잠시 쓰지 못하게 할 때(명단 · 기록은 그대로, 계정만 휴면 · 다시 사용 가능).
+//     한때 이 창의 안내가 '사용 중지 — 전학 등으로 더 쓰지 않을 때'라 두 단추의 뜻이 거꾸로 읽혔습니다(선생님 지적 · 2026년 11월 —
+//     사용 중지는 명단 · 자리표에 학생을 그대로 두므로 전학에는 '이 반에서 빼기'가 맞음).
+//   · 사용 중지 · 탈퇴는 계정 전체(lib/data/suspend.js · withdraw.js). 그 학생의 반이 모두
 //     내 반일 때만 되고, 다른 선생님 반에도 있으면 막고 '이 반에서 빼기'를 안내합니다.
 // 탈퇴는 학생 이름을 그대로 적어야 실행되고, 되돌릴 수 없습니다.
 // =============================================================
@@ -63,7 +66,7 @@ export default function StudentProfileDialog({ student, myClasses, onClose, onWi
   const [saveError, setSaveError] = useState("");
   const [saved, setSaved] = useState(""); // 저장한 뒤 한 줄 안내
   const [syncing, setSyncing] = useState(false);
-  // 사용 중지(전학 등) — 두 번 눌러 확정(첫 번째 누름은 무엇이 일어나는지 펼침)
+  // 사용 중지(반에 두고 잠시 쉬게 — 전학처럼 반을 떠나면 이 반에서 빼기) — 두 번 눌러 확정(첫 번째 누름은 무엇이 일어나는지 펼침)
   const [suspendAsk, setSuspendAsk] = useState(false);
   const [suspending, setSuspending] = useState(false);
   const [suspendMsg, setSuspendMsg] = useState("");
@@ -241,10 +244,10 @@ export default function StudentProfileDialog({ student, myClasses, onClose, onWi
         탈퇴를 누르면 그 자리가 확인 칸으로 바뀝니다. */}
     {profile && !draft && !suspendAsk && !confirming && !removeAsk && <section className="bb-profile-tools" aria-label="학생 관리">
       <ul className="bb-profile-tool-notes">
-        <li>이 반에서 빼기 — {here?.name || "이 반"} 명단 · 자리표 · 모둠에서만 뺍니다. 글 · 과일 · 출석 기록은 남고, 참여 코드로 다시 들어오면 이어집니다.</li>
+        <li>이 반에서 빼기 — 전학 · 반 옮김처럼 이 반을 떠날 때. {here?.name || "이 반"} 명단 · 자리표 · 모둠에서 빠지고, 글 · 과일 · 출석 기록은 남습니다. 참여 코드로 다시 들어오면 이어집니다.</li>
         <li>{profile.suspended
           ? "사용 중지 상태예요. 다시 사용하게 하면 빠졌던 모둠 자리로 돌아갑니다."
-          : "사용 중지 — 전학 등으로 더 쓰지 않을 때. 글 · 그림 · 기록은 그대로 두고 계정만 쉬게 합니다."}</li>
+          : "사용 중지 — 반에는 그대로 두고 잠시 쓰지 못하게 할 때. 명단 · 글 · 그림 · 기록은 그대로 두고 계정만 쉬게 하며, '다시 사용하게 하기'로 되돌립니다."}</li>
         <li>탈퇴 — 내 반에 남은 이 학생의 글 · 그림 파일 · 기록 · 과일 · 출석과 프로필이 모두 지워지고 되돌릴 수 없습니다.</li>
       </ul>
       {check && !check.ok && <p className="bb-profile-block">{blockText(check.reason, check.classNames)}</p>}
@@ -280,10 +283,11 @@ export default function StudentProfileDialog({ student, myClasses, onClose, onWi
     </section>}
 
     {profile && !draft && suspendAsk && !profile.suspended && <section className="bb-profile-suspend" aria-label="사용 중지">
-      <p>전학 등으로 더 쓰지 않을 때 — 글 · 그림 · 기록은 그대로 두고 계정만 쉬게 합니다.</p>
+      <p>반에는 그대로 두고 잠시 쓰지 못하게 할 때 — 명단 · 글 · 그림 · 기록은 그대로 두고 계정만 쉬게 합니다. 전학처럼 이 반을 떠나는 학생이면 '이 반에서 빼기'를 쓰세요.</p>
       <ul className="bb-profile-suspend-list">
         <li>이 학생은 로그인해도 안내 화면만 보고, 아무것도 읽거나 입력할 수 없어요.</li>
         <li>반 친구들은 이 학생이 남긴 글과 그림을 그대로 읽어요. 이 학생의 글에 댓글은 달 수 없어요.</li>
+        <li>이 반 명단 · 자리표 · 과일 · 출석 기록은 그대로 남아요.</li>
         <li>기본 모둠과 독서 활동 모둠에서 빠집니다(다시 사용하면 돌아와요).</li>
       </ul>
       {suspendMsg && <p className="bb-profile-note" role="status">{suspendMsg}</p>}
@@ -296,7 +300,7 @@ export default function StudentProfileDialog({ student, myClasses, onClose, onWi
     </section>}
 
     {profile && !draft && confirming && <section className="bb-profile-danger" aria-label="탈퇴">
-        <p>탈퇴하면 내 반에 남은 이 학생의 글 · 그림 파일 · 기록 · 과일 · 출석과 프로필이 모두 지워지고 되돌릴 수 없습니다. 남긴 글을 남겨 두려면 '사용 중지'를 쓰세요.</p>
+        <p>탈퇴하면 내 반에 남은 이 학생의 글 · 그림 파일 · 기록 · 과일 · 출석과 프로필이 모두 지워지고 되돌릴 수 없습니다. 남긴 글을 남겨 두려면 '이 반에서 빼기'나 '사용 중지'를 쓰세요.</p>
         <label htmlFor="bb-withdraw-name">확인하려면 학생 이름 <b>{name}</b>을(를) 그대로 적어 주세요.</label>
         <input
           id="bb-withdraw-name"
