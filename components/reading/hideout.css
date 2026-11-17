@@ -34,12 +34,16 @@
 .hideout-prop.is-flipped { transform: translate(-50%, -100%) scaleX(-1); }
 /* 고른 소품의 테 — 도트 그림에 맞춰 번지지 않는 흰 테(네 방향) + 살구빛. 작은 화면에서도 1.5px보다 가늘어지지 않게 */
 .hideout-scene { --hideout-ring: max(1.5px, calc(var(--hideout-unit, 1px) * 3)); }
-.hideout-scene.is-arranging .hideout-prop.is-selected { filter: drop-shadow(var(--hideout-ring) 0 0 #fffdf4) drop-shadow(calc(var(--hideout-ring) * -1) 0 0 #fffdf4)
+.hideout-scene.is-arranging .hideout-prop.is-selected, .hideout-scene.is-arranging .hideout-return-portal-art.is-selected {
+  filter: drop-shadow(var(--hideout-ring) 0 0 #fffdf4) drop-shadow(calc(var(--hideout-ring) * -1) 0 0 #fffdf4)
   drop-shadow(0 var(--hideout-ring) 0 #fffdf4) drop-shadow(0 calc(var(--hideout-ring) * -1) 0 #fffdf4) drop-shadow(0 0 calc(var(--hideout-ring) * 1.5) #d9733f); }
-.hideout-scene.is-arranging .hideout-prop.is-dragging { opacity: .82; }
+.hideout-scene.is-arranging .hideout-prop.is-dragging, .hideout-scene.is-arranging .hideout-return-portal-art.is-dragging { opacity: .82; }
 /* 누르는 칸(꾸미는 동안만 — 보이는 상자) — 여기서만 touch-action을 꺼 폰에서도 끌고, 빈 바닥을 쓸면 화면이 구릅니다 */
 .hideout-hit { position: absolute; cursor: grab; touch-action: none; }
 .hideout-scene.is-dragging, .hideout-scene.is-dragging .hideout-hit { cursor: grabbing; }
+/* 포털을 누르는 칸(꾸미는 동안) — 보이는 포털(타원)만, 걷기 단추(z 21 · 꾸미는 동안은 꺼짐) 위에. 걷기 단추는 누름을 받지 않습니다. */
+.hideout-hit.hideout-hit--portal { z-index: 22; border-radius: 50%; }
+.hideout-scene.is-arranging .hideout-return-portal { pointer-events: none; }
 /* 문패 글자 — 자리 · 폭 · 크기는 hideoutPlaqueLabel이 문패의 크림색 칸에 맞춰 정합니다(글자 크기를 화면 폭 vw로 정하던 때는
    그림이 작게 보이는 화면에서 '선생님의 아지트'가 문패 밖으로 넘쳤음). 어림이 빗나가도 칸을 넘지 않게 줄마다 말줄임.
    line-height는 lib/readingHideout.js의 HIDEOUT_PLAQUE_FONT.lineHeight와 같아야 합니다(글자 크기를 그 값으로 셈). */
@@ -62,13 +66,18 @@
 .hideout-pet > img { width: 100%; height: 100%; display: block; object-fit: contain; image-rendering: pixelated; }
 .hideout-pet .pet-figure { width: 100% !important; height: 100% !important; }
 .hideout-pet .pet-figure > img, .hideout-pet .pet-egg { width: 100%; height: 100%; object-fit: contain; }
-/* 교실로 돌아가는 포털 — 그림(상자)과 누르는 단추(보이는 포털 크기의 타원)를 따로 둡니다(lib/readingHideoutMap.js의 HIDEOUT_RETURN_PORTAL) */
+/* 교실로 돌아가는 포털 — 그림(상자)과 누르는 단추(보이는 포털 크기의 타원)를 따로 둡니다(lib/readingHideoutMap.js의 HIDEOUT_RETURN_PORTAL ·
+   자리는 학생이 옮긴 배치를 따름 — hideoutReturnPortal) */
 .hideout-return-portal-art { position: absolute; z-index: 20; transform: translate(-50%, -50%); pointer-events: none; }
 .hideout-return-portal-art > img { position: absolute; display: block; inset: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
 /* 도는 빛 — 상자 폭의 절반(도트 포털의 안쪽 청록 소용돌이 안). 예전 그림처럼 상자 폭을 다 쓰면 금테를 덮습니다 */
 .hideout-return-portal-art > .hideout-portal-swirl { inset: auto; left: 25%; top: 50%; width: 50%; height: auto; aspect-ratio: 1; transform: translateY(-50%) scaleY(.5) rotate(0deg); opacity: .92; animation: hideout-portal-spin 7s linear infinite; }
 .hideout-return-portal { position: absolute; z-index: 21; transform: translate(-50%, -50%); min-height: 0 !important; border: 0 !important; border-radius: 50% !important; background: transparent !important; padding: 0 !important; overflow: visible; }
 .hideout-return-portal > span { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); padding: 2px 8px; border-radius: 20px; background: #fffdf4e8; font-size: clamp(8px, .9vw, 12px); white-space: nowrap; pointer-events: none; }
+/* 옮긴 포털의 이름표가 장면 밖으로 잘리지 않게(ReadingHideout의 portalLabelY · X) — 바닥 아래쪽이면 포털 위에, 양옆 끝이면 그쪽 끝에 맞춤 */
+.hideout-return-portal[data-label-y="top"] > span { top: auto; bottom: 100%; }
+.hideout-return-portal[data-label-x="start"] > span { left: 0; transform: none; }
+.hideout-return-portal[data-label-x="end"] > span { left: auto; right: 0; transform: none; }
 .hideout-walk-marker { position: absolute; z-index: 2; width: 12px; height: 6px; border: 1.5px solid #57795c; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; }
 .hideout-walk-help { font-size: 12px; line-height: 1.7; color: #75816e; margin: 9px 0 18px; }
 .hideout-editor { min-width: 0; max-width: 720px; max-height: calc(100dvh - 210px); overflow-y: auto; scrollbar-gutter: stable; border: 1px solid var(--hideout-line); border-radius: 14px; padding: 16px; background: #faf9f1; }

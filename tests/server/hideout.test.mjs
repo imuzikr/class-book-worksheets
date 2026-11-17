@@ -302,3 +302,29 @@ test("배치(아지트 2단계) — 자리 · 뒤집기 · 돌리기를 저장�
   await roomRef.set({ ...room({}, 5), arrange: { desk: { x: 1415, y: 820 }, plant: { x: 600, y: 640 } } });
   assert.deepEqual((await getReadingHideout(who("student"), classId)).room.arrange, { plant: { x: 600, y: 640 } });
 });
+
+test("포털 옮기기 — 포털 자리를 저장 · 다시 읽고(선생님 보기에도), 놓을 수 없는 자리 · 포털의 뒤집기는 거절하며, 옛 포털 자리에는 가구를 둘 수 있음", async () => {
+  const arrange = { plant: { x: 1416, y: 864 }, portal: { x: 400, y: 920 } };
+  const saved = await saveReadingHideout(who("student"), payload(room({}, 0, arrange)));
+  assert.equal(saved.room.revision, 1);
+  assert.deepEqual(saved.room.arrange, arrange);
+  assert.deepEqual((await roomRef.get()).data().arrange, arrange);
+  assert.deepEqual((await getReadingHideout(who("student"), classId)).room.arrange, arrange);
+  assert.deepEqual((await getReadingHideout(who("teacher"), classId, ids.student)).room.arrange, arrange);
+  // 포털만 옮겨도 저장 · 처음 자리로 돌리면 칸이 없어짐
+  const back = await saveReadingHideout(who("student"), payload(room({}, 1, { portal: { x: 1415, y: 820 } })));
+  assert.equal(back.room.revision, 2);
+  assert.deepEqual(back.room.arrange, {});
+  // 방 가운데(캐릭터가 들어오는 자리) · 가구 위 · 벽 · 뒤집기 · 정수가 아닌 자리 → 400(저장된 방은 그대로)
+  await assert.rejects(() => saveReadingHideout(who("student"), payload(room({}, 2, { portal: { x: 760, y: 850 } }))),
+    (e) => e.status === 400 && e.code === "reading/hideout-arrange" && /캐릭터가 들어오는 자리/.test(e.message));
+  await assert.rejects(() => saveReadingHideout(who("student"), payload(room({}, 2, { portal: { x: 216, y: 760 } }))),
+    (e) => e.status === 400 && e.code === "reading/hideout-arrange" && /겹쳐요/.test(e.message));
+  for (const portal of [{ x: 760, y: 400 }, { x: 400, y: 920, flip: true }, { x: 400.5, y: 920 }]) {
+    await assert.rejects(() => saveReadingHideout(who("student"), payload(room({}, 2, { portal }))), (e) => e.status === 400, JSON.stringify(portal));
+  }
+  assert.equal((await roomRef.get()).data().revision, 2);
+  // 저장된 포털이 (그 뒤 고른 소품 등으로) 설 수 없게 되면 읽을 때 처음 자리로
+  await roomRef.set({ ...room({}, 5), arrange: { portal: { x: 216, y: 760 }, plant: { x: 600, y: 640 } } });
+  assert.deepEqual((await getReadingHideout(who("student"), classId)).room.arrange, { plant: { x: 600, y: 640 } });
+});

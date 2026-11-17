@@ -5,14 +5,17 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 import {
-  HIDEOUT_DEFAULT_ANCHORS, HIDEOUT_DEFAULT_LAYOUT, HIDEOUT_ITEMS, HIDEOUT_SLOTS, HIDEOUT_THEMES, HIDEOUT_TURN_TABLETOP, HIDEOUT_UNITS,
-  hideoutArrangeShape, hideoutArtBox, hideoutPlaqueLabel, hideoutSceneProps, hideoutUnitFlips, normalizeHideoutRoom, sameHideoutArrange,
+  HIDEOUT_ARRANGE_KEYS, HIDEOUT_DEFAULT_ANCHORS, HIDEOUT_DEFAULT_LAYOUT, HIDEOUT_ITEMS, HIDEOUT_PORTAL_HOME, HIDEOUT_SLOTS, HIDEOUT_THEMES,
+  HIDEOUT_TURN_TABLETOP, HIDEOUT_UNITS,
+  hideoutArrangeShape, hideoutArtBox, hideoutPlaqueLabel, hideoutPortalPlacement, hideoutSceneProps, hideoutUnitFlips, normalizeHideoutRoom, sameHideoutArrange,
 } from "../../lib/readingHideout.js";
 import { HIDEOUT_ART_INSETS } from "../../lib/readingHideoutBoxes.js";
 import { HIDEOUT_TURN_ART, HIDEOUT_TURN_SLOTS, hideoutTurnArt } from "../../lib/readingHideoutTurn.js";
-import { createHideoutWalkMap } from "../../lib/readingHideoutMap.js";
 import {
-  HIDEOUT_GRID, hideoutArrangeProblem, hideoutFindSpot, hideoutNudge, hideoutSnap, hideoutUnitPlacement, hideoutWithEntry,
+  HIDEOUT_RETURN_PORTAL, HIDEOUT_SPAWN, createHideoutWalkMap, hideoutAtReturnPortal, hideoutReturnPortal,
+} from "../../lib/readingHideoutMap.js";
+import {
+  HIDEOUT_GRID, hideoutArrangeProblem, hideoutFindSpot, hideoutNudge, hideoutPortalReachable, hideoutSnap, hideoutUnitPlacement, hideoutWithEntry,
   settleHideoutArrange, validateHideoutArrange,
 } from "../../lib/readingHideoutArrange.js";
 import { measureInsets } from "../../scripts/measure-hideout-boxes.mjs";
@@ -170,7 +173,7 @@ test("판정 — 바닥 · 벽 밖, 창문 가림, 가구 겹침, 벽 장식 크
   assert.match(issue.message, /겹쳐요/);
 });
 
-test("모든 테마 — 기본 자리는 '옮긴 것'으로 봐도(뒤집어도) 문제가 없다", () => {
+test("모든 테마 — 기본 자리는 '옮긴 것'으로 봐도(뒤집어도) 문제가 없다 · 포털을 한 칸 옮겨도", () => {
   for (const [name, layout] of Object.entries(LAYOUTS)) {
     const arrange = {};
     for (const unit of HIDEOUT_UNITS) {
@@ -180,7 +183,110 @@ test("모든 테마 — 기본 자리는 '옮긴 것'으로 봐도(뒤집어도)
       arrange[unit] = hideoutUnitFlips(unit) ? { ...home, flip: true } : { x: home.x + HIDEOUT_GRID, y: home.y };
     }
     assert.equal(hideoutArrangeProblem(layout, arrange), null, name);
+    // 포털 — 처음 자리에서 한 칸씩 옮겨도(옮기지 않은 가구 · 옮긴 가구 모두와) 문제가 없음
+    for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+      const portal = { x: HIDEOUT_PORTAL_HOME.x + dx * HIDEOUT_GRID, y: HIDEOUT_PORTAL_HOME.y + dy * HIDEOUT_GRID };
+      assert.equal(hideoutArrangeProblem(layout, { portal }), null, `${name} · 포털 ${JSON.stringify(portal)}`);
+      assert.equal(hideoutArrangeProblem(layout, { ...arrange, portal }), null, `${name} · 가구를 옮긴 방의 포털 ${JSON.stringify(portal)}`);
+    }
   }
+});
+
+test("포털 옮기기 — 배치의 'portal' 칸(자리만): 모양 다듬기 · 같은 배치 · 옮긴 포털의 자리 · 들어서는 타원", () => {
+  const layout = { ...HIDEOUT_DEFAULT_LAYOUT };
+  assert.deepEqual(HIDEOUT_ARRANGE_KEYS.at(-1), "portal");
+  assert.deepEqual(HIDEOUT_DEFAULT_ANCHORS.portal, HIDEOUT_PORTAL_HOME);
+  assert.deepEqual([HIDEOUT_RETURN_PORTAL.x, HIDEOUT_RETURN_PORTAL.y], [HIDEOUT_PORTAL_HOME.x, HIDEOUT_PORTAL_HOME.y], "처음 자리의 포털");
+  // 모양 — 자리만 남기고 뒤집기 · 돌리기 · 낯선 칸은 버림, 처음 자리와 같거나 정수가 아니거나 장면 밖이면 칸이 없음
+  assert.deepEqual(hideoutArrangeShape({ portal: { x: 400, y: 920, flip: true, turn: true, extra: 1 } }, layout), { portal: { x: 400, y: 920 } });
+  for (const portal of [{ ...HIDEOUT_PORTAL_HOME }, { x: 400.5, y: 920 }, { x: 1600, y: 920 }, { x: -8, y: 920 }, "x", null]) {
+    assert.deepEqual(hideoutArrangeShape({ portal }, layout), {}, JSON.stringify(portal));
+  }
+  // 소품 칸은 앞, 포털 칸은 맨 뒤(관대한 맞춤이 길이 막힌 까닭을 모를 때 뒤에서부터 되돌림)
+  assert.deepEqual(Object.keys(hideoutArrangeShape({ portal: { x: 400, y: 920 }, desk: { x: 760, y: 1000 } }, layout)), ["desk", "portal"]);
+  assert.equal(sameHideoutArrange({ portal: { x: 400, y: 920 } }, {}), false);
+  assert.equal(sameHideoutArrange({ portal: { x: 400, y: 920 } }, { portal: { x: 400, y: 920 } }), true);
+  assert.deepEqual(normalizeHideoutRoom({ version: 2, layout, arrange: { portal: { x: 400, y: 920 } }, revision: 0 }, { level: 1 }).arrange, { portal: { x: 400, y: 920 } });
+  // 자리 · 칸 넣기
+  assert.deepEqual(hideoutPortalPlacement({}), HIDEOUT_PORTAL_HOME);
+  assert.deepEqual(hideoutPortalPlacement({ portal: { x: 400, y: 920 } }), { x: 400, y: 920 });
+  assert.deepEqual(hideoutUnitPlacement({}, "portal"), { ...HIDEOUT_PORTAL_HOME, flip: false, turn: false });
+  assert.deepEqual(hideoutWithEntry({}, "portal", { x: 400, y: 920, flip: true, turn: true }), { portal: { x: 400, y: 920 } }, "포털은 자리만");
+  assert.deepEqual(hideoutWithEntry({ portal: { x: 400, y: 920 } }, "portal", { ...HIDEOUT_PORTAL_HOME }), {}, "처음 자리면 칸을 지움");
+  // 옮긴 포털 — 그림 · 범위 · 타원은 그대로, 자리만
+  assert.equal(hideoutReturnPortal({}), HIDEOUT_RETURN_PORTAL);
+  assert.equal(hideoutReturnPortal(null), HIDEOUT_RETURN_PORTAL);
+  const gate = hideoutReturnPortal({ portal: { x: 400, y: 920 } });
+  assert.deepEqual({ ...gate, x: HIDEOUT_RETURN_PORTAL.x, y: HIDEOUT_RETURN_PORTAL.y }, { ...HIDEOUT_RETURN_PORTAL });
+  assert.deepEqual([gate.x, gate.y], [400, 920]);
+  assert.equal(hideoutAtReturnPortal({ x: 400, y: 920 }, 0, gate), true);
+  assert.equal(hideoutAtReturnPortal({ x: 400, y: 920 }), false, "처음 자리의 포털이 아님");
+  assert.equal(hideoutAtReturnPortal(HIDEOUT_PORTAL_HOME, 0, gate), false);
+  assert.equal(hideoutAtReturnPortal({ x: 400, y: 920 }, 0, { x: NaN, y: 920, rx: 75, ry: 57 }), false);
+});
+
+test("포털 옮기기 — 판정: 바닥 밖 · 가구 위 · 캐릭터가 들어오는 자리 · 길 / 가구는 옛 포털 자리를 쓰고 옮긴 포털은 가리지 않음", () => {
+  const issue = (arrange) => hideoutArrangeProblem(PROBE, arrange);
+  const code = (arrange) => issue(arrange)?.code ?? null;
+  assert.equal(code({ portal: { x: 400, y: 920 } }), null, "왼쪽 아래 빈 바닥");
+  assert.equal(code({ portal: { x: 1000, y: 720 } }), null, "뒤쪽 가운데 빈 바닥");
+  assert.equal(code({ portal: { x: 760, y: 400 } }), "floor", "벽에");
+  assert.equal(code({ portal: { x: 760, y: 1000 } }), "floor", "바닥 아래 끝 너머");
+  assert.equal(code({ portal: { x: 30, y: 900 } }), "floor", "왼쪽 벽에 걸침");
+  assert.equal(code({ portal: { x: 760, y: 850 } }), "spawn", "방 가운데(캐릭터가 들어오는 자리)");
+  assert.equal(code({ portal: { x: HIDEOUT_SPAWN.x + 140, y: HIDEOUT_SPAWN.y } }), null, "들어오는 자리 옆은 됨");
+  assert.equal(code({ portal: { x: 216, y: 760 } }), "overlap", "옮기지 않은 책상 위");
+  assert.deepEqual([issue({ portal: { x: 216, y: 760 } }).unit, issue({ portal: { x: 760, y: 850 } }).unit], ["portal", "portal"]);
+  assert.match(issue({ portal: { x: 760, y: 850 } }).message, /캐릭터가 들어오는 자리/);
+  // 포털을 옮기면 옛 자리는 가구가 쓰고, 옮긴 자리는 가구가 가리지 못함
+  assert.equal(code({ plant: { x: 1416, y: 864 } }), "portal", "처음 자리의 포털을 가림");
+  assert.equal(code({ portal: { x: 400, y: 920 }, plant: { x: 1416, y: 864 } }), null, "옛 포털 자리에 화분");
+  assert.equal(code({ portal: { x: 1000, y: 720 }, plant: { x: 1000, y: 780 } }), "portal", "화분으로 옮긴 포털을 가림");
+  assert.equal(issue({ portal: { x: 1000, y: 720 }, plant: { x: 1000, y: 780 } }).unit, "plant");
+  // 길 — 침대 · 책상으로 막은 오른쪽 구석에 포털을 두면 막히고, 막히지 않은 곳으로 옮기면 같은 가구 배치도 됨
+  const wall = { "desk-calendar": { x: 1150, y: 800, turn: true }, desk: { x: 1150, y: 930, turn: true } };
+  assert.equal(code(wall), "path");
+  assert.equal(code({ ...wall, portal: { x: 1400, y: 760 } }), "path");
+  assert.equal(code({ ...wall, portal: { x: 400, y: 920 } }), null);
+  assert.equal(hideoutPortalReachable(PROBE, { ...wall, portal: { x: 400, y: 920 } }), true);
+  // 하나만 볼 때(끌어 놓는 포털) — 포털의 자리와 길만
+  assert.equal(hideoutArrangeProblem(PROBE, { portal: { x: 216, y: 760 } }, { only: "portal" })?.code, "overlap");
+  assert.equal(hideoutArrangeProblem(PROBE, { portal: { x: 400, y: 920 } }, { only: "portal" }), null);
+});
+
+test("포털 옮기기 — 빈자리 찾기 · 방향키 · 엄격한 확인(저장) · 관대한 맞춤(읽을 때)", () => {
+  // 막힌 자리에서 가까운 빈자리 — 그 자리는 문제가 없고 칸에 맞춤
+  for (const from of [{ x: 216, y: 760 }, { x: 760, y: 850 }]) {
+    const spot = hideoutFindSpot(PROBE, {}, "portal", { from, radius: 400 });
+    assert.ok(spot, JSON.stringify(from));
+    assert.equal(hideoutArrangeProblem(PROBE, { portal: spot }), null, JSON.stringify(spot));
+    assert.ok(Math.hypot(spot.x - from.x, spot.y - from.y) < 200, JSON.stringify(spot));
+  }
+  // 방향키 — 한 칸씩, 바닥 끝에서는 더 못 감
+  assert.deepEqual(hideoutNudge(PROBE, {}, "portal", -1, 0), { x: HIDEOUT_PORTAL_HOME.x - HIDEOUT_GRID, y: HIDEOUT_PORTAL_HOME.y });
+  let here = {};
+  for (let i = 0; i < 20; i += 1) {
+    const next = hideoutNudge(PROBE, here, "portal", 1, 0);
+    if (!next) break;
+    here = hideoutWithEntry(here, "portal", next);
+  }
+  assert.equal(hideoutNudge(PROBE, here, "portal", 1, 0), null, "오른쪽 벽 쪽으로는 더 못 감");
+  assert.equal(hideoutArrangeProblem(PROBE, here), null);
+  // 엄격한 확인 — 모양 · 자리 · 문제
+  assert.deepEqual(validateHideoutArrange(PROBE, { portal: { x: 400, y: 920 } }), { portal: { x: 400, y: 920 } });
+  assert.deepEqual(validateHideoutArrange(PROBE, { portal: { ...HIDEOUT_PORTAL_HOME } }), {});
+  for (const portal of [{ x: 400, y: 920, flip: true }, { x: 400, y: 920, turn: false }, { x: 400.5, y: 920 }, { x: -8, y: 920 }, { x: 400 }, "x"]) {
+    assert.throws(() => validateHideoutArrange(PROBE, { portal }), { code: "reading/invalid-hideout" }, JSON.stringify(portal));
+  }
+  assert.throws(() => validateHideoutArrange(PROBE, { portal: { x: 400.5, y: 920 } }), { message: /포털의 자리/ });
+  assert.throws(() => validateHideoutArrange(PROBE, { portal: { x: 760, y: 850 } }), { code: "reading/hideout-arrange", message: /캐릭터가 들어오는 자리/ });
+  assert.throws(() => validateHideoutArrange(PROBE, { portal: { x: 216, y: 760 } }), { code: "reading/hideout-arrange", message: /겹쳐요/ });
+  // 관대한 맞춤 — 못 서는 포털은 처음 자리로(옮긴 가구는 그대로), 처음 자리를 옮긴 가구가 차지했으면 그 가구도 제자리로
+  assert.deepEqual(settleHideoutArrange(PROBE, { portal: { x: 216, y: 760 }, plant: { x: 600, y: 640 } }), { plant: { x: 600, y: 640 } });
+  assert.deepEqual(settleHideoutArrange(PROBE, { portal: { x: 400, y: 920 }, plant: { x: 1416, y: 864 } }), { plant: { x: 1416, y: 864 }, portal: { x: 400, y: 920 } });
+  const crowded = settleHideoutArrange(PROBE, { portal: { x: 216, y: 760 }, plant: { x: 1416, y: 864 } });
+  assert.equal(hideoutArrangeProblem(PROBE, crowded), null);
+  assert.deepEqual(crowded, {});
 });
 
 test("돌린 모습 — 기본 자리에서 겹치면 가까운 빈자리를 찾고, 그 자리는 문제가 없다", () => {

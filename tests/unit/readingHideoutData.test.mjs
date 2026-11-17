@@ -247,9 +247,16 @@ test("체험반 — 배치(아지트 2단계: 자리 · 뒤집기 · 돌리기)�
   // 포털을 가리거나 다른 가구와 겹치는 배치는 그 까닭으로 거절(저장된 방은 그대로)
   await assert.rejects(() => data.saveReadingHideout("class", { ...moved.room, arrange: { plant: { x: 1416, y: 864 } } }), (e) => e.code === "reading/hideout-arrange" && /포털/.test(e.message));
   await assert.rejects(() => data.saveReadingHideout("class", { ...moved.room, arrange: { nope: { x: 1, y: 1 } } }), (e) => e.code === "reading/invalid-hideout");
+  // 포털 옮기기 — 자리를 저장 · 처음 자리로 되돌리기, 방 가운데는 거절
+  const portal = await data.saveReadingHideout("class", { ...moved.room, arrange: { ...moved.room.arrange, portal: { x: 1000, y: 720 } } });
+  assert.equal(portal.room.revision, 3);
+  assert.deepEqual(portal.room.arrange.portal, { x: 1000, y: 720 });
+  await assert.rejects(() => data.saveReadingHideout("class", { ...portal.room, arrange: { portal: { x: 760, y: 850 } } }), (e) => e.code === "reading/hideout-arrange" && /캐릭터가 들어오는 자리/.test(e.message));
+  const home = await data.saveReadingHideout("class", { ...portal.room, arrange: moved.room.arrange });
+  assert.equal(home.room.revision, 4);
   // 배치를 모르는 옛 화면의 요청 — 소품만 바꾸고 옮겨 둔 자리는 그대로
-  const { arrange: _old, ...legacy } = moved.room;
-  const kept = await data.saveReadingHideout("class", { ...legacy, layout: { ...moved.room.layout, rug: "rug-starlight" } });
+  const { arrange: _old, ...legacy } = home.room;
+  const kept = await data.saveReadingHideout("class", { ...legacy, layout: { ...home.room.layout, rug: "rug-starlight" } });
   assert.equal(kept.room.layout.rug, "rug-starlight");
   assert.deepEqual(kept.room.arrange, moved.room.arrange);
 });

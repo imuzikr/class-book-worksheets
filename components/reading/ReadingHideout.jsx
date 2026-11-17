@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
-  HIDEOUT_DEFAULT_ANCHORS, HIDEOUT_DEFAULT_LAYOUT, HIDEOUT_ITEMS, HIDEOUT_OCCUPANTS, HIDEOUT_SCENE, HIDEOUT_SLOTS, HIDEOUT_UNITS,
+  HIDEOUT_DEFAULT_ANCHORS, HIDEOUT_DEFAULT_LAYOUT, HIDEOUT_ITEMS, HIDEOUT_OCCUPANTS, HIDEOUT_PORTAL_UNIT, HIDEOUT_SCENE, HIDEOUT_SLOTS, HIDEOUT_UNITS,
   hideoutArtBox, hideoutPlaqueLabel, hideoutSceneProps, hideoutUnitCategory, hideoutUnitFlips, isHideoutItemUnlocked, normalizeHideoutRoom, sameHideoutArrange,
 } from "@/lib/readingHideout";
 import {
-  HIDEOUT_RETURN_PORTAL, createHideoutWalkMap, hideoutAtReturnPortal,
+  createHideoutWalkMap, hideoutAtReturnPortal, hideoutReturnPortal,
 } from "@/lib/readingHideoutMap";
 import {
   HIDEOUT_GRID, hideoutArrangeProblem, hideoutFindSpot, hideoutNudge, hideoutSnap, hideoutUnitPlacement, hideoutWithEntry, settleHideoutArrange,
@@ -57,8 +57,10 @@ const unlockLevel = (item) => item.unlock?.level || item.unlockStage || item.sam
 // 소품 묶음 — 2026년 11월에 작은 소품 여섯을 바닥 가구로 바꾸며 다시 묶었습니다(자리 이름은 예전 그대로):
 // 1인 독서 소파(pencil-caddy) · 독서 침대(desk-calendar)는 가구, 독서 텐트(pet-water) · 지구본 스탠드(hourglass)는 독서 도구,
 // 스탠드 어항(badge-display)은 펫 소품, 큰 나무 화분(cover-display)은 정원.
+// '가구·러그'의 끝 '포털'(2026년 11월 · 선생님 요청 — 포털의 자리도 바꿈)은 고르는 소품이 아니라 돌아가는 포털입니다: 누르면 테마 대신
+// 포털 카드(제자리로 · 안내)가 섭니다. 방 그림에서 포털을 누른 때도 이 종류가 열립니다. 본인 방에만(선생님의 학생 방 보기에는 포털이 없음).
 const ITEM_GROUPS = [
-  { id: "furniture", label: "가구·러그", slots: ["rug", "cushion", "desk", "pencil-caddy", "shelf", "wall-shelf", "desk-calendar"] },
+  { id: "furniture", label: "가구·러그", slots: ["rug", "cushion", "desk", "pencil-caddy", "shelf", "wall-shelf", "desk-calendar", HIDEOUT_PORTAL_UNIT] },
   { id: "reading", label: "독서 도구", slots: ["bookmark-rack", "bookstand", "bookends", "pet-water", "hourglass"] },
   { id: "pet", label: "펫 소품", slots: ["bed", "pet-toys", "badge-display"] },
   { id: "garden", label: "조명·정원", slots: ["lamp", "mood-light", "plant", "cover-display", "terrarium", "hanging-planter"] },
@@ -182,6 +184,11 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
   const liveArrange = useMemo(() => drag ? hideoutWithEntry(shownRoom.arrange, drag.unit, { ...hideoutUnitPlacement(shownRoom.arrange, drag.unit), x: drag.x, y: drag.y }) : shownRoom.arrange, [drag, shownRoom.arrange]);
   const props = useMemo(() => hideoutSceneProps(shownRoom.layout, liveArrange), [shownRoom.layout, liveArrange]);
   const map = useMemo(() => createHideoutWalkMap(shownRoom.layout, shownRoom.arrange), [shownRoom.layout, shownRoom.arrange]);
+  // 돌아가는 포털(학생이 옮길 수 있음 — 배치의 'portal' 칸) — 그릴 때는 끄는 중인 자리까지(liveArrange), 걷기 · 나가기는 정해진 배치를 따릅니다.
+  const portal = useMemo(() => hideoutReturnPortal(liveArrange), [liveArrange]);
+  const gate = useMemo(() => hideoutReturnPortal(shownRoom.arrange), [shownRoom.arrange]);
+  // 포털이 방에 있는가 — 본인 방에만(선생님이 학생의 방을 볼 때는 나가는 길이 아니라 그리지 않음)
+  const portalShown = !!onExit && !readOnly;
   const dirty = !!room && (!sameLayout(savedRoom.layout, shownRoom.layout) || !sameHideoutArrange(savedRoom.arrange, shownRoom.arrange));
   draftSnapshot.current = room ? (!readOnly && dirty ? { revision: room.revision, layout: { ...shownRoom.layout }, arrange: { ...shownRoom.arrange } } : null) : undefined;
   useEffect(() => () => { if (!readOnly && draftSnapshot.current !== undefined) keepDraft(draftKey, draftSnapshot.current); }, [draftKey, readOnly]);
@@ -199,13 +206,14 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
   const bed = props.find((prop) => prop.category === "bed");
   // ── 아지트 2단계: 꾸미는 동안 소품의 자리 · 방향 바꾸기 ──
   const arranging = !readOnly && editing && !saving && !detail && !exitPending && !resetPending && !petOpen;
-  // 패널에서 고른 종류가 가리키는 소품(벽 선반은 둘 가운데 고른 것) — 책상 위 · 선반 위 소품은 받치는 가구를 가리킴
-  const categoryUnit = category === "wall-shelf" ? ledge : HIDEOUT_UNITS.includes(category) ? category : null;
-  const categoryProp = props.find((prop) => prop.category === category && (category !== "wall-shelf" || prop.unit === ledge));
-  const selectedUnit = categoryProp ? (categoryProp.unit ?? categoryProp.parentUnit) : null;
+  // 패널에서 고른 종류가 가리키는 소품(벽 선반은 둘 가운데 고른 것) — 책상 위 · 선반 위 소품은 받치는 가구를 가리킴. '포털'은 포털.
+  const portalPicked = category === HIDEOUT_PORTAL_UNIT;
+  const categoryUnit = portalPicked ? HIDEOUT_PORTAL_UNIT : category === "wall-shelf" ? ledge : HIDEOUT_UNITS.includes(category) ? category : null;
+  const categoryProp = portalPicked ? null : props.find((prop) => prop.category === category && (category !== "wall-shelf" || prop.unit === ledge));
+  const selectedUnit = portalPicked ? (portalShown ? HIDEOUT_PORTAL_UNIT : null) : categoryProp ? (categoryProp.unit ?? categoryProp.parentUnit) : null;
   const movement = useMovement({
     enabled: !!room && !loading && !readOnly && !editing && !saving && !detail && !exitPending && !resetPending && !petOpen,
-    map, spriteRef, onPortal: () => requestExitRef.current?.(),
+    map, gate, spriteRef, onPortal: () => requestExitRef.current?.(),
   });
   // 들어오자마자 방향키로 걷게 무대에 초점을 둡니다 — 교실의 포털로 들어오면 광장의 무대가 사라져 초점이 본문으로
   // 떨어지고, 그때는 방을 한 번 눌러야 방향키가 들었습니다(선생님 신고). 꾸미기를 마치거나 거둔 뒤에도(꾸미던 단추가
@@ -287,7 +295,7 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
     setDraft(savedRoom.layout); setArrange(savedRoom.arrange); setEditing(false); setError(""); setNotice("저장된 모습으로 돌아왔어요.");
   }
 
-  const unitLabel = (unit) => unit === "ledge-left" ? "작은 벽 선반" : unit === "ledge-right" ? "아래 진열 선반"
+  const unitLabel = (unit) => unit === "ledge-left" ? "작은 벽 선반" : unit === "ledge-right" ? "아래 진열 선반" : unit === HIDEOUT_PORTAL_UNIT ? "포털"
     : HIDEOUT_SLOTS.find((entry) => entry.id === unit)?.label ?? "소품";
   // 한 소품을 patch(자리 · 뒤집기 · 돌리기)대로 놓습니다 — 안 되면 radius 안의 가까운 빈자리, 그래도 없으면 그대로 두고 까닭을 알림.
   // full이면 방 전체를 봄(제자리로 — 그 자리를 옮긴 다른 가구가 차지했을 수 있음).
@@ -403,7 +411,10 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
   </section>;
 
   const actorSize = HIDEOUT_OCCUPANTS.character.width * sceneWidth / HIDEOUT_SCENE.width;
-  const portal = HIDEOUT_RETURN_PORTAL;
+  // 포털 아래 이름표('책 광장으로')가 장면 밖으로 잘리지 않게 — 바닥 아래쪽이면 포털 위에, 양옆 끝이면 그쪽 끝에 맞춰 둡니다.
+  const portalLabelY = portal.y > 900 ? "top" : "bottom";
+  const portalLabelX = portal.x < 200 ? "start" : portal.x > 1440 ? "end" : "center";
+  const portalLit = arranging && selectedUnit === HIDEOUT_PORTAL_UNIT;
   return <section className={`hideout${editing ? " is-editing" : ""}`} aria-label={`${myName}의 아지트`} aria-busy={saving}>
     {!(readOnly && hideHeading) && <header className="hideout-heading">
       <div><p className="hideout-eyebrow">이야기가 머무는 작은 방</p><h2>{readOnly || teacherOwn ? `${myName}의 아지트` : "나의 아지트"}</h2></div>
@@ -431,8 +442,8 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
     <div className="hideout-room">
     <div className={`hideout-scene${arranging ? " is-arranging" : ""}${drag ? " is-dragging" : ""}`} ref={movement.stageRef} style={{ "--hideout-unit": `${sceneWidth / HIDEOUT_SCENE.width}px` }} tabIndex={readOnly ? -1 : 0} role={readOnly ? "group" : "application"}
       aria-label={readOnly ? "학생 아지트 미리보기. 이동하거나 꾸밀 수 없습니다."
-        : editing ? "아지트 꾸미기. 소품을 끌어 옮기거나, 고른 소품을 방향키로 한 칸씩(Shift는 네 칸) 옮깁니다."
-        : `나의 아지트. 누른 곳으로 걸어가고 방향키로도 걷습니다. 오른쪽 포털로 ${returnPlace}에 돌아갑니다.`}
+        : editing ? "아지트 꾸미기. 소품이나 포털을 끌어 옮기거나, 고른 것을 방향키로 한 칸씩(Shift는 네 칸) 옮깁니다."
+        : `나의 아지트. 누른 곳으로 걸어가고 방향키로도 걷습니다. 포털로 ${returnPlace}에 돌아갑니다.`}
       onClick={movement.onClick} onKeyDown={(e) => { if (arranging) { if (e.target === e.currentTarget) arrangeKey(e); } else movement.onKeyDown(e); }} onBlur={movement.stop}
       onPointerDown={arranging ? arrangeDown : movement.onPointerDown} onPointerMove={arranging ? arrangeMove : movement.onPointerMove}
       onPointerUp={arranging ? arrangeUp : movement.onPointerUp} onPointerCancel={arranging ? arrangeCancel : movement.onPointerCancel}>
@@ -465,14 +476,22 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
           width: `${label.width / HIDEOUT_SCENE.width * 100}%`, fontSize: `calc(var(--hideout-unit, 1px) * ${label.fontSize})`,
         }}>{label.lines.map((line) => <span key={line}>{line}</span>)}</span>;
       })}
-      {/* 그림 상자와 누르는 단추(보이는 포털 크기 — portal.hit)를 따로 둡니다: 단추가 그림 상자만 하면 포털 옆의 빈 바닥을 눌러도 포털로 걸어갑니다 */}
-      {onExit && !readOnly && <div className="hideout-return-portal-art" aria-hidden="true" style={{ ...place(portal.x, portal.y, portal.width), aspectRatio: `${portal.width}/${portal.height}` }}>
+      {/* 그림 상자와 누르는 단추(보이는 포털 크기 — portal.hit)를 따로 둡니다: 단추가 그림 상자만 하면 포털 옆의 빈 바닥을 눌러도 포털로 걸어갑니다.
+          자리는 배치를 따릅니다(꾸미는 동안 끌어 옮김 — 아래 누르는 칸). 고른 포털은 소품과 같은 흰 테 + 살구빛. */}
+      {portalShown && <div className={`hideout-return-portal-art${portalLit ? " is-selected" : ""}${drag?.unit === HIDEOUT_PORTAL_UNIT ? " is-dragging" : ""}`} aria-hidden="true"
+        style={{ ...place(portal.x, portal.y, portal.width), aspectRatio: `${portal.width}/${portal.height}` }}>
         <img src={portal.src} alt="" draggable={false} /><img className="hideout-portal-swirl" src={portal.swirl} alt="" draggable={false} />
       </div>}
-      {onExit && !readOnly && <button type="button" className="hideout-return-portal" style={{ ...place(portal.x, portal.y, portal.hit.width), aspectRatio: `${portal.hit.width}/${portal.hit.height}` }}
-        aria-label={`포털로 ${returnPlace} 돌아가기`} title={`포털까지 걸어 ${returnTo} 돌아가기`} onClick={(e) => { e.stopPropagation(); movement.walkTo({ x: portal.x, y: portal.y }); }} disabled={saving || editing}>
+      {portalShown && <button type="button" className="hideout-return-portal" data-label-y={portalLabelY} data-label-x={portalLabelX}
+        style={{ ...place(portal.x, portal.y, portal.hit.width), aspectRatio: `${portal.hit.width}/${portal.hit.height}` }}
+        aria-label={`포털로 ${returnPlace} 돌아가기`} title={`포털까지 걸어 ${returnTo} 돌아가기`} onClick={(e) => { e.stopPropagation(); movement.walkTo({ x: gate.x, y: gate.y }); }} disabled={saving || editing}>
         <span>{returnTo}</span>
       </button>}
+      {/* 꾸미는 동안 포털을 누르는 칸 — 보이는 포털(타원)만 · 걷기 단추(꾸미는 동안은 꺼짐) 위에 둡니다 */}
+      {arranging && portalShown && <span className="hideout-hit hideout-hit--portal" data-unit={HIDEOUT_PORTAL_UNIT} data-category={HIDEOUT_PORTAL_UNIT} aria-hidden="true" style={{
+        left: `${(portal.x - portal.hit.width / 2) / HIDEOUT_SCENE.width * 100}%`, top: `${(portal.y - portal.hit.height / 2) / HIDEOUT_SCENE.height * 100}%`,
+        width: `${portal.hit.width / HIDEOUT_SCENE.width * 100}%`, height: `${portal.hit.height / HIDEOUT_SCENE.height * 100}%`,
+      }} />}
       {movement.marker && <span className="hideout-walk-marker" aria-hidden="true" style={{ left: `${movement.marker.x / HIDEOUT_SCENE.width * 100}%`, top: `${movement.marker.y / HIDEOUT_SCENE.height * 100}%` }} />}
       <div className="hideout-resident" ref={movement.avatarRef} style={{ left: `${movement.position.current.x / HIDEOUT_SCENE.width * 100}%`, top: `${movement.position.current.y / HIDEOUT_SCENE.height * 100}%`, zIndex: 100 + Math.round(movement.position.current.y) }} role="img" aria-label={`${myName}, ${characterName(appearance)}`}>
         <span className="hideout-resident-shadow" style={{ width: actorSize * .35, height: actorSize * .05 }} />
@@ -482,7 +501,7 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
       </div>
       {pet && bed && <RestingPet pet={pet} bed={bed} owner={readOnly ? myName : ""} passive={arranging} onOpen={() => { movement.stop(); setPetOpen(true); }} />}
     </div>
-    <p className="hideout-walk-help">{readOnly ? "학생 본인만 아지트를 꾸밀 수 있어요." : editing ? `방 그림에서 소품을 끌어 옮기거나, 누른 뒤 방향키로 한 칸씩 옮겨요. 다 꾸몄으면 위쪽의 ‘꾸미기 완료’나 ‘꾸미기 취소’를 누르면 다시 걷거나 포털로 ${returnPlace}에 돌아갈 수 있어요.` : `빈 바닥을 누르거나 방향키로 걸어요. ${petGone ? "펫은 먹이를 찾아 떠나 있어요(책 봄에서 다시 불러요). " : pet ? "펫은 창가에서 쉬어요. " : ""}${onExit ? (returnRoom === "plaza" ? "오른쪽 포털이나 위의 ‘광장으로’로 책 광장에 돌아가요." : "오른쪽 포털로 교실에, 위의 ‘광장으로’로 책 광장에 돌아가요.") : ""}`}</p>
+    <p className="hideout-walk-help">{readOnly ? "학생 본인만 아지트를 꾸밀 수 있어요." : editing ? `방 그림에서 소품이나 포털을 끌어 옮기거나, 누른 뒤 방향키로 한 칸씩 옮겨요. 다 꾸몄으면 위쪽의 ‘꾸미기 완료’나 ‘꾸미기 취소’를 누르면 다시 걷거나 포털로 ${returnPlace}에 돌아갈 수 있어요.` : `빈 바닥을 누르거나 방향키로 걸어요. ${petGone ? "펫은 먹이를 찾아 떠나 있어요(책 봄에서 다시 불러요). " : pet ? "펫은 창가에서 쉬어요. " : ""}${onExit ? (returnRoom === "plaza" ? "포털이나 위의 ‘광장으로’로 책 광장에 돌아가요." : "포털로 교실에, 위의 ‘광장으로’로 책 광장에 돌아가요.") : ""}`}</p>
     </div>
 
     <section className="hideout-editor" aria-label="아지트 소품">
@@ -493,13 +512,21 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
           aria-controls={`${categoryId}-types`} disabled={saving} onClick={() => chooseCategory(group.slots[0])}>{group.label}</button>)}
       </div>
       <div className="hideout-item-types" id={`${categoryId}-types`} role="group" aria-label={`${selectedGroup.label} 종류`}>
-        {selectedGroup.slots.map((id) => {
-          const slot = HIDEOUT_SLOTS.find((entry) => entry.id === id);
-          return <button type="button" key={id} data-hideout-category={id} className={category === id ? "is-selected" : ""} title={slot.label}
-            aria-pressed={category === id} aria-controls={`${categoryId}-preview`} disabled={saving} onClick={() => chooseCategory(id)}>{slot.label}</button>;
+        {selectedGroup.slots.filter((id) => id !== HIDEOUT_PORTAL_UNIT || portalShown).map((id) => {
+          const label = id === HIDEOUT_PORTAL_UNIT ? "포털" : HIDEOUT_SLOTS.find((entry) => entry.id === id).label;
+          return <button type="button" key={id} data-hideout-category={id} className={category === id ? "is-selected" : ""} title={label}
+            aria-pressed={category === id} aria-controls={`${categoryId}-preview`} disabled={saving} onClick={() => chooseCategory(id)}>{label}</button>;
         })}
       </div>
       <div className="hideout-item-preview" id={`${categoryId}-preview`} role="region" aria-labelledby={`${categoryId}-title`}>
+      {portalPicked && portalShown ? <>
+        {/* 포털 — 고르는 테마가 없고 자리만 옮깁니다(꾸미는 동안 끌기 · 방향키 · 제자리로) */}
+        <div className="hideout-preview-heading"><h4 id={`${categoryId}-title`}>포털</h4><span>{returnTo} 돌아가는 길 · 자리만 옮겨요</span></div>
+        {editing ? <ArrangeTools category={HIDEOUT_PORTAL_UNIT} unit={HIDEOUT_PORTAL_UNIT} itemId={HIDEOUT_PORTAL_UNIT}
+          placement={hideoutUnitPlacement(shownRoom.arrange, HIDEOUT_PORTAL_UNIT)} moved={Object.hasOwn(shownRoom.arrange, HIDEOUT_PORTAL_UNIT)}
+          ledge={ledge} onLedge={setLedge} label="포털" busy={saving} onFlip={flipUnit} onTurn={turnUnit} onHome={homeUnit} />
+          : <p className="hideout-arrange-hint">위의 ‘아지트 꾸미기’를 누르면 방 그림에서 포털을 끌어 옮길 수 있어요. 포털 자리도 ‘꾸미기 완료’를 누르면 저장돼요.</p>}
+      </> : <>
       <div className="hideout-preview-heading"><h4 id={`${categoryId}-title`}>{selectedSlot.label}</h4><span>네 가지 테마</span>
         {!readOnly && editing && HIDEOUT_DEFAULT_LAYOUT[category] == null && <button type="button" className="hideout-clear-slot" onClick={clearSlot}
           disabled={saving || shownRoom.layout[category] == null}>이 자리 비우기</button>}
@@ -518,6 +545,7 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
           <small>{chosen ? "현재 배치" : teacherOwn ? "사용 가능" : unlockLevel(item) ? `레벨 ${unlockLevel(item)}` : "기본 소품"}</small>
         </button>;
       })}</div>
+      </>}
       </div>
     </section>
     </div>
@@ -537,7 +565,7 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
       care={petFeed?.on ? careStatus(petMirror, petFeed, kstToday(), pet.stage) : null} read={petFeed?.read} fruits={fruits}
       onClose={() => { setPetOpen(false); if (!readOnly) focusStage(); }} />}
     {resetPending && <HideoutDialog title="기본 소품으로 바꿀까요?" onClose={() => setResetPending(false)} alert>
-      <p>기본 가구를 놓고 추가 소품은 치워요. 옮긴 자리와 방향도 처음으로 돌아가요. 열린 소품은 다시 고를 수 있어요.</p><div className="hideout-dialog-actions">
+      <p>기본 가구를 놓고 추가 소품은 치워요. 옮긴 자리와 방향도 처음으로 돌아가요(포털도 제자리로). 열린 소품은 다시 고를 수 있어요.</p><div className="hideout-dialog-actions">
         <button type="button" onClick={() => setResetPending(false)}>계속 꾸미기</button><button type="button" className="hideout-primary" onClick={() => { setDraft({ ...HIDEOUT_DEFAULT_LAYOUT }); setArrange({}); setResetPending(false); setNotice("기본 소품을 놓았어요. ‘꾸미기 완료’를 누르면 저장돼요."); }}>기본 소품 놓기</button>
       </div>
     </HideoutDialog>}
@@ -549,6 +577,11 @@ const TURN_LABELS = { side: ["옆모습으로 돌리기", "앞모습으로 돌�
 // 꾸미기 패널 — 고른 종류의 자리 · 방향(아지트 2단계). 같은 크기의 단추들(좌우 뒤집기 · 돌리기 · 제자리로)과 한 줄 안내.
 // 따로 옮기지 않는 소품(책상 위 · 선반 위 · 창가 장식)은 안내만 섭니다.
 function ArrangeTools({ category, unit, itemId, placement, moved, ledge, onLedge, label, busy, onFlip, onTurn, onHome }) {
+  // 포털 — 자리만 옮깁니다(뒤집기 · 돌리기 없음). 놓이는 곳: 바닥의 빈 곳 · 캐릭터가 들어오는 방 가운데와 떨어진 곳(lib/readingHideoutArrange.js)
+  if (unit === HIDEOUT_PORTAL_UNIT) return <div className="hideout-arrange" role="group" aria-label="포털의 자리">
+    <div className="hideout-arrange-tools" style={{ "--tools": 1 }}><button type="button" onClick={() => onHome(unit)} disabled={busy || !moved}>제자리로</button></div>
+    <p className="hideout-arrange-hint">방 그림에서 포털을 끌어 옮기거나, 방 그림을 누른 뒤 방향키로 한 칸씩(Shift는 네 칸) 옮겨요. 바닥의 빈 곳에만 놓이고, 캐릭터가 들어오는 방 가운데와는 조금 떨어져야 해요.</p>
+  </div>;
   if (!itemId) return null;
   if (!unit) return FOLLOW_NOTES[category] ? <p className="hideout-arrange-hint">{FOLLOW_NOTES[category]}</p> : null;
   const turn = hideoutTurnArt(itemId);
@@ -638,15 +671,19 @@ function RestingPet({ pet, bed, owner = "", passive = false, onOpen }) {
 
 // Position is a ref and animation is painted into the existing plaza sprite. No
 // position, direction, frame, or portal movement is ever written to Firebase.
-function useMovement({ enabled, map, spriteRef, onPortal }) {
+// gate — 돌아가는 포털(학생이 옮긴 자리 · lib/readingHideoutMap.js의 hideoutReturnPortal). 발이 그 타원에 들어서면 onPortal.
+function useMovement({ enabled, map, gate, spriteRef, onPortal }) {
   const stageRef = useRef(null), avatarRef = useRef(null);
   const position = useRef({ ...map.spawn });
   const [marker, setMarker] = useState(null);
-  const enabledRef = useRef(enabled), mapRef = useRef(map), portalRef = useRef(onPortal);
-  enabledRef.current = enabled; mapRef.current = map; portalRef.current = onPortal;
+  const enabledRef = useRef(enabled), mapRef = useRef(map), portalRef = useRef(onPortal), gateRef = useRef(gate);
+  enabledRef.current = enabled; mapRef.current = map; portalRef.current = onPortal; gateRef.current = gate;
   const path = useRef([]), held = useRef(new Set()), blocked = useRef(new Set());
   const pointer = useRef(null), dragged = useRef(false), raf = useRef(0), previous = useRef(0);
   const distance = useRef(0), facing = useRef("down"), tickRef = useRef(null), armed = useRef(false), portalBusy = useRef(false);
+  // 포털이 옮겨 가면(꾸미기를 마치거나 거둠) 다시 무장합니다 — 옮긴 포털이 캐릭터 발밑이어도 곧바로 건너가지 않고,
+  // 한 번 벗어났다가 다시 들어서야 건너갑니다(꾸미기를 마치고 처음 누른 방향키에 방을 나가 버리지 않게).
+  useEffect(() => { armed.current = false; portalBusy.current = false; }, [gate.x, gate.y]);
   const stop = useCallback(() => {
     if (raf.current) cancelAnimationFrame(raf.current);
     raf.current = 0; previous.current = 0; path.current = [];
@@ -678,8 +715,8 @@ function useMovement({ enabled, map, spriteRef, onPortal }) {
     const movedX = position.current.x - before.x, movedY = position.current.y - before.y, moved = Math.hypot(movedX, movedY), walking = moved > .001;
     if (walking) { facing.current = plazaFacing(facing.current, movedX, movedY); distance.current += moved; }
     spriteRef.current?.show(facing.current, walking ? plazaWalkFrame(distance.current) : 0); draw();
-    if (!hideoutAtReturnPortal(position.current, 15)) { armed.current = true; portalBusy.current = false; }
-    if (armed.current && !portalBusy.current && hideoutAtReturnPortal(position.current)) {
+    if (!hideoutAtReturnPortal(position.current, 15, gateRef.current)) { armed.current = true; portalBusy.current = false; }
+    if (armed.current && !portalBusy.current && hideoutAtReturnPortal(position.current, 0, gateRef.current)) {
       portalBusy.current = true; armed.current = false; stop(); portalRef.current?.(); return;
     }
     if (walking || dx || dy || path.current.length) raf.current = requestAnimationFrame(tickRef.current);

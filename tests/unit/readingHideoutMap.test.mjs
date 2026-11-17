@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { HIDEOUT_DEFAULT_LAYOUT, HIDEOUT_SCENE, HIDEOUT_SLOTS, HIDEOUT_THEMES } from "../../lib/readingHideout.js";
 import {
-  HIDEOUT_RETURN_PORTAL, HIDEOUT_SPAWN, createHideoutWalkMap, hideoutAtReturnPortal,
+  HIDEOUT_RETURN_PORTAL, HIDEOUT_SPAWN, createHideoutWalkMap, hideoutAtReturnPortal, hideoutReturnPortal,
 } from "../../lib/readingHideoutMap.js";
 
 test("entry spawn is away from the return portal and every full theme can walk back to class", () => {
@@ -72,4 +72,18 @@ test("바닥 가구(2026년 11월)의 발자리는 막히고, 여섯을 모두 �
     assert.ok(nav.path(HIDEOUT_SPAWN, { x: 1320, y: 820 }).length > 0);
     assert.ok(nav.path(HIDEOUT_SPAWN, nav.nearest(560, 640)).length > 0, `${theme.id} — 지구본과 어항 사이 안쪽`);
   }
+});
+
+test("옮긴 포털(배치의 'portal' 칸) — 들어오는 자리에서 걸어가면 옮긴 자리의 타원에 닿고, 처음 자리는 그냥 바닥", () => {
+  const gate = hideoutReturnPortal({ portal: { x: 400, y: 920 } });
+  const nav = createHideoutWalkMap(HIDEOUT_DEFAULT_LAYOUT, { portal: { x: 400, y: 920 } });
+  const route = nav.path(HIDEOUT_SPAWN, gate);
+  assert.ok(route.length > 0);
+  let here = HIDEOUT_SPAWN;
+  for (const next of route) { assert.equal(nav.clear(here, next), true); here = next; }
+  assert.equal(hideoutAtReturnPortal(here, 0, gate), true);
+  assert.equal(hideoutAtReturnPortal(HIDEOUT_RETURN_PORTAL, 0, gate), false, "처음 자리는 이제 포털이 아님");
+  assert.equal(hideoutAtReturnPortal(HIDEOUT_SPAWN, 24, gate), false);
+  // 포털은 걷는 지도의 막힌 곳이 아님 — 가구만 막음
+  assert.deepEqual(nav.colliders, createHideoutWalkMap(HIDEOUT_DEFAULT_LAYOUT).colliders);
 });
