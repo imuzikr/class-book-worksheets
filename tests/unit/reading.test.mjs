@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   initialReadingState, applyReadingAction, deriveReading, READING_BADGES,
-  kstToday, readingPeriodKey, readingEnabled, getExpForReadingLevel, getReadingLevel, READING_LEVEL_MAX,
+  kstToday, readingPeriodKey, readingEnabled, getExpForReadingLevel, getReadingLevel, READING_LEVEL_MAX, readingLevelProgress,
   teacherBookAction, bookPagesFloor, TEACHER_BOOK_FIELDS,
 } from "../../lib/reading.js";
 
@@ -61,6 +61,27 @@ test("최고 레벨이면 다음 레벨까지 0 · 진행 100이고 경험치는
   assert.equal(top.nextXp, getExpForReadingLevel(10));
   assert.equal(top.expToNextLevel, 0);
   assert.equal(top.progress, 100);
+});
+
+test("누적 경험치만으로 레벨 · 다음 레벨 · 진행을 셈 — 책 봄 요약과 같은 값(아지트 머리의 캐릭터 카드)", () => {
+  // 선생님이 보신 카드: Lv.3 · 325 / 500 EXP
+  assert.deepEqual(readingLevelProgress(325), { xp: 325, exp: 325, level: 3, maxLevel: false, nextXp: 500, expToNextLevel: 175, progress: 30 });
+  assert.deepEqual(readingLevelProgress(0), { xp: 0, exp: 0, level: 1, maxLevel: false, nextXp: 100, expToNextLevel: 100, progress: 0 });
+  assert.equal(readingLevelProgress(99).progress, 99);
+  assert.deepEqual([100, 250, 999, 1000].map((xp) => readingLevelProgress(xp).level), [2, 3, 4, 5]);
+  const top = readingLevelProgress(9000);
+  assert.deepEqual({ level: top.level, maxLevel: top.maxLevel, nextXp: top.nextXp, expToNextLevel: top.expToNextLevel, progress: top.progress },
+    { level: 10, maxLevel: true, nextXp: 7595, expToNextLevel: 0, progress: 100 });
+  // 값이 아니면 0으로(아지트 응답에 경험치가 빠진 때)
+  for (const bad of [undefined, null, "", "x", NaN, Infinity]) assert.equal(readingLevelProgress(bad).level, 1, String(bad));
+  // 실제 독서 기록으로 셈한 책 봄 요약과 같은 값 — 레벨 · 다음 레벨 · 남은 경험치 · 진행
+  let state = book(initialReadingState(), "book1", 9000);
+  for (const [id, from, to, date] of [["a", 1, 20, "2026-10-26"], ["b", 21, 140, "2026-10-27"], ["c", 141, 2600, "2026-10-28"], ["d", 2601, 9000, "2026-10-29"]]) {
+    state = log(state, id, from, to, date);
+    const summary = deriveReading(state, NOW);
+    const own = readingLevelProgress(summary.xp);
+    for (const key of ["xp", "exp", "level", "maxLevel", "nextXp", "expToNextLevel", "progress"]) assert.equal(own[key], summary[key], `${id} ${key}`);
+  }
 });
 
 test("초기 상태와 6개 시리즈의 세 단계 뱃지 정의", () => {

@@ -1,21 +1,37 @@
-.teacher-hideout-browser { min-width:0; color:#35513e; }
+/* 머리의 배치는 화면 폭이 아니라 이 칸의 폭으로 접습니다(@container thb) — 선생님 책 봄은 오른쪽 '멋진 순간' 패널이 서고
+   접히는 데 따라 같은 창에서도 칸 폭이 400px 가까이 달라집니다. */
+.teacher-hideout-browser { min-width:0; color:#35513e; container:thb / inline-size; }
 .teacher-hideout-browser [hidden] { display:none !important; }
-.teacher-hideout-heading { display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; margin-bottom:12px; }
-.teacher-hideout-title { flex:1 1 auto; min-width:0; }
+/* 머리(선생님 요청 · 2026년 11월) — 왼쪽 묶음(제목 + 그 오른쪽의 이전 · 다음 — 아지트 그림 위), 오른쪽은 전체 아지트 · 광장으로 ·
+   학생 서재로와 그 오른쪽 끝(화면 오른쪽 위)의 캐릭터 카드. 카드의 모양은 아지트 본인 방과 같은 .hideout-character(hideout.css).
+   칸이 1000px보다 좁으면 카드는 제목 줄 오른쪽에 남고 단추 셋이 그 아래 줄 오른쪽으로, 560px보다 좁으면 제목 · 카드 · 단추 차례로 쌓입니다. */
+.teacher-hideout-heading { display:grid; grid-template-columns:minmax(0, 1fr) auto auto; grid-template-areas:"lead nav card"; align-items:center; gap:10px 12px; margin-bottom:12px; }
+.teacher-hideout-lead { grid-area:lead; display:flex; flex-wrap:wrap; align-items:center; gap:8px 18px; min-width:0; }
+.teacher-hideout-title { min-width:0; }
 .teacher-hideout-title h2 { margin:0; font-size:25px; line-height:1.35; overflow-wrap:anywhere; outline:none; }
-.teacher-hideout-navigation { display:flex; flex-wrap:wrap; align-items:center; gap:6px; min-width:0; }
-.teacher-hideout-navigation button { min-height:44px; padding:7px 9px; border:1px solid #cfd8c7; border-radius:10px; background:#fffdf7; color:#35513e; font:inherit; font-size:12px; font-weight:650; white-space:nowrap; cursor:pointer; }
-.teacher-hideout-navigation button:hover:not(:disabled) { background:#eaf0e3; }
-.teacher-hideout-navigation button:disabled { opacity:.5; cursor:default; }
-.teacher-hideout-navigation button:focus-visible { outline:3px solid #478fbd; outline-offset:3px; }
-.teacher-hideout-sequence { display:flex; align-items:center; justify-content:center; gap:6px; min-width:0; }
-.teacher-hideout-sequence span { font-size:12px; color:#78836f; white-space:nowrap; }
+.teacher-hideout-heading > .hideout-character, .teacher-hideout-heading > .hideout-level { grid-area:card; justify-self:end; }
+/* 이어 놓인 단추는 같은 크기 — 셋(전체 아지트 · 광장으로 · 학생 서재로)은 열마다 1fr, 이전 · 다음은 가운데 숫자를 두고 양쪽 1fr. */
+.teacher-hideout-navigation { grid-area:nav; justify-self:end; display:grid; grid-auto-flow:column; grid-auto-columns:1fr; gap:6px; min-width:0; }
+.teacher-hideout-sequence { display:grid; grid-template-columns:minmax(0, 1fr) auto minmax(0, 1fr); align-items:center; gap:6px; min-width:0; }
+.teacher-hideout-navigation button,
+.teacher-hideout-sequence button { min-height:44px; padding:7px 10px; border:1px solid #cfd8c7; border-radius:10px; background:#fffdf7; color:#35513e; font:inherit; font-size:12px; font-weight:650; white-space:nowrap; cursor:pointer; }
+.teacher-hideout-navigation button:hover:not(:disabled),
+.teacher-hideout-sequence button:hover:not(:disabled) { background:#eaf0e3; }
+.teacher-hideout-navigation button:disabled,
+.teacher-hideout-sequence button:disabled { opacity:.5; cursor:default; }
+.teacher-hideout-navigation button:focus-visible,
+.teacher-hideout-sequence button:focus-visible { outline:3px solid #478fbd; outline-offset:3px; }
+.teacher-hideout-sequence span { min-width:44px; font-size:12px; color:#78836f; text-align:center; white-space:nowrap; }
 .teacher-hideout-view .hideout { padding-inline:0; }
+@container thb (max-width:999px) {
+  .teacher-hideout-heading { grid-template-columns:minmax(0, 1fr) auto; grid-template-areas:"lead card" "nav nav"; }
+}
+@container thb (max-width:559px) {
+  .teacher-hideout-heading { grid-template-columns:minmax(0, 1fr); grid-template-areas:"lead" "card" "nav"; }
+  .teacher-hideout-heading > .hideout-character, .teacher-hideout-navigation { justify-self:stretch; }
+  .teacher-hideout-heading > .hideout-character > .reading-character-summary { width:100%; }
+  .teacher-hideout-navigation { grid-auto-columns:minmax(0, 1fr); }
+}
 @media (max-width:700px) {
-  .teacher-hideout-heading { gap:10px; }
-  .teacher-hideout-title { flex-basis:calc(100% - 120px); }
   .teacher-hideout-title h2 { font-size:22px; }
-  .teacher-hideout-navigation { order:1; flex-basis:100%; }
-  .teacher-hideout-navigation > button { flex:1 1 auto; }
-  .teacher-hideout-sequence { flex:1 1 auto; }
 }

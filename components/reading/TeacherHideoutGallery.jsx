@@ -12,7 +12,7 @@ const studentName = (student) => student.realName || student.name || "학생";
 // Each existing hideout endpoint validates class ownership and membership. No
 // ledger subscriptions, presence channels, profile listeners, or writes are
 // started. The endpoint still reads each ledger once to validate decor unlocks.
-export default function TeacherHideoutGallery({ classId, user, roster = [], onSelect, onClose, onLoaded }) {
+export default function TeacherHideoutGallery({ classId, user, roster = [], onSelect, onClose, onLoaded, onPlaza = null }) {
   const students = useMemo(() => {
     const seen = new Set();
     return roster.filter((student) => {
@@ -99,7 +99,11 @@ export default function TeacherHideoutGallery({ classId, user, roster = [], onSe
   return <section className="teacher-hideout-gallery" aria-label="우리 반 아지트">
     <header className="teacher-hideout-gallery-heading">
       <div><h2 ref={headingRef} tabIndex={-1}>우리 반 아지트 <span>{students.length}</span></h2><p>학생을 고르면 저장된 아지트를 둘러볼 수 있어요.</p></div>
-      {onClose && <button type="button" className="btn-ghost" onClick={onClose}>학생 서재로</button>}
+      {/* '광장으로'(선생님 요청 · 2026년 11월 — 아지트를 보다가 곧바로 책 광장으로) · '학생 서재로' — 같은 크기 두 칸 */}
+      {(onPlaza || onClose) && <div className="teacher-hideout-gallery-actions">
+        {onPlaza && <button type="button" className="btn-ghost" onClick={onPlaza} title="책 광장으로 가요">광장으로</button>}
+        {onClose && <button type="button" className="btn-ghost" onClick={onClose}>학생 서재로</button>}
+      </div>}
     </header>
     {students.length ? <>
       <p className="teacher-hideout-gallery-status" role="status" aria-live="polite" aria-atomic="true">

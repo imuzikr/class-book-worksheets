@@ -5,7 +5,8 @@
 .teacher-hideout-gallery-heading h2 { margin: 0; font-size: 23px; line-height: 1.4; }
 .teacher-hideout-gallery-heading h2 span { margin-left: 6px; color: #77866f; font-size: 14px; font-weight: 500; }
 .teacher-hideout-gallery-heading p { margin: 7px 0 0; color: #75816e; font-size: 13px; line-height: 1.7; }
-.teacher-hideout-gallery-heading > button { min-height: 44px; }
+.teacher-hideout-gallery-actions { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
+.teacher-hideout-gallery-actions > button { min-height: 44px; white-space: nowrap; }
 .teacher-hideout-gallery-status { min-height: 20px; margin: 14px 0 12px; color: #74806d; font-size: 12px; line-height: 1.6; }
 .teacher-hideout-gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 12px; }
 .teacher-hideout-gallery-card { min-width: 0; overflow: hidden; border: 1px solid #d9dece; border-radius: 12px; background: #fffdf7; }
@@ -34,4 +35,5 @@
   .teacher-hideout-gallery-caption { flex-wrap: wrap; gap: 3px 8px; padding: 8px; }
   .teacher-hideout-gallery-student { width: 100%; }
   .teacher-hideout-gallery-heading h2 { font-size: 21px; }
+  .teacher-hideout-gallery-actions { width: 100%; grid-auto-columns: minmax(0, 1fr); }
 }
