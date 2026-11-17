@@ -5,18 +5,21 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 import {
-  HIDEOUT_ARRANGE_KEYS, HIDEOUT_DEFAULT_ANCHORS, HIDEOUT_DEFAULT_LAYOUT, HIDEOUT_ITEMS, HIDEOUT_PORTAL_HOME, HIDEOUT_SLOTS, HIDEOUT_THEMES,
-  HIDEOUT_TURN_TABLETOP, HIDEOUT_UNITS,
-  hideoutArrangeShape, hideoutArtBox, hideoutPlaqueLabel, hideoutPortalPlacement, hideoutSceneProps, hideoutUnitFlips, normalizeHideoutRoom, sameHideoutArrange,
+  HIDEOUT_ARRANGE_KEYS, HIDEOUT_DEFAULT_ANCHORS, HIDEOUT_DEFAULT_LAYOUT, HIDEOUT_ITEMS, HIDEOUT_PORTAL_HOME, HIDEOUT_SLOTS, HIDEOUT_SURFACE_UNITS, HIDEOUT_THEMES,
+  HIDEOUT_TOP_HOME, HIDEOUT_TOP_UNITS, HIDEOUT_TOPPERS, HIDEOUT_TURN_TABLETOP, HIDEOUT_UNITS,
+  HIDEOUT_LEDGE_SPAN, HIDEOUT_SURFACE_ART,
+  hideoutArrangeShape, hideoutArtBox, hideoutPlaceTargets, hideoutPlaqueLabel, hideoutPortalPlacement, hideoutSceneProps, hideoutSurfaces, hideoutTopAt,
+  hideoutTopRange, hideoutUnitFlips, normalizeHideoutRoom, sameHideoutArrange,
 } from "../../lib/readingHideout.js";
+import { HIDEOUT_CATALOG_DATA } from "../../lib/readingHideoutCatalog.js";
 import { HIDEOUT_ART_INSETS } from "../../lib/readingHideoutBoxes.js";
 import { HIDEOUT_TURN_ART, HIDEOUT_TURN_SLOTS, hideoutTurnArt } from "../../lib/readingHideoutTurn.js";
 import {
   HIDEOUT_RETURN_PORTAL, HIDEOUT_SPAWN, createHideoutWalkMap, hideoutAtReturnPortal, hideoutReturnPortal,
 } from "../../lib/readingHideoutMap.js";
 import {
-  HIDEOUT_GRID, hideoutArrangeProblem, hideoutFindSpot, hideoutNudge, hideoutPortalReachable, hideoutSnap, hideoutUnitPlacement, hideoutWithEntry,
-  settleHideoutArrange, validateHideoutArrange,
+  HIDEOUT_GRID, HIDEOUT_TOP_SNAP, hideoutArrangeProblem, hideoutFindSpot, hideoutNudge, hideoutPortalReachable, hideoutSnap, hideoutTopTarget,
+  hideoutUnitPlacement, hideoutWithEntry, settleHideoutArrange, validateHideoutArrange,
 } from "../../lib/readingHideoutArrange.js";
 import { measureInsets } from "../../scripts/measure-hideout-boxes.mjs";
 
@@ -78,12 +81,13 @@ test("배치가 없으면 지금까지와 똑같은 방 — 자리 · 폭 · 그
     for (const prop of before) {
       assert.equal(prop.flip, false, prop.id);
       assert.equal(prop.turned, false, prop.id);
-      if (prop.unit) assert.deepEqual([prop.x, prop.y], [HIDEOUT_DEFAULT_ANCHORS[prop.unit].x, HIDEOUT_DEFAULT_ANCHORS[prop.unit].y], prop.unit);
+      if (prop.unit && !prop.parentUnit) assert.deepEqual([prop.x, prop.y], [HIDEOUT_DEFAULT_ANCHORS[prop.unit].x, HIDEOUT_DEFAULT_ANCHORS[prop.unit].y], prop.unit);
     }
-    // 옮길 수 없는 것: 창가 장식(창문) · 책상 위 · 선반 위 소품은 따라가는 가구가 있음
-    for (const prop of before.filter((entry) => !entry.unit)) {
-      if (prop.category === "garland") assert.equal(prop.parentUnit, null);
-      else assert.ok(["desk", "ledge-left", "ledge-right"].includes(prop.parentUnit), `${prop.category} → ${prop.parentUnit}`);
+    // 옮길 수 없는 것은 창가 장식(창문)뿐 · 책 받침대 · 북엔드 · 오르골 · 무드등 · 트로피는 처음엔 정해진 가구 위(따로도 옮김)
+    assert.deepEqual(before.filter((entry) => !entry.unit).map((entry) => entry.category), layout.garland ? ["garland"] : []);
+    for (const prop of before.filter((entry) => entry.parentUnit)) {
+      assert.equal(prop.parentUnit, HIDEOUT_TOP_HOME[prop.unit], prop.category);
+      assert.ok(HIDEOUT_TOP_UNITS.includes(prop.unit), prop.category);
     }
   }
 });
@@ -173,12 +177,21 @@ test("판정 — 바닥 · 벽 밖, 창문 가림, 가구 겹침, 벽 장식 크
   assert.match(issue.message, /겹쳐요/);
 });
 
+// 처음 자리(배치 칸 없음)에 서 있는 가구 위 소품의 자리를 천분율로(같은 자리 · 같은 가구 위)
+function homeAt(layout, unit) {
+  const props = hideoutSceneProps(layout), prop = props.find((entry) => entry.unit === unit);
+  const surface = hideoutSurfaces(props).get(prop.parentUnit);
+  return { on: prop.parentUnit, at: hideoutTopAt(surface, hideoutTopRange(surface, prop.src, prop.width, prop.flip), prop.x) };
+}
+
 test("모든 테마 — 기본 자리는 '옮긴 것'으로 봐도(뒤집어도) 문제가 없다 · 포털을 한 칸 옮겨도", () => {
   for (const [name, layout] of Object.entries(LAYOUTS)) {
     const arrange = {};
     for (const unit of HIDEOUT_UNITS) {
       const category = unit.startsWith("ledge-") ? "wall-shelf" : unit;
       if (!layout[category]) continue;
+      // 늘 가구 위에 서는 소품 — 처음 자리를 가구 위 칸(천분율)으로 적고 뒤집음
+      if (HIDEOUT_TOP_UNITS.includes(unit)) { arrange[unit] = { ...homeAt(layout, unit), flip: true }; continue; }
       const home = HIDEOUT_DEFAULT_ANCHORS[unit];
       arrange[unit] = hideoutUnitFlips(unit) ? { ...home, flip: true } : { x: home.x + HIDEOUT_GRID, y: home.y };
     }
@@ -366,4 +379,221 @@ test("뒤집은 문패 — 글자 띠도 거울로(장식이 반대쪽으로 감
     assert.ok(Math.abs((a.x - plain.x) + (b.x - flipped.x)) < 1e-9, theme.id);
     assert.equal(a.fontSize, b.fontSize);
   }
+});
+
+// ── 가구 위에 올리기(2026년 11월 · 선생님 요청 — "책상 위, 선반 위, 책장 위에도") ─────────────────────────────────────────
+// 소품이 다 열린 방(기본 가구 + 숲속 소품) — 책 받침대 · 북엔드 · 오르골 · 무드등 · 트로피가 처음 자리에 있음
+const FULL = { ...HIDEOUT_DEFAULT_LAYOUT, bookstand: "bookstand-forest", bookends: "bookends-forest", "music-box": "music-box-forest",
+  "mood-light": "mood-light-forest", "book-trophy": "book-trophy-forest", terrarium: "terrarium-forest", "pet-toys": "pet-toys-forest", "travel-case": "travel-case-forest" };
+const OPEN = { ...HIDEOUT_DEFAULT_LAYOUT };   // 빈 윗면(기본 방 — 위의 소품이 하나도 없음)
+
+test("가구 위에 올리기 — 윗면 줄이 그 가구 그림의 윗면 위에 있다(앞모습 · 돌린 모습 · 벽 선반)", async () => {
+  const pixels = async (src) => sharp(file(src)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const check = async (src, y, x0, x1, label) => {
+    const { data, info } = await pixels(src);
+    let light = 0, count = 0;
+    for (let x = Math.round(x0); x <= Math.round(x1); x += 1) {
+      const i = (Math.round(y) * info.width + x) * 4;
+      assert.ok(data[i + 3] >= 128, `${label} — 줄(${x}, ${Math.round(y)})이 그림 밖(투명)`);
+      count += 1;
+      if ((data[i] * 299 + data[i + 1] * 587 + data[i + 2] * 114) / 1000 >= 110) light += 1;
+    }
+    // 장식(끈 · 나침반 · 의자 등받이)이 걸친 줄도 있어 밝은 나무가 다는 아님 — 그래도 줄의 대부분이 윗면
+    assert.ok(light / count >= 0.35, `${label} — 밝은 윗면이 ${Math.round(light / count * 100)}%`);
+  };
+  assert.deepEqual(Object.keys(HIDEOUT_SURFACE_ART).sort(), HIDEOUT_ITEMS.filter((item) => item.slot === "desk" || item.slot === "shelf").map((item) => item.id).sort());
+  for (const [id, spec] of Object.entries(HIDEOUT_SURFACE_ART)) {
+    const item = HIDEOUT_ITEMS.find((entry) => entry.id === id), turn = hideoutTurnArt(id);
+    await check(item.src, spec.front.y, spec.front.x0, spec.front.x1, `${id} 앞모습`);
+    await check(turn.src, spec.turn.y, spec.turn.x0, spec.turn.x1, `${id} 돌린 모습`);
+  }
+  for (const shelf of HIDEOUT_CATALOG_DATA.shelves) {
+    const [x0, x1] = HIDEOUT_LEDGE_SPAN[shelf.theme];
+    await check(shelf.src, shelf.height * shelf.surfaceYFraction, x0, x1, `벽 선반 ${shelf.theme}`);
+  }
+});
+
+test("가구 위에 올리기 — 모양 다듬기 · 같은 배치 · 칸 넣기 · 지금 자리 · 놓을 곳", () => {
+  assert.deepEqual([...HIDEOUT_SURFACE_UNITS], ["desk", "shelf", "ledge-left", "ledge-right"]);
+  assert.deepEqual([...HIDEOUT_TOPPERS].sort(), ["book-trophy", "bookends", "bookstand", "mood-light", "music-box", "pet-toys", "plant", "terrarium", "travel-case"]);
+  for (const unit of HIDEOUT_TOP_UNITS) assert.ok(HIDEOUT_UNITS.includes(unit) && !Object.hasOwn(HIDEOUT_DEFAULT_ANCHORS, unit), unit);
+  assert.deepEqual(hideoutPlaceTargets("plant"), ["floor", "desk", "shelf", "ledge-left", "ledge-right"]);
+  assert.deepEqual(hideoutPlaceTargets("bookends"), ["desk", "shelf", "ledge-left", "ledge-right"]);
+  assert.deepEqual(hideoutPlaceTargets("lamp"), []);
+  // 모양 — 올릴 수 있는 소품 · 윗면 · 0~1000 정수만, 늘 가구 위에 서는 소품의 바닥 자리는 버림
+  const shaped = hideoutArrangeShape({
+    plant: { on: "shelf", at: 250, flip: true, x: 1, y: 2 }, bookends: { on: "desk", at: 1000 }, "music-box": { x: 600, y: 700 },
+    terrarium: { on: "rug", at: 5 }, "pet-toys": { on: "desk", at: 1001 }, "travel-case": { on: "desk", at: 2.5 }, lamp: { on: "desk", at: 5 },
+    "mood-light": { on: "ledge-left", at: 0, turn: true },
+  }, FULL);
+  assert.deepEqual(shaped, { plant: { on: "shelf", at: 250, flip: true }, bookends: { on: "desk", at: 1000 }, "mood-light": { on: "ledge-left", at: 0 } });
+  assert.deepEqual(hideoutArrangeShape({ bookends: { on: "desk", at: 5 } }, OPEN), {}, "빈 자리의 소품");
+  assert.equal(sameHideoutArrange({ plant: { on: "shelf", at: 5 } }, { plant: { on: "shelf", at: 5 } }), true);
+  assert.equal(sameHideoutArrange({ plant: { on: "shelf", at: 5 } }, { plant: { on: "desk", at: 5 } }), false);
+  assert.equal(sameHideoutArrange({ plant: { on: "shelf", at: 5 } }, { plant: { on: "shelf", at: 6 } }), false);
+  // 칸 넣기 — on이 있으면 { on, at, flip? }, on: null이면 바닥 자리
+  assert.deepEqual(hideoutWithEntry({}, "plant", { on: "desk", at: 300.4, flip: true, x: 5, y: 6, turn: true }), { plant: { on: "desk", at: 300, flip: true } });
+  assert.deepEqual(hideoutWithEntry({ plant: { on: "desk", at: 3 } }, "plant", { on: null, x: 640, y: 760 }), { plant: { x: 640, y: 760 } });
+  assert.deepEqual(hideoutWithEntry({ plant: { on: "desk", at: 3 } }, "plant", { on: null, ...HIDEOUT_DEFAULT_ANCHORS.plant }), {}, "바닥의 처음 자리면 칸을 지움");
+  // 지금 자리 — 늘 가구 위에 서는 소품은 처음엔 정해진 가구 위(at 없음)
+  assert.deepEqual(hideoutUnitPlacement({}, "bookstand"), { on: "desk", at: null, flip: false, turn: false });
+  assert.deepEqual(hideoutUnitPlacement({}, "music-box"), { on: "ledge-left", at: null, flip: false, turn: false });
+  assert.deepEqual(hideoutUnitPlacement({ plant: { on: "shelf", at: 7, flip: true } }, "plant"), { on: "shelf", at: 7, flip: true, turn: false });
+  assert.deepEqual(hideoutUnitPlacement({}, "plant"), { ...HIDEOUT_DEFAULT_ANCHORS.plant, flip: false, turn: false });
+  for (const [unit, on] of Object.entries(HIDEOUT_TOP_HOME)) assert.ok(HIDEOUT_SURFACE_UNITS.includes(on), unit);
+});
+
+test("가구 위에 올리기 — 그리기: 윗면의 줄에 서고, 바닥을 차지하지 않고, 처음 자리를 칸으로 적어도 그대로", () => {
+  for (const [name, layout] of Object.entries({ ...LAYOUTS, full: FULL })) {
+    const props = hideoutSceneProps(layout), surfaces = hideoutSurfaces(props);
+    assert.deepEqual([...surfaces.keys()].sort(), ["desk", "ledge-left", "ledge-right", "shelf"], name);
+    for (const [on, surface] of surfaces) {
+      assert.ok(surface.x1 - surface.x0 > 100 && Number.isFinite(surface.y), `${name} · ${on}`);
+      // 화분을 올리면 — 그 줄에 서고 · 바닥 그림자 없이 · 받치는 가구보다 앞(벽 선반 위는 20)
+      const arrange = { plant: { on, at: 500 } }, after = hideoutSceneProps(layout, arrange);
+      const plant = after.find((prop) => prop.unit === "plant"), bearer = after.find((prop) => prop.unit === on);
+      assert.equal(plant.parentUnit, on);
+      assert.equal(plant.y, hideoutSurfaces(after).get(on).y, `${name} · ${on}`);
+      assert.equal(plant.contactShadow, false);
+      assert.equal(Math.round(plant.z), on.startsWith("ledge-") ? 20 : Math.round(bearer.z) + 1, `${name} · ${on}`);
+      // 바닥을 차지하지 않음 — 걷는 지도의 막는 칸이 하나 줄고 화분의 옛 자리를 걸어감
+      const before = createHideoutWalkMap(layout), lifted = createHideoutWalkMap(layout, arrange);
+      assert.equal(lifted.colliders.length, before.colliders.length - 1, `${name} · ${on}`);
+      assert.equal(lifted.walkable(600, 600), true, `${name} · ${on} — 화분의 옛 자리`);
+    }
+  }
+  // 처음 자리(칸 없음)를 그 자리의 천분율 칸으로 적어도 같은 자리 · 같은 크기(1px 안) — 처음 옮길 때 튀지 않음
+  for (const unit of HIDEOUT_TOP_UNITS) {
+    const home = hideoutSceneProps(FULL).find((prop) => prop.unit === unit);
+    const moved = hideoutSceneProps(FULL, { [unit]: homeAt(FULL, unit) }).find((prop) => prop.unit === unit);
+    assert.ok(Math.abs(moved.x - home.x) < 0.5 && Math.abs(moved.y - home.y) < 0.5, `${unit} ${moved.x},${moved.y} ≠ ${home.x},${home.y}`);
+    assert.equal(moved.width, home.width, unit);
+    assert.equal(moved.parentUnit, HIDEOUT_TOP_HOME[unit]);
+  }
+});
+
+test("가구 위에 올리기 — 받치는 가구를 옮기고 뒤집고 돌리면 위의 소품이 따라간다(천분율 그대로)", () => {
+  const layout = { ...LAYOUTS.forest };
+  for (const on of ["desk", "shelf"]) {
+    const home = hideoutSceneProps(layout, { plant: { on, at: 250 } });
+    const plantHome = home.find((prop) => prop.unit === "plant"), bearerHome = home.find((prop) => prop.unit === on);
+    // 옮기면 같은 만큼
+    const anchor = HIDEOUT_DEFAULT_ANCHORS[on], dx = -96, dy = 64;
+    const moved = hideoutSceneProps(layout, { [on]: { x: anchor.x + dx, y: anchor.y + dy }, plant: { on, at: 250 } }).find((prop) => prop.unit === "plant");
+    assert.ok(Math.abs(moved.x - plantHome.x - dx) < 1e-9 && Math.abs(moved.y - plantHome.y - dy) < 1e-9, on);
+    // 뒤집으면 가구의 바닥 가운데를 축으로 거울 · 소품도 뒤집힘
+    const flipped = hideoutSceneProps(layout, { [on]: { ...anchor, flip: true }, plant: { on, at: 250 } }).find((prop) => prop.unit === "plant");
+    assert.ok(Math.abs((flipped.x - bearerHome.x) + (plantHome.x - bearerHome.x)) < 1e-9, `${on} 거울`);
+    assert.equal(flipped.flip, true);
+    // 돌리면 돌린 그림의 윗면 위(범위 안)
+    const turnedProps = hideoutSceneProps(layout, { [on]: { ...anchor, turn: true }, plant: { on, at: 250 } });
+    const turned = turnedProps.find((prop) => prop.unit === "plant"), surface = hideoutSurfaces(turnedProps).get(on);
+    const range = hideoutTopRange(surface, turned.src, turned.width, turned.flip);
+    assert.ok(turned.x >= range.lo - 1e-9 && turned.x <= range.hi + 1e-9 && turned.y === surface.y, `${on} 돌림`);
+  }
+  // 벽 선반을 옮기면 위의 소품(처음 자리 · 칸으로 올린 것)이 함께
+  const ledge = HIDEOUT_DEFAULT_ANCHORS["ledge-right"];
+  const before = hideoutSceneProps(FULL, { plant: { on: "ledge-left", at: 900 } });
+  const after = hideoutSceneProps(FULL, { "ledge-left": { x: HIDEOUT_DEFAULT_ANCHORS["ledge-left"].x - 40, y: HIDEOUT_DEFAULT_ANCHORS["ledge-left"].y + 16 }, plant: { on: "ledge-left", at: 900 } });
+  for (const unit of ["plant", "bookends", "music-box"]) {
+    const a = before.find((prop) => prop.unit === unit), b = after.find((prop) => prop.unit === unit);
+    assert.ok(Math.abs(b.x - a.x + 40) < 1e-9 && Math.abs(b.y - a.y - 16) < 1e-9, unit);
+  }
+  assert.ok(ledge);
+});
+
+test("가구 위에 올리기 — 판정: 위의 다른 소품과 겹침 · 벽 장식 · 창문 · 천장 · 받치는 가구를 돌릴 때 위의 소품", () => {
+  const issue = (layout, arrange, options) => hideoutArrangeProblem(layout, arrange, options);
+  const code = (layout, arrange, options) => issue(layout, arrange, options)?.code ?? null;
+  // 빈 윗면에는 화분이 들어감(책상 · 책장 · 벽 선반 둘)
+  for (const on of HIDEOUT_SURFACE_UNITS) for (const at of [0, 500, 1000]) assert.equal(code(OPEN, { plant: { on, at } }), null, `${on} ${at}`);
+  // 처음 자리의 북엔드 위로 오르골을 옮기면 겹침 · 떨어뜨리면 됨
+  const bookends = homeAt(FULL, "bookends");
+  assert.equal(code(FULL, { "music-box": { ...bookends } }), "top-overlap");
+  assert.equal(issue(FULL, { "music-box": { ...bookends } }).unit, "music-box");
+  assert.match(issue(FULL, { "music-box": { ...bookends } }).message, /위에 놓인 다른 소품과 겹쳐요/);
+  // 같은 줄이 아니면(다른 가구 위) 겹쳐 보여도 됨 — 화분을 책장 위에, 받침대는 책상 위
+  assert.equal(code(FULL, { plant: { on: "shelf", at: 500 }, bookstand: { on: "shelf", at: 1000 } }), "top-overlap", "책장 위 둘이 겹침");
+  assert.equal(code(FULL, { plant: { on: "shelf", at: 0 }, bookstand: { on: "shelf", at: 1000 } }), null, "책장 위 양 끝");
+  // 벽 선반 위의 소품은 벽 장식(독서 게시판)을 크게 가리지 않음
+  assert.equal(code(PROBE, { plant: { on: "ledge-left", at: 500 } }), "wall-overlap");
+  assert.equal(code(OPEN, { plant: { on: "ledge-left", at: 500 } }), null);
+  // 창문 — 창 아래로 내린 벽 선반에 화분을 올리면 화분이 창을 가림(선반만은 됨)
+  assert.equal(code(OPEN, { "ledge-left": { x: 400, y: 500 } }), null);
+  assert.equal(code(OPEN, { "ledge-left": { x: 400, y: 500 }, plant: { on: "ledge-left", at: 500 } }), "top-window");
+  // 천장 — 높이 건 벽 선반 위의 화분이 들보에 닿음
+  assert.equal(code(OPEN, { "ledge-left": { x: 665, y: 200 } }), null);
+  assert.equal(code(OPEN, { "ledge-left": { x: 665, y: 200 }, plant: { on: "ledge-left", at: 500 } }), "ceiling");
+  assert.equal(code(OPEN, { "ledge-left": { x: 665, y: 200 }, plant: { on: "ledge-left", at: 500 } }, { only: "plant" }), "ceiling");
+  // 받치는 가구를 볼 때(only) 위의 소품도 봄 — 책장을 돌리면 좁아져 양 끝의 둘이 겹침
+  const riders = { plant: { on: "shelf", at: 0 }, bookends: { on: "shelf", at: 1000 } };
+  assert.equal(code(FULL, riders), null);
+  assert.equal(code(FULL, { shelf: { ...HIDEOUT_DEFAULT_ANCHORS.shelf, turn: true }, ...riders }, { only: "shelf" }), "top-overlap");
+  // 가구 위의 소품 하나만 볼 때는 길을 보지 않음(바닥과 무관) · 늘 가구 위에 서는 소품이 바닥(공중)이면 문제
+  assert.equal(code(PROBE, { "desk-calendar": { x: 1150, y: 800, turn: true }, desk: { x: 1150, y: 930, turn: true }, plant: { on: "shelf", at: 0 } }, { only: "plant" }), null);
+  assert.equal(code(FULL, { bookends: { x: 640, y: 760 } }), "top-only");
+});
+
+test("가구 위에 올리기 — 엄격한 확인(저장) · 관대한 맞춤(읽을 때)", () => {
+  assert.deepEqual(validateHideoutArrange(FULL, { plant: { on: "shelf", at: 0 }, bookends: { on: "shelf", at: 1000, flip: true } }),
+    { plant: { on: "shelf", at: 0 }, bookends: { on: "shelf", at: 1000, flip: true } });
+  // 기본 책상은 윗면이 좁아 처음 자리의 받침대 옆에 북엔드가 들어가지 않음
+  assert.throws(() => validateHideoutArrange(FULL, { bookends: { on: "desk", at: 1000 } }), { code: "reading/hideout-arrange", message: /겹쳐요/ });
+  const bad = [
+    [{ plant: { on: "rug", at: 5 } }, /올릴 수 없어요/], [{ lamp: { on: "desk", at: 5 } }, /올릴 수 없어요/], [{ plant: { on: "desk", at: 1001 } }, /소품의 자리/],
+    [{ plant: { on: "desk", at: 2.5 } }, /소품의 자리/], [{ plant: { on: "desk", at: 5, x: 1 } }, /배치 정보/], [{ plant: { on: "desk", at: 5, turn: true } }, /배치 정보/],
+    [{ plant: { on: "desk", at: 5, flip: "yes" } }, /배치 정보/], [{ bookends: { x: 600, y: 700 } }, /위에만 놓을 수 있어요/],
+  ];
+  for (const [raw, message] of bad) assert.throws(() => validateHideoutArrange(FULL, raw), { code: "reading/invalid-hideout", message }, JSON.stringify(raw));
+  assert.throws(() => validateHideoutArrange(OPEN, { bookends: { on: "desk", at: 5 } }), { code: "reading/invalid-hideout", message: /빈 자리/ });
+  assert.throws(() => validateHideoutArrange(FULL, { "music-box": { ...homeAt(FULL, "bookends") } }), { code: "reading/hideout-arrange", message: /겹쳐요/ });
+  // 관대한 맞춤 — 겹친 소품은 제자리로(바닥에도 서는 화분은 바닥의 처음 자리 · 옮긴 다른 소품은 그대로)
+  assert.deepEqual(settleHideoutArrange(FULL, { plant: { on: "shelf", at: 300 }, bookends: { on: "shelf", at: 300 } }), { bookends: { on: "shelf", at: 300 } });
+  assert.deepEqual(normalizeHideoutRoom({ version: 2, layout: FULL, arrange: { plant: { on: "desk", at: 9 }, bookstand: { x: 1, y: 2 } }, revision: 0 }, { teacher: true }).arrange,
+    { plant: { on: "desk", at: 9 } });
+});
+
+test("가구 위에 올리기 — 빈자리 찾기 · 방향키(좌우는 윗면을 따라, 위아래는 다른 윗면 · 바닥) · 끌어 올리기", () => {
+  // 놓을 곳을 고르면 그 윗면의 빈자리 — 바닥의 화분을 책상 위로, 책장 위의 화분을 바닥으로
+  for (const target of HIDEOUT_SURFACE_UNITS) {
+    const spot = hideoutFindSpot(OPEN, {}, "plant", { target, radius: 4000 });
+    assert.equal(spot?.on, target, target);
+    assert.equal(hideoutArrangeProblem(OPEN, hideoutWithEntry({}, "plant", spot)), null, target);
+  }
+  const down = hideoutFindSpot(OPEN, { plant: { on: "shelf", at: 500 } }, "plant", { target: "floor" });
+  assert.equal(down.on, null);
+  assert.equal(hideoutArrangeProblem(OPEN, hideoutWithEntry({}, "plant", down)), null);
+  // 자리가 모자라면 null(받침대 · 북엔드 · 오르골로 꽉 찬 작은 벽 선반에 화분)
+  assert.equal(hideoutFindSpot(FULL, {}, "plant", { target: "ledge-left", radius: 4000 }), null);
+  // 좌우 — 처음 자리의 북엔드를 오른쪽으로 한 칸(같은 선반 · 8px쯤), 오르골을 건너뛰어 끝까지 가면 더 못 감
+  const right = hideoutNudge(FULL, {}, "bookends", 1, 0);
+  assert.equal(right.on, "ledge-left");
+  const home = hideoutSceneProps(FULL).find((prop) => prop.unit === "bookends");
+  const stepped = hideoutSceneProps(FULL, { bookends: right }).find((prop) => prop.unit === "bookends");
+  assert.ok(Math.abs(stepped.x - home.x - HIDEOUT_GRID) < 1, `${stepped.x - home.x}`);
+  // 넓은 책장 위 — 왼쪽 끝의 북엔드를 오른쪽으로 옮기면 가운데의 오르골을 건너뛰고, 오른쪽 끝에서는 더 못 감
+  let here = { bookends: { on: "shelf", at: 0 }, "music-box": { on: "shelf", at: 500 } };
+  for (let i = 0; i < 80; i += 1) {
+    const next = hideoutNudge(FULL, here, "bookends", 1, 0, 16);
+    if (!next) break;
+    here = hideoutWithEntry(here, "bookends", next);
+  }
+  assert.equal(hideoutNudge(FULL, here, "bookends", 1, 0, 16), null);
+  assert.equal(hideoutArrangeProblem(FULL, here), null);
+  const passed = hideoutSceneProps(FULL, here);
+  assert.ok(passed.find((prop) => prop.unit === "bookends").x > passed.find((prop) => prop.unit === "music-box").x, "오르골을 건너뜀");
+  assert.equal(here.bookends.on, "shelf");
+  // 위아래 — 책상의 받침대는 ↑ 로 위의 윗면에, ↓ 로는 갈 곳이 없음(바닥에 서지 않는 소품) · 벽 선반의 화분은 ↓ 로 바닥에
+  assert.ok(hideoutNudge(FULL, {}, "bookstand", 0, -1)?.on, "위의 윗면");
+  assert.equal(hideoutNudge(FULL, {}, "bookstand", 0, 1), null);
+  const dropped = hideoutNudge(OPEN, { plant: { on: "ledge-right", at: 500 } }, "plant", 0, 1);
+  assert.equal(dropped.on, null);
+  assert.equal(hideoutArrangeProblem(OPEN, hideoutWithEntry({}, "plant", dropped)), null);
+  // 끌어 올리기 — 바닥 가운데가 윗면 줄 가까이(위아래 48px 안)면 그 윗면, 멀면 null
+  const shelf = hideoutSurfaces(hideoutSceneProps(OPEN)).get("shelf");
+  const target = hideoutTopTarget(OPEN, {}, "plant", { x: (shelf.x0 + shelf.x1) / 2, y: shelf.y + HIDEOUT_TOP_SNAP - 8 });
+  assert.equal(target.on, "shelf");
+  assert.ok(Math.abs(target.at - 500) <= 10, `${target.at}`);   // 화분 그림의 좌우 투명 여백이 조금 달라 한가운데가 500에서 조금 비낌
+  assert.equal(hideoutTopTarget(OPEN, {}, "plant", { x: (shelf.x0 + shelf.x1) / 2, y: shelf.y + HIDEOUT_TOP_SNAP + 40 }), null);
+  assert.equal(hideoutTopTarget(OPEN, {}, "lamp", { x: shelf.x0, y: shelf.y }), null, "올릴 수 없는 소품");
 });

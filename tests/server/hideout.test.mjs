@@ -303,6 +303,32 @@ test("배치(아지트 2단계) — 자리 · 뒤집기 · 돌리기를 저장�
   assert.deepEqual((await getReadingHideout(who("student"), classId)).room.arrange, { plant: { x: 600, y: 640 } });
 });
 
+test("가구 위에 올리기 — 화분을 책장 · 책상 위에 올린 자리({ on, at, flip })를 저장 · 다시 읽고(선생님 보기에도), 올릴 수 없는 곳 · 천장에 닿는 자리는 거절하며, 읽을 때 빈 자리의 소품은 걷음", async () => {
+  const arrange = { plant: { on: "shelf", at: 500, flip: true } };
+  const saved = await saveReadingHideout(who("student"), payload(room({}, 0, arrange)));
+  assert.equal(saved.room.revision, 1);
+  assert.deepEqual(saved.room.arrange, arrange);
+  assert.deepEqual((await roomRef.get()).data().arrange, arrange);
+  assert.deepEqual((await getReadingHideout(who("student"), classId)).room.arrange, arrange);
+  assert.deepEqual((await getReadingHideout(who("teacher"), classId, ids.student)).room.arrange, arrange);
+  // 책상을 옮기고 그 위에 올림 — 화분의 칸은 책상 위의 비율(at)이라 책상과 함께 움직임
+  const desk = { desk: { x: 400, y: 880 }, plant: { on: "desk", at: 500 } };
+  const moved = await saveReadingHideout(who("student"), payload(room({}, 1, desk)));
+  assert.equal(moved.room.revision, 2);
+  assert.deepEqual(moved.room.arrange, desk);
+  // 올릴 수 없는 곳 · 범위 밖 · 정수가 아닌 자리 · 바닥 칸과 섞임 · 돌리기 → 400, 천장에 닿는 선반 위 → 그 까닭으로 400(저장된 방은 그대로)
+  for (const bad of [{ plant: { on: "rug", at: 5 } }, { lamp: { on: "desk", at: 5 } }, { plant: { on: "shelf", at: 1001 } }, { plant: { on: "shelf", at: 2.5 } },
+    { plant: { on: "shelf", at: 5, x: 1, y: 2 } }, { plant: { on: "shelf", at: 5, turn: true } }]) {
+    await assert.rejects(() => saveReadingHideout(who("student"), payload(room({}, 2, bad))), (e) => e.status === 400, JSON.stringify(bad));
+  }
+  await assert.rejects(() => saveReadingHideout(who("student"), payload(room({}, 2, { "ledge-left": { x: 665, y: 200 }, plant: { on: "ledge-left", at: 500 } }))),
+    (e) => e.status === 400 && e.code === "reading/hideout-arrange" && /천장/.test(e.message));
+  assert.equal((await roomRef.get()).data().revision, 2);
+  // 빈 자리의 소품(책받침을 고르지 않은 방의 책상 위 책받침)은 읽을 때 걷음
+  await roomRef.set({ ...room({}, 5), arrange: { bookstand: { on: "desk", at: 5 }, plant: { on: "shelf", at: 500 } } });
+  assert.deepEqual((await getReadingHideout(who("student"), classId)).room.arrange, { plant: { on: "shelf", at: 500 } });
+});
+
 test("포털 옮기기 — 포털 자리를 저장 · 다시 읽고(선생님 보기에도), 놓을 수 없는 자리 · 포털의 뒤집기는 거절하며, 옛 포털 자리에는 가구를 둘 수 있음", async () => {
   const arrange = { plant: { x: 1416, y: 864 }, portal: { x: 400, y: 920 } };
   const saved = await saveReadingHideout(who("student"), payload(room({}, 0, arrange)));

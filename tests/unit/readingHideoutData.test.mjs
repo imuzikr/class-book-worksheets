@@ -260,3 +260,24 @@ test("체험반 — 배치(아지트 2단계: 자리 · 뒤집기 · 돌리기)�
   assert.equal(kept.room.layout.rug, "rug-starlight");
   assert.deepEqual(kept.room.arrange, moved.room.arrange);
 });
+
+test("체험반 — 가구 위에 올린 소품({ on, at, flip })을 저장 · 다시 읽고, 책상을 옮겨도 위의 자리를 지키며, 올릴 수 없는 곳 · 천장에 닿는 자리는 거절", async () => {
+  const env = await demo();
+  const { module: data } = env;
+  const first = await data.fetchReadingHideout("class");
+  const lifted = await data.saveReadingHideout("class", { ...first.room, arrange: { plant: { on: "shelf", at: 500, flip: true } } });
+  assert.equal(lifted.room.revision, 1);
+  assert.deepEqual(lifted.room.arrange, { plant: { on: "shelf", at: 500, flip: true } });
+  assert.deepEqual((await data.fetchReadingHideout("class")).room.arrange, lifted.room.arrange);
+  // 책상 위로 옮기고 책상도 옮김 — 화분의 칸은 책상 위의 비율(at)이라 책상과 함께 움직임
+  const onDesk = await data.saveReadingHideout("class", { ...lifted.room, arrange: { desk: { x: 400, y: 880 }, plant: { on: "desk", at: 500 } } });
+  assert.equal(onDesk.room.revision, 2);
+  assert.deepEqual(onDesk.room.arrange, { desk: { x: 400, y: 880 }, plant: { on: "desk", at: 500 } });
+  // 올릴 수 없는 곳 · 범위 밖 · 바닥 칸과 섞임 → 형식 오류, 천장에 닿는 선반 위 → 그 까닭으로 거절(저장된 방은 그대로)
+  for (const bad of [{ plant: { on: "rug", at: 5 } }, { lamp: { on: "desk", at: 5 } }, { plant: { on: "shelf", at: 1001 } }, { plant: { on: "shelf", at: 5, x: 1 } }]) {
+    await assert.rejects(() => data.saveReadingHideout("class", { ...onDesk.room, arrange: bad }), (e) => e.code === "reading/invalid-hideout", JSON.stringify(bad));
+  }
+  await assert.rejects(() => data.saveReadingHideout("class", { ...onDesk.room, arrange: { "ledge-left": { x: 665, y: 200 }, plant: { on: "ledge-left", at: 500 } } }),
+    (e) => e.code === "reading/hideout-arrange" && /천장/.test(e.message));
+  assert.deepEqual((await data.fetchReadingHideout("class")).room.arrange, onDesk.room.arrange);
+});

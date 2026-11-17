@@ -103,6 +103,10 @@
 .hideout-arrange-tools { display: grid; grid-template-columns: repeat(var(--tools, 3), minmax(0, 1fr)); gap: 6px; }
 .hideout .hideout-arrange-tools > button { min-height: 38px; padding: 6px 8px; font-size: 12px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hideout .hideout-arrange-tools > button[aria-pressed="true"] { background: #e6eddc; border-color: #648354; }
+/* 놓을 곳(작은 소품 — 바닥 · 책상 위 · 책장 위 · 작은 벽 선반 · 아래 진열 선반) — 같은 크기 단추, 패널이 좁으면 다음 줄로(2026년 11월 · 선생님 요청) */
+.hideout-place { display: grid; gap: 4px; }
+.hideout-place-label { color: #5f6b58; font-size: 11px; font-weight: 700; }
+.hideout-arrange-tools.hideout-place-tools { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
 .hideout-arrange-hint { margin: 0 0 12px; color: #75816e; font-size: 12px; line-height: 1.6; }
 .hideout-arrange .hideout-arrange-hint { margin: 0; }
 .hideout-preview-heading > span { color: #78836f; font-size: 11px; }
