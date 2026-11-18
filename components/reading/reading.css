@@ -47,9 +47,10 @@
 .reading-intro.reading-intro--profile { padding:16px 20px; }
 .reading-intro--profile > .reading-intro-main { display:flex; flex:1 1 300px; min-width:0; flex-direction:column; gap:10px; }
 .reading-intro--profile .reading-intro-main > .reading-intro-copy { flex:none; }
-.reading-intro--profile .reading-intro-copy h2 { font-size:clamp(18px,2.1vw,24px); }
+/* 제목 · 설명은 낱말 가운데에서 줄을 바꾸지 않습니다(keep-all) — 카드가 한 줄로 서는 폭(1536px 등)에서 왼쪽 칸이 좁아 '넓 / 히다.'처럼 쪼개졌음. */
+.reading-intro--profile .reading-intro-copy h2 { font-size:clamp(18px,2.1vw,24px); word-break:keep-all; text-wrap:balance; }
 .reading-intro--profile .reading-intro-heading { margin-bottom:8px; }
-.reading-intro--profile .reading-intro-copy > p { margin-top:7px; font-size:12px; }
+.reading-intro--profile .reading-intro-copy > p { margin-top:7px; font-size:12px; word-break:keep-all; }
 .reading-intro--profile .reading-intro-main > .reading-summary--compact { flex:none; width:100%; max-width:500px; align-self:flex-start; grid-template-columns:repeat(2,minmax(0,1fr)); }
 .reading-intro--profile .reading-intro-main > .reading-intro-loading { flex:none; margin:0; }
 .reading-intro--profile .reading-intro-main .reading-summary--compact > div { min-height:36px; padding:3px 6px; border-left:0; border-top:0; }
@@ -553,6 +554,15 @@
 .reading-teacher-main { min-width: 0; }
 .reading-teacher--hideouts { grid-template-columns:minmax(0,1fr); }
 .reading-teacher--hideouts > .reading-teacher-rail { display:none; }
+/* 고른 학생의 소개 카드(책 봄 제목 · 통계 · 대표 뱃지 · 캐릭터 · 펫 — ReadingHub가 TeacherReadingView의 introSlot에 띄움)는 명단 칸까지
+   가로를 다 쓰는 맨 윗줄입니다(선생님 요청 · 2026년 11월 — 한때 명단 오른쪽 칸 안에만 서서 좁았고, 명단이 카드 옆에서 시작했음).
+   명단과 탭 줄은 그 아래 줄에서 같은 높이로 시작합니다 — 이 화면만 책 봄의 위 여백과 탭 줄 위 여백을 걷어(.reading-hub--intro-apart)
+   명단 칸의 위 테두리와 탭 단추의 위가 한 줄에 섭니다(카드와의 사이는 격자 틈 18px). 학생을 고르기 전 · 아지트 보기에서는 비어 있어
+   자리도 없습니다. 900px 아래(한 칸)에서는 예전처럼 명단 → 카드 → 탭 차례입니다(아래 order). */
+.reading-teacher-intro { grid-column: 1 / -1; min-width: 0; }
+.reading-teacher-intro:empty { display: none; }
+.reading-hub--intro-apart { padding-top: 0; }
+.reading-hub--intro-apart > .reading-tabs { padding-top: 0; }
 /* 책 봄 머리말 오른쪽 끝 빈자리(.books-head-aside — TeacherReadingView가 늘 그려 둠) — 학생 아지트 보기가 그 학생의 캐릭터 카드를
    띄웁니다(선생님 요청 · 2026년 11월 — 반 고르개 줄 · '책 봄' 줄 오른쪽이 비어 있었고, 카드가 아지트 제목 줄에 서서 그 줄이 높아졌음).
    카드가 들어오면 책방 본문(.books-main)이 두 칸 격자가 되어 왼쪽 칸에 머리말 두 줄, 오른쪽 칸에 두 줄에 걸친 카드가 섭니다.
@@ -583,20 +593,26 @@
 .reading-teacher-chip.is-hungry { background: #fdeed9; color: #a85a22; }
 .reading-teacher-chip.is-low { background: #fde3df; color: #b3392f; }
 .reading-teacher-chip.is-away { background: #ebe8e1; color: #6f675c; }
-/* 학생 책꽂이 도구 — 제목 영역을 비우고 댓글 이력 · 광장 대화를 책꽂이 제목 옆에 둡니다. */
-/* 이력 단추 둘(댓글 이력 · 광장 대화) — 한 줄에 같은 크기, 좁으면 한 줄에 하나 */
-/* (이어 놓인 단추는 같은 크기 — inline-grid의 1fr 두 칸은 글자가 긴 쪽에 맞춰 함께 넓어짐) */
-/* 책꽂이 제목 옆의 선생님 단추 셋(댓글 이력 · 광장 대화 · 프로필 편집) — 넓으면 한 줄에 같은 크기 셋, 책꽂이 칸이 좁으면
-   (양옆에 명단 · 성장 칸 · '멋진 순간'이 서는 1440px 화면 등) 같은 폭으로 세로로 쌓아 설명이 한 줄에 들게 합니다.
-   접는 기준은 창 폭이 아니라 책꽂이 칸의 폭(readinglib) — 셋을 나란히 두면 1024 · 1440px에서 설명이 두세 줄로 쪼개졌습니다. */
+/* 책꽂이 제목 옆의 선생님 단추 셋(댓글 이력 · 광장 대화 · 프로필 편집) — 늘 한 줄에 같은 크기 셋입니다(선생님 요청 · 2026년 11월 —
+   한때 책꽂이 칸이 좁으면 같은 폭으로 세로로 쌓아 머리가 단추 세 줄만큼 높았습니다. 다시 쌓지 마세요). 설명 글(small)은 셋을 설명과 함께
+   제목 옆에 둘 만큼 넓을 때만 보이고(그 밖에는 단추의 title — 마우스를 올리면 같은 말이 뜸), 이름만으로도 제목 옆에 다 들지 않으면
+   제목 아래 제 줄을 다 씁니다. 접는 기준은 창 폭이 아니라 책꽂이 칸의 폭(readinglib — 양옆에 명단 · 성장 칸 · '멋진 순간'이 서서
+   창 폭으로는 모름). 기준 값은 이 컨테이너의 넓은 대체 글꼴로 잰 자리라(제목 201 · 설명까지 셋 820 · 이름만 셋 376px) 실제 화면에서는 남습니다. */
 .reading-library-toolbar { container: readinglib / inline-size; }
-.reading-teacher-tools { display: inline-grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; min-width: 0; max-width: 100%; }
-@container readinglib (max-width: 1080px) {
-  .reading-teacher-tools { grid-template-columns: minmax(0, 1fr); }
-  .reading-teacher-tools .reading-teacher-history { justify-content: flex-start; }
+.reading-teacher-tools { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; min-width: 0; max-width: 100%; }
+.reading-teacher-tools .reading-teacher-history { min-width: 0; margin-top: 0; justify-content: center; }
+@container readinglib (max-width: 1039px) {
+  .reading-teacher-tools .reading-teacher-history small { display: none; }
 }
-.reading-teacher-tools .reading-teacher-history { margin-top: 0; justify-content: center; }
-@media (max-width: 560px) { .reading-teacher-tools { grid-template-columns: minmax(0, 1fr); } }
+@container readinglib (max-width: 599px) {
+  .reading-teacher-tools { flex: 1 1 100%; }
+  .reading-teacher-tools .reading-teacher-history { padding-inline: 8px; }
+}
+/* '멋진 순간'을 편 1024px 화면처럼 칸이 아주 좁으면 그림을 걷어 이름이 한 줄에 들게 합니다. */
+@container readinglib (max-width: 359px) {
+  .reading-teacher-tools { gap: 6px; }
+  .reading-teacher-tools .reading-teacher-history > svg { display: none; }
+}
 .reading-teacher-history { display: inline-flex; align-items: center; flex-wrap:wrap; justify-content:center; gap: 7px; padding: 7px 14px 7px 11px; border: 1px solid #cfdccf; border-radius: 999px; background: #fff; color: #2c4c3f; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
 .reading-teacher-history:hover { border-color: #9fbfa6; background: #f6faf3; }
 .reading-teacher-history:focus-visible { outline: 3px solid #478fbd; outline-offset: 2px; }
@@ -626,6 +642,8 @@
 .reading-teacher-plaza small { font-size: 12px; font-weight: 500; color: #7a5a3a; line-height: 1.35; }
 @media (max-width: 900px) {
   .reading-teacher { grid-template-columns: minmax(0, 1fr); }
+  .reading-teacher-intro { order: 1; }
+  .reading-teacher-main { order: 2; }
   .reading-teacher-rail ol { display: flex; gap: 6px; overflow-x: auto; }
   .reading-teacher-rail li { flex: 0 0 auto; }
   .reading-teacher-rail button { width: auto; white-space: nowrap; }

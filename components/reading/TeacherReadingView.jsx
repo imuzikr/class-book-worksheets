@@ -147,6 +147,9 @@ export default function TeacherReadingView({ classId, user, roster = [], ownClas
   // 책 봄 머리말(반 고르개 줄 · '책 봄' 줄) 오른쪽 끝 빈자리 — 학생 아지트 보기가 그 학생의 캐릭터 카드를 여기에 띄웁니다(선생님 요청 ·
   // 2026년 11월 · createPortal). 늘 그려 두고 비어 있으면 자리를 차지하지 않습니다(reading.css의 .books-head-aside).
   const [headAside, setHeadAside] = useState(null);
+  // 고른 학생의 소개 카드(책 봄 제목 · 통계 · 대표 뱃지 · 캐릭터 · 펫) 자리 — 명단 칸까지 가로를 다 쓰는 맨 윗줄(선생님 요청 · 2026년 11월 —
+  // 명단 오른쪽 칸에만 서서 좁았음). ReadingHub가 카드를 여기에 띄우고(createPortal), 명단 · 탭 줄은 그 아래에서 같은 높이로 시작합니다.
+  const [introSlot, setIntroSlot] = useState(null);
   const mainRef = useRef(null);
   const restoreGalleryFocus = useRef(false);
   const galleryIdentity = `${classId || ""}:${user?.uid || ""}`;
@@ -202,6 +205,8 @@ export default function TeacherReadingView({ classId, user, roster = [], ownClas
     {introHeading && (galleryActive || !student) && <div className="books-head">{introHeading}</div>}
     <div className="books-head-aside" ref={setHeadAside} />
     <div className={`reading-teacher${galleryActive ? " reading-teacher--hideouts" : ""}`}>
+      {/* 소개 카드 자리 — 늘 그려 두고 비어 있으면 자리를 차지하지 않습니다(reading.css의 .reading-teacher-intro). */}
+      <div className="reading-teacher-intro" ref={setIntroSlot} />
       <aside className="reading-teacher-rail" aria-label="책 광장 입구와 학생 명단">
         {plazaOn && (
           <button type="button" className="reading-teacher-plaza" onClick={openPlaza}>
@@ -241,18 +246,19 @@ export default function TeacherReadingView({ classId, user, roster = [], ownClas
           </div>
         )}
         {galleryActive ? <TeacherHideoutBrowser key={`${classId}:${user?.uid}`} classId={classId} user={user} roster={roster} characterOn={hubProps.characterOn} petOn={petOn} petFeed={petFeed} onClose={closeGallery} onPlaza={plazaOn ? openPlaza : null} cardSlot={headAside} />
-          : student ? <ReadingHub key={`${classId}:${student.uid}`} classId={classId} user={user} isTeacher student={{ uid: student.uid, name: student.name, pet: pets.get(student.uid) ?? null }} plazaOn={plazaOn} petOn={petOn} petFeed={studentFeed} initialTab={hubTab} introHeading={introHeading} {...hubProps}
+          : student ? <ReadingHub key={`${classId}:${student.uid}`} classId={classId} user={user} isTeacher student={{ uid: student.uid, name: student.name, pet: pets.get(student.uid) ?? null }} plazaOn={plazaOn} petOn={petOn} petFeed={studentFeed} initialTab={hubTab} introHeading={introHeading} introApart introSlot={introSlot} {...hubProps}
           onOpenHideoutGallery={() => { setHistoryFor(null); setGalleryOpen(true); }}
           onOpenOwnHideout={(origin) => { setStartInHideoutRoom(origin === "plaza" ? "plaza" : "classroom"); setStartInHideout(true); setPlazaOpen(true); }}
           teacherTools={(
             <div className="reading-teacher-tools">
-              <button type="button" className="reading-teacher-history" onClick={() => setHistoryFor({ student, kind: "comments" })}>
+              {/* 설명 글(small)은 책꽂이 칸이 좁으면 감춥니다 — 그때는 마우스를 올리면 뜨는 title이 같은 말을 합니다. */}
+              <button type="button" className="reading-teacher-history" title="댓글 이력 — 책 광장 · 고친 글 · 지운 글까지" onClick={() => setHistoryFor({ student, kind: "comments" })}>
                 <IconAnswer size={17} /><span>댓글 이력</span><small>책 광장 · 고친 글 · 지운 글까지</small>
               </button>
-              <button type="button" className="reading-teacher-history" onClick={() => setHistoryFor({ student, kind: "talk" })}>
+              <button type="button" className="reading-teacher-history" title="광장 대화 — 친구들과 나눈 말" onClick={() => setHistoryFor({ student, kind: "talk" })}>
                 <IconAnswer size={17} /><span>광장 대화</span><small>친구들과 나눈 말</small>
               </button>
-              <button type="button" className="reading-teacher-history" aria-haspopup="dialog" onClick={() => openProfile(student)}
+              <button type="button" className="reading-teacher-history" title="프로필 편집 — 이름 · 학번 · 이메일" aria-haspopup="dialog" onClick={() => openProfile(student)}
                 aria-label={`${student.name} 프로필 편집 — 이름 · 학번 · 이메일, 이 반에서 빼기 · 사용 중지 · 탈퇴`}>
                 <IconStudent size={17} /><span>프로필 편집</span><small>이름 · 학번 · 이메일</small>
               </button>

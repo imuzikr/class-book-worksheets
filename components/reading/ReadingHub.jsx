@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import { bookInfoUrl, bookPagesFloor, bookTitleDrifted, coversWholeBook, deriveReading, initialReadingState, kstToday, READING_BADGES, wholeBookReviewPlan } from "@/lib/reading";
 import { subscribeReadingState, mutateReading, mutateStudentBook, fetchReadingRankings } from "@/lib/data/reading";
@@ -184,7 +185,9 @@ function Modal({ title, onClose, children, wide = false, busy = false }) {
 // '함께할 독서 활동' 칸을 세우지 않습니다(책 상세의 '활동 열기'는 부르는 쪽이 onOpenActivity를 넘기지 않아 사라짐). 이미 이어 둔
 // 활동은 지우지 않습니다 — 칸만 감추고 값은 그대로 저장됩니다(다시 켜면 그대로).
 // introHeading — 학생·교사 공통 '책 봄' 제목 · 반 표시. 학생은 반 고르개·출석 버튼도 카드 안에 둡니다.
-export default function ReadingHub({ classId, user, isTeacher = false, bookSearchOn = false, petOn = false, plazaOn = false, hideoutOn = false, talkOn = false, characterOn = true, onDisabled, activities = [], onOpenActivity, activitiesOn = true, initialBookId = null, initialTab = "library", student = null, classroom = null, plazaCall = 0, petFeed = null, myFruit = 0, petPreview = false, teacherTools = null, onOpenOwnHideout = null, onOpenHideoutGallery = null, introHeading = null }) {
+// introApart · introSlot — 교사 책 봄(TeacherReadingView)이 소개 카드를 명단 위 맨 윗줄(introSlot)에 띄우게 합니다(선생님 요청 ·
+//   2026년 11월). introApart인데 자리가 아직 없으면 카드를 그리지 않습니다(한 번 그렸다가 옮겨 가며 깜빡이지 않게).
+export default function ReadingHub({ classId, user, isTeacher = false, bookSearchOn = false, petOn = false, plazaOn = false, hideoutOn = false, talkOn = false, characterOn = true, onDisabled, activities = [], onOpenActivity, activitiesOn = true, initialBookId = null, initialTab = "library", student = null, classroom = null, plazaCall = 0, petFeed = null, myFruit = 0, petPreview = false, teacherTools = null, onOpenOwnHideout = null, onOpenHideoutGallery = null, introHeading = null, introApart = false, introSlot = null }) {
   // student가 있으면 교사가 그 학생의 책 봄을 보는 읽기 전용 화면입니다(선생님 결정 — 감상·발자국까지 전부 보임).
   const readOnly = !!student?.uid;
   const viewUid = readOnly ? student.uid : user?.uid;
@@ -387,7 +390,8 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
     hasReview: stats.reviews.some((review) => review.bookId === bookId && review.classId === classId),
   });
 
-  return <ReadingErrorContext.Provider value={error}><section className={`reading-hub${ownPlaza ? " reading-hub--no-tabs" : ""}${tab === "plaza" || tab === "hideout" ? " reading-hub--plaza" : ""}`} aria-label={readOnly ? `${student.name || "학생"}의 책 봄` : "책 봄 성장 기능"} aria-busy={tab === "hideout" ? false : loading || busy}>
+  // 소개 카드(제목 · 통계 · 대표 뱃지 · 캐릭터 · 펫). 교사 화면은 명단 위 맨 윗줄(introSlot)에, 학생 화면은 탭 줄 위 그대로.
+  const intro = (
     <div className={`reading-intro reading-intro--profile ${readOnly ? "reading-intro--teacher" : "reading-intro--student"}${ownStudent ? " has-profile" : ""}${showPet ? " has-pet" : ""}`}>
       <div className="reading-intro-main">
       <div className="reading-intro-copy">{introHeading && <div className="reading-intro-heading">{introHeading}</div>}<h2>한 페이지씩, 나의 가능성을 넓히다.</h2><p>읽은 순간을 기록하고 나만의 독서 컬렉션을 완성해 보세요.</p></div>
@@ -405,6 +409,9 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
           feed={petFeed} fruits={myFruit} today={day} preview={petPreview} />}
       </div>}
     </div>
+  );
+  return <ReadingErrorContext.Provider value={error}><section className={`reading-hub${ownPlaza ? " reading-hub--no-tabs" : ""}${introApart ? " reading-hub--intro-apart" : ""}${tab === "plaza" || tab === "hideout" ? " reading-hub--plaza" : ""}`} aria-label={readOnly ? `${student.name || "학생"}의 책 봄` : "책 봄 성장 기능"} aria-busy={tab === "hideout" ? false : loading || busy}>
+    {introApart ? (introSlot && tab !== "plaza" && tab !== "hideout" ? createPortal(intro, introSlot) : null) : intro}
     {!ownPlaza && <nav className="reading-tabs" aria-label="책 봄 메뉴" ref={tabsRef}>
       {[["library", "책꽂이"], ...(!readOnly || !plazaOn ? [[thirdTab, plazaOn ? "책 광장" : "우리 반 랭킹"]] : []), ...(readOnly && canHideout ? [["hideout", "아지트 보기"]] : [])].map(([key, label]) => <button type="button" key={key} className={tab === key ? "active" : ""} aria-current={tab === key ? "page" : undefined} data-reading-hideout-gallery={key === "hideout" && onOpenHideoutGallery ? "true" : undefined} onClick={() => { if (key === "hideout" && readOnly && onOpenHideoutGallery) { onOpenHideoutGallery(); return; } setTab(key); setDialog(null); setError(""); setPlazaJump(null); setPlazaReturn(null); }}>{label}</button>)}
     </nav>}
