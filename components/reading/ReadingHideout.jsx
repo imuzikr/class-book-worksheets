@@ -4,9 +4,10 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import {
   HIDEOUT_DEFAULT_ANCHORS, HIDEOUT_DEFAULT_LAYOUT, HIDEOUT_ITEMS, HIDEOUT_OCCUPANTS, HIDEOUT_PORTAL_UNIT, HIDEOUT_SCENE, HIDEOUT_SLOTS, HIDEOUT_SURFACE_LABELS,
   HIDEOUT_TOP_HOME, HIDEOUT_UNITS,
-  hideoutArtBox, hideoutPlaceTargets, hideoutPlaqueLabel, hideoutSceneProps, hideoutUnitCategory, hideoutUnitFlips, hideoutUnitTopOnly, hideoutUnitTops,
+  hideoutArtQuad, hideoutPlaceTargets, hideoutPlaqueLabel, hideoutSceneProps, hideoutUnitCategory, hideoutUnitFlips, hideoutUnitTopOnly, hideoutUnitTops,
   isHideoutItemUnlocked, normalizeHideoutRoom, sameHideoutArrange,
 } from "@/lib/readingHideout";
+import { hideoutFloorPerspective, hideoutPerspectiveStyle, hideoutQuadHit } from "@/lib/readingHideoutPerspective";
 import {
   createHideoutWalkMap, hideoutAtReturnPortal, hideoutReturnPortal,
 } from "@/lib/readingHideoutMap";
@@ -515,20 +516,25 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
         // 꾸미는 동안 고른 소품은 테두리 빛, 끄는 소품은 살짝 비침 — 책상 · 책장 · 선반을 고르면 그 위의 소품도 함께(같이 움직임)
         const lit = arranging && !!selectedUnit && (prop.unit === selectedUnit || prop.parentUnit === selectedUnit);
         const dragging = !!drag && (prop.unit === drag.unit || prop.parentUnit === drag.unit);
+        // 바닥에 앞뒤로 길게 누운 소품(세로로 놓은 침대)은 방 그림처럼 원근을 입혀 — 아래 변은 그대로, 위 변은 소실점 쪽으로 좁고 기울게
+        // (선생님 요청 · lib/readingHideoutPerspective.js). 끄는 동안에도 놓인 자리의 원근을 따릅니다. 무대 폭을 재기 전(--hideout-unit 0)에는 평평하게.
+        const perspective = sceneWidth > 0 ? hideoutPerspectiveStyle(hideoutFloorPerspective(prop), prop.flip) : null;
         return <img key={prop.id} src={prop.src} className={`hideout-prop${prop.contactShadow ? " is-grounded" : ""}${prop.flip ? " is-flipped" : ""}${lit ? " is-selected" : ""}${dragging ? " is-dragging" : ""}`}
-          data-hideout-slot={prop.category || prop.slot} data-hideout-item={prop.itemId || prop.id} alt="" draggable={false}
-          style={{ ...place(prop.x, prop.y, prop.width), zIndex: Math.round(prop.z) }} />;
+          data-hideout-slot={prop.category || prop.slot} data-hideout-item={prop.itemId || prop.id} data-hideout-perspective={perspective ? "floor" : undefined} alt="" draggable={false}
+          style={{ ...place(prop.x, prop.y, prop.width), zIndex: Math.round(prop.z), ...perspective }} />;
       })}
-      {/* 누르는 칸(꾸미는 동안만) — 그림 상자가 아니라 보이는 상자(투명 여백을 뺀 — hideoutArtBox)만 합니다. 그림 상자로 누르면
-          옆 소품의 빈 여백을 눌러도 그 소품이 잡혔습니다. 앞뒤 차례는 그림과 같고, 여기서만 touch-action을 꺼서 폰에서도 끌어
-          옮기고 빈 바닥을 쓸면 화면이 구릅니다. 책상 · 책장 · 선반 위의 소품은 받치는 가구보다 위라 그 소품 자체가 잡힙니다(따로 옮김). */}
+      {/* 누르는 칸(꾸미는 동안만) — 그림 상자가 아니라 보이는 모양(투명 여백을 뺀 — hideoutArtQuad)만 합니다. 그림 상자로 누르면
+          옆 소품의 빈 여백을 눌러도 그 소품이 잡혔습니다. 원근을 입힌 세로 침대는 기운 모양 그대로(clip-path — 옆의 빈 바닥은 안 잡힘).
+          앞뒤 차례는 그림과 같고, 여기서만 touch-action을 꺼서 폰에서도 끌어 옮기고 빈 바닥을 쓸면 화면이 구릅니다. 책상 · 책장 ·
+          선반 위의 소품은 받치는 가구보다 위라 그 소품 자체가 잡힙니다(따로 옮김). */}
       {arranging && props.map((prop) => {
         const unit = prop.unit;
         if (!unit) return null;
-        const box = hideoutArtBox(prop);
+        const { box, clipPath } = hideoutQuadHit(hideoutArtQuad(prop));
         return <span key={`${prop.id}-hit`} className="hideout-hit" data-unit={unit} data-category={prop.category} aria-hidden="true" style={{
           left: `${box.x0 / HIDEOUT_SCENE.width * 100}%`, top: `${box.y0 / HIDEOUT_SCENE.height * 100}%`,
           width: `${(box.x1 - box.x0) / HIDEOUT_SCENE.width * 100}%`, height: `${(box.y1 - box.y0) / HIDEOUT_SCENE.height * 100}%`, zIndex: Math.round(prop.z),
+          ...(hideoutFloorPerspective(prop) ? { clipPath } : null),
         }} />;
       })}
       {/* 문패 글자는 문패의 크림색 칸 안에만 — 크기는 장면 단위(그림과 함께 커지고 작아짐), 한 줄 · 두 줄 가운데 큰 쪽(hideoutPlaqueLabel) */}

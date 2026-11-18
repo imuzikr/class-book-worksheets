@@ -171,7 +171,10 @@ test("판정 — 바닥 · 벽 밖, 창문 가림, 가구 겹침, 벽 장식 크
   assert.equal(code({ clock: { x: 880, y: 160 } }), null, "액자 모서리에 살짝 걸친 것은 됨");
   assert.equal(code({ plant: { x: 1416, y: 864 } }), "portal", "화분으로 포털을 가림");
   assert.equal(code({ "desk-calendar": { x: 1150, y: 800, turn: true }, desk: { x: 1150, y: 930, turn: true } }), "path", "침대 · 책상으로 포털 가는 길을 막음");
-  assert.equal(code({ plant: { x: 600, y: 640 }, clock: { x: 1200, y: 240 }, "desk-calendar": { x: 1384, y: 704, turn: true } }), null);
+  // 세로 침대는 원근을 입혀 머리 쪽이 방 가운데로 기웁니다(lib/readingHideoutPerspective.js) — 책장 오른쪽 구석에서는 머리가 책장 바닥에
+  // 걸리지 않을 만큼 벽 쪽에 붙여야 놓입니다(한때 평평한 네모일 때는 1384도 됐음).
+  assert.equal(code({ plant: { x: 600, y: 640 }, clock: { x: 1200, y: 240 }, "desk-calendar": { x: 1448, y: 704, turn: true } }), null);
+  assert.equal(code({ "desk-calendar": { x: 1384, y: 704, turn: true } }), "overlap", "기운 머리가 책장 바닥에 걸림");
   const issue = hideoutArrangeProblem(PROBE, { chest: { x: 216, y: 792 } });
   assert.equal(issue.unit, "chest");
   assert.match(issue.message, /겹쳐요/);

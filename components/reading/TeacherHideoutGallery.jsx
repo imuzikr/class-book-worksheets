@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchReadingHideout } from "@/lib/data/readingHideout";
 import { HIDEOUT_SCENE, hideoutSceneProps } from "@/lib/readingHideout";
+import { hideoutFloorPerspective, hideoutPerspectiveStyle } from "@/lib/readingHideoutPerspective";
 import "./teacher-hideout-gallery.css";
 
 const CONCURRENT_ROOMS = 4;
@@ -134,11 +135,13 @@ function RoomCard({ student, result, onSelect, onRetry }) {
 }
 
 function RoomPreview({ room, name }) {
-  // 학생이 옮긴 자리 · 뒤집기 · 돌리기(아지트 2단계)까지 그대로 — 서버가 맞춰 보낸 배치(room.arrange)
+  // 학생이 옮긴 자리 · 뒤집기 · 돌리기(아지트 2단계)까지 그대로 — 서버가 맞춰 보낸 배치(room.arrange). 세로로 놓은 침대는 아지트 무대처럼
+  // 원근을 입혀(lib/readingHideoutPerspective.js — 장면 1px의 길이는 이 그림 칸의 폭으로 셈: teacher-hideout-gallery.css의 --hideout-unit)
   const props = useMemo(() => hideoutSceneProps(room.layout, room.arrange), [room.layout, room.arrange]);
   return <span className="teacher-hideout-gallery-scene" role="img" aria-label={`${name}이 꾸민 아지트 미리보기`}>
     <img className="teacher-hideout-gallery-background" src={HIDEOUT_SCENE.background} width={HIDEOUT_SCENE.width} height={HIDEOUT_SCENE.height} alt="" loading="lazy" draggable={false} />
     {props.map((prop) => <img key={prop.id} className={`teacher-hideout-gallery-prop${prop.flip ? " is-flipped" : ""}`} src={prop.src} alt="" loading="lazy" draggable={false}
-      style={{ left: `${prop.x / HIDEOUT_SCENE.width * 100}%`, top: `${prop.y / HIDEOUT_SCENE.height * 100}%`, width: `${prop.width / HIDEOUT_SCENE.width * 100}%`, zIndex: prop.z }} />)}
+      style={{ left: `${prop.x / HIDEOUT_SCENE.width * 100}%`, top: `${prop.y / HIDEOUT_SCENE.height * 100}%`, width: `${prop.width / HIDEOUT_SCENE.width * 100}%`, zIndex: prop.z,
+        ...hideoutPerspectiveStyle(hideoutFloorPerspective(prop), prop.flip) }} />)}
   </span>;
 }
