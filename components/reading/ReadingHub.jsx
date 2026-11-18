@@ -184,7 +184,8 @@ function Modal({ title, onClose, children, wide = false, busy = false }) {
 // activitiesOn — 이 반의 책방이 학생에게 열려 있는가(관리자 설정 · lib/reading.js의 bookActivitiesOn). 끈 반의 학생에게는 책 등록 창의
 // '함께할 독서 활동' 칸을 세우지 않습니다(책 상세의 '활동 열기'는 부르는 쪽이 onOpenActivity를 넘기지 않아 사라짐). 이미 이어 둔
 // 활동은 지우지 않습니다 — 칸만 감추고 값은 그대로 저장됩니다(다시 켜면 그대로).
-// introHeading — 학생·교사 공통 '책 봄' 제목 · 반 표시. 학생은 반 고르개·출석 버튼도 카드 안에 둡니다.
+// introHeading — 학생 본인 화면의 '책 봄' 제목 · 반 표시(반 고르개 · 출석 버튼도 카드 안에 둡니다). 교사가 학생을 볼 때는 넘기지
+//   않습니다 — 그 카드는 제목 덩이 없이 통계 · 대표 뱃지 · 캐릭터 · 펫만 그립니다(아래 intro).
 // introApart · introSlot — 교사 책 봄(TeacherReadingView)이 소개 카드를 명단 위 맨 윗줄(introSlot)에 띄우게 합니다(선생님 요청 ·
 //   2026년 11월). introApart인데 자리가 아직 없으면 카드를 그리지 않습니다(한 번 그렸다가 옮겨 가며 깜빡이지 않게).
 export default function ReadingHub({ classId, user, isTeacher = false, bookSearchOn = false, petOn = false, plazaOn = false, hideoutOn = false, talkOn = false, characterOn = true, onDisabled, activities = [], onOpenActivity, activitiesOn = true, initialBookId = null, initialTab = "library", student = null, classroom = null, plazaCall = 0, petFeed = null, myFruit = 0, petPreview = false, teacherTools = null, onOpenOwnHideout = null, onOpenHideoutGallery = null, introHeading = null, introApart = false, introSlot = null }) {
@@ -391,10 +392,13 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
   });
 
   // 소개 카드(제목 · 통계 · 대표 뱃지 · 캐릭터 · 펫). 교사 화면은 명단 위 맨 윗줄(introSlot)에, 학생 화면은 탭 줄 위 그대로.
+  // 교사가 학생을 볼 때(readOnly)는 제목 덩이('책 봄 · 반 이름' 머리줄 · '한 페이지씩…' 문구 · 학생에게 하는 안내 한 줄)를 그리지
+  // 않습니다 — 통계 · 대표 뱃지 · 캐릭터 · 펫만 남겨 카드가 낮아지게(선생님 요청 · 2026년 11월, 한때 그 덩이가 카드 높이를 정해
+  // 캐릭터 · 펫 카드 아래위가 비었음). 학생 본인 화면은 그대로입니다(반 고르개 · 출석 단추가 그 머리줄에 섬).
   const intro = (
     <div className={`reading-intro reading-intro--profile ${readOnly ? "reading-intro--teacher" : "reading-intro--student"}${ownStudent ? " has-profile" : ""}${showPet ? " has-pet" : ""}`}>
       <div className="reading-intro-main">
-      <div className="reading-intro-copy">{introHeading && <div className="reading-intro-heading">{introHeading}</div>}<h2>한 페이지씩, 나의 가능성을 넓히다.</h2><p>읽은 순간을 기록하고 나만의 독서 컬렉션을 완성해 보세요.</p></div>
+      {!readOnly && <div className="reading-intro-copy">{introHeading && <div className="reading-intro-heading">{introHeading}</div>}<h2>한 페이지씩, 나의 가능성을 넓히다.</h2><p>읽은 순간을 기록하고 나만의 독서 컬렉션을 완성해 보세요.</p></div>}
       {raw && !loading ? <ReadingSummary stats={stats} compact /> : <p className="reading-intro-loading" role="status">{loading ? "독서 기록을 불러오고 있어요." : "독서 정보를 불러오지 못했어요."}</p>}
       </div>
       {(ownStudent || readOnly) && <div className="reading-intro-side">

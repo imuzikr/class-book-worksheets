@@ -147,8 +147,9 @@ export default function TeacherReadingView({ classId, user, roster = [], ownClas
   // 책 봄 머리말(반 고르개 줄 · '책 봄' 줄) 오른쪽 끝 빈자리 — 학생 아지트 보기가 그 학생의 캐릭터 카드를 여기에 띄웁니다(선생님 요청 ·
   // 2026년 11월 · createPortal). 늘 그려 두고 비어 있으면 자리를 차지하지 않습니다(reading.css의 .books-head-aside).
   const [headAside, setHeadAside] = useState(null);
-  // 고른 학생의 소개 카드(책 봄 제목 · 통계 · 대표 뱃지 · 캐릭터 · 펫) 자리 — 명단 칸까지 가로를 다 쓰는 맨 윗줄(선생님 요청 · 2026년 11월 —
+  // 고른 학생의 소개 카드(통계 · 대표 뱃지 · 캐릭터 · 펫) 자리 — 명단 칸까지 가로를 다 쓰는 맨 윗줄(선생님 요청 · 2026년 11월 —
   // 명단 오른쪽 칸에만 서서 좁았음). ReadingHub가 카드를 여기에 띄우고(createPortal), 명단 · 탭 줄은 그 아래에서 같은 높이로 시작합니다.
+  // 학생을 고른 동안은 '책 봄 · 반 이름' 머리말이 어디에도 서지 않습니다 — 카드 안의 제목 덩이도 걷어 카드가 낮아졌습니다(선생님 요청).
   const [introSlot, setIntroSlot] = useState(null);
   const mainRef = useRef(null);
   const restoreGalleryFocus = useRef(false);
@@ -246,7 +247,7 @@ export default function TeacherReadingView({ classId, user, roster = [], ownClas
           </div>
         )}
         {galleryActive ? <TeacherHideoutBrowser key={`${classId}:${user?.uid}`} classId={classId} user={user} roster={roster} characterOn={hubProps.characterOn} petOn={petOn} petFeed={petFeed} onClose={closeGallery} onPlaza={plazaOn ? openPlaza : null} cardSlot={headAside} />
-          : student ? <ReadingHub key={`${classId}:${student.uid}`} classId={classId} user={user} isTeacher student={{ uid: student.uid, name: student.name, pet: pets.get(student.uid) ?? null }} plazaOn={plazaOn} petOn={petOn} petFeed={studentFeed} initialTab={hubTab} introHeading={introHeading} introApart introSlot={introSlot} {...hubProps}
+          : student ? <ReadingHub key={`${classId}:${student.uid}`} classId={classId} user={user} isTeacher student={{ uid: student.uid, name: student.name, pet: pets.get(student.uid) ?? null }} plazaOn={plazaOn} petOn={petOn} petFeed={studentFeed} initialTab={hubTab} introApart introSlot={introSlot} {...hubProps}
           onOpenHideoutGallery={() => { setHistoryFor(null); setGalleryOpen(true); }}
           onOpenOwnHideout={(origin) => { setStartInHideoutRoom(origin === "plaza" ? "plaza" : "classroom"); setStartInHideout(true); setPlazaOpen(true); }}
           teacherTools={(
