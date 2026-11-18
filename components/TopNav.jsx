@@ -31,6 +31,7 @@ import QuestionSignalButton from "./QuestionSignalButton";
 import ClassNoticeButton from "./ClassNoticeButton";
 import RoleSwitcher from "./RoleSwitcher";
 import SampleClassBar from "./SampleClassBar";
+import { canUseSampleClass, enterSampleClass } from "@/lib/sampleClass";
 import RoleManagerModal from "./RoleManagerModal";
 import PresentationOverlay from "./PresentationOverlay";
 import RewardCelebration from "./RewardCelebration";
@@ -515,6 +516,9 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
           character={characterOn && myUid ? characterOf({ uid: myUid, character: myCharacter }) : null}
           onSaveCharacter={characterOn ? saveMyCharacter : null}
           pet={petOn && !admin && myPet.mirror ? { classId: hubClassId, mirror: myPet.mirror } : null}
+          // 체험용 샘플 반 들어가기 — 실서비스의 교사 · 관리자만(샘플 반 안 · 체험반 데모에서는 없음). 한때 책방 화면 위의 한 줄
+          // 띠였는데, 실제로 쓰는 화면과 같게 보이도록 프로필 메뉴로 옮겼습니다(선생님 요청 · 2026년 11월 — 띠를 되살리지 마세요).
+          onOpenSample={isFirebaseConfigured && canUseSampleClass(user) ? enterSampleClass : null}
           onLogout={handleLogout}
         />
       </div>

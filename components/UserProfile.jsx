@@ -4,7 +4,8 @@
 // 상단바 오른쪽의 접속 사용자 프로필 — 클릭하면 메뉴가 열립니다
 // -------------------------------------------------------------
 // - 동그라미 아바타(이모지) + 표시 이름 + ▾
-// - 메뉴: [내 프로필](전원) / [관리자 설정 → 역할 관리](최고 관리자만) / [로그아웃]
+// - 메뉴: [내 프로필](전원) / [관리자 설정 → 역할 관리](최고 관리자만) /
+//   [체험용 샘플 반 열기](실서비스의 교사 · 관리자) / [로그아웃]
 //
 // [로그아웃이 왜 여기인가]
 // 예전에는 상단바 오른쪽 끝에 아이콘+글자 단추로 나와 있었습니다. 상단바에
@@ -39,6 +40,10 @@ export default function UserProfile({
   onSaveCharacter = null,
   // 독서 펫 — 학생 펫이 켜진 반의 학생이고 알을 받았으면 { classId, mirror }(lib/readingPet.js)
   pet = null,
+  // 체험용 샘플 반 들어가기(lib/sampleClass.js의 enterSampleClass) — 실서비스의 교사 · 관리자만 받습니다(TopNav).
+  // 한때 책방 화면 위의 한 줄 띠(.sample-class-entry)였는데, 실제로 쓰는 화면과 같게 보이도록 여기로 옮겼습니다
+  // (선생님 요청 · 2026년 11월 — 띠를 되살리지 마세요). 이 탭을 연습용 반으로 새로 여는 일이라 선으로 갈라 둡니다.
+  onOpenSample = null,
   onLogout = null,
 }) {
   const user = useCurrentUser();
@@ -143,6 +148,21 @@ export default function UserProfile({
             >
               🛡️ 관리자 설정
               {pendingCount > 0 && <span className="role-badge">{pendingCount}</span>}
+            </button>
+          )}
+          {onOpenSample && (
+            <button
+              type="button"
+              className="profile-menu-item profile-menu-item--sample"
+              role="menuitem"
+              title="가상의 학생 15명과 활동이 준비된 체험용 샘플 반에서 기능을 마음껏 시험해 보세요. 여기서 한 일은 저장되지 않아요."
+              onClick={() => {
+                setMenuOpen(false);
+                onOpenSample();
+              }}
+            >
+              <span aria-hidden="true">🧪</span>
+              <span className="profile-menu-text">체험용 샘플 반 열기<small>가상의 학생 15명 · 저장되지 않아요</small></span>
             </button>
           )}
           {onLogout && (

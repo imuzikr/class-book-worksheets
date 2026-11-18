@@ -527,25 +527,14 @@
   .paratext-board > .book-workspace > .book-workspace-center { order: 2; }
 }
 
-/* ── 체험용 샘플 반(교사 전용) — 들어가는 안내 · 안에서의 배지 ── */
-.sample-class-entry {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  margin: 8px 16px 0; padding: 10px 14px; border-radius: 12px;
-  background: #f2edf9; border: 1px dashed #b7a8f0; font-size: 14px; color: #3b2f6b;
-}
-.sample-class-entry .btn-ghost { white-space: nowrap; }
+/* ── 체험용 샘플 반(교사 전용) — 안에서의 배지 · 나가기. 들어가는 길은 프로필 메뉴(02의 .profile-menu-item--sample —
+   한때 여기 있던 책방 화면 위의 안내 띠 .sample-class-entry는 걷음, 선생님 요청) ── */
 .sample-class-bar { display: flex; align-items: center; gap: 6px; }
 .sample-class-badge {
   padding: 4px 10px; border-radius: 999px; background: #fff4d6; border: 1px solid #f0c36d;
   color: #7d5811; font-size: 12px; font-weight: 700; white-space: nowrap;
 }
 .sample-class-exit { font-size: 12px; padding: 4px 10px; white-space: nowrap; }
-/* 휴대폰 — 안내 한 줄 + 단추. 넘치는 글은 …로 줄입니다(늘 위에 붙어 있는 줄이라) */
-@media (max-width: 767.98px) {
-  .sample-class-entry { margin: 6px 12px 0; padding: 6px 8px 6px 12px; gap: 8px; font-size: 12px; line-height: 1.4; }
-  .sample-class-entry > span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .sample-class-entry .btn-ghost { font-size: 12px; padding: 4px 12px; min-height: 36px; }
-}
 
 /* 활동 화면 공통 머리(모든 독서 활동) — 제목 · 활동 목록 · 안내문을 한 줄에.
    .books-head-title은 원래 한 줄 고정(가로 스크롤)이지만, 여기서는 긴

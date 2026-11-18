@@ -842,7 +842,9 @@ function BooksPageInner() {
     ? myClasses
     : classes.filter((c) => membershipIds.includes(c.id));
   // 체험용 샘플 반 — 실제 반을 쓰는 교사·관리자에게만 보입니다(학생 X).
-  // 고르면 이 탭을 데모 자료로 새로 엽니다(lib/sampleClass.js).
+  // 고르면 이 탭을 데모 자료로 새로 엽니다(lib/sampleClass.js). 들어가는 길은 프로필 메뉴의 '체험용 샘플 반 열기'와
+  // 활동 화면의 반 고르개 — 한때 책방 화면 위에 섰던 안내 띠는 걷었습니다(선생님 요청 · 2026년 11월 — 실제로 쓰는
+  // 화면과 같게 보이도록. 되살리지 마세요).
   const showSampleEntry = isFirebaseConfigured && canUseSampleClass(user);
   const classPicker =
     pickableClasses.length > 1 ? (
@@ -985,12 +987,6 @@ function BooksPageInner() {
   return (
     <div className="board-shell">
       <TopNav key={myUid} active="books" growthEnabled={growthEnabled} rankingOn={rankingOn} readingOpen={readingOpen} leaderboardOpen={leaderboardOpen} settingsOpen={settingsOpen} booksOn={booksOn} />
-      {showSampleEntry && !activeActivity && (
-        <aside className="sample-class-entry" aria-label="체험용 샘플 반">
-          <span>가상의 학생 15명과 활동이 준비된 <strong>체험용 샘플 반</strong>에서 기능을 마음껏 시험해 보세요. 여기서 한 일은 저장되지 않아요.</span>
-          <button type="button" className="btn-ghost" onClick={() => enterSampleClass()}>🧪 체험용 샘플 반 열기</button>
-        </aside>
-      )}
       {!isFirebaseConfigured && <aside className="demo-classroom-notice" aria-label="체험 데이터 안내">
         <div><strong>책나눔 체험반 · 학생 15명</strong><span>11가지 독서 활동과 학생별 책꽂이의 책 1~2권이 준비되어 있어요. 상단에서 체험 학생을 골라 볼 수 있어요.</span>
           <small>{sampleMode

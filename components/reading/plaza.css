@@ -20,7 +20,6 @@
    본문 칸의 여백도 걷어 무대가 좌우 끝 · 화면 바닥까지 닿습니다(둥근 모서리 · 그림자 없음).
    한때 책방 머리말과 탭 줄을 남기고 그 아래에만 맵을 깔았습니다(여백 28px · 둥근 모서리) — 되돌리지 마세요. */
 .board-shell:has(.reading-hub--plaza) > .demo-classroom-notice,
-.board-shell:has(.reading-hub--plaza) > .sample-class-entry { display: none; }
 .books-body:has(.reading-hub--plaza) > .reward-panel { display: none; }
 .books-main:has(.reading-hub--plaza) { padding: 0; }
 .books-main:has(.reading-hub--plaza) > .books-head { display: none; }
