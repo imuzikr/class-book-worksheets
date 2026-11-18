@@ -1,0 +1,27 @@
+/* 성장·뱃지 — 여섯 묶음 · 18개 뱃지와 묶음마다 다음 목표(ReadingGrowthBadges).
+   떠 있는 동그라미의 '성장·뱃지' 창(ReadingBadgePanel) 안에서만 그립니다 — 창 틀(.hub-panel)이 테두리 · 머리 · 구르기를 맡고,
+   여기는 창 안의 모양만입니다. 한때 책 봄 왼쪽에 늘 서던 240px 칸(뱃지 44px · 칸 안에서 구름)이었는데, 선생님 요청(2026년 11월)으로
+   동그라미의 창으로 옮겼습니다 — 책 봄에 그 칸을 되살리지 마세요(책꽂이가 가로를 다 씁니다).
+   이 파일은 그 창의 코드와 함께, 누를 때만 내려받습니다(FloatingHub의 dynamic). */
+.reading-growth { min-width:0; color:#29473c; }
+.reading-growth, .reading-growth * { box-sizing:border-box; }
+.reading-growth-body { min-width:0; padding:0 14px 8px; }
+.reading-growth-series { min-width:0; padding:14px 0; border-top:1px solid #e6ece3; }
+.reading-growth-series:first-child { border-top:0; }
+.reading-growth-series-heading { min-width:0; margin-bottom:9px; }
+.reading-growth-series-heading h4 { margin:0; color:#315345; font-size:13px; font-weight:750; line-height:1.5; }
+.reading-growth-series-heading p { margin:4px 0 0; color:#667b6d; font-size:12px; line-height:1.65; overflow-wrap:anywhere; }
+.reading-growth-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+.reading-growth-badge { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; width:100%; min-width:44px; min-height:112px; padding:6px 2px; border:1px solid #e0e5dc; border-radius:9px; background:#f7f8f3; color:#66786b; font:inherit; cursor:pointer; }
+.reading-growth-badge:hover { border-color:#90b3a0; background:#edf4eb; }
+.reading-growth-badge:focus-visible { outline:3px solid #478fbd; outline-offset:-3px; }
+.reading-growth-badge--earned { border-color:#d6e3d4; background:#f8fbf4; color:#3f6851; }
+.reading-growth-badge--featured { border-color:#9a8748; background:#fbf7e6; color:#766126; }
+.reading-growth-badge--featured:hover { border-color:#87733a; background:#f5efd8; }
+.reading-growth-badge .reading-growth-art { display:block; width:54px; height:61.56px; }
+.reading-growth-tier { font-size:12px; font-weight:700; line-height:1.4; }
+.reading-growth-status { font-size:12px; line-height:1.4; white-space:nowrap; }
+.reading-growth-empty { margin:0; padding:18px 2px; color:#667b6d; font-size:12px; line-height:1.7; }
+@media (forced-colors:active) {
+  .reading-growth-badge--featured { outline:2px solid Highlight; outline-offset:-3px; }
+}

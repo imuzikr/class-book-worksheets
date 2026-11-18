@@ -492,7 +492,8 @@ function MessengerWindowBody({
 
   return (
     <section
-      className="msgr"
+      // 틀 · 자리는 .hub-panel(독서로 검색 · 성장·뱃지 창과 같은 자리 — app/styles/41-floating-messenger.css)
+      className="msgr hub-panel"
       role="dialog"
       aria-label="메신저"
       onKeyDown={onKeyDown}

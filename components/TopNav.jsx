@@ -539,8 +539,9 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
         상단바처럼 다섯 화면에 다 떠 있어야 해서 여기 답니다. 반은 교사는
         고른 반, 학생은 소속 반(데모 모드는 소속을 안 읽어 고른 반으로).
         교사 화면에 '방송 종료' 알약이 떠 있으면 그 위로 비켜 섭니다.
-        책 봄에서는 '독서로 검색'만 켜고 나머지는 흐린 회색(선생님 요청 — lib/hubPlace.js의 hubLibraryOnly:
-        책방을 끈 반의 학생은 책 봄이 첫 화면이라 그대로). */}
+        책 봄에서는 '독서로 검색' · '성장·뱃지'만 켜고 나머지는 흐린 회색 — 학생도 교사처럼(선생님 요청 ·
+        lib/hubPlace.js의 hubLibraryOnly: 책방과 리더보드를 모두 끈 반의 학생만 갈 화면이 없어 그대로).
+        '성장·뱃지' 행성은 책 봄에서만 섭니다(badgesOn — 자료는 책 봄이 lib/readingBadgeBridge.js에 건 것). */}
     {user && (
       <FloatingHub
         classId={hubClassId}
@@ -548,7 +549,8 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
         isTeacher={admin}
         fruitOn={fruitOn}
         lifted={admin && !!broadcast}
-        libraryOnly={hubLibraryOnly({ readingOpen, isTeacher: admin, booksOn })}
+        libraryOnly={hubLibraryOnly({ readingOpen, isTeacher: admin, booksOn, rankingOn: growthEnabled && rankingOn })}
+        badgesOn={!!readingOpen}
       />
     )}
 

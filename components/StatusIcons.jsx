@@ -381,6 +381,19 @@ export function IconMemo({ size = 20, className = "" }) {
   );
 }
 
+// 성장·뱃지 — 리본 단 메달(떠 있는 동그라미의 '성장·뱃지' 행성 · components/reading/ReadingBadgePanel.jsx).
+// 우승컵(IconTrophy — 리더보드)과 갈리게 메달 + 별. 메달 몸통은 우승컵과 같은 금빛 바탕, 별은 무늬 색(#8A6258).
+export function IconGrowthBadge({ size = 20, className = "" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+      <path d="M7 2.9h3.5l2.3 5.8-2.7 1.3L7 2.9Z" fill="#FFF7ED" stroke="#3A312E" strokeWidth="1.35" strokeLinejoin="round"/>
+      <path d="M17 2.9h-3.5l-2.3 5.8 2.7 1.3L17 2.9Z" fill="#FFF7ED" stroke="#3A312E" strokeWidth="1.35" strokeLinejoin="round"/>
+      <circle cx="12" cy="14.6" r="5.6" fill="#FFF1C9" stroke="#3A312E" strokeWidth="1.5"/>
+      <path d="M12 11.9l.68 1.77 1.89.1-1.48 1.19.5 1.82L12 15.75l-1.59 1.03.5-1.82-1.48-1.19 1.89-.1L12 11.9Z" fill="#8A6258" stroke="#8A6258" strokeWidth=".5" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
 // 독서로 검색 — 펼친 책 위에 돋보기(떠 있는 동그라미의 '독서로 검색' 행성 · components/reading/SchoolLibrarySearch.jsx).
 // 책은 IconBook을 왼쪽 위로 작게 옮긴 것이고, 돋보기의 흰 알이 오른쪽 아래 쪽을 덮습니다(그리는 차례가 곧 겹침).
 export function IconLibrarySearch({ size = 20, className = "" }) {

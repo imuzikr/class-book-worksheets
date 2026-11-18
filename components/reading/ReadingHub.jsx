@@ -9,12 +9,12 @@ import { rankingAsOf, rankingsForPeriod } from "@/lib/readingJourney";
 import { petGrowthOfSummary } from "@/lib/readingPet";
 import { careReadLabel, readingDayProof } from "@/lib/petCare";
 import ReadingBadge from "./ReadingBadge";
-import ReadingGrowthSidebar from "./ReadingGrowthSidebar";
 import ReadingCharacterSummary from "./ReadingCharacterSummary";
 import { IconTrophy } from "@/components/StatusIcons";
 import BookSearch from "./BookSearch";
 import { hasModalAbove } from "@/lib/modal";
 import { PLAZA_STAGE_MIN_H, plazaRoom, plazaScroller } from "@/lib/plazaStageRoom";
+import { publishReadingBadges, requestReadingBadgesPanel, withdrawReadingBadges } from "@/lib/readingBadgeBridge";
 import PetCard, { StudentPetSummary } from "./PetCard";
 import "./reading.css";
 import "./plaza.css";
@@ -205,7 +205,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
   // 책 광장을 켠 반은 그 자리에 '책 광장'이 섭니다(선생님 요청 — 순위는 상단바 리더보드에서 봄). 끈 반은 지금처럼 '우리 반 랭킹'.
   const thirdTab = plazaOn ? "plaza" : "ranking";
   const canHideout = hideoutOn && (readOnly || (!isTeacher && !!user?.uid));
-  // 옛 ?tab=growth 주소도 책꽂이와 왼쪽 성장 패널을 함께 엽니다.
+  // ?tab=growth(분석 리포트의 '성장·뱃지 모두 보기')는 책꽂이를 열고, 떠 있는 동그라미의 성장·뱃지 창을 함께 엽니다(아래 badgeToken).
   const [tab, setTab] = useState(() => (initialTab === "plaza" || initialTab === "ranking" ? thirdTab : initialTab === "hideout" && canHideout && readOnly ? "hideout" : "library"));
   // 선생님이 설정을 바꿔 셋째 탭이 달라지면(광장 ↔ 랭킹) 보던 탭도 따라갑니다.
   useEffect(() => { setTab((current) => (current === "plaza" || current === "ranking" ? thirdTab : current)); }, [thirdTab]);
@@ -313,6 +313,23 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
     return () => clearTimeout(timer);
   }, [notice]);
   const stats = useMemo(() => deriveReading(raw || initialReadingState(), new Date(`${day}T12:00:00+09:00`)), [raw, day]);
+  // 성장·뱃지 — 한때 책꽂이 왼쪽에 늘 서던 칸(ReadingGrowthSidebar)을 걷고, 떠 있는 동그라미의 '성장·뱃지' 행성이 메신저처럼
+  // 창으로 엽니다(선생님 요청 · 2026년 11월 — 되살리지 마세요). 이 화면이 들고 있는 뱃지를 다리에 걸어 두면 그 창이 그대로
+  // 그립니다(서버에 다시 묻지 않음). 뱃지를 누르면 이 화면의 뱃지 상세 창이 뜹니다(대표 뱃지 고르기도 그대로).
+  // 교사가 학생을 볼 때는 그 학생의 것(owner) — 다른 학생을 고르면 새 화면이 다시 걸고, 걷을 때는 제 것만 걷습니다(token).
+  const badgeToken = useMemo(() => ({}), []);
+  const openBadge = useCallback((badgeId) => setDialog({ type: "badge", badgeId }), []);
+  const badgeOwner = readOnly ? (student?.name || "학생") : null;
+  useEffect(() => {
+    publishReadingBadges({ token: badgeToken, state: loading ? "loading" : raw ? "ready" : "error", owner: badgeOwner, stats: raw ? stats : null, onInspect: openBadge });
+  }, [badgeToken, loading, raw, stats, badgeOwner, openBadge]);
+  useEffect(() => () => withdrawReadingBadges(badgeToken), [badgeToken]);
+  const askedBadges = useRef(false);
+  useEffect(() => {
+    if (askedBadges.current || readOnly || initialTab !== "growth") return;
+    askedBadges.current = true;
+    requestReadingBadgesPanel();
+  }, [initialTab, readOnly]);
   const previousLevel = useRef(null);
   // 펫 축하가 함께 알린 레벨 — 같은 저장에서 펫이 자라며 레벨도 오르면 폭죽 한 번에 함께 알리므로
   // 알림 줄은 같은 말을 또 띄우지 않습니다. 펫 카드(자식)의 효과가 아래 효과보다 먼저 돌아 여기에 적습니다.
@@ -427,7 +444,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
     {tab === "plaza" ? <PlazaExitContext.Provider value={leavePlaza}><ReadingPlaza key={plazaJump?.key ?? plazaReturn?.key ?? "plaza"} classId={classId} user={user} isTeacher={isTeacher} characterOn={characterOn} petOn={showPet} petFeed={petFeed} growthXp={raw ? petGrowthOfSummary(stats) : null} fruits={myFruit} initialBook={plazaJump} initialRoom={plazaJump ? null : plazaReturn?.room} onExit={leavePlaza} classroom={classroom} hideoutOn={canHideout && (!readOnly || typeof onOpenOwnHideout === "function")} onEnterHideout={enterHideout} talkOn={plazaOn && talkOn} /></PlazaExitContext.Provider>
     : tab === "hideout" && canHideout ? <PlazaExitContext.Provider value={leaveHideout}><ReadingHideout key={`${classId}:${viewUid}`} classId={classId} user={user} student={student} summary={stats} readOnly={readOnly} characterOn={characterOn} petOn={petOn} petFeed={petFeed} fruits={myFruit} returnRoom={hideoutOrigin} onDisabled={leaveHideout} onExit={leaveHideout} /></PlazaExitContext.Provider>
     : loading ? <div className="reading-loading" role="status"><span className="reading-loader" />독서 기록을 불러오고 있어요.</div> : !raw ? <div className="reading-empty"><BookIcon size={40} /><h3>독서 정보를 불러오지 못했어요.</h3><button type="button" className="btn-primary" onClick={() => setRevision((r) => r + 1)}>다시 불러오기</button></div> : <div className="reading-workspace"><div className="reading-workspace-layout">
-      <ReadingGrowthSidebar stats={stats} onInspect={(badgeId) => setDialog({ type: "badge", badgeId })} />
+      {/* 성장·뱃지는 떠 있는 동그라미의 창으로 옮겼습니다(위 badgeToken) — 책꽂이가 가로를 다 씁니다 */}
       <div className="reading-workspace-main">
       {tab === "library" && <>
         <div className="reading-library-toolbar">

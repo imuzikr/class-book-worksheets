@@ -45,14 +45,18 @@ test("저장한 자리가 없으면 null(CSS 기본 자리)", () => {
   assert.equal(hubPlacement({ fx: 0.5, fy: 0.5 }, 0, 0), null);
 });
 
-test("책 봄에서는 '독서로 검색'만 — 책방이 열린 반(교사는 늘)", () => {
+test("책 봄에서는 '독서로 검색 · 성장·뱃지'만 — 학생도 교사처럼", () => {
   assert.equal(hubLibraryOnly({ readingOpen: true, isTeacher: false, booksOn: true }), true);
-  assert.equal(hubLibraryOnly({ readingOpen: true, isTeacher: true, booksOn: false }), true);   // 교사는 책방이 늘 있음
+  assert.equal(hubLibraryOnly({ readingOpen: true, isTeacher: true, booksOn: false, rankingOn: false }), true);   // 교사는 책방이 늘 있음
   assert.equal(hubLibraryOnly({ readingOpen: false, isTeacher: true, booksOn: true }), false);  // 책방 · 리더보드 · 대시보드
-  // 책방을 끈 반의 학생 — 책 봄이 첫 화면이라 동그라미를 그대로(메신저 · 출석부를 열 곳이 없어지지 않게)
-  assert.equal(hubLibraryOnly({ readingOpen: true, isTeacher: false, booksOn: false }), false);
+  // 책방을 끈 반의 학생도 이제 막음(선생님 요청) — 메신저 · 출석부는 리더보드 화면의 동그라미에서
+  assert.equal(hubLibraryOnly({ readingOpen: true, isTeacher: false, booksOn: false }), true);
+  assert.equal(hubLibraryOnly({ readingOpen: true, isTeacher: false, booksOn: false, rankingOn: true }), true);
+  // 책방 · 리더보드를 모두 끈 반의 학생 — 동그라미가 다 켜지는 화면이 없어 그대로(열 곳이 없어지지 않게)
+  assert.equal(hubLibraryOnly({ readingOpen: true, isTeacher: false, booksOn: false, rankingOn: false }), false);
+  assert.equal(hubLibraryOnly({ readingOpen: true, isTeacher: false, booksOn: true, rankingOn: false }), true);
   assert.equal(hubLibraryOnly(), false);
-  const keys = ["msg", "library", "attend", "classes", "fruit", "report"];
+  const keys = ["msg", "library", "badges", "attend", "classes", "fruit", "report"];
   assert.deepEqual(keys.filter((k) => hubItemOff(k, true)), ["msg", "attend", "classes", "fruit", "report"]);
   assert.deepEqual(keys.filter((k) => hubItemOff(k, false)), []);
 });

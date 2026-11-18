@@ -1,10 +1,13 @@
 /* 독서로 검색(학교 도서관 소장 검색 · SchoolLibrarySearch) — 떠 있는 동그라미의 '독서로 검색'이 여는 창.
    이 파일은 그 창의 코드와 함께, 누를 때만 내려받습니다(FloatingHub의 dynamic) — 책방 · 대시보드 첫 화면에는 안 실림.
-   한때 교사 책 봄 명단 위의 작은 칸(.lib-rail)에서 열었는데, 모든 사용자의 동그라미로 옮기며 그 칸은 걷었습니다.
-   창은 body에 포털입니다. */
+   창의 틀 · 자리 · 크기(440px)는 메신저와 같은 .hub-panel(app/styles/41-floating-messenger.css의 .lib-panel)이 정합니다 —
+   여기는 창 안의 모양만(선생님 요청 · 2026년 11월 '메신저처럼'. 한때 화면 가운데 860px 모달이었음).
+   창이 좁아 권마다의 청구기호 · 등록번호 · 위치 · 자료 상태는 늘 이름표를 단 두 칸입니다(표 머리줄 없음). */
+/* 맨 위 검색 줄 — 구르지 않고 늘 제자리 */
+.lib-panel-top { flex-shrink: 0; display: grid; gap: 6px; padding: 12px 14px 10px; border-bottom: 1px solid var(--border); }
 /* 칸 이름(.sr-only — 앱 공통, position: absolute)의 기준이 되게 relative — 대시보드처럼 책 봄 CSS가 없는 화면에서도 열림 */
 .lib-search-form { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
-.lib-search-form input { min-width: 0; height: 38px; padding: 0 10px; border: 1px solid var(--border); border-radius: 9px; background: #fff; font: inherit; font-size: 14px; }
+.lib-search-form input { min-width: 0; height: 38px; padding: 0 10px; border: 1px solid var(--border); border-radius: 9px; background: #fff; font: inherit; font-size: 16px; }
 .lib-search-form input:focus { outline: 2px solid #478fbd; outline-offset: 0; border-color: #478fbd; }
 .lib-search-form button {
   width: auto; height: 38px; padding: 0 14px; display: inline-flex; align-items: center; justify-content: center;
@@ -13,31 +16,32 @@
 .lib-search-form button:hover:not(:disabled) { background: #245a80; }
 .lib-search-form button:disabled { opacity: .6; cursor: wait; }
 .lib-hint { margin: 0 2px; font-size: 12.5px; color: #b3392f; }
-.lib-modal { width: min(860px, 96vw); max-width: 860px; height: min(780px, 90vh); display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
-.lib-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-.lib-head h3 { margin: 0; font-size: 18px; }
-.lib-head p { margin: 3px 0 0; font-size: 13px; color: var(--text-sub); }
-.lib-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: 2px; }
-.lib-status { margin: 4px 0 10px; font-size: 14px; color: var(--text); }
-.lib-status-note { color: var(--text-faint); font-size: 12.5px; }
+/* 결과 — 창 몸통(.hub-panel-body)이 구릅니다 */
+.lib-body { padding: 12px 14px 14px; }
+.lib-status { margin: 2px 0 10px; font-size: 13.5px; color: var(--text); }
+.lib-status-note { color: var(--text-faint); font-size: 12px; }
 .lib-results { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-.lib-book { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; background: #fff;
-  display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 14px; align-items: start; }
+.lib-book { border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; background: #fff;
+  display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 10px; align-items: start; }
 .lib-book-info { min-width: 0; }
-/* 표지 — 자리는 늘 72 × 101(5:7), 그림은 비율 그대로 안에 맞춤(잘라 내지 않음). 그림이 없거나 안 열리면 기본 표지 */
+/* 표지 — 자리는 늘 54 × 76(5:7), 그림은 비율 그대로 안에 맞춤(잘라 내지 않음). 그림이 없거나 안 열리면 기본 표지 */
 .lib-cover { display: flex; align-items: center; justify-content: center; width: 100%; aspect-ratio: 5 / 7;
   border-radius: 6px; background: #f3f0ea; overflow: hidden; box-shadow: 0 1px 3px rgba(60, 45, 30, .18); }
 .lib-cover img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .lib-cover.is-fallback { background: linear-gradient(160deg, #e9eef4, #d8e2ec); border: 1px solid #cdd8e3; box-shadow: none; }
-.lib-cover.is-fallback span { font-size: 15px; font-weight: 800; color: #6b8299; letter-spacing: .02em; }
-.lib-book-head { display: flex; gap: 10px; align-items: baseline; justify-content: space-between; }
-.lib-book-title { font-size: 15.5px; word-break: keep-all; }
+.lib-cover.is-fallback span { font-size: 14px; font-weight: 800; color: #6b8299; letter-spacing: .02em; }
+.lib-book-head { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; justify-content: space-between; }
+.lib-book-title { min-width: 0; font-size: 15px; word-break: keep-all; overflow-wrap: anywhere; }
 .lib-own { flex-shrink: 0; padding: 2px 9px; border-radius: 999px; background: #e7eff7; color: #2f5d82; font-size: 12px; font-weight: 700; }
-.lib-book-meta { margin: 4px 0 8px; font-size: 13px; color: var(--text-sub); }
-.lib-copies { width: 100%; border-collapse: collapse; font-size: 13px; }
-.lib-copies th { text-align: left; font-weight: 600; color: var(--text-faint); font-size: 12px; padding: 4px 6px; border-bottom: 1px solid var(--border); }
-.lib-copies td { padding: 6px; border-bottom: 1px dashed #ece8e0; vertical-align: middle; }
-.lib-copies tr:last-child td { border-bottom: 0; }
+.lib-book-meta { margin: 4px 0 6px; font-size: 12.5px; color: var(--text-sub); overflow-wrap: anywhere; }
+/* 권마다 한 덩이 — 이름표를 단 두 칸(청구기호 · 등록번호 / 위치 · 자료 상태). 표의 머리줄은 감춥니다(좁은 창) */
+.lib-copies { display: block; width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.lib-copies thead { display: none; }
+.lib-copies tbody { display: block; }
+.lib-copies tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 2px 10px; padding: 6px 0; border-bottom: 1px dashed #ece8e0; }
+.lib-copies tr:last-child { border-bottom: 0; }
+.lib-copies td { min-width: 0; padding: 2px 0; overflow-wrap: anywhere; }
+.lib-copies td::before { content: attr(data-label) " "; color: var(--text-faint); font-size: 11.5px; }
 .lib-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .lib-vol { color: var(--text-sub); }
 .lib-state { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #efece6; color: #5f574c; font-size: 12px; font-weight: 700; white-space: nowrap; }
@@ -46,23 +50,15 @@
 .lib-state.is-unknown { background: #fff; border: 1px dashed #c9c2b6; color: #7a7266; font-weight: 600; }
 .lib-return { color: var(--text-sub); font-size: 12px; }
 /* 처음 연 창(아직 검색 전) · 결과 없음 · 조회 실패 — 같은 모양의 상자, 바탕색만 다름 */
-.lib-idle, .lib-empty, .lib-error { padding: 16px; border-radius: 12px; display: grid; gap: 6px; justify-items: start; }
+.lib-idle, .lib-empty, .lib-error { padding: 14px; border-radius: 12px; display: grid; gap: 6px; justify-items: start; }
 .lib-idle { background: #f6f9fc; border: 1px solid #d6e0ea; }
 .lib-empty { background: #f7f5f0; border: 1px solid #e3ddd1; }
 .lib-error { background: #fdf1ef; border: 1px solid #efc9c1; }
-.lib-idle p, .lib-empty p, .lib-error p { margin: 0; font-size: 13.5px; color: var(--text-sub); }
+.lib-idle p, .lib-empty p, .lib-error p { margin: 0; font-size: 13px; color: var(--text-sub); }
 .lib-idle strong { color: #2f4d66; }
 .lib-error-note { font-weight: 600; color: #8a3a2c !important; }
 .lib-error-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
-.lib-origin { font-size: 13.5px; font-weight: 700; color: #2f6b96; }
+.lib-origin { font-size: 13px; font-weight: 700; color: #2f6b96; }
 .lib-pager { display: flex; gap: 12px; align-items: center; justify-content: center; margin: 12px 0 4px; font-size: 13px; }
-.lib-foot { margin: 0; font-size: 12px; color: var(--text-faint); }
+.lib-foot { margin: 12px 0 0; font-size: 11.5px; line-height: 1.6; color: var(--text-faint); }
 .lib-foot a { color: #2f6b96; }
-@media (max-width: 640px) {
-  .lib-modal { height: 94vh; }
-  .lib-book { grid-template-columns: 54px minmax(0, 1fr); gap: 10px; padding: 10px 12px; }
-  .lib-copies thead { display: none; }
-  .lib-copies tr { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; padding: 6px 0; border-bottom: 1px dashed #ece8e0; }
-  .lib-copies td { border: 0; padding: 2px 0; }
-  .lib-copies td::before { content: attr(data-label) " "; color: var(--text-faint); font-size: 11.5px; }
-}

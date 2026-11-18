@@ -23,7 +23,7 @@
    쪽으로 펼칩니다. 끄는 동안은 움직임(transition)을 꺼 손을 바로 따라오게. */
 .hub-root.is-dragging .hub-fab,
 .hub-root.is-dragging .hub-disc,
-.hub-root.is-dragging .msgr { transition: none; }
+.hub-root.is-dragging .hub-panel { transition: none; }
 .hub-root.is-dragging .hub-fab { cursor: grabbing; transform: scale(1.06); }
 /* 끌 수 있는 것은 교사의 동그라미뿐 — 손가락으로 끌 때 화면이 대신 구르지 않게.
    학생 동그라미는 그대로 두어 그 위에서 시작한 손짓도 화면을 굴립니다. */
@@ -32,13 +32,13 @@
 .hub-root.is-top .hub-disc { bottom: auto; top: var(--hub-top); }
 .hub-root.is-left .hub-disc { --hub-ox: 28px; }
 .hub-root.is-top .hub-disc { --hub-oy: 28px; }
-.hub-root.is-left .msgr { right: auto; left: var(--hub-left); }
-.hub-root.is-top .msgr {
+.hub-root.is-left .hub-panel { right: auto; left: var(--hub-left); }
+.hub-root.is-top .hub-panel {
   bottom: auto;
   top: calc(var(--hub-top) + 68px);
   height: min(580px, calc(100vh - var(--hub-top) - 84px));
 }
-.hub-root.is-placed:not(.is-top) .msgr {
+.hub-root.is-placed:not(.is-top) .hub-panel {
   height: min(580px, calc(100vh - var(--hub-bottom) - 84px));
 }
 
@@ -231,13 +231,14 @@
 }
 .hub-center-badge svg { width: 20px; height: 20px; }
 .hub-center-badge .hub-basket-pic { width: 24px; height: 16px; }
-/* 독서로 검색 창의 코드를 내려받는 동안 서는 작은 창(FloatingHub의 LibraryLoading) — 그 창의 CSS는 코드와 함께
-   오므로(components/reading/school-library.css) 이 자리표시만은 늘 실리는 이 파일에 둡니다. */
-.modal.hub-modal-loading { width: min(420px, 100%); display: flex; align-items: center; gap: 12px; }
-.hub-modal-loading p { margin: 0; flex: 1; color: #2f4d66; font-size: 14px; }
-
 /* ── 메신저 창 ── */
-.msgr {
+/* ── 동그라미에서 펼쳐지는 창의 틀 — 메신저 · 독서로 검색 · 성장·뱃지가 같은 자리에 같은 틀로 섭니다 ──
+   (선생님 요청 · 2026년 11월 '메신저처럼'. 한때 독서로 검색은 화면 가운데 모달, 성장·뱃지는 책 봄 왼쪽 칸이었음.)
+   틀은 components/HubPanel.jsx(독서로 검색 · 성장·뱃지)와 MessengerWindow(`msgr hub-panel`). 자리 · 크기 · 펼치는 쪽은
+   이 `.hub-panel` 한 곳이 정합니다 — 창마다 따로 적으면 동그라미를 옮긴 자리 · 폰에서 셋이 어긋납니다.
+   독서로 검색만 조금 넓습니다(결과에 표지 · 권마다 청구기호 · 상태가 있어 — 아래 .lib-panel).
+   창의 코드를 내려받는 동안에도 같은 틀이 서므로(FloatingHub의 PanelLoading) 틀의 규칙은 늘 실리는 이 파일에 둡니다. */
+.hub-panel {
   position: fixed;
   right: var(--hub-right);
   bottom: calc(var(--hub-bottom) + 68px);
@@ -258,7 +259,11 @@
   from { opacity: 0; transform: translateY(10px) scale(0.97); }
   to { opacity: 1; transform: none; }
 }
-.msgr-head {
+.hub-panel:focus { outline: none; }
+.hub-panel.lib-panel { width: min(440px, calc(100vw - 32px)); }
+/* 창 머리 — 메신저(.msgr-head)와 같은 모양 */
+.msgr-head,
+.hub-panel-head {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -266,9 +271,15 @@
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
-.msgr-head-title { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.msgr-head-title strong { font-size: 15px; color: var(--dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.msgr-head-title span { font-size: 12px; color: var(--text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.msgr-head-title,
+.hub-panel-title { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.msgr-head-title strong,
+.hub-panel-title strong { font-size: 15px; color: var(--dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.msgr-head-title span,
+.hub-panel-title span { font-size: 12px; color: var(--text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 창 몸통 — 머리 아래 남는 높이를 다 쓰고 안에서 구릅니다 */
+.hub-panel-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.hub-panel-note { margin: 0; padding: 18px 16px; color: var(--text-sub); font-size: 13px; line-height: 1.6; }
 .msgr-back {
   width: 32px;
   height: 32px;
@@ -283,7 +294,8 @@
   padding-bottom: 3px;
 }
 .msgr-back:hover { background: var(--bg-deep); }
-.msgr-close { flex-shrink: 0; }
+.msgr-close,
+.hub-panel-close { flex-shrink: 0; }
 .msgr-avatar {
   width: 36px;
   height: 36px;
@@ -556,19 +568,20 @@ button.msgr-receipt:hover { color: var(--text-sub); }
 @media (max-width: 768px) {
   .hub-root { --hub-right: 14px; --hub-bottom: 76px; }
   .hub-root.is-lifted { --hub-bottom: 120px; }
-  .msgr,
-  .hub-root.is-left .msgr {
+  .hub-panel,
+  .hub-panel.lib-panel,
+  .hub-root.is-left .hub-panel {
     right: 8px;
     left: 8px;
     width: auto;
     height: min(560px, calc(100dvh - var(--hub-bottom) - 96px));
   }
-  .hub-root.is-top .msgr { height: min(560px, calc(100dvh - var(--hub-top) - 84px)); }
+  .hub-root.is-top .hub-panel { height: min(560px, calc(100dvh - var(--hub-top) - 84px)); }
 }
 @media (prefers-reduced-motion: reduce) {
   .hub-disc,
   .hub-fab,
-  .msgr { transition: none; animation: none; }
+  .hub-panel { transition: none; animation: none; }
   .hub-disc.is-open .hub-item { animation: none; }
   .msgr-msg.is-flash .msgr-bubble { animation: none; box-shadow: 0 0 0 3px rgba(217, 119, 87, 0.45); }
 }

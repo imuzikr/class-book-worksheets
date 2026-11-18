@@ -11,16 +11,14 @@
 .reading-tabs button { background:transparent; border:0; border-bottom:3px solid transparent; padding:11px 18px 13px; color:#718177; font:inherit; font-size:14px; font-weight:650; cursor:pointer; }
 .reading-tabs button.active { color:#254f44; border-color:#4c846c; }
 .reading-tabs button:hover { color:#254f44; background:#f0f4ed; border-radius:8px 8px 0 0; }
-/* 뱃지는 책꽂이 왼쪽에 둡니다. 반 명단·옆 패널을 뺀 실제 본문 너비로 접습니다. */
+/* 책꽂이 · 우리 반 랭킹이 가로를 다 씁니다. 한때 왼쪽 240px에 성장·뱃지 칸이 늘 섰는데, 떠 있는 동그라미의 '성장·뱃지' 창으로
+   옮겼습니다(선생님 요청 · 2026년 11월 — 되살리지 마세요). 접는 기준은 반 명단·옆 패널을 뺀 실제 본문 너비(컨테이너)입니다. */
 .reading-workspace { min-width:0; container:readingworkspace / inline-size; }
 .reading-hub--no-tabs > .reading-workspace { margin-top:24px; }
-.reading-workspace-layout { display:grid; grid-template-columns:240px minmax(0,1fr); align-items:start; gap:20px; }
+.reading-workspace-layout { display:grid; grid-template-columns:minmax(0,1fr); align-items:start; gap:20px; }
 .reading-workspace-main { min-width:0; }
 .reading-workspace-main .reading-section-head { margin-top:0; }
 .reading-workspace-main .reading-library-grid { grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr)); }
-@container readingworkspace (max-width:679px) {
-  .reading-workspace-layout { grid-template-columns:minmax(0,1fr); gap:16px; }
-}
 .reading-hub button:focus-visible,.reading-hub .reading-book-actions > a:focus-visible,.reading-modal button:focus-visible,.reading-form input:focus-visible,.reading-form textarea:focus-visible,.reading-form select:focus-visible { outline:3px solid #478fbd; outline-offset:3px; }
 .reading-summary { display:grid; grid-template-columns:1.25fr 1fr 1fr 1fr; gap:1px; border:1px solid var(--reading-line); border-radius:14px; overflow:hidden; background:var(--reading-line); margin-bottom:28px; }
 .reading-summary>div { display:flex; flex-direction:column; justify-content:center; gap:8px; background:var(--reading-paper); padding:19px 24px; }

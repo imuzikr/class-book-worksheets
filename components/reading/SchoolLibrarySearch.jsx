@@ -3,7 +3,9 @@
 // 독서로 검색 — 학교 도서관 소장 검색(한성여자고등학교 · 독서로 우리학교 도서검색)
 // 떠 있는 동그라미(FloatingHub)의 '독서로 검색' 행성이 이 창을 엽니다 — **모든 사용자**(학생 · 교사 · 관리자,
 // 선생님 요청 · 2026년 11월). 창 맨 위 칸에 제목 일부를 적고 '검색'(또는 Enter) → 같은 창에 결과.
-// 한때 교사 책 봄 명단 위의 작은 칸에서만 열었습니다(그 칸은 걷음 — 입구는 동그라미 하나).
+// 창은 **메신저처럼 동그라미 자리에서 펼쳐집니다**(components/HubPanel.jsx — 선생님 요청 · 2026년 11월). 한때 화면 가운데
+// 모달(배경을 덮음)이었고, 그보다 전에는 교사 책 봄 명단 위의 작은 칸이었습니다(그 칸은 걷음 — 입구는 동그라미 하나).
+// 창이 좁아(440px) 권마다의 청구기호 · 등록번호 · 위치 · 자료 상태는 이름표를 단 두 칸으로 섭니다(school-library.css).
 // 이 파일은 누를 때만 내려받습니다(FloatingHub의 dynamic) — 창의 CSS(school-library.css)도 함께 옵니다.
 // 서버(/api/library/search)는 로그인한 사용자 모두를 받고, 사용 중지 · 로그인 안 함은 독서로에 닿기 전에 막습니다.
 //
@@ -14,8 +16,7 @@
 // =============================================================
 import "./school-library.css";
 import { useEffect, useId, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { backdropClose } from "@/lib/modal";
+import HubPanel from "@/components/HubPanel";
 import { fetchLibraryCover, searchSchoolLibrary } from "@/lib/data/schoolLibrary";
 import { LIBRARY, libraryResultUrl } from "@/lib/schoolLibraryLink";
 
@@ -51,7 +52,7 @@ function SearchForm({ value, onChange, onSubmit, busy, inputRef, id }) {
   return (
     <form className="lib-search-form" role="search" onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
       <label htmlFor={id} className="sr-only">책 제목(일부)</label>
-      {/* data-esc-ignore — 글이 든 칸이 있어도 Esc로 창을 닫습니다(검색어는 다시 적기 쉬운 값 · lib/modal.js) */}
+      {/* Esc는 글이 든 칸이 있어도 창을 닫습니다(검색어는 다시 적기 쉬운 값 — HubPanel). data-esc-ignore는 모달이던 때의 표시 */}
       <input id={id} ref={inputRef} value={value} onChange={(e) => onChange(e.target.value)} maxLength={KEYWORD_MAX}
         placeholder="책 제목의 일부" autoComplete="off" enterKeyHint="search" data-esc-ignore />
       <button type="submit" disabled={busy}>{busy ? "검색 중…" : "검색"}</button>
@@ -60,7 +61,7 @@ function SearchForm({ value, onChange, onSubmit, busy, inputRef, id }) {
 }
 
 // onClose — 창을 닫을 때(동그라미가 받아 초점을 돌려줌). 열리자마자 검색 칸에 초점이 갑니다.
-export default function SchoolLibraryModal({ onClose }) {
+export default function SchoolLibraryPanel({ onClose }) {
   const [draft, setDraft] = useState("");
   const [phase, setPhase] = useState("idle");   // idle | loading | done | error
   const [result, setResult] = useState(null);
@@ -137,89 +138,82 @@ export default function SchoolLibraryModal({ onClose }) {
   const keywordShown = phase === "error" ? error?.keyword : result?.keyword;
   const copyTotal = result?.books?.reduce((n, b) => n + b.copies.length, 0) ?? 0;
 
-  if (typeof document === "undefined") return null;
-  return createPortal(
-    <div className="modal-backdrop lib-backdrop" {...backdropClose(close)}>
-      <div className="modal lib-modal" role="dialog" aria-modal="true" aria-labelledby={`${formId}-title`}>
-        <div className="lib-head">
-          <div>
-            <h3 id={`${formId}-title`}>독서로 검색</h3>
-            <p>{LIBRARY.schoolName} 도서관 · 제목(서명) 일부로 찾아요</p>
-          </div>
-          <button type="button" className="btn-close" aria-label="닫기" onClick={close}>×</button>
-        </div>
+  return (
+    <HubPanel title="독서로 검색" sub={`${LIBRARY.schoolName} 도서관 · 제목(서명) 일부로 찾아요`} className="lib-panel" onClose={close} closeLabel="독서로 검색 닫기" busy={phase === "loading"}>
+      <div className="lib-panel-top">
         <SearchForm id={formId} inputRef={inputRef} value={draft} onChange={(v) => { setDraft(v); setHint(""); }} onSubmit={() => run(1)} busy={phase === "loading"} />
         {hint && <p className="lib-hint" role="alert">{hint}</p>}
-        <div className="lib-body" aria-busy={phase === "loading"} aria-live="polite">
-          {phase === "idle" && (
-            <div className="lib-idle">
-              <strong>찾고 싶은 책의 제목을 적어 보세요</strong>
-              <p>제목의 일부만 적어도 돼요(저자 · 출판사로는 찾지 않아요). 우리 학교 도서관에 있는 책인지, 지금 빌릴 수 있는지(자료 상태) 알려 드려요.</p>
+      </div>
+      <div className="hub-panel-body lib-body" aria-busy={phase === "loading"} aria-live="polite">
+        {phase === "idle" && (
+          <div className="lib-idle">
+            <strong>찾고 싶은 책의 제목을 적어 보세요</strong>
+            <p>제목의 일부만 적어도 돼요(저자 · 출판사로는 찾지 않아요). 우리 학교 도서관에 있는 책인지, 지금 빌릴 수 있는지(자료 상태) 알려 드려요.</p>
+          </div>
+        )}
+        {phase === "loading" && <p className="lib-status" role="status">독서로에서 소장 도서를 찾고 있어요…</p>}
+        {phase === "error" && error && (
+          <div className="lib-error" role="alert">
+            <strong>{error.rateLimited ? "잠시 후 다시 검색해 주세요" : "소장 여부를 확인하지 못했어요"}</strong>
+            <p>{error.message}</p>
+            <p className="lib-error-note">조회에 실패한 것이며, 소장하지 않는다는 뜻이 아니에요.</p>
+            <div className="lib-error-actions">
+              <button type="button" className="btn-primary" onClick={() => run(page)}>다시 시도</button>
+              <a className="lib-origin" href={libraryResultUrl(error.keyword)} target="_blank" rel="noopener noreferrer">독서로에서 직접 보기 ↗</a>
             </div>
-          )}
-          {phase === "loading" && <p className="lib-status" role="status">독서로에서 소장 도서를 찾고 있어요…</p>}
-          {phase === "error" && error && (
-            <div className="lib-error" role="alert">
-              <strong>{error.rateLimited ? "잠시 후 다시 검색해 주세요" : "소장 여부를 확인하지 못했어요"}</strong>
-              <p>{error.message}</p>
-              <p className="lib-error-note">조회에 실패한 것이며, 소장하지 않는다는 뜻이 아니에요.</p>
-              <div className="lib-error-actions">
-                <button type="button" className="btn-primary" onClick={() => run(page)}>다시 시도</button>
-                <a className="lib-origin" href={libraryResultUrl(error.keyword)} target="_blank" rel="noopener noreferrer">독서로에서 직접 보기 ↗</a>
-              </div>
-            </div>
-          )}
-          {phase === "done" && result && (result.books.length === 0 ? (
-            <div className="lib-empty" role="status">
-              <strong>제목에 ‘{keywordShown}’ 글자가 들어간, 일치하는 소장 도서가 없습니다.</strong>
-              <p>제목 일부로만 찾아요(저자 · 출판사는 찾지 않음). 띄어쓰기나 다른 낱말로도 찾아보세요.</p>
-              <a className="lib-origin" href={libraryResultUrl(keywordShown)} target="_blank" rel="noopener noreferrer">독서로에서 직접 보기 ↗</a>
-            </div>
-          ) : (
-            <>
-              <p className="lib-status" role="status">
-                ‘{keywordShown}’ 소장 자료 <b>{Number(result.total).toLocaleString("ko-KR")}권</b>
-                {result.total > copyTotal ? ` 가운데 ${(result.page - 1) * 10 + 1}~${(result.page - 1) * 10 + copyTotal}번째` : ""}
-                <span className="lib-status-note"> · 소장 = 이 도서관에 등록된 책 · 대출 가능은 자료 상태로 따로 확인</span>
-              </p>
-              <ul className="lib-results">
-                {result.books.map((book) => (
-                  <li key={book.key} className="lib-book">
-                    <LibraryCover key={book.cover || extraCovers[book.isbn13] || "none"} title={book.title} src={book.cover || extraCovers[book.isbn13] || ""} />
-                    <div className="lib-book-info">
-                      <div className="lib-book-head">
-                        <strong className="lib-book-title">{book.title}</strong>
-                        <span className="lib-own">소장 {book.copies.length}권</span>
-                      </div>
-                      <p className="lib-book-meta">{[book.author, book.publisher, book.pubYear].filter(Boolean).join(" · ") || "저자 · 출판사 정보 없음"}{book.isbn ? ` · ISBN ${book.isbn}` : ""}</p>
-                      <table className="lib-copies">
-                        <thead><tr><th scope="col">청구기호</th><th scope="col">등록번호</th><th scope="col">위치</th><th scope="col">자료 상태</th></tr></thead>
-                        <tbody>
-                          {book.copies.map((copy, i) => (
-                            <tr key={copy.regNo || i}>
-                              <td data-label="청구기호">{copy.callNo || "-"}{copy.volume ? <span className="lib-vol"> {copy.volume}</span> : null}</td>
-                              <td data-label="등록번호" className="lib-mono">{copy.regNo || "-"}</td>
-                              <td data-label="위치">{copy.location || "-"}</td>
-                              <td data-label="자료 상태"><StatusBadge copy={copy} />{copy.returnPlanDate ? <small className="lib-return"> 반납 예정 {copy.returnPlanDate}</small> : null}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+          </div>
+        )}
+        {phase === "done" && result && (result.books.length === 0 ? (
+          <div className="lib-empty" role="status">
+            <strong>제목에 ‘{keywordShown}’ 글자가 들어간, 일치하는 소장 도서가 없습니다.</strong>
+            <p>제목 일부로만 찾아요(저자 · 출판사는 찾지 않음). 띄어쓰기나 다른 낱말로도 찾아보세요.</p>
+            <a className="lib-origin" href={libraryResultUrl(keywordShown)} target="_blank" rel="noopener noreferrer">독서로에서 직접 보기 ↗</a>
+          </div>
+        ) : (
+          <>
+            <p className="lib-status" role="status">
+              ‘{keywordShown}’ 소장 자료 <b>{Number(result.total).toLocaleString("ko-KR")}권</b>
+              {result.total > copyTotal ? ` 가운데 ${(result.page - 1) * 10 + 1}~${(result.page - 1) * 10 + copyTotal}번째` : ""}
+              <span className="lib-status-note"> · 소장 = 이 도서관에 등록된 책 · 대출 가능은 자료 상태로 따로 확인</span>
+            </p>
+            <ul className="lib-results">
+              {result.books.map((book) => (
+                <li key={book.key} className="lib-book">
+                  <LibraryCover key={book.cover || extraCovers[book.isbn13] || "none"} title={book.title} src={book.cover || extraCovers[book.isbn13] || ""} />
+                  <div className="lib-book-info">
+                    <div className="lib-book-head">
+                      <strong className="lib-book-title">{book.title}</strong>
+                      <span className="lib-own">소장 {book.copies.length}권</span>
                     </div>
-                  </li>
-                ))}
-              </ul>
-              {(result.page > 1 || result.hasMore) && (
-                <div className="lib-pager">
-                  <button type="button" className="btn-ghost" disabled={result.page <= 1} onClick={() => run(result.page - 1)}>← 이전</button>
-                  <span>{result.page}쪽</span>
-                  <button type="button" className="btn-ghost" disabled={!result.hasMore} onClick={() => run(result.page + 1)}>다음 →</button>
-                </div>
-              )}
-            </>
-          ))}
-        </div>
-        {/* 아직 검색 전(처음 연 창)에는 받아 온 것이 없어 이 줄을 두지 않습니다 — 위 안내 상자가 할 일을 말함 */}
+                    <p className="lib-book-meta">{[book.author, book.publisher, book.pubYear].filter(Boolean).join(" · ") || "저자 · 출판사 정보 없음"}{book.isbn ? ` · ISBN ${book.isbn}` : ""}</p>
+                    <table className="lib-copies">
+                      <thead><tr><th scope="col">청구기호</th><th scope="col">등록번호</th><th scope="col">위치</th><th scope="col">자료 상태</th></tr></thead>
+                      <tbody>
+                        {book.copies.map((copy, i) => (
+                          <tr key={copy.regNo || i}>
+                            <td data-label="청구기호">{copy.callNo || "-"}{copy.volume ? <span className="lib-vol"> {copy.volume}</span> : null}</td>
+                            <td data-label="등록번호" className="lib-mono">{copy.regNo || "-"}</td>
+                            <td data-label="위치">{copy.location || "-"}</td>
+                            <td data-label="자료 상태"><StatusBadge copy={copy} />{copy.returnPlanDate ? <small className="lib-return"> 반납 예정 {copy.returnPlanDate}</small> : null}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {(result.page > 1 || result.hasMore) && (
+              <div className="lib-pager">
+                <button type="button" className="btn-ghost" disabled={result.page <= 1} onClick={() => run(result.page - 1)}>← 이전</button>
+                <span>{result.page}쪽</span>
+                <button type="button" className="btn-ghost" disabled={!result.hasMore} onClick={() => run(result.page + 1)}>다음 →</button>
+              </div>
+            )}
+          </>
+        ))}
+        {/* 아직 검색 전(처음 연 창)에는 받아 온 것이 없어 이 줄을 두지 않습니다 — 위 안내 상자가 할 일을 말함.
+            좁은 창이라 맨 아래에 따로 세우지 않고 결과 끝에 이어 둡니다(구르는 칸 안). */}
         {phase !== "idle" && (
           <p className="lib-foot">
             자동 확인 — 독서로 ‘우리학교 도서검색’에서 받아 왔어요{result?.cached && phase === "done" ? "(5분 안의 같은 검색은 잠시 기억한 결과)" : ""}. 표지는 독서로가 주는 그림이고, 없으면 ISBN이 같은 판본의 표지(카카오)를 붙여요. 정확한 내용은{" "}
@@ -227,7 +221,6 @@ export default function SchoolLibraryModal({ onClose }) {
           </p>
         )}
       </div>
-    </div>,
-    document.body,
+    </HubPanel>
   );
 }
