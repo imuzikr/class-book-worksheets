@@ -553,6 +553,28 @@
 .reading-teacher-main { min-width: 0; }
 .reading-teacher--hideouts { grid-template-columns:minmax(0,1fr); }
 .reading-teacher--hideouts > .reading-teacher-rail { display:none; }
+/* 책 봄 머리말 오른쪽 끝 빈자리(.books-head-aside — TeacherReadingView가 늘 그려 둠) — 학생 아지트 보기가 그 학생의 캐릭터 카드를
+   띄웁니다(선생님 요청 · 2026년 11월 — 반 고르개 줄 · '책 봄' 줄 오른쪽이 비어 있었고, 카드가 아지트 제목 줄에 서서 그 줄이 높아졌음).
+   카드가 들어오면 책방 본문(.books-main)이 두 칸 격자가 되어 왼쪽 칸에 머리말 두 줄, 오른쪽 칸에 두 줄에 걸친 카드가 섭니다.
+   비어 있으면 자리도 없고 격자도 아닙니다(다른 화면은 그대로). 두 줄이 좁아지면 그 줄 안에서 접히고, 카드를 옆에 둘 폭이 모자라는
+   화면('멋진 순간'을 펼친 1015px 이하 · 627px 이하)에서는 카드가 두 줄 아래 오른쪽으로 내려갑니다. */
+.books-head-aside:empty { display:none; }
+.books-main:has(> .books-head-aside:not(:empty)) { display:grid; grid-template-columns:minmax(0, 1fr) auto; column-gap:16px; align-content:start; }
+.books-main:has(> .books-head-aside:not(:empty)) > * { grid-column:1 / -1; min-width:0; }
+.books-main:has(> .books-head-aside:not(:empty)) > .books-head { grid-column:1; }
+.books-main:has(> .books-head-aside:not(:empty)) > .books-head > .books-head-main { flex-wrap:wrap; }
+.books-main:has(> .books-head-aside:not(:empty)) > .books-head .study-class-select { min-width:0; max-width:100%; }
+.books-main:has(> .books-head-aside:not(:empty)) > .books-head-aside { grid-column:2; grid-row:1 / span 2; align-self:start; display:flex; justify-content:flex-end; }
+@media (min-width:769px) and (max-width:1015px) {
+  .books-body:has(> .reward-panel:not(.reward-panel--collapsed)) > .books-main:has(> .books-head-aside:not(:empty)) { grid-template-columns:minmax(0, 1fr); }
+  .books-body:has(> .reward-panel:not(.reward-panel--collapsed)) > .books-main:has(> .books-head-aside:not(:empty)) > .books-head-aside { grid-column:1; grid-row:auto; margin-bottom:12px; }
+}
+@media (max-width:627px) {
+  .books-main:has(> .books-head-aside:not(:empty)) { grid-template-columns:minmax(0, 1fr); }
+  .books-main:has(> .books-head-aside:not(:empty)) > .books-head-aside { grid-column:1; grid-row:auto; margin-bottom:12px; }
+  .books-head-aside > .hideout-character { flex:1 1 auto; }
+  .books-head-aside > .hideout-character > .reading-character-summary { width:100%; }
+}
 /* 펫 먹이(lib/petCare.js) — 명단의 배부름 · 떠난 펫 불러 주기 */
 .reading-teacher-care { margin: -4px 4px 10px; font-size: 12px; color: var(--text-faint); }
 .reading-teacher-care.is-alert { color: #a85a22; }

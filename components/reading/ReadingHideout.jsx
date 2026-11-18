@@ -501,7 +501,6 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
         : <span className="hideout-level">{teacherOwn ? "모든 소품 사용 가능" : <>독서 레벨 <strong>{eligibility.level}</strong></>}</span>}
     </header>}
     {error && <div className="hideout-error" role="alert"><p>{error}</p><button type="button" disabled={saving} onClick={() => { movement.stop(); keepDraft(draftKey, null); draftSnapshot.current = null; setReload((value) => value + 1); }}>저장된 모습 다시 불러오기</button></div>}
-    <p className="hideout-status" role="status" aria-live="polite">{notice}</p>
     <div className="hideout-layout">
     <div className="hideout-room">
     <div className={`hideout-scene${arranging ? " is-arranging" : ""}${drag ? " is-dragging" : ""}`} ref={movement.stageRef} style={{ "--hideout-unit": `${sceneWidth / HIDEOUT_SCENE.width}px` }} tabIndex={readOnly ? -1 : 0} role={readOnly ? "group" : "application"}
@@ -570,6 +569,10 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
       </div>
       {pet && bed && <RestingPet pet={pet} bed={bed} owner={readOnly ? myName : ""} passive={arranging} onOpen={() => { movement.stop(); setPetOpen(true); }} />}
     </div>
+    {/* 알림 줄은 그림 아래(선생님 요청 · 2026년 11월 — 제목과 그림 사이를 비우지 않게). 한때 그림 위에서 비어 있을 때도 한 줄(30px)을
+        차지해 제목과 그림 사이가 벌어졌습니다. 여기서는 비어 있으면 높이가 없고, 알림이 뜨면 그 아래 안내 줄만 내려갑니다(그림은 그대로).
+        학생 아지트 보기(읽기 전용)는 알림이 없어 그리지 않습니다. */}
+    {!readOnly && <p className="hideout-status" role="status" aria-live="polite">{notice}</p>}
     <p className="hideout-walk-help">{readOnly ? "학생 본인만 아지트를 꾸밀 수 있어요." : editing ? `방 그림에서 소품이나 포털을 끌어 옮기거나, 누른 뒤 방향키로 한 칸씩 옮겨요. 작은 소품은 책상 · 책장 · 선반 위에도 올려요. 다 꾸몄으면 위쪽의 ‘꾸미기 완료’나 ‘꾸미기 취소’를 누르면 다시 걷거나 포털로 ${returnPlace}에 돌아갈 수 있어요.` : `빈 바닥을 누르거나 방향키로 걸어요. ${petGone ? "펫은 먹이를 찾아 떠나 있어요(책 봄에서 다시 불러요). " : pet ? "펫은 창가에서 쉬어요. " : ""}${onExit ? (returnRoom === "plaza" ? "포털이나 위의 ‘광장으로’로 책 광장에 돌아가요." : "포털로 교실에, 위의 ‘광장으로’로 책 광장에 돌아가요.") : ""}`}</p>
     </div>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { careRulesFor } from "@/lib/petCare";
 import { readingLevelProgress } from "@/lib/reading";
 import ReadingCharacterSummary from "./ReadingCharacterSummary";
@@ -10,8 +11,10 @@ import "./teacher-hideout-browser.css";
 
 // Local browsing only: changing rooms does not move a teacher's plaza avatar,
 // change the selected library student, or subscribe to each student's ledger.
-// onPlaza — 아지트를 보다가 곧바로 책 광장으로(선생님 요청 · 2026년 11월 — '전체 아지트' 옆 '광장으로'). 광장을 끈 반에서는 없음.
-export default function TeacherHideoutBrowser({ classId, user, roster = [], characterOn = true, petOn = false, petFeed = null, onClose, onPlaza = null }) {
+// onPlaza — 아지트를 보다가 곧바로 책 광장으로(선생님 요청 · 2026년 11월). 광장을 끈 반에서는 없음.
+// cardSlot — 책 봄 머리말 오른쪽 끝 빈자리(TeacherReadingView의 .books-head-aside). 고른 학생의 캐릭터 카드를 거기에 띄웁니다
+// (선생님 요청 · 2026년 11월 — 아지트 제목 줄이 카드 높이만큼 높아져 그림까지 여백이 컸음). 없으면 제목 줄 오른쪽 끝에.
+export default function TeacherHideoutBrowser({ classId, user, roster = [], characterOn = true, petOn = false, petFeed = null, onClose, onPlaza = null, cardSlot = null }) {
   const [viewingUid, setViewingUid] = useState(null);
   const [snapshots, setSnapshots] = useState(() => new Map());
   const heading = useRef(null);
@@ -54,39 +57,40 @@ export default function TeacherHideoutBrowser({ classId, user, roster = [], char
     }
   }, [viewedUid]);
 
+  // 고른 학생의 캐릭터 카드(독서 레벨 · 경험치 — 목록에서 받아 둔 방의 누적 경험치로 셈, 읽기 0). 캐릭터를 끈 반은 레벨 알약.
+  const card = !student ? null : characterOn
+    ? <div className="hideout-character"><ReadingCharacterSummary uid={student.uid} summary={cardSummary} readOnly /></div>
+    : snapshot?.progress?.level != null ? <span className="hideout-level">독서 레벨 <strong>{snapshot.progress.level}</strong></span> : null;
+
   return <section className={`teacher-hideout-browser${student ? " is-viewing" : ""}`} aria-label="학생 아지트 열람">
     <div ref={gallery} hidden={!!student}>
       <TeacherHideoutGallery classId={classId} user={user} roster={roster} onSelect={select} onLoaded={remember} onClose={onClose} onPlaza={onPlaza} />
     </div>
     {student && <div className="teacher-hideout-view">
-      {/* 머리(선생님 요청 · 2026년 11월) — 왼쪽은 제목과 그 오른쪽의 이전 · 다음(아지트 그림 위), 오른쪽은 전체 아지트 · 광장으로 ·
-          학생 서재로와 그 오른쪽 끝(화면 오른쪽 위)의 캐릭터 카드(독서 레벨 · 경험치 — 목록에서 받아 둔 방의 누적 경험치로 셈, 읽기 0).
-          칸이 좁으면 카드는 제목 줄 오른쪽에 남고 단추 셋이 그 아래 줄로 내려갑니다(teacher-hideout-browser.css의 격자). */}
+      {/* 머리 한 줄(선생님 요청 · 2026년 11월) — 제목 바로 오른쪽에 이전 · 다음, 같은 줄 오른쪽 끝에 광장으로 · 학생 서재로.
+          '전체 아지트'는 걷었습니다(선생님 요청 — 학생 아지트를 보는 동안에는 필요 없음 · 목록은 학생 서재로 → '아지트 보기').
+          캐릭터 카드는 이 줄이 아니라 책 봄 머리말 오른쪽 끝 빈자리(cardSlot)에 섭니다 — 줄이 카드 높이만큼 높아지지 않게. */}
       <header className="teacher-hideout-heading">
-        <div className="teacher-hideout-lead">
-          <div className="teacher-hideout-title">
-            <p className="hideout-eyebrow">이야기가 머무는 작은 방{student.studentId ? ` · ${student.studentId}` : ""}</p>
-            <h2 ref={heading} tabIndex={-1} aria-live="polite">{student.realName || student.name || "학생"}의 아지트</h2>
-          </div>
-          <div className="teacher-hideout-sequence" role="group" aria-label="다른 학생의 아지트 보기">
-            <button type="button" aria-label="이전 학생 아지트" onClick={() => browse(-1)} disabled={roster.length < 2}>← 이전</button>
-            <span aria-live="polite" aria-label={`${index + 1}번째 학생, 전체 ${roster.length}명`}>{index + 1} / {roster.length}</span>
-            <button type="button" aria-label="다음 학생 아지트" onClick={() => browse(1)} disabled={roster.length < 2}>다음 →</button>
-          </div>
+        <div className="teacher-hideout-title">
+          <p className="hideout-eyebrow">이야기가 머무는 작은 방{student.studentId ? ` · ${student.studentId}` : ""}</p>
+          <h2 ref={heading} tabIndex={-1} aria-live="polite">{student.realName || student.name || "학생"}의 아지트</h2>
+        </div>
+        <div className="teacher-hideout-sequence" role="group" aria-label="다른 학생의 아지트 보기">
+          <button type="button" aria-label="이전 학생 아지트" onClick={() => browse(-1)} disabled={roster.length < 2}>← 이전</button>
+          <span aria-live="polite" aria-label={`${index + 1}번째 학생, 전체 ${roster.length}명`}>{index + 1} / {roster.length}</span>
+          <button type="button" aria-label="다음 학생 아지트" onClick={() => browse(1)} disabled={roster.length < 2}>다음 →</button>
         </div>
         <nav className="teacher-hideout-navigation" aria-label="아지트 보기 메뉴">
-          <button type="button" onClick={() => setViewingUid(null)}>전체 아지트</button>
           {onPlaza && <button type="button" onClick={onPlaza} title="책 광장으로 가요">광장으로</button>}
           <button type="button" onClick={onClose}>학생 서재로</button>
         </nav>
-        {characterOn
-          ? <div className="hideout-character"><ReadingCharacterSummary uid={student.uid} summary={cardSummary} readOnly /></div>
-          : snapshot?.progress?.level != null && <span className="hideout-level">독서 레벨 <strong>{snapshot.progress.level}</strong></span>}
+        {!cardSlot && card}
       </header>
+      {cardSlot && card && createPortal(card, cardSlot)}
       <ReadingHideout key={`${classId}:${student.uid}`} classId={classId} user={user} student={student} readOnly
         initialView={snapshots.has(student.uid) ? { classId, uid: student.uid, value: snapshots.get(student.uid) } : null}
         onLoaded={remember} characterOn={characterOn} petOn={petOn} petFeed={feed}
-        onDisabled={onClose} onExit={() => setViewingUid(null)} exitLabel="전체 아지트" hideExitButton hideHeading />
+        onDisabled={onClose} onExit={() => setViewingUid(null)} hideExitButton hideHeading />
     </div>}
   </section>;
 }

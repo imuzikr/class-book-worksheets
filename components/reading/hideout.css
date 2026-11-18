@@ -1,9 +1,8 @@
 /* Personal room: all decor coordinates stay in the approved1536×1024 world. */
 .hideout { --hideout-ink: #35513e; --hideout-line: #d9dece; --hideout-scene-max: calc((100dvh - 200px) * 1.5); color: var(--hideout-ink); min-width: 0; padding: 8px clamp(12px, 1.6vw, 24px) 20px; }
-/* 머리에 캐릭터 카드가 서면 머리줄이 카드 높이(78px)만큼 높아지므로(알약일 때 56px), 머리 아래 여백을 6px 줄이고 그림이 화면 높이에
-   맞는 폭도 남은 만큼(16px) 줄여 그림 아래가 잘리지 않게 합니다. */
+/* 머리에 캐릭터 카드가 서면 머리줄이 카드 높이(78px)만큼 높아지므로(알약일 때 56px), 그림이 화면 높이에 맞는 폭도 그만큼(16px)
+   줄여 그림 아래(알림 · 안내 줄)가 잘리지 않게 합니다. */
 .hideout:has(> .hideout-heading .hideout-character) { --hideout-scene-max: calc((100dvh - 216px) * 1.5); }
-.hideout-heading:has(.hideout-character) { margin-bottom: 6px; }
 .hideout button, .hideout select, .hideout-dialog button { font: inherit; min-height: 44px; }
 .hideout button, .hideout-dialog button { cursor: pointer; border: 1px solid #cfd8c7; border-radius: 10px; padding: 9px 14px; background: #fffdf7; color: #35513e; }
 .hideout button:hover:not(:disabled), .hideout-dialog button:hover:not(:disabled) { background: #eaf0e3; }
@@ -18,7 +17,7 @@
 /* 머리 — 왼쪽 제목, 오른쪽 단추들과 그 오른쪽 끝(화면 오른쪽 위)의 캐릭터 카드(또는 알약). 한 줄에 다 안 들어가는 폭(940px 아래 —
    꾸미는 동안의 단추 셋 + 카드가 기준)에서는 카드가 제목 줄 오른쪽에 남고 단추가 그 아래 줄 오른쪽으로 내려갑니다. 좁은 화면(700px
    아래)은 아래 @media. */
-.hideout-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "title actions card"; align-items: center; gap: 10px 12px; }
+.hideout-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "title actions card"; align-items: center; gap: 10px 12px; margin-bottom: 10px; }
 .hideout-heading > .hideout-title { grid-area: title; min-width: 0; }
 .hideout-heading > .hideout-actions { grid-area: actions; justify-self: end; }
 .hideout-heading > .hideout-character, .hideout-heading > .hideout-level { grid-area: card; justify-self: end; }
@@ -27,7 +26,8 @@
 }
 /* ── 머리 오른쪽 위의 캐릭터 카드(선생님 요청 · 2026년 11월) ──
    독서 레벨 알약 대신 책 봄 프로필의 그 카드입니다(ReadingCharacterSummary — 캐릭터 · 독서 레벨 · 경험치 막대, 누르면 캐릭터
-   정보 창). 선생님의 학생 아지트 보기(머리가 .hideout 바깥 — TeacherHideoutBrowser)와 본인 방이 같은 규칙을 씁니다. 머리줄이 크게
+   정보 창). 본인 방(머리 오른쪽 끝)과 선생님의 학생 아지트 보기(책 봄 머리말 오른쪽 끝 빈자리 — TeacherHideoutBrowser가
+   reading.css의 .books-head-aside에 띄움)가 같은 규칙을 씁니다. 머리줄이 크게
    높아지지 않게 그림을 줄이고 레벨과 경험치를 한 줄에, 막대를 그 아래에 둡니다(내용과 차례는 프로필 카드 그대로). */
 .hideout-character { display: flex; min-width: 0; }
 .hideout-character > .reading-character-summary { display: flex; align-items: center; gap: 10px; width: 288px; max-width: 100%; min-height: 0; margin: 0; padding: 7px 12px 7px 8px; border: 1px solid #d8e5db; border-radius: 14px; background: #fffffff2; box-shadow: 0 1px 2px #35513e12; }
@@ -50,7 +50,11 @@
 .hideout-head-buttons > button { white-space: nowrap; }
 .hideout-level { display: inline-flex; align-items: baseline; gap: 7px; padding: 7px 12px; border-radius: 20px; background: #e9efdf; font-size: 12px; white-space: nowrap; }
 .hideout-level strong { font-size: 17px; }
-.hideout-status { margin: 0 0 10px; min-height: 20px; font-size: 13px; color: #52734b; }
+/* 알림 줄은 그림 아래(ReadingHideout — 선생님 요청 · 2026년 11월). 비어 있으면 높이가 없어(:empty) 그림 아래 안내 줄이 붙고,
+   알림이 뜨면 그 안내 줄만 한 줄 내려갑니다 — 그림은 움직이지 않습니다. 한때 그림 위에서 비어 있을 때도 한 줄(20px + 여백 10px)을
+   잡아 두어 제목과 그림 사이가 벌어졌습니다(선생님 지적). 자리를 늘 잡아 두는 모양으로 되돌리지 마세요. */
+.hideout-status { margin: 8px 0 0; font-size: 13px; line-height: 1.5; color: #52734b; }
+.hideout-status:empty { margin: 0; }
 .hideout-error { border: 1px solid #dfbfb0; background: #fff2e9; padding: 12px 14px; border-radius: 12px; margin: 10px 0; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
 .hideout-error p { margin: 0; font-size: 14px; }
 /* 두 칸(선생님 요청) — 그림 칸은 그림 폭(화면 높이에 맞춘 폭 --hideout-scene-max)까지만 잡고 왼쪽에 붙이며, 남는 폭은 오른쪽

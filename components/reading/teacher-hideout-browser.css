@@ -2,16 +2,17 @@
    접히는 데 따라 같은 창에서도 칸 폭이 400px 가까이 달라집니다. */
 .teacher-hideout-browser { min-width:0; color:#35513e; container:thb / inline-size; }
 .teacher-hideout-browser [hidden] { display:none !important; }
-/* 머리(선생님 요청 · 2026년 11월) — 왼쪽 묶음(제목 + 그 오른쪽의 이전 · 다음 — 아지트 그림 위), 오른쪽은 전체 아지트 · 광장으로 ·
-   학생 서재로와 그 오른쪽 끝(화면 오른쪽 위)의 캐릭터 카드. 카드의 모양은 아지트 본인 방과 같은 .hideout-character(hideout.css).
-   칸이 1000px보다 좁으면 카드는 제목 줄 오른쪽에 남고 단추 셋이 그 아래 줄 오른쪽으로, 560px보다 좁으면 제목 · 카드 · 단추 차례로 쌓입니다. */
-.teacher-hideout-heading { display:grid; grid-template-columns:minmax(0, 1fr) auto auto; grid-template-areas:"lead nav card"; align-items:center; gap:10px 12px; margin-bottom:12px; }
-.teacher-hideout-lead { grid-area:lead; display:flex; flex-wrap:wrap; align-items:center; gap:8px 18px; min-width:0; }
+/* 머리 한 줄(선생님 요청 · 2026년 11월) — 제목 바로 오른쪽에 이전 · 다음, 같은 줄 오른쪽 끝에 광장으로 · 학생 서재로('전체 아지트'는
+   걷음). 캐릭터 카드는 이 줄이 아니라 책 봄 머리말 오른쪽 끝 빈자리(reading.css의 .books-head-aside)에 서서, 이 줄은 단추 높이만큼만
+   높고 아래 아지트 그림과의 사이도 10px입니다 — 한때 카드가 이 줄 끝에 서서 줄이 78px로 높아지고, 그 아래 빈 알림 줄까지 더해 제목과
+   그림 사이가 50px 비었습니다(선생님 지적). 칸이 좁으면 단추 둘이 다음 줄 오른쪽으로, 560px보다 좁으면 그 줄을 반씩 씁니다. */
+.teacher-hideout-heading { display:flex; flex-wrap:wrap; align-items:center; gap:8px 18px; margin-bottom:10px; }
 .teacher-hideout-title { min-width:0; }
 .teacher-hideout-title h2 { margin:0; font-size:25px; line-height:1.35; overflow-wrap:anywhere; outline:none; }
-.teacher-hideout-heading > .hideout-character, .teacher-hideout-heading > .hideout-level { grid-area:card; justify-self:end; }
-/* 이어 놓인 단추는 같은 크기 — 셋(전체 아지트 · 광장으로 · 학생 서재로)은 열마다 1fr, 이전 · 다음은 가운데 숫자를 두고 양쪽 1fr. */
-.teacher-hideout-navigation { grid-area:nav; justify-self:end; display:grid; grid-auto-flow:column; grid-auto-columns:1fr; gap:6px; min-width:0; }
+/* 머리말 빈자리가 없는 곳에서 쓸 때만 카드가 이 줄 오른쪽 끝(단추 다음)에 섭니다 */
+.teacher-hideout-heading > .hideout-character, .teacher-hideout-heading > .hideout-level { flex:0 1 auto; }
+/* 이어 놓인 단추는 같은 크기 — 둘(광장으로 · 학생 서재로)은 열마다 1fr, 이전 · 다음은 가운데 숫자를 두고 양쪽 1fr. */
+.teacher-hideout-navigation { margin-left:auto; display:grid; grid-auto-flow:column; grid-auto-columns:1fr; gap:6px; min-width:0; }
 .teacher-hideout-sequence { display:grid; grid-template-columns:minmax(0, 1fr) auto minmax(0, 1fr); align-items:center; gap:6px; min-width:0; }
 .teacher-hideout-navigation button,
 .teacher-hideout-sequence button { min-height:44px; padding:7px 10px; border:1px solid #cfd8c7; border-radius:10px; background:#fffdf7; color:#35513e; font:inherit; font-size:12px; font-weight:650; white-space:nowrap; cursor:pointer; }
@@ -22,15 +23,11 @@
 .teacher-hideout-navigation button:focus-visible,
 .teacher-hideout-sequence button:focus-visible { outline:3px solid #478fbd; outline-offset:3px; }
 .teacher-hideout-sequence span { min-width:44px; font-size:12px; color:#78836f; text-align:center; white-space:nowrap; }
-.teacher-hideout-view .hideout { padding-inline:0; }
-@container thb (max-width:999px) {
-  .teacher-hideout-heading { grid-template-columns:minmax(0, 1fr) auto; grid-template-areas:"lead card" "nav nav"; }
-}
+.teacher-hideout-view .hideout { padding-top:0; padding-inline:0; }
 @container thb (max-width:559px) {
-  .teacher-hideout-heading { grid-template-columns:minmax(0, 1fr); grid-template-areas:"lead" "card" "nav"; }
-  .teacher-hideout-heading > .hideout-character, .teacher-hideout-navigation { justify-self:stretch; }
+  .teacher-hideout-navigation { flex:1 1 100%; grid-auto-columns:minmax(0, 1fr); }
+  .teacher-hideout-heading > .hideout-character { flex:1 1 100%; }
   .teacher-hideout-heading > .hideout-character > .reading-character-summary { width:100%; }
-  .teacher-hideout-navigation { grid-auto-columns:minmax(0, 1fr); }
 }
 @media (max-width:700px) {
   .teacher-hideout-title h2 { font-size:22px; }

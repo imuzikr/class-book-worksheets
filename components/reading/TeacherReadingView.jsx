@@ -144,6 +144,9 @@ export default function TeacherReadingView({ classId, user, roster = [], ownClas
   const [galleryOpen, setGalleryOpen] = useState(initialTab === "hideout");
   const galleryAvailable = !!hubProps.hideoutOn;
   const galleryActive = galleryOpen && galleryAvailable;
+  // 책 봄 머리말(반 고르개 줄 · '책 봄' 줄) 오른쪽 끝 빈자리 — 학생 아지트 보기가 그 학생의 캐릭터 카드를 여기에 띄웁니다(선생님 요청 ·
+  // 2026년 11월 · createPortal). 늘 그려 두고 비어 있으면 자리를 차지하지 않습니다(reading.css의 .books-head-aside).
+  const [headAside, setHeadAside] = useState(null);
   const mainRef = useRef(null);
   const restoreGalleryFocus = useRef(false);
   const galleryIdentity = `${classId || ""}:${user?.uid || ""}`;
@@ -197,6 +200,7 @@ export default function TeacherReadingView({ classId, user, roster = [], ownClas
   return (
     <>
     {introHeading && (galleryActive || !student) && <div className="books-head">{introHeading}</div>}
+    <div className="books-head-aside" ref={setHeadAside} />
     <div className={`reading-teacher${galleryActive ? " reading-teacher--hideouts" : ""}`}>
       <aside className="reading-teacher-rail" aria-label="책 광장 입구와 학생 명단">
         {plazaOn && (
@@ -236,7 +240,7 @@ export default function TeacherReadingView({ classId, user, roster = [], ownClas
             <button type="button" className="btn-primary" disabled={recalling} onClick={() => recall(student)}>{recalling ? "불러 주는 중…" : "불러 주기"}</button>
           </div>
         )}
-        {galleryActive ? <TeacherHideoutBrowser key={`${classId}:${user?.uid}`} classId={classId} user={user} roster={roster} characterOn={hubProps.characterOn} petOn={petOn} petFeed={petFeed} onClose={closeGallery} onPlaza={plazaOn ? openPlaza : null} />
+        {galleryActive ? <TeacherHideoutBrowser key={`${classId}:${user?.uid}`} classId={classId} user={user} roster={roster} characterOn={hubProps.characterOn} petOn={petOn} petFeed={petFeed} onClose={closeGallery} onPlaza={plazaOn ? openPlaza : null} cardSlot={headAside} />
           : student ? <ReadingHub key={`${classId}:${student.uid}`} classId={classId} user={user} isTeacher student={{ uid: student.uid, name: student.name, pet: pets.get(student.uid) ?? null }} plazaOn={plazaOn} petOn={petOn} petFeed={studentFeed} initialTab={hubTab} introHeading={introHeading} {...hubProps}
           onOpenHideoutGallery={() => { setHistoryFor(null); setGalleryOpen(true); }}
           onOpenOwnHideout={(origin) => { setStartInHideoutRoom(origin === "plaza" ? "plaza" : "classroom"); setStartInHideout(true); setPlazaOpen(true); }}
