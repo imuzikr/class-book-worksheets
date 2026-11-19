@@ -446,13 +446,15 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
     : loading ? <div className="reading-loading" role="status"><span className="reading-loader" />독서 기록을 불러오고 있어요.</div> : !raw ? <div className="reading-empty"><BookIcon size={40} /><h3>독서 정보를 불러오지 못했어요.</h3><button type="button" className="btn-primary" onClick={() => setRevision((r) => r + 1)}>다시 불러오기</button></div> : <div className="reading-workspace"><div className="reading-workspace-layout">
       {/* 성장·뱃지는 떠 있는 동그라미의 창으로 옮겼습니다(위 badgeToken) — 책꽂이가 가로를 다 씁니다 */}
       <div className="reading-workspace-main">
-      {tab === "library" && <>
+      {/* 책꽂이 카드 하나 — 제목 · 단추 · 상태 필터와 그 아래 책 카드(빈 안내)가 한 카드 안에 섭니다(선생님 요청 · 2026년 11월 —
+          한때 책 카드가 도구 카드 아래 따로 섰습니다). */}
+      {tab === "library" && <div className="reading-library-panel">
         <div className="reading-library-toolbar">
         <div className="reading-section-head reading-library-head"><div><h3>책꽂이 <span>{books.filter((b) => !b.archived).length}</span></h3><p>책의 마지막 페이지까지, 나의 속도로.</p></div>{readOnly ? teacherTools : ownPlaza ? <div className="reading-library-actions">{plazaEntry}<button type="button" className="btn-primary" onClick={() => setDialog({ type: "book" })}>＋ 책 등록</button></div> : <button type="button" className="btn-primary" onClick={() => setDialog({ type: "book" })}>＋ 책 등록</button>}</div>
         <div className="reading-filters" aria-label="도서 상태 필터">{FILTERS.map(([key, label]) => <button type="button" key={key} className={filter === key ? "active" : ""} aria-pressed={filter === key} onClick={() => setFilter(key)}>{label}</button>)}</div>
         </div>
         {visibleBooks.length ? <div className="reading-library-grid">{visibleBooks.map((b, i) => <BookCard key={b.id} book={b} index={i} busy={busy} readOnly={readOnly} onOpen={() => setDialog({ type: "detail", bookId: b.id })} onReview={() => setDialog({ type: "review", bookId: b.id })} onLog={() => setDialog({ type: "log", bookId: b.id })} onRestore={() => run({ type: "archiveBook", bookId: b.id, archived: false }, "책을 책꽂이로 돌려놓았어요.")} />)}</div> : <div className="reading-empty"><BookIcon size={44} /><h3>{readOnly ? "아직 이곳에 놓인 책이 없어요." : filter === "all" ? "나의 첫 책을 기다리고 있어요." : "아직 이곳에 놓인 책이 없어요."}</h3>{!readOnly && <p>{filter === "all" ? "읽고 싶은 책을 등록하고 오늘 읽은 순간을 남겨 보세요." : "책을 읽고 기록하면 책꽂이의 풍경도 달라져요."}</p>}{filter === "all" && !readOnly && <button type="button" className="btn-primary" onClick={() => setDialog({ type: "book" })}>첫 책 등록하기</button>}</div>}
-      </>}
+      </div>}
       {/* 순위는 탭을 열 때 · 기간을 바꿀 때 · 새로고침을 누를 때만 받습니다(한 번에 반 전체를 읽음).
           한때 독서 자료 전체(raw)를 신호로 넘겨, 상태를 다시 물을 때마다(10초) 순위를 다시 받았습니다 —
           저장은 다른 탭에서만 하므로, 저장한 뒤 이 탭을 열면 새로 받습니다. */}
