@@ -147,6 +147,9 @@ function withBadgeItem(list, item) {
 
 // 창 이름 — 동그라미(창이 떠 있는 동안 ×)의 '○○ 닫기'
 const PANEL_NAMES = { msg: "메신저", library: "독서로 검색", badges: "성장·뱃지" };
+// 독서로 검색 · 성장·뱃지 창을 바깥 누르기로 닫을 때 '바깥이 아닌 것' — 그 위에 뜬 창(뱃지 상세 · 펫 창 · 캐릭터 창 …)과
+// 그 창의 배경입니다. 배경을 눌러 뱃지 상세만 닫았는데 그 아래의 성장·뱃지 창까지 함께 닫히면 안 됩니다.
+const PANEL_OUTSIDE_KEEP = ".modal-backdrop, .reading-modal-backdrop, dialog, [role='dialog'], [role='alertdialog']";
 
 // 책 봄에서 꺼진 행성의 말(libraryOnly) — 가운데 해 · 행성 툴팁 · 아무것도 안 가리킬 때의 해
 const OFF_HINT = "책 봄에서는 쓸 수 없어요";
@@ -408,6 +411,23 @@ export default function FloatingHub({ classId: pageClassId, user, isTeacher, fru
   useEffect(() => {
     msgOpenRef.current = msgOpen;
   }, [msgOpen]);
+
+  // 독서로 검색 · 성장·뱃지 창은 바깥 빈 곳을 누르면 닫힙니다(선생님 요청 · 2026년 11월 — 한때 × · Esc · 동그라미로만 닫혀
+  // 빈 곳을 눌러도 그대로 떠 있었습니다). 메신저는 그대로 둡니다 — 대화를 띄워 둔 채 뒤 화면을 보며 답하는 창이라서요.
+  // 바깥이 아닌 것: 동그라미 · 창 안, 누르는 순간 사라진 것(isConnected — 프로젝트 문서 '바깥을 눌러 닫기'), 그 위에 뜬 창
+  // (PANEL_OUTSIDE_KEEP). 초점은 옮기지 않습니다 — 누른 곳으로 갑니다.
+  useEffect(() => {
+    if (panel !== HUB_LIBRARY_KEY && panel !== HUB_BADGES_KEY) return undefined;
+    function onDown(e) {
+      const t = e.target;
+      if (!(t instanceof Element) || !t.isConnected) return;
+      if (rootRef.current?.contains(t)) return;
+      if (t.closest(PANEL_OUTSIDE_KEEP)) return;
+      setPanel(null);
+    }
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
+  }, [panel]);
 
   // 책 봄을 떠나면 성장·뱃지 창을 접습니다(그 자료는 책 봄의 것).
   useEffect(() => {

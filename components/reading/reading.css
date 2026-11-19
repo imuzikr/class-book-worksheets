@@ -27,28 +27,19 @@
 .reading-summary strong small { font-size:14px; font-weight:600; margin:0 3px; color:#657f73; letter-spacing:0; }
 .reading-summary>div>span:last-child { font-size:10px; color:#657d70; }
 .reading-summary .reading-level { background:#f0f5ed; }
-.reading-intro-copy { flex:1 1 240px; min-width:0; }
-.reading-intro-copy h2 { font-size:clamp(19px,2vw,25px); overflow-wrap:anywhere; }
-.reading-intro-heading { margin-bottom:16px; }
-.reading-intro-heading .books-head-main { flex-wrap:wrap; gap:8px 12px; }
-.reading-intro-heading .books-head-main > .study-class-select { min-width:0; max-width:100%; }
-.reading-intro-heading .books-attend-btn { flex-shrink:0; white-space:nowrap; }
-.reading-intro-heading .books-class-name { min-width:0; max-width:100%; overflow-wrap:anywhere; }
 .reading-intro .reading-summary--compact { flex:2 1 460px; min-width:0; margin:0; border:0; border-radius:0; gap:0; grid-template-columns:1.25fr 1fr 1fr 1fr; background:transparent; }
 .reading-summary--compact > div { min-width:0; gap:7px; padding:10px; border-left:1px solid #d9e3d8; background:transparent; }
 .reading-summary--compact .reading-level { background:transparent; }
 .reading-summary--compact > div > span { overflow-wrap:anywhere; }
 .reading-summary--compact strong { font-size:27px; }
 .reading-intro-loading { flex:2 1 460px; color:#657d70; }
-/* 학생·교사 열람 공통 머리말 — 제목·작은 통계는 왼쪽, 큰 정보 카드는 같은 줄 오른쪽에 둡니다. */
+/* 소개 카드 — 학생 본인 · 교사가 학생을 볼 때 같은 모양입니다(선생님 요청 · 2026년 11월). 작은 통계는 왼쪽, 대표 뱃지 · 캐릭터 · 펫
+   카드는 같은 줄 오른쪽. 제목 덩이('책 봄 · 반 이름' · '한 페이지씩…' · 안내 한 줄)는 없습니다 — 한때 그 덩이가 카드 높이를 정해
+   캐릭터 · 펫 카드 아래위가 비었습니다(교사 쪽을 먼저, 학생 쪽도 걷음 · 되살리지 마세요). 카드 높이는 가장 긴 카드가 정하고(아래
+   카드들에 바닥 높이를 두지 않음), 통계는 그 높이의 가운데에 섭니다. */
 .reading-intro--profile { display:flex; flex-wrap:wrap; align-items:stretch; gap:18px 22px; }
 .reading-intro.reading-intro--profile { padding:16px 20px; }
-.reading-intro--profile > .reading-intro-main { display:flex; flex:1 1 300px; min-width:0; flex-direction:column; gap:10px; }
-.reading-intro--profile .reading-intro-main > .reading-intro-copy { flex:none; }
-/* 제목 · 설명은 낱말 가운데에서 줄을 바꾸지 않습니다(keep-all) — 카드가 한 줄로 서는 폭(1536px 등)에서 왼쪽 칸이 좁아 '넓 / 히다.'처럼 쪼개졌음. */
-.reading-intro--profile .reading-intro-copy h2 { font-size:clamp(18px,2.1vw,24px); word-break:keep-all; text-wrap:balance; }
-.reading-intro--profile .reading-intro-heading { margin-bottom:8px; }
-.reading-intro--profile .reading-intro-copy > p { margin-top:7px; font-size:12px; word-break:keep-all; }
+.reading-intro--profile > .reading-intro-main { display:flex; flex:1 1 300px; min-width:0; flex-direction:column; justify-content:center; gap:10px; container:readingstats / inline-size; }
 .reading-intro--profile .reading-intro-main > .reading-summary--compact { flex:none; width:100%; max-width:500px; align-self:flex-start; grid-template-columns:repeat(2,minmax(0,1fr)); }
 .reading-intro--profile .reading-intro-main > .reading-intro-loading { flex:none; margin:0; }
 .reading-intro--profile .reading-intro-main .reading-summary--compact > div { min-height:36px; padding:3px 6px; border-left:0; border-top:0; }
@@ -59,7 +50,7 @@
 .reading-intro--profile .reading-intro-main .reading-summary--compact strong small { font-size:10px; }
 .reading-intro--profile > .reading-intro-side { display:flex; flex:2 1 740px; width:auto; min-width:0; align-items:stretch; justify-content:flex-start; gap:12px; }
 .reading-intro--profile .reading-featured,
-.reading-intro--profile .reading-character-summary { display:flex; align-items:center; flex:1 1 180px; min-width:0; max-width:none; min-height:160px; gap:12px; padding:12px; border:1px solid #d8e5db; border-radius:14px; background:#ffffff91; }
+.reading-intro--profile .reading-character-summary { display:flex; align-items:center; flex:1 1 180px; min-width:0; max-width:none; gap:12px; padding:12px; border:1px solid #d8e5db; border-radius:14px; background:#ffffff91; }
 .reading-intro--profile .reading-character-summary { flex:1.2 1 220px; }
 .reading-intro--profile .reading-featured > svg { flex-shrink:0; color:#99aa9d; }
 .reading-intro--profile .reading-featured > span { min-width:0; overflow-wrap:anywhere; }
@@ -84,7 +75,7 @@
 .reading-intro--profile .reading-pet-wrap,
 .reading-intro--profile > .reading-intro-side > .reading-pet { flex:1.4 1 280px; min-width:0; max-width:none; }
 .reading-intro--profile .reading-pet-wrap { display:flex; flex-direction:column; }
-.reading-intro--profile .reading-pet { min-width:0; min-height:160px; flex-wrap:wrap; gap:10px; padding:12px; border-radius:14px; }
+.reading-intro--profile .reading-pet { min-width:0; flex-wrap:wrap; gap:10px; padding:12px; border-radius:14px; }
 .reading-intro--profile .pet-say { position:relative; left:auto; bottom:auto; flex:0 0 100%; max-width:100%; box-shadow:none; }
 .reading-intro--profile .reading-pet-wrap > .reading-pet { flex:1; }
 .reading-intro--profile .reading-pet-open { flex:1 1 200px; min-width:0; gap:10px; }
@@ -97,11 +88,10 @@
 @media (max-width:700px) {
   .reading-intro--profile > .reading-intro-main,
   .reading-intro--profile > .reading-intro-side { flex-basis:100%; }
-  .reading-intro--profile .reading-featured { flex-basis:130px; min-height:140px; padding:10px; }
-  .reading-intro--profile .reading-character-summary { flex-basis:180px; min-height:140px; padding:10px; gap:10px; }
+  .reading-intro--profile .reading-featured { flex-basis:130px; padding:10px; }
+  .reading-intro--profile .reading-character-summary { flex-basis:180px; padding:10px; gap:10px; }
   .reading-character-summary > img,
   .reading-character-placeholder { width:64px; height:64px; }
-  .reading-intro--profile .reading-pet { min-height:140px; }
   .reading-intro--profile .reading-pet-open > .pet-figure,
   .reading-intro--profile .reading-pet > .pet-figure { width:64px !important; height:64px !important; }
 }
@@ -118,26 +108,14 @@
 .reading-intro .reading-summary--compact > div > span:last-child { grid-area:2 / 1 / 3 / -1; font-size:10px; line-height:1.25; }
 .reading-intro .reading-summary--compact .reading-level > .reading-progress { grid-area:2 / 1; height:4px; }
 .reading-intro .reading-summary--compact .reading-level > span:last-child { grid-column:2; text-align:right; }
-/* 교사가 학생을 볼 때의 소개 카드(.reading-intro--teacher) — 제목 덩이('책 봄 · 반 이름' · '한 페이지씩…' · 안내 한 줄) 없이
-   통계 · 대표 뱃지 · 캐릭터 · 펫만 섭니다(선생님 요청 · 2026년 11월 — 한때 그 덩이가 카드 높이를 정해 캐릭터 · 펫 카드 아래위가 비었음).
-   카드 높이는 가장 긴 카드(캐릭터 — 여섯 줄)가 정하도록 카드들의 바닥 높이(160px · 700px 아래 140px)를 걷고, 통계는 그 높이의
-   가운데에 섭니다. 학생 본인 화면은 그대로입니다. */
-.reading-intro--teacher.reading-intro--profile > .reading-intro-main { justify-content:center; }
-.reading-intro--teacher.reading-intro--profile .reading-featured,
-.reading-intro--teacher.reading-intro--profile .reading-character-summary,
-.reading-intro--teacher.reading-intro--profile .reading-pet { min-height:0; }
-/* 폭이 모자라 통계와 세 카드가 한 줄에 서지 못하면(카드 자리 .reading-teacher-intro가 1104px 아래 — 통계 300 + 틈 22 + 세 카드 740
-   + 안쪽 여백 42) 통계가 가로를 다 쓰는 띠가 되어 세 카드 위에 섭니다. 자리가 700px 이상이면 네 칸 한 줄, 그 아래는 두 칸 두 줄.
-   그대로 두면 통계가 왼쪽 500px에만 서고 오른쪽이 통째로 비었습니다(1440px 창에서 '멋진 순간'을 펼쳤을 때 등). */
-.reading-teacher-intro { container:readingintro / inline-size; }
-@container readingintro (max-width:1103.98px) {
-  .reading-intro--teacher.reading-intro--profile > .reading-intro-main { flex-basis:100%; }
-  .reading-intro--teacher.reading-intro--profile .reading-intro-main > .reading-summary--compact { max-width:none; }
-}
-@container readingintro (min-width:700px) and (max-width:1103.98px) {
-  .reading-intro--teacher.reading-intro--profile .reading-intro-main > .reading-summary--compact { grid-template-columns:1.25fr 1fr 1fr 1fr; }
-  .reading-intro--teacher.reading-intro--profile .reading-intro-main .reading-summary--compact > div { border-top:0; }
-  .reading-intro--teacher.reading-intro--profile .reading-intro-main .reading-summary--compact > div + div { border-left:1px solid #d9e3d8; }
+/* 폭이 모자라 통계와 세 카드가 한 줄에 서지 못하면(카드 안쪽 폭 1062px 아래 — 통계 300 + 틈 22 + 세 카드 740) 세 카드가 다음 줄로
+   내려가고, 통계 칸이 가로를 다 쓰는 띠가 됩니다. 그 띠가 600px 이상이면 네 칸 한 줄, 그 아래는 두 칸 두 줄(통계 칸의 폭 readingstats
+   으로 접음 — 창 폭으로는 모름: 교사 화면은 명단 · '멋진 순간'이 섬). 그대로 두면 통계가 왼쪽 500px에만 서고 오른쪽이 통째로
+   비었습니다(1440px 창에서 '멋진 순간'을 펼쳤을 때 등). 컨테이너는 통계 칸에만 겁니다 — 카드 전체에 걸면 그 안의 창이 갇힐 수 있음. */
+@container readingstats (min-width:600px) {
+  .reading-intro--profile .reading-intro-main > .reading-summary--compact { max-width:none; grid-template-columns:1.25fr 1fr 1fr 1fr; }
+  .reading-intro--profile .reading-intro-main .reading-summary--compact > div { border-top:0; }
+  .reading-intro--profile .reading-intro-main .reading-summary--compact > div + div { border-left:1px solid #d9e3d8; }
 }
 /* 캐릭터 정보는 이미 받은 프로필과 독서 요약만 크게 보여 줍니다. */
 .reading-character-dialog,

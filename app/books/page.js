@@ -222,7 +222,6 @@ function BooksPageInner() {
   const [membershipsLoaded, setMembershipsLoaded] = useState(false);
   const [localSelectedId, setLocalSelectedId] = useState(null);
   const [teacherClassId, setTeacherClassId] = useState(null);
-  const readingClassFocus = useRef(null);
   const [baseGroupAssignment, setBaseGroupAssignment] = useState(null);
   // '멋진 순간' 패널의 자리표 — 공부방과 같은 문서(seatLayouts/default)를 봅니다.
   // 두 화면 중 어디서 자리를 옮기든 서로 어긋나지 않습니다.
@@ -870,8 +869,6 @@ function BooksPageInner() {
       <span className="book-group-class">{activeClassName}</span>
     ) : null;
 
-  // 학생은 반 선택·출석도 카드 안에 둡니다. 교사 관리 도구는 별도 줄에 유지합니다.
-  const inlineReadingHeading = readingOpen && !admin;
   const pageClassControls = (
     <>
       {admin && myClasses.length > 0 && (
@@ -894,18 +891,8 @@ function BooksPageInner() {
         <select
           className="study-class-select"
           aria-label="반 고르기"
-          ref={(node) => {
-            // 반을 바꾸면 서재가 새로 서므로 카드 안 고르개에도 초점을 돌려줍니다.
-            if (node && readingClassFocus.current === `${myUid}:${classId}`) {
-              readingClassFocus.current = null;
-              node.focus({ preventScroll: true });
-            }
-          }}
           value={classId ?? ""}
-          onChange={(e) => {
-            if (inlineReadingHeading && document.activeElement === e.currentTarget && e.target.value !== classId) readingClassFocus.current = `${myUid}:${e.target.value}`;
-            setSelectedClassId(e.target.value);
-          }}
+          onChange={(e) => setSelectedClassId(e.target.value)}
         >
           {membershipIds.map((cid) => (
             <option key={cid} value={cid}>
@@ -1249,7 +1236,10 @@ function BooksPageInner() {
         />
       ) : (
         <main className="books-main">
-          {!inlineReadingHeading && <div className="books-head">{readingOpen && admin ? <div className="books-head-main">{pageClassControls}</div> : pageHeading}</div>}
+          {/* 학생 책 봄도 다른 화면처럼 이 머리말(책 봄 · 반 이름 · 출석하기)이 소개 카드 위에 섭니다 — 소개 카드는 교사가 학생을 볼 때와
+              같은 모양(통계 · 대표 뱃지 · 캐릭터 · 펫, 제목 덩이 없음 — 선생님 요청 · 2026년 11월). 한때 이 머리줄을 '한 페이지씩…' 문구와
+              함께 카드 안 왼쪽에 두어 그 덩이가 카드 높이를 정했고, 세 카드 아래위가 비었습니다. */}
+          <div className="books-head">{readingOpen && admin ? <div className="books-head-main">{pageClassControls}</div> : pageHeading}</div>
 
           {settingsOpen ? (
             <AdminSettingsPanel classes={myClasses} onToast={setToast} />
@@ -1267,7 +1257,6 @@ function BooksPageInner() {
               onDisabled={() => patchBooksQuery({ area: null }, { replace: true })} />
           ) : readingOpen ? (
             <ReadingHub key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin} bookSearchOn={bookSearchEnabled(currentClass)} petOn={petOn}
-              introHeading={pageHeading}
               petFeed={petFeed} myFruit={myFruit} petPreview={petPreview}
               plazaOn={plazaOn(currentClass)} hideoutOn={hideoutOn(currentClass)} talkOn={plazaTalkOn(currentClass)} characterOn={characterOn} classroom={classroomProps}
               plazaCall={plazaCall}
