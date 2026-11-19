@@ -35,9 +35,11 @@ export default function UserProfile({
   // 둘(창을 여는 것)과 섞이지 않게 앞에 세웁니다.
   onOpenAdmin = null,
   onStudyExport = null,
-  // 학생 캐릭터(책 봄 · 랭킹 · 학생 캐릭터가 모두 켜진 반) — { number, style } · 저장 함수
+  // 내 캐릭터(책 봄 · 학생 캐릭터가 켜진 반) — { number, style } · 저장 함수. 선생님도 받습니다('내 프로필'의 '바꾸기' —
+  // 동그라미 얼굴은 선생님 그림 그대로).
   character = null,
   // 내 독서 레벨 — 레벨 옷(Lv.7 탐험가 옷 · Lv.10 마스터 옷 · lib/readingCharacter.js)을 고릅니다. 모르면 null(기본 옷).
+  // 선생님은 늘 10(TopNav가 넘김 — 선생님 결정).
   characterLevel = null,
   onSaveCharacter = null,
   // 독서 펫 — 학생 펫이 켜진 반의 학생이고 알을 받았으면 { classId, mirror }(lib/readingPet.js)
@@ -185,7 +187,12 @@ export default function UserProfile({
 
       {profileOpen && user && (
         <ProfileModal user={user} onClose={() => setProfileOpen(false)} character={character} characterLevel={characterLevel} pet={pet}
-          onChangeCharacter={onSaveCharacter ? () => { setProfileOpen(false); setChoosing(true); } : null} />
+          onChangeCharacter={onSaveCharacter ? () => {
+            // 학생은 이 창을 닫고 고르기 창을 엽니다. 선생님은 이 창에서 실명을 고칠 수 있어 닫지 않고 그 위에 엽니다 —
+            // 고치던 이름이 날아가지 않고, 고른 뒤에는 새 캐릭터가 이 창에 곧바로 보입니다(선생님 요청 · 2026년 11월).
+            if (!teacherRole) setProfileOpen(false);
+            setChoosing(true);
+          } : null} />
       )}
       {choosing && character && onSaveCharacter && (
         <CharacterChooser row={{ uid: user?.uid, character, level: characterLevel }} onClose={() => setChoosing(false)}

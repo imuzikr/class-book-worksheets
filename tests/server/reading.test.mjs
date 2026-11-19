@@ -266,7 +266,7 @@ test("old character keys are saved and read as the new set keys — the student 
   }
 });
 
-test("journey appearance rejects other UIDs, malformed choices, teachers and disabled access", async () => {
+test("journey appearance rejects other UIDs, malformed choices and disabled access", async () => {
   const character = { number: 1, style: "animal" };
   for (const body of [null, [], { classId: "api-class", uid: ids.other, character },
     { classId: "api-class", character: { ...character, role: "admin" } },
@@ -274,15 +274,39 @@ test("journey appearance rejects other UIDs, malformed choices, teachers and dis
     await assert.rejects(() => saveReadingCharacter(principal("student"), body), (error) => error.status === 400);
   }
   await assert.rejects(() => saveReadingCharacter(principal("other"), { classId: "api-class", character }), (error) => error.status === 403);
-  await assert.rejects(() => saveReadingCharacter(principal("teacher"), { classId: "api-class", character }), (error) => error.status === 403);
-  await assert.rejects(() => saveReadingCharacter(principal("admin"), { classId: "api-class", character }), (error) => error.status === 403);
   await assert.rejects(() => saveReadingCharacter(principal("student"), { classId: "api-off", character }), (error) => error.status === 403);
+  await assert.rejects(() => saveReadingCharacter(principal("teacher"), { classId: "api-off", character }), (error) => error.status === 403);
   // 리더보드를 꺼 둔 반도 캐릭터는 고릅니다('내 프로필'에서 — 선생님 요청: 리더보드 스위치는 보이는 화면만).
   await db.doc("classes/api-class").update({ rankingEnabled: false });
   try {
     assert.deepEqual((await saveReadingCharacter(principal("student"), { classId: "api-class", character })).character, character);
     assert.deepEqual((await db.doc(`users/${ids.student}`).get()).data().readingCharacter, character);
   } finally { await db.doc("classes/api-class").update({ rankingEnabled: true }); }
+});
+
+// 선생님 · 관리자도 '내 프로필'에서 제 캐릭터를 고릅니다(선생님 요청 · 2026년 11월) — 담당 반에서(관리자는 어느 반이든).
+// 남의 반 · 캐릭터를 끈 반에서는 학생과 같이 막히고, 순위 줄은 생기지 않습니다(선생님은 순위에 없음).
+test("teachers and administrators save only their own character, in classes they may open, while the switch still applies", async () => {
+  const character = { number: 6, style: "fantasy" };
+  for (const kind of ["teacher", "admin"]) {
+    const ref = db.doc(`users/${ids[kind]}`);
+    const prior = (await ref.get()).data();
+    assert.deepEqual(await saveReadingCharacter(principal(kind), { classId: "api-class", character }), { character }, kind);
+    assert.deepEqual((await ref.get()).data(), { ...prior, readingCharacter: character }, kind);
+  }
+  const rows = (await rankingsNow(principal("teacher"), "api-class", "all-time")).rankings;
+  assert.equal(rows.some((row) => row.uid === ids.teacher || row.uid === ids.admin), false);
+  // 남의 반 — 그 반을 만든 선생님이 아니면 고를 수 없음(관리자는 됨)
+  await db.doc("classes/api-foreign").set({ createdBy: "api-someone-else", readingEnabled: true, archived: false });
+  try {
+    await assert.rejects(() => saveReadingCharacter(principal("teacher"), { classId: "api-foreign", character }), (error) => error.status === 403);
+    assert.deepEqual((await saveReadingCharacter(principal("admin"), { classId: "api-foreign", character })).character, character);
+  } finally { await db.doc("classes/api-foreign").delete(); }
+  // 캐릭터를 끈 반 — 선생님도 막힘(그 반의 광장에서는 선생님도 기본 캐릭터로 보이므로)
+  await db.doc("classes/api-class").update({ characterEnabled: false });
+  try {
+    await assert.rejects(() => saveReadingCharacter(principal("teacher"), { classId: "api-class", character }), (error) => error.code === "reading/character-disabled");
+  } finally { await db.doc("classes/api-class").update({ characterEnabled: true }); }
 });
 
 test("character switch off blocks choosing and shows the default character, keeping the saved choice", async () => {

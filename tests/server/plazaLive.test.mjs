@@ -405,6 +405,42 @@ test("입장 — 이어지면 지금 자리를 올리고 서로가 보인다 · 
   await until(async () => (await tree()).pos[ids.b]?.g === 1, "B의 나감");
 });
 
+// '내 프로필'에서 캐릭터를 바꾸면(학생 · 선생님 — 선생님 요청 · 2026년 11월) 화면이 refresh를 불러 입장권을 곧바로 새로 받습니다.
+test("캐릭터를 바꾸면 — refresh가 입장권을 새로 받아 친구 화면에 새 모습이 간다(선생님이 고른 캐릭터도 · 반이 끄면 기본)", async () => {
+  const teacherRef = db.doc(`users/${ids.teacher}`);
+  const t = visit("teacher", { teacher: true });
+  const b = visit("b");
+  try {
+    await until(() => t.now() === "live" && b.now() === "live", "두 화면이 이어짐");
+    const seen = await until(() => b.heard.here.get(ids.teacher), "B의 화면에 선생님");
+    assert.deepEqual(seen.who.character, characterOf({ uid: ids.teacher }), "아직 안 고른 선생님은 기본 캐릭터");
+    await teacherRef.update({ readingCharacter: { style: "zodiac", number: 5 } });
+    const entered = t.heard.entered;
+    t.session.refresh();
+    t.session.refresh(); // 잇달아 불러도 됩니다(다음 갱신은 하나만 걸림 — renewLater)
+    assert.equal(t.heard.entered, entered + 2);
+    await until(() => b.heard.here.get(ids.teacher)?.who.character?.number === 5, "B의 화면에 선생님의 새 캐릭터");
+    assert.deepEqual(b.heard.here.get(ids.teacher).who.character, { style: "zodiac", number: 5 });
+    assert.equal(b.heard.here.get(ids.teacher).who.teacher, true);
+    // 반이 캐릭터를 끄면 — 고른 값이 있어도 기본 캐릭터(학생과 같은 약속)
+    await db.doc(`classes/${CLASS}`).update({ characterEnabled: false });
+    try {
+      t.session.refresh();
+      await until(() => b.heard.here.get(ids.teacher)?.who.character?.number !== 5, "끈 반은 기본 캐릭터");
+      assert.deepEqual(b.heard.here.get(ids.teacher).who.character, characterOf({ uid: ids.teacher }));
+    } finally { await db.doc(`classes/${CLASS}`).update({ characterEnabled: FieldValue.delete() }); }
+    // 닫은 화면의 refresh는 아무 일도 하지 않는다
+    t.session.close();
+    const closedCount = t.heard.entered;
+    t.session.refresh();
+    assert.equal(t.heard.entered, closedCount);
+  } finally {
+    await teacherRef.update({ readingCharacter: FieldValue.delete() });
+    t.session.close();
+    b.session.close();
+  }
+});
+
 test("쉬는 화면 — 탭이 가려지면 놓고(나감), 돌아오면 입장권을 새로 받아 지금 자리로 다시 선다", async () => {
   const a = visit("a");
   const b = visit("b");

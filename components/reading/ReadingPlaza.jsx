@@ -984,6 +984,13 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
       setLive({ status: "off", why: "" });
     };
   }, [classId, myUid, isTeacher, classroomOn, liveState, settle, wake]);
+  // '내 프로필'에서 캐릭터를 바꾸면(상단바가 저장을 마치고 알림 — 학생 · 선생님) 입장권을 곧바로 새로 받습니다 —
+  // 친구들 화면에도 새 캐릭터가 가게(내 화면의 내 캐릭터는 프로필 구독으로 이미 바뀜 · lib/plazaLiveSession.js의 refresh).
+  useEffect(() => {
+    const changed = () => session.current?.refresh?.();
+    window.addEventListener("reading-character-change", changed);
+    return () => window.removeEventListener("reading-character-change", changed);
+  }, []);
   // 자리표가 (늦게) 오거나 바뀌면 — 친구들이 앉았다는 소식을 다시 맞춰 봅니다
   useEffect(() => {
     const now = performance.now();

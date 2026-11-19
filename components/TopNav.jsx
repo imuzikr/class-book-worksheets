@@ -46,7 +46,7 @@ import { useClassMembers } from "@/lib/useClassRoster";
 import { IconLogo, IconBook, IconTrophy, IconSettings } from "./StatusIcons";
 import { ensureReadingPet, READING_PET_EVENT, saveReadingCharacter, subscribeMyReadingCharacter, subscribeMyReadingLevel, subscribeMyReadingPet } from "@/lib/data/reading";
 import { kstToday, readingEnabled, readingTopOn, fruitBasketOn } from "@/lib/reading";
-import { characterChoiceEnabled } from "@/lib/readingCharacter";
+import { characterChoiceEnabled, TEACHER_OUTFIT_LEVEL } from "@/lib/readingCharacter";
 import { petCareRules, petEnabled, petPreviewOn } from "@/lib/readingPet";
 import { readWelcome, welcomePending, WELCOME_EVENT } from "@/lib/readingWelcome";
 import { careRulesFor, careStatus } from "@/lib/petCare";
@@ -163,9 +163,10 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
     return subscribeBroadcast(broadcastClassId, setBroadcast);
   }, [broadcastClassId]);
 
-  // 학생 캐릭터 — 프로필 동그라미의 얼굴과 '내 프로필'의 '바꾸기'. 책 봄 · 학생 캐릭터가 켜진 반에서
+  // 내 캐릭터 — 학생은 프로필 동그라미의 얼굴과 '내 프로필'의 '바꾸기', 선생님 · 관리자는 '내 프로필'의 '바꾸기'만
+  // (선생님 요청 · 2026년 11월 — 동그라미는 지금처럼 선생님 그림). 책 봄 · 학생 캐릭터가 켜진 반에서
   // (리더보드는 안 봄 — 선생님 요청: 리더보드는 보이는 화면만 켜고 끄고, 캐릭터는 꺼 둔 동안에도 그대로).
-  // 반 문서 1건 · 내 프로필 1건을 구독합니다(학생만).
+  // 반 문서 1건 · 내 프로필 1건을 구독합니다.
   const myUid = user?.uid;
   const [characterOn, setCharacterOn] = useState(false);
   // 과일 바구니 — 관리자 설정에서 끄면 떠 있는 동그라미의 '과일 바구니'를 가립니다(교사 · 학생 모두).
@@ -199,7 +200,7 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
       setFruitOn(fruitBasketOn(c));
       setTopOn(!!c && !c.archived && readingTopOn(c));
       setTopCharacters(!!c && characterChoiceEnabled(c));
-      if (!admin) setCharacterOn(!!c && readingEnabled(c) && characterChoiceEnabled(c));
+      setCharacterOn(!!c && readingEnabled(c) && characterChoiceEnabled(c));
       if (!admin) setPetOn(!!c && petEnabled(c));
       if (!admin) setPetFeedKey(c ? JSON.stringify(petCareRules(c)) : "");
       if (!admin) setClassInfo({ id: hubClassId, previewOn: !!c && petPreviewOn(c) });
@@ -293,12 +294,12 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
   useEffect(() => {
     setMyCharacter(null);
     setCharacterLoaded(false);
-    if (admin || !myUid || !characterOn) return;
+    if (!myUid || !characterOn) return;
     return subscribeMyReadingCharacter(myUid, (value) => {
       setMyCharacter(value);
       setCharacterLoaded(true);
     });
-  }, [admin, myUid, characterOn]);
+  }, [myUid, characterOn]);
   // 내 독서 레벨 — 레벨 옷(Lv.7 탐험가 옷 · Lv.10 마스터 옷 · lib/readingCharacter.js). 내 users 문서의 readingLevel(서버가 적어 둔 값 —
   // 캐릭터와 같은 문서라 구독이 하나로 묶임 · 데모는 메모리 서재). 캐릭터와 레벨의 첫 답이 둘 다 온 뒤에 얼굴을 그립니다 —
   // 기본 캐릭터 · 기본 옷이 한 박자 보였다가 바뀌지 않게.
@@ -308,9 +309,13 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
     if (admin || !myUid || !characterOn) return;
     return subscribeMyReadingLevel(myUid, (level) => setMyLevel({ loaded: true, level }));
   }, [admin, myUid, characterOn]);
+  // 선생님 · 관리자는 레벨이 없고 늘 Lv.10 마스터 옷입니다(선생님 결정 — lib/readingCharacter.js) — 레벨을 구독하지 않습니다.
+  const myOutfitLevel = admin ? TEACHER_OUTFIT_LEVEL : myLevel.level;
+  const myOutfitReady = admin || myLevel.loaded;
   async function saveMyCharacter(next) {
     const result = await saveReadingCharacter(hubClassId, next);
-    // 리더보드가 떠 있으면 새 캐릭터로 다시 읽게 알립니다(ReadingLeaderboard)
+    // 새 캐릭터를 알립니다 — 떠 있는 리더보드가 다시 읽고(ReadingLeaderboard), 광장이 입장권을 새로 받아 친구 화면에도
+    // 새 모습이 갑니다(ReadingPlaza — 선생님도).
     window.dispatchEvent(new Event("reading-character-change"));
     return result;
   }
@@ -522,8 +527,8 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
           onOpenRoleMgr={isStrictAdmin ? () => setRoleMgrOpen(true) : null}
           onOpenAdmin={null}
           onStudyExport={admin ? onStudyExport : null}
-          character={characterOn && myUid && characterLoaded && myLevel.loaded ? characterOf({ uid: myUid, character: myCharacter }) : null}
-          characterLevel={myLevel.level}
+          character={characterOn && myUid && characterLoaded && myOutfitReady ? characterOf({ uid: myUid, character: myCharacter }) : null}
+          characterLevel={myOutfitLevel}
           onSaveCharacter={characterOn ? saveMyCharacter : null}
           pet={petOn && !admin && myPet.mirror ? { classId: hubClassId, mirror: myPet.mirror } : null}
           // 체험용 샘플 반 들어가기 — 실서비스의 교사 · 관리자만(샘플 반 안 · 체험반 데모에서는 없음). 한때 책방 화면 위의 한 줄

@@ -14,8 +14,9 @@ import { isTeacher } from "@/lib/user";
 import { characterImage, characterName } from "./reading/CharacterChooser";
 import { PetProfileField } from "./reading/PetCard";
 
-// character: 학생 캐릭터를 쓰는 반이면 지금 캐릭터({ number, style }), 아니면 null.
-// onChangeCharacter: '바꾸기' — 이 창을 닫고 고르기 창을 엽니다(UserProfile).
+// character: 학생 캐릭터를 쓰는 반이면 지금 캐릭터({ number, style }), 아니면 null. 선생님도 받습니다(선생님 요청 ·
+//   2026년 11월 — 책 광장 · 교실 · 아지트에서 걷는 선생님의 모습, 늘 Lv.10 마스터 옷 · characterLevel이 10).
+// onChangeCharacter: '바꾸기' — 고르기 창을 엽니다(UserProfile — 학생은 이 창을 닫고, 선생님은 이 창 위에).
 // pet: 학생 펫을 쓰는 반이고 알을 받았으면 { classId, mirror } — 단계는 열 때 한 번 서버에 묻습니다.
 export default function ProfileModal({ user, onClose, character = null, characterLevel = null, onChangeCharacter = null, pet = null }) {
   const teacherRole = isTeacher(user);
@@ -80,7 +81,7 @@ export default function ProfileModal({ user, onClose, character = null, characte
             <span>이메일</span>
             <div className="student-edit-value">{user.email || "—"}</div>
           </div>
-          {!teacherRole && character && (
+          {character && (
             <div className="student-edit-field">
               <span>내 캐릭터</span>
               <div className="profile-character">
@@ -107,6 +108,12 @@ export default function ProfileModal({ user, onClose, character = null, characte
             실명·학번은 선생님만 수정할 수 있어요. 게시물과 채팅에는 실명이
             표시됩니다.{character && " 캐릭터는 언제든 바꿀 수 있고, 리더보드의 독서 여정 지도에서도 함께 걸어요."}
             {pet?.mirror && " 펫은 독서로 얻은 경험치로 자라요."}
+          </p>
+        )}
+        {teacherRole && character && (
+          <p className="profile-modal-hint">
+            캐릭터는 언제든 바꿀 수 있고, 책 광장 · 교실 · 아지트에서 이 모습으로 걸어요. 학생들도 광장과 교실에서 이
+            모습의 선생님을 만나요(선생님은 늘 Lv.10 마스터 옷).
           </p>
         )}
 

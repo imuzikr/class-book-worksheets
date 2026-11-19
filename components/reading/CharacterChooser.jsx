@@ -37,7 +37,11 @@ export default function CharacterChooser({
     try { await onSave(draft); }
     catch (e) { setError(e?.message || "캐릭터를 저장하지 못했어요. 다시 시도해 주세요."); setBusy(false); }
   }
-  return <dialog ref={dialog} className="rwm-character-dialog" aria-labelledby={titleId} onCancel={(event) => { event.preventDefault(); if (!busy) onClose(); }}>
+  // Esc는 이 창만 닫습니다 — keydown에서 preventDefault를 불러 공통 처리(lib/modal.js)가 뒤에 떠 있는 창(선생님의 '내 프로필'은
+  // 고르는 동안 그대로 떠 있음)까지 닫지 않게 합니다. 브라우저가 따로 보내는 cancel도 같은 닫기라 두 번 불려도 그대로입니다.
+  return <dialog ref={dialog} className="rwm-character-dialog" aria-labelledby={titleId}
+    onKeyDown={(event) => { if (event.key !== "Escape" || event.nativeEvent.isComposing) return; event.preventDefault(); if (!busy) onClose(); }}
+    onCancel={(event) => { event.preventDefault(); if (!busy) onClose(); }}>
     <div className="rwm-character-head"><div><span>{eyebrow}</span><h3 id={titleId}>{title}</h3></div><button type="button" aria-label="캐릭터 선택 닫기" disabled={busy} onClick={onClose}>×</button></div>
     <p>{lead}</p>
     <fieldset className="rwm-outfits" disabled={busy}><legend>캐릭터 등급</legend>{CHARACTER_STYLE_OPTIONS.map(([value, label]) => <label key={value}><input type="radio" name={titleId} checked={draft.style === value} onChange={() => setDraft((old) => ({ ...old, style: value }))} />{label}</label>)}</fieldset>
