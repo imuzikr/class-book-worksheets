@@ -481,16 +481,22 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
   const portalLit = arranging && selectedUnit === HIDEOUT_PORTAL_UNIT;
   return <section className={`hideout${editing ? " is-editing" : ""}`} aria-label={`${myName}의 아지트`} aria-busy={saving}>
     {!(readOnly && hideHeading) && <header className="hideout-heading">
-      <div className="hideout-title"><p className="hideout-eyebrow">이야기가 머무는 작은 방</p><h2>{readOnly || teacherOwn ? `${myName}의 아지트` : "나의 아지트"}</h2></div>
-      {/* 오른쪽 — 단추들과 그 오른쪽 끝(화면 오른쪽 위)의 캐릭터 카드(선생님 요청 · 2026년 11월 — 독서 레벨 알약 대신). 한 줄에 다
-          안 들어가면 카드는 제목 줄 오른쪽에 남고 단추가 그 아래 줄로 내려갑니다(hideout.css의 .hideout-heading 격자). */}
+      {/* 제목 위 '이야기가 머무는 작은 방'은 본인 방에만 — 선생님이 학생 방을 볼 때는 걷었습니다(선생님 요청 · 2026년 11월). */}
+      <div className="hideout-title">{!readOnly && <p className="hideout-eyebrow">이야기가 머무는 작은 방</p>}<h2>{readOnly || teacherOwn ? `${myName}의 아지트` : "나의 아지트"}</h2></div>
+      {/* 캐릭터 카드는 오른쪽 위, 단추는 그 아래 제목 줄의 오른쪽 끝(선생님 요청 · 2026년 11월 — 선생님의 학생 아지트 보기와 같은 짜임.
+          한때 단추 다음 오른쪽 끝에 카드가 서서 단추가 가운데로 밀려 있었음 · hideout.css의 .hideout-heading 격자). 읽는 차례도
+          보이는 차례대로 제목 → 카드 → 단추입니다. 카드가 없으면(선생님 본인 방 · 캐릭터를 끈 반) 알약 다음 오른쪽 끝에 단추 — 한 줄. */}
+      {showCard
+        ? <div className="hideout-character"><ReadingCharacterSummary uid={viewUid} summary={cardSummary} readOnly={readOnly} /></div>
+        : <span className="hideout-level">{teacherOwn ? "모든 소품 사용 가능" : <>독서 레벨 <strong>{eligibility.level}</strong></>}</span>}
       {/* 꾸미기를 시작한 그 자리에 마치는 단추가 섭니다(선생님 신고 — 한때 '꾸미기 취소 · 꾸미기 완료'가 오른쪽 패널의 소품 카드
           맨 아래에 있어, 패널을 끝까지 굴려야 보였고 꾸미기를 켜면 저장 · 끝내기가 없는 것처럼 보였음). 그 자리로 되돌리지 마세요. */}
       {(!readOnly || (onExit && !hideExitButton)) && <div className="hideout-actions">
         {/* '아지트 꾸미기' 오른쪽의 '광장으로'(선생님 요청 — 포털만으로는 나가는 길이 안 보였음): 어디서 들어왔든 책 광장으로 갑니다
-            (광장의 아지트 포털 아래에 섬 · 교실로는 그 광장에서 · 들어온 곳으로는 방의 포털로). 두 단추는 같은 크기(.hideout-head-buttons). */}
+            (광장의 아지트 포털 아래에 섬 · 교실로는 그 광장에서 · 들어온 곳으로는 방의 포털로). 두 단추는 같은 크기(.hideout-head-buttons)이고
+            색은 '아지트 꾸미기' 연한 초록 · '광장으로' 연한 살구(선생님 요청 · 2026년 11월 — 한때 진한 초록 · 흰 바탕). */}
         {!readOnly && !editing && <div className="hideout-head-buttons">
-          <button type="button" className="hideout-primary" onClick={() => { movement.stop(); setEditing(true); setNotice(""); }}>아지트 꾸미기</button>
+          <button type="button" className="hideout-edit-start" onClick={() => { movement.stop(); setEditing(true); setNotice(""); }}>아지트 꾸미기</button>
           {onExit && <button type="button" className="hideout-to-plaza" onClick={() => requestExit("plaza")} disabled={saving} title="책 광장으로 돌아가요">광장으로</button>}
         </div>}
         {!readOnly && editing && <>
@@ -500,9 +506,6 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
         </>}
         {onExit && readOnly && !hideExitButton && <button type="button" onClick={() => requestExit()} disabled={saving}>{exitLabel}</button>}
       </div>}
-      {showCard
-        ? <div className="hideout-character"><ReadingCharacterSummary uid={viewUid} summary={cardSummary} readOnly={readOnly} /></div>
-        : <span className="hideout-level">{teacherOwn ? "모든 소품 사용 가능" : <>독서 레벨 <strong>{eligibility.level}</strong></>}</span>}
     </header>}
     {error && <div className="hideout-error" role="alert"><p>{error}</p><button type="button" disabled={saving} onClick={() => { movement.stop(); keepDraft(draftKey, null); draftSnapshot.current = null; setReload((value) => value + 1); }}>저장된 모습 다시 불러오기</button></div>}
     <div className="hideout-layout">

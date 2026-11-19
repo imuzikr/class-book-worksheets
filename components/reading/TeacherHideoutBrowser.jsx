@@ -69,10 +69,10 @@ export default function TeacherHideoutBrowser({ classId, user, roster = [], char
     {student && <div className="teacher-hideout-view">
       {/* 머리 한 줄(선생님 요청 · 2026년 11월) — 제목 바로 오른쪽에 이전 · 다음, 같은 줄 오른쪽 끝에 광장으로 · 학생 서재로.
           '전체 아지트'는 걷었습니다(선생님 요청 — 학생 아지트를 보는 동안에는 필요 없음 · 목록은 학생 서재로 → '아지트 보기').
-          캐릭터 카드는 이 줄이 아니라 책 봄 머리말 오른쪽 끝 빈자리(cardSlot)에 섭니다 — 줄이 카드 높이만큼 높아지지 않게. */}
+          캐릭터 카드는 이 줄이 아니라 책 봄 머리말 오른쪽 끝 빈자리(cardSlot)에 섭니다 — 줄이 카드 높이만큼 높아지지 않게.
+          제목 위의 '이야기가 머무는 작은 방 · 학번' 줄은 걷었습니다(선생님 요청 · 2026년 11월 — 되살리지 마세요). */}
       <header className="teacher-hideout-heading">
         <div className="teacher-hideout-title">
-          <p className="hideout-eyebrow">이야기가 머무는 작은 방{student.studentId ? ` · ${student.studentId}` : ""}</p>
           <h2 ref={heading} tabIndex={-1} aria-live="polite">{student.realName || student.name || "학생"}의 아지트</h2>
         </div>
         <div className="teacher-hideout-sequence" role="group" aria-label="다른 학생의 아지트 보기">

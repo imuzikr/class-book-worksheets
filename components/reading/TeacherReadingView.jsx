@@ -144,8 +144,9 @@ export default function TeacherReadingView({ classId, user, roster = [], ownClas
   const [galleryOpen, setGalleryOpen] = useState(initialTab === "hideout");
   const galleryAvailable = !!hubProps.hideoutOn;
   const galleryActive = galleryOpen && galleryAvailable;
-  // 책 봄 머리말(반 고르개 줄 · '책 봄' 줄) 오른쪽 끝 빈자리 — 학생 아지트 보기가 그 학생의 캐릭터 카드를 여기에 띄웁니다(선생님 요청 ·
-  // 2026년 11월 · createPortal). 늘 그려 두고 비어 있으면 자리를 차지하지 않습니다(reading.css의 .books-head-aside).
+  // 책 봄 머리말(반 고르개 줄) 오른쪽 끝 빈자리 — 학생 아지트 보기가 그 학생의 캐릭터 카드를 여기에 띄웁니다(선생님 요청 ·
+  // 2026년 11월 · createPortal). 아지트를 보는 동안은 '책 봄' 줄이 없어 반 고르개 줄 오른쪽입니다. 늘 그려 두고 비어 있으면 자리를
+  // 차지하지 않습니다(reading.css의 .books-head-aside).
   const [headAside, setHeadAside] = useState(null);
   // 고른 학생의 소개 카드(통계 · 대표 뱃지 · 캐릭터 · 펫) 자리 — 명단 칸까지 가로를 다 쓰는 맨 윗줄(선생님 요청 · 2026년 11월 —
   // 명단 오른쪽 칸에만 서서 좁았음). ReadingHub가 카드를 여기에 띄우고(createPortal), 명단 · 탭 줄은 그 아래에서 같은 높이로 시작합니다.
@@ -203,7 +204,9 @@ export default function TeacherReadingView({ classId, user, roster = [], ownClas
   const hubTab = (plazaOn && initialTab === "plaza") || initialTab === "hideout" ? "library" : initialTab;
   return (
     <>
-    {introHeading && (galleryActive || !student) && <div className="books-head">{introHeading}</div>}
+    {/* '책 봄 · 반 이름' 머리줄은 학생을 아직 고르지 않은 명단 화면에만 섭니다 — 학생을 고른 동안(소개 카드가 대신함)과 학생 아지트를
+        보는 동안(목록 · 상세 — 선생님 요청 · 2026년 11월, 반 고르개 줄 오른쪽의 캐릭터 카드와 아지트 제목 줄이면 충분)에는 걷습니다. */}
+    {introHeading && !galleryActive && !student && <div className="books-head">{introHeading}</div>}
     <div className="books-head-aside" ref={setHeadAside} />
     <div className={`reading-teacher${galleryActive ? " reading-teacher--hideouts" : ""}`}>
       {/* 소개 카드 자리 — 늘 그려 두고 비어 있으면 자리를 차지하지 않습니다(reading.css의 .reading-teacher-intro). */}

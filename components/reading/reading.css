@@ -599,7 +599,9 @@
 .reading-hub--intro-apart { padding-top: 0; }
 /* 책 봄 머리말 오른쪽 끝 빈자리(.books-head-aside — TeacherReadingView가 늘 그려 둠) — 학생 아지트 보기가 그 학생의 캐릭터 카드를
    띄웁니다(선생님 요청 · 2026년 11월 — 반 고르개 줄 · '책 봄' 줄 오른쪽이 비어 있었고, 카드가 아지트 제목 줄에 서서 그 줄이 높아졌음).
-   카드가 들어오면 책방 본문(.books-main)이 두 칸 격자가 되어 왼쪽 칸에 머리말 두 줄, 오른쪽 칸에 두 줄에 걸친 카드가 섭니다.
+   카드가 들어오면 책방 본문(.books-main)이 두 칸 격자가 되어 왼쪽 칸에 머리말, 오른쪽 칸에 카드가 섭니다. 아지트를 보는 동안에는
+   '책 봄' 줄을 걷어(선생님 요청 · 2026년 11월) 왼쪽은 반 고르개 줄 하나 — 카드는 두 줄 몫(span 2)을 그대로 잡아, 반 고르개 줄은 제
+   높이로 위에 붙고 그 아래 빈 줄을 지나 아지트 제목 줄이 카드 바로 아래에서 시작합니다.
    비어 있으면 자리도 없고 격자도 아닙니다(다른 화면은 그대로). 두 줄이 좁아지면 그 줄 안에서 접히고, 카드를 옆에 둘 폭이 모자라는
    화면('멋진 순간'을 펼친 1015px 이하 · 627px 이하)에서는 카드가 두 줄 아래 오른쪽으로 내려갑니다. */
 .books-head-aside:empty { display:none; }
@@ -608,7 +610,9 @@
 .books-main:has(> .books-head-aside:not(:empty)) > .books-head { grid-column:1; }
 .books-main:has(> .books-head-aside:not(:empty)) > .books-head > .books-head-main { flex-wrap:wrap; }
 .books-main:has(> .books-head-aside:not(:empty)) > .books-head .study-class-select { min-width:0; max-width:100%; }
-.books-main:has(> .books-head-aside:not(:empty)) > .books-head-aside { grid-column:2; grid-row:1 / span 2; align-self:start; display:flex; justify-content:flex-end; }
+/* 카드 아래 8px — 아지트 제목 줄 오른쪽 끝의 '광장으로 · 학생 서재로'가 카드 바로 아래에 서므로 둘이 붙지 않게(학생 본인 아지트의 카드와
+   단추 사이와 같은 틈). 한때 '책 봄' 줄 · '이야기가 머무는 작은 방' 줄이 그 사이를 벌려 주었습니다. */
+.books-main:has(> .books-head-aside:not(:empty)) > .books-head-aside { grid-column:2; grid-row:1 / span 2; align-self:start; display:flex; justify-content:flex-end; margin-bottom:8px; }
 @media (min-width:769px) and (max-width:1015px) {
   .books-body:has(> .reward-panel:not(.reward-panel--collapsed)) > .books-main:has(> .books-head-aside:not(:empty)) { grid-template-columns:minmax(0, 1fr); }
   .books-body:has(> .reward-panel:not(.reward-panel--collapsed)) > .books-main:has(> .books-head-aside:not(:empty)) > .books-head-aside { grid-column:1; grid-row:auto; margin-bottom:12px; }

@@ -1,8 +1,8 @@
 /* Personal room: all decor coordinates stay in the approved1536×1024 world. */
 .hideout { --hideout-ink: #35513e; --hideout-line: #d9dece; --hideout-scene-max: calc((100dvh - 200px) * 1.5); color: var(--hideout-ink); min-width: 0; padding: 8px clamp(12px, 1.6vw, 24px) 20px; }
-/* 머리에 캐릭터 카드가 서면 머리줄이 카드 높이(78px)만큼 높아지므로(알약일 때 56px), 그림이 화면 높이에 맞는 폭도 그만큼(16px)
-   줄여 그림 아래(알림 · 안내 줄)가 잘리지 않게 합니다. */
-.hideout:has(> .hideout-heading .hideout-character) { --hideout-scene-max: calc((100dvh - 216px) * 1.5); }
+/* 머리에 캐릭터 카드가 서면 머리가 두 단(위 카드 78px · 아래 단추 줄 44px — 130px, 알약일 때는 한 줄 56px)이라, 그림이 화면 높이에
+   맞는 폭도 그만큼 줄여 그림 아래(알림 · 안내 줄)가 잘리지 않게 합니다(한때 카드와 단추가 한 줄이라 78px — 216px이었음). */
+.hideout:has(> .hideout-heading .hideout-character) { --hideout-scene-max: calc((100dvh - 268px) * 1.5); }
 .hideout button, .hideout select, .hideout-dialog button { font: inherit; min-height: 44px; }
 .hideout button, .hideout-dialog button { cursor: pointer; border: 1px solid #cfd8c7; border-radius: 10px; padding: 9px 14px; background: #fffdf7; color: #35513e; }
 .hideout button:hover:not(:disabled), .hideout-dialog button:hover:not(:disabled) { background: #eaf0e3; }
@@ -14,16 +14,30 @@
 .hideout-heading h2 { margin: 0; font-size: 25px; line-height: 1.35; }
 .hideout-eyebrow { margin: 0 0 5px; color: #77866f; font-size: 12px; }
 .hideout-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-/* 머리 — 왼쪽 제목, 오른쪽 단추들과 그 오른쪽 끝(화면 오른쪽 위)의 캐릭터 카드(또는 알약). 한 줄에 다 안 들어가는 폭(940px 아래 —
-   꾸미는 동안의 단추 셋 + 카드가 기준)에서는 카드가 제목 줄 오른쪽에 남고 단추가 그 아래 줄 오른쪽으로 내려갑니다. 좁은 화면(700px
-   아래)은 아래 @media. */
-.hideout-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "title actions card"; align-items: center; gap: 10px 12px; margin-bottom: 10px; }
-.hideout-heading > .hideout-title { grid-area: title; min-width: 0; }
+/* 머리(선생님 요청 · 2026년 11월) — 왼쪽 제목, 오른쪽 위 캐릭터 카드, 그 아래 제목 줄의 오른쪽 끝에 단추('아지트 꾸미기 · 광장으로',
+   꾸미는 동안은 '모든 소품 기본으로 · 꾸미기 취소 · 꾸미기 완료'). 선생님의 학생 아지트 보기(카드는 반 고르개 줄 오른쪽, 단추는 제목
+   줄 오른쪽 끝)와 같은 짜임입니다. 제목은 단추 줄에 맞춰 아래에 서고(padding-bottom 5px — 제목 34px · 단추 44px의 가운데를 맞춤),
+   카드와 단추는 오른쪽 끝에 붙습니다. 한때 '제목 · 단추 · 카드' 한 줄이라 카드가 오른쪽 끝을 차지해 단추가 가운데 쪽으로 밀려
+   있었습니다 — 그 한 줄로 되돌리지 마세요. 카드가 없으면(선생님 본인 방의 '모든 소품 사용 가능' · 캐릭터를 끈 반의 레벨 알약) 한 줄
+   '제목 · 알약 · 단추'(단추가 오른쪽 끝)이고, 그 한 줄이 안 들어가는 폭(940px 아래)에서는 단추가 아래 줄 오른쪽으로 내려갑니다.
+   좁은 화면(700px 아래)은 아래 @media. */
+.hideout-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "title card" "title actions"; align-items: center; gap: 8px 12px; margin-bottom: 10px; }
+.hideout-heading > .hideout-title { grid-area: title; min-width: 0; align-self: end; padding-bottom: 5px; }
+.hideout-heading > .hideout-character { grid-area: card; justify-self: end; }
+.hideout-heading > .hideout-level { grid-area: level; justify-self: end; }
 .hideout-heading > .hideout-actions { grid-area: actions; justify-self: end; }
-.hideout-heading > .hideout-character, .hideout-heading > .hideout-level { grid-area: card; justify-self: end; }
+.hideout-heading:not(:has(> .hideout-character)) { grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "title level actions"; }
+.hideout-heading:not(:has(> .hideout-character)) > .hideout-title { align-self: center; padding-bottom: 0; }
 @media (max-width: 940px) {
-  .hideout-heading { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "title card" "actions actions"; }
+  .hideout-heading:not(:has(> .hideout-character)) { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "title level" "actions actions"; }
 }
+/* 머리 두 단추의 색(선생님 요청 · 2026년 11월) — '아지트 꾸미기'는 연한 초록, '광장으로'는 연한 살구(앱의 --primary-light). 한때 진한 초록
+   (.hideout-primary) · 흰 바탕이었습니다. 진한 초록은 '꾸미기 완료' · 되묻는 창의 저장 단추에 그대로 남깁니다. '광장으로'의 글자는 진한
+   살구(--primary-dark)를 한 단계 더 짙게 — 그대로면 연한 살구 바탕에서 대비가 3.9:1이라 4.5:1을 넘기게(5:1 남짓). */
+.hideout .hideout-edit-start { background: #e6eddc; border-color: #b9cdb0; color: #35513e; font-weight: 650; }
+.hideout .hideout-edit-start:hover:not(:disabled) { background: #dae6cd; border-color: #9fbb94; }
+.hideout .hideout-to-plaza { background: var(--primary-light, #f8ece5); border-color: #eccbbb; color: color-mix(in srgb, var(--primary-dark, #b85c3f) 86%, #000); font-weight: 650; }
+.hideout .hideout-to-plaza:hover:not(:disabled) { background: #f4ddd0; border-color: #e3b49f; }
 /* ── 머리 오른쪽 위의 캐릭터 카드(선생님 요청 · 2026년 11월) ──
    독서 레벨 알약 대신 책 봄 프로필의 그 카드입니다(ReadingCharacterSummary — 캐릭터 · 독서 레벨 · 경험치 막대, 누르면 캐릭터
    정보 창). 본인 방(머리 오른쪽 끝)과 선생님의 학생 아지트 보기(책 봄 머리말 오른쪽 끝 빈자리 — TeacherHideoutBrowser가
@@ -187,8 +201,9 @@
 @media (max-width: 700px) {
   .hideout-heading h2 { font-size: 22px; }
   /* 좁은 화면 — 제목, 카드(줄을 다 씀), 단추(줄을 다 씀) 차례. 알약(선생님 본인 방 · 캐릭터를 끈 반)은 예전처럼 단추 줄의 앞에 섭니다. */
-  .hideout-heading { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "title title" "card actions"; }
+  .hideout-heading:not(:has(> .hideout-character)) { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "title title" "level actions"; }
   .hideout-heading:has(> .hideout-character) { grid-template-columns: minmax(0, 1fr); grid-template-areas: "title" "card" "actions"; }
+  .hideout-heading > .hideout-title { align-self: start; padding-bottom: 0; }
   .hideout-heading > .hideout-actions, .hideout-heading > .hideout-character { justify-self: stretch; }
   .hideout-heading > .hideout-character > .reading-character-summary { width: 100%; }
   .hideout-heading > .hideout-actions > button { flex: 1 1 auto; }
