@@ -396,6 +396,18 @@ export function IconGrowthBadge({ size = 20, className = "" }) {
 
 // 독서로 검색 — 펼친 책 위에 돋보기(떠 있는 동그라미의 '독서로 검색' 행성 · components/reading/SchoolLibrarySearch.jsx).
 // 책은 IconBook을 왼쪽 위로 작게 옮긴 것이고, 돋보기의 흰 알이 오른쪽 아래 쪽을 덮습니다(그리는 차례가 곧 겹침).
+// 확성기 — 공지사항(책 광장 · 교실의 '공지사항' 단추 · 학생 화면의 큰 글씨 공지 · 선생님 요청). 몸통은 밝은 살구, 소리 물결은 살구 진한 색.
+export function IconMegaphone({ size = 20, className = "" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+      <path d="M4.2 9.4h2.9v5.2H4.2a.9.9 0 0 1-.9-.9V10.3a.9.9 0 0 1 .9-.9Z" fill="#F4C9A6" stroke="#3A312E" strokeWidth="1.45" strokeLinejoin="round"/>
+      <path d="M7.1 9.4 15.2 5.3c.58-.29 1.25.13 1.25.78v11.84c0 .65-.67 1.07-1.25.78L7.1 14.6Z" fill="#FFF7ED" stroke="#3A312E" strokeWidth="1.45" strokeLinejoin="round"/>
+      <path d="m7.9 14.9 1.25 4.15c.12.4.54.63.94.52l.86-.24c.42-.12.66-.57.52-.98l-1.06-3.03" fill="#FFF7ED" stroke="#3A312E" strokeWidth="1.35" strokeLinejoin="round"/>
+      <path d="M18.6 9.6c.9 1.45.9 3.35 0 4.8M20.6 7.8c1.7 2.6 1.7 5.8 0 8.4" stroke="#C8692F" strokeWidth="1.5" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
 export function IconLibrarySearch({ size = 20, className = "" }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">

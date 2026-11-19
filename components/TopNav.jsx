@@ -39,6 +39,7 @@ import FloatingHub from "./FloatingHub";
 import { hubLibraryOnly } from "@/lib/hubPlace";
 import ClassTopReaders from "./ClassTopReaders";
 import ClassMoveBanner from "./reading/ClassMoveBanner";
+import ClassNoticeSpotlight from "./reading/ClassNoticeSpotlight";
 import PageTagline from "./PageTagline";
 import { feedClassroomMove, watchClassroomMove } from "@/lib/classroomMoveStore";
 import { useRewardCelebration } from "@/lib/useRewardCelebration";
@@ -575,6 +576,10 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
     {/* 선생님의 '모두 교실로 · 모두 광장으로' — 화면 위쪽에 알림과 10초 카운트다운(선생님 요청). 다 세면 다른 화면에
         있던 사람도 책 광장 탭으로 데려갑니다. 상단바가 모든 화면에 떠 있어 여기 하나면 어디서나 뜹니다. */}
     {user && hubClassId && <ClassMoveBanner classId={hubClassId} isTeacher={admin} />}
+
+    {/* 공지사항을 학생 화면에 크게 — 선생님이 책 광장 · 교실의 '공지사항'(또는 상단바 📢)으로 보낸 반 공지를, 학생이 어느 공간에
+        있든(광장 · 교실 · 아지트 · 책꽂이 · 책방 …) 큰 글씨 카드로 한 번(선생님 요청). 상단바가 모든 화면에 떠 있어 여기 하나면 됩니다. */}
+    {user && !admin && hubClassId && <ClassNoticeSpotlight classId={hubClassId} uid={myUid} />}
 
     {/* 첫 만남 — 참여 코드로 반에 막 들어온 학생: 캐릭터 고르기 → 책 친구 알(펫 미리보기를 켠 반은 고르기) → 큰 알 화면.
         이 기기에 표시가 있을 때만 섭니다(lib/readingWelcome.js · 선생님 요청). */}

@@ -4,8 +4,10 @@
 // 반 공지 보내기 (교사 전용) — 상단바 확성기 버튼
 // -------------------------------------------------------------
 // 지금 보고 있는 반에 공지 한 장을 남깁니다(classes/{cId}/classNotices).
-// 그 반 학생의 알림 벨과 간편 메신저 '공지' 탭이 그것을 읽습니다 — 서버
-// 함수 없이 돕니다. 다른 반 학생은 규칙상 읽을 수 없습니다.
+// 그 반 학생의 알림 벨과 간편 메신저 '공지' 탭이 그것을 읽고, 학생 화면에는
+// 어디에 있든 큰 글씨로 한 번 뜹니다(components/reading/ClassNoticeSpotlight.jsx —
+// 책 광장 · 교실의 '공지사항'과 같은 공지). 서버 함수 없이 돕니다. 다른 반 학생은
+// 규칙상 읽을 수 없습니다.
 //
 // 공지사항 게시판(notices)과 다른 자리입니다. 그쪽은 질문방에 남아 있는
 // 글이고 전체 공유라 누구나 봅니다. 여기는 "지금 이 반에 알려야 하는 것"을
@@ -132,7 +134,7 @@ export default function ClassNoticeButton({ classId, className = "", memberCount
             <p className={`notice-pop-result${result.ok ? " ok" : " bad"}`}>{result.message}</p>
           )}
           <p className="notice-pop-hint">
-            보낸 공지는 되돌릴 수 없어요. Ctrl(⌘)+Enter로도 보낼 수 있어요.
+            학생 화면에 큰 글씨로 떠요. 보낸 공지는 되돌릴 수 없어요. Ctrl(⌘)+Enter로도 보낼 수 있어요.
           </p>
 
           {/* 보낸 이력 — 학생은 '읽음'으로 치우면 그만이지만, 교사에게는

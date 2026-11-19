@@ -87,7 +87,8 @@ import PlazaActor from "./PlazaActor";
 import PlazaClassroom, { PlazaFurniture } from "./PlazaClassroom";
 import PlazaPanel from "./PlazaPanel";
 import PetInfoModal from "./PetInfoModal";
-import { PlazaTalkAsk, PlazaTalkFocus, PlazaTalkPanel, PlazaTalkWaiting } from "./PlazaTalk";
+import { PlazaChatTabs, PlazaNoticePanel, PlazaTalkAsk, PlazaTalkFocus, PlazaTalkPanel, PlazaTalkWaiting } from "./PlazaTalk";
+import { IconMegaphone } from "@/components/StatusIcons";
 import usePlazaTalk from "./usePlazaTalk";
 import "./plaza.css";
 
@@ -461,6 +462,27 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
     onAsked: () => { setPick((current) => (current?.open ? { ...current, open: false } : current)); setMenu(null); },
   });
   talkerRef.current = talker;
+  // ── 공지사항(선생님 요청 · 2026년 11월) — 맵 위 '공지사항' 단추(광장은 가판대 왼쪽 · 교실은 오른쪽 위)가 대화창 자리에 공지사항 창을
+  // 엽니다(PlazaTalk.jsx의 PlazaNoticePanel — 선생님은 반 모두에게 보내고 · 학생은 읽기만). 광장 대화가 열려 있으면 두 창 맨 위에 탭 줄
+  // (공지사항 · 광장 대화)이 서고, 공지사항을 보는 동안 대화창은 그리지 않을 뿐 쓰던 말 · 접힘을 그대로 둡니다. 새 대화가 열리면 대화로.
+  const [noticeOpen, setNoticeOpen] = useState(false);
+  const [talkReveal, setTalkReveal] = useState(0);
+  const [talkUnreadN, setTalkUnreadN] = useState(0);
+  const talkId = talkLive ? talker.talk?.id ?? null : null;
+  const lastTalkId = useRef(talkId);
+  useEffect(() => {
+    if (talkId && talkId !== lastTalkId.current) setNoticeOpen(false);
+    lastTalkId.current = talkId;
+  }, [talkId]);
+  const closeNotice = useCallback(() => {
+    setNoticeOpen(false);
+    stageRef.current?.focus({ preventScroll: true });
+  }, []);
+  const selectChat = useCallback((view) => {
+    if (view === "notice") { setNoticeOpen(true); return; }
+    setNoticeOpen(false);
+    setTalkReveal((n) => n + 1);
+  }, []);
   // 시점을 DOM에 적습니다 — 그림을 통째로 밉니다(transform이라 다시 칠하지 않음)
   const look = useCallback(() => {
     const el = worldRef.current;
@@ -1542,6 +1564,14 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
   const other = inClass ? "plaza" : "classroom";
   const gathering = canGather && !!classroom?.moveWaiting;
   const roster = isTeacher ? classroom?.roster ?? null : null;
+  // 공지사항 단추 — 광장은 가판대 왼쪽(같은 크기 세 칸), 교실은 오른쪽 위(출석 알림 위). 선생님은 반 모두에게 보내고, 학생은 지난 공지를 봅니다.
+  const noticeButton = (
+    <button type="button" className={`plaza-notice-btn${noticeOpen ? " is-on" : ""}`} aria-pressed={noticeOpen}
+      onClick={() => (noticeOpen ? closeNotice() : setNoticeOpen(true))}
+      title={isTeacher ? "반 학생 모두의 화면에 큰 글씨로 공지를 띄워요" : "선생님이 보낸 공지를 다시 봐요"}>
+      <IconMegaphone size={18} /><span>공지사항</span>
+    </button>
+  );
   const names = useMemo(() => new Map((roster ?? []).map((s) => [s.uid, s])), [roster]);
   const seated = useMemo(() => {
     const set = new Set(friends.filter((f) => f.room === "classroom" && f.seat !== null).map((f) => f.seat));
@@ -1657,11 +1687,13 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
           </div>
           {!inClass ? (
             <div className="plaza-hud-actions">
+              {noticeButton}
               <button type="button" onClick={() => setPanel({ place: "stall" })}>가판대 <small>{PLACE_NAME.stall}</small> <b>{counts.stall}</b></button>
               <button type="button" onClick={() => setPanel({ place: "shelf" })}>책꽂이 <small>{PLACE_NAME.shelf}</small> <b>{counts.shelf}</b></button>
             </div>
           ) : (
             <div className="plaza-hud-room">
+              {noticeButton}
               {/* 선생님 — 오늘 출석(받는 중이면 그 사실) · 자리표에 없는 학생 */}
               {isTeacher && roll && (openToday || roll.present > 0) && (
                 <p className={`plaza-roll${openToday ? " is-open" : ""}`} role="status">
@@ -1706,9 +1738,16 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
         </div>
         {/* 광장 대화 — 오른쪽 대화창(접으면 작은 단추 · 폰에서는 아래쪽 창). 무대 밖이라 여기에 쓰는 동안 캐릭터가 걷지 않습니다 */}
         {talkLive && talker.talk && (
-          <PlazaTalkPanel key={talker.talk.id} talk={talker.talk} myUid={myUid} onSend={talker.send} onCover={onTalkCover}
+          <PlazaTalkPanel key={talker.talk.id} talk={talker.talk} myUid={myUid} onSend={talker.send} onCover={noticeOpen ? null : onTalkCover}
+            hidden={noticeOpen} reveal={talkReveal} onUnread={setTalkUnreadN}
+            tabs={<PlazaChatTabs view="talk" talkCount={talker.talk.members.length} onSelect={selectChat} />}
             onLeave={() => { talker.leave(); stageRef.current?.focus({ preventScroll: true }); }}
             onDismiss={() => { talker.dismiss(); stageRef.current?.focus({ preventScroll: true }); }} />
+        )}
+        {/* 공지사항 — 대화창과 같은 자리 · 같은 틀(선생님 요청). 광장 대화가 열려 있으면 맨 위 탭 줄로 오갑니다 */}
+        {noticeOpen && (
+          <PlazaNoticePanel classId={classId} teacher={isTeacher} memberCount={roster?.length ?? 0} onClose={closeNotice} onCover={onTalkCover}
+            tabs={talkLive && talker.talk ? <PlazaChatTabs view="notice" talkCount={talker.talk.members.length} talkUnread={talkUnreadN} onSelect={selectChat} /> : null} />
         )}
       </div>
       {/* 광장 대화 — 나에게 온 요청(책 보기 창 위에 뜸 · S 승인 · C 취소) */}

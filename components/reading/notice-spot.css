@@ -1,0 +1,77 @@
+/* =============================================================
+   공지사항을 학생 화면에 크게 (components/reading/ClassNoticeSpotlight.jsx — 선생님 요청 · 2026년 11월)
+   -------------------------------------------------------------
+   화면 위쪽 가운데의 큰 카드 — 어느 화면에 떠도 읽히게 흰 종이 위 짙은 큰 글씨(22~34px). 뒤를 살짝 어둡게 덮어
+   '지금 읽을 것'을 알립니다. 수업 화면 강제 전환(3000) · 폭죽(3200) · 참여 코드 전체 화면(3300) 위, '모두 이동' 띠(3400)
+   아래 — 카운트다운은 카드 위에서도 보입니다. Esc · 바깥 · '확인'으로 닫습니다(lib/modal.js의 backdropClose).
+   ============================================================= */
+.notice-spot-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 3350;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: max(72px, 12vh) max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px));
+  background: rgba(32, 26, 20, 0.42);
+  overflow-y: auto;
+  animation: notice-spot-fade 0.2s ease-out both;
+}
+@keyframes notice-spot-fade { from { opacity: 0; } to { opacity: 1; } }
+.notice-spot {
+  box-sizing: border-box;
+  width: min(760px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 22px 28px 24px;
+  border: 3px solid #8a5a2b;
+  border-radius: 22px;
+  background: #fffaf0;
+  color: #2f2419;
+  box-shadow: 0 6px 0 #8a5a2b55, 0 24px 60px rgba(26, 18, 12, 0.38);
+  animation: notice-spot-pop 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+}
+@keyframes notice-spot-pop {
+  from { opacity: 0; transform: translateY(-10px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.notice-spot-head { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.notice-spot-icon {
+  flex: none; display: grid; place-items: center; width: 48px; height: 48px;
+  border-radius: 14px; background: #ffe9d6; box-shadow: inset 0 0 0 1px #f1c3a1;
+}
+.notice-spot-head h2 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.03em; color: #5a3a1b; white-space: nowrap; }
+.notice-spot-meta { margin-left: auto; min-width: 0; font-size: 13.5px; font-weight: 600; color: #8a7b66; text-align: right; overflow-wrap: anywhere; }
+/* 공지 글 — 크게(선생님 요청 '큰 글씨'), 줄바꿈 그대로. 500자까지라 아주 길면 이 칸 안에서 구릅니다. */
+.notice-spot-text {
+  margin: 0;
+  max-height: 46vh;
+  overflow-y: auto;
+  font-size: clamp(22px, 3.1vw, 34px);
+  font-weight: 750;
+  line-height: 1.5;
+  letter-spacing: -0.02em;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+/* 앞서 온 공지(새것을 크게 · 나머지는 작게 — 셋까지) */
+.notice-spot-rest { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 12px 0 0; border-top: 1px dashed #e0cfb2; list-style: none; }
+.notice-spot-rest li { display: flex; gap: 10px; align-items: baseline; font-size: 15px; line-height: 1.55; color: #4a3a2c; }
+.notice-spot-rest time { flex: none; font-size: 12.5px; font-weight: 700; color: #8a7b66; font-variant-numeric: tabular-nums; }
+.notice-spot-rest span { min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.notice-spot-ok { align-self: center; min-width: 180px; height: 48px; padding: 0 28px; display: inline-flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 800; border-radius: 14px; }
+.notice-spot-ok:focus-visible { outline: 3px solid #478fbd; outline-offset: 3px; }
+
+@media (max-width: 600px) {
+  .notice-spot-backdrop { padding-top: max(64px, 8vh); }
+  .notice-spot { gap: 12px; padding: 16px 16px 18px; border-radius: 18px; }
+  .notice-spot-icon { width: 40px; height: 40px; border-radius: 12px; }
+  .notice-spot-head h2 { font-size: 19px; }
+  .notice-spot-meta { font-size: 12px; }
+  .notice-spot-ok { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .notice-spot-backdrop, .notice-spot { animation: none; }
+}
