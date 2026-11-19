@@ -190,6 +190,19 @@
   .reading-library-panel { padding:14px 14px 18px; }
   .reading-library-panel > .reading-library-grid { padding-right:10px; }
 }
+/* [교사] 탭 줄(책꽂이 · 아지트 보기 — 책 광장을 끈 반은 책꽂이 · 우리 반 랭킹)이 책꽂이 카드 맨 위에서 카드 제목을 대신합니다(선생님 요청 ·
+   2026년 11월 — 한때 탭 줄이 카드 위에 따로 섰고 카드 안에 '책꽂이 n · 책의 마지막 페이지까지…' 제목이 또 섰습니다. 되살리지 마세요).
+   줄 아래 선은 카드 폭을 다 쓰고 고른 탭의 밑줄(3px)이 그 선 위에 얹히며, 오른쪽 끝에 선생님 단추 셋(.reading-teacher-tools)이 섭니다.
+   단추 셋이 탭 옆에 다 들지 않는 좁은 칸에서는 탭이 제 줄을 다 쓰고(선도 탭 줄로) 그 아래 줄에 단추 셋이 섭니다(readinglib — 아래).
+   그 줄 아래의 상태 필터는 위 선을 따로 긋지 않습니다(탭 줄의 선이 그 자리). 학생 본인 화면은 그대로입니다. */
+.reading-library-panel--tabs { padding-top:6px; }
+.reading-library-tabsrow { display:flex; align-items:center; gap:8px 16px; min-width:0; border-bottom:1px solid var(--reading-line); }
+.reading-library-tabsrow > .reading-tabs { flex:0 0 auto; align-self:flex-end; min-width:0; padding:0; margin:0 0 -1px; border-bottom:0; }
+.reading-library-tabsrow > .reading-tabs button { white-space:nowrap; }
+.reading-library-tabsrow > .reading-teacher-tools { margin-left:auto; }
+.reading-library-tabsrow ~ .reading-filters { margin-top:12px; padding-top:0; border-top:0; }
+.reading-library-panel--tabs > .reading-rankings { margin-top:18px; }
+.reading-library-panel--tabs > .reading-loading { min-height:160px; }
 .reading-library-grid { --reading-completion-size:50px; display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:32px; padding:calc(var(--reading-completion-size) / 2) calc(var(--reading-completion-size) / 2) 0 0; }
 .reading-book-card { position:relative; display:flex; flex-direction:column; border:1px solid var(--reading-line); border-radius:14px; background:var(--reading-paper); overflow:visible; transition:border-color .2s,box-shadow .2s; }
 .reading-book-card:hover { border-color:#b7cbbd; box-shadow:0 5px 20px #29452f08; }
@@ -563,13 +576,13 @@
 .reading-teacher--hideouts > .reading-teacher-rail { display:none; }
 /* 고른 학생의 소개 카드(통계 · 대표 뱃지 · 캐릭터 · 펫 — ReadingHub가 TeacherReadingView의 introSlot에 띄움)는 명단 칸까지
    가로를 다 쓰는 맨 윗줄입니다(선생님 요청 · 2026년 11월 — 한때 명단 오른쪽 칸 안에만 서서 좁았고, 명단이 카드 옆에서 시작했음).
-   명단과 탭 줄은 그 아래 줄에서 같은 높이로 시작합니다 — 이 화면만 책 봄의 위 여백과 탭 줄 위 여백을 걷어(.reading-hub--intro-apart)
-   명단 칸의 위 테두리와 탭 단추의 위가 한 줄에 섭니다(카드와의 사이는 격자 틈 18px). 학생을 고르기 전 · 아지트 보기에서는 비어 있어
-   자리도 없습니다. 900px 아래(한 칸)에서는 예전처럼 명단 → 카드 → 탭 차례입니다(아래 order). */
+   명단과 책꽂이 카드는 그 아래 줄에서 같은 높이로 시작합니다 — 이 화면만 책 봄의 위 여백을 걷어(.reading-hub--intro-apart) 명단 칸의
+   위 테두리와 책꽂이 카드(탭 줄이 그 안 맨 위 — 위 .reading-library-tabsrow)의 위 테두리가 한 줄에 섭니다(소개 카드와의 사이는 격자 틈
+   18px). 학생을 고르기 전 · 아지트 보기에서는 비어 있어 자리도 없습니다. 900px 아래(한 칸)에서는 예전처럼 명단 → 소개 카드 → 책꽂이
+   카드 차례입니다(아래 order). */
 .reading-teacher-intro { grid-column: 1 / -1; min-width: 0; }
 .reading-teacher-intro:empty { display: none; }
 .reading-hub--intro-apart { padding-top: 0; }
-.reading-hub--intro-apart > .reading-tabs { padding-top: 0; }
 /* 책 봄 머리말 오른쪽 끝 빈자리(.books-head-aside — TeacherReadingView가 늘 그려 둠) — 학생 아지트 보기가 그 학생의 캐릭터 카드를
    띄웁니다(선생님 요청 · 2026년 11월 — 반 고르개 줄 · '책 봄' 줄 오른쪽이 비어 있었고, 카드가 아지트 제목 줄에 서서 그 줄이 높아졌음).
    카드가 들어오면 책방 본문(.books-main)이 두 칸 격자가 되어 왼쪽 칸에 머리말 두 줄, 오른쪽 칸에 두 줄에 걸친 카드가 섭니다.
@@ -614,6 +627,8 @@
 @container readinglib (max-width: 599px) {
   .reading-teacher-tools { flex: 1 1 100%; }
   .reading-teacher-tools .reading-teacher-history { padding-inline: 8px; }
+  .reading-library-tabsrow { flex-wrap: wrap; row-gap: 12px; border-bottom: 0; }
+  .reading-library-tabsrow > .reading-tabs { flex: 1 1 100%; margin: 0; border-bottom: 1px solid var(--reading-line); }
 }
 /* '멋진 순간'을 편 1024px 화면처럼 칸이 아주 좁으면 그림을 걷어 이름이 한 줄에 들게 합니다. */
 @container readinglib (max-width: 359px) {

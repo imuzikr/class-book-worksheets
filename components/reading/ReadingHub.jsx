@@ -428,11 +428,34 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
       </div>}
     </div>
   );
+  // 탭 줄 — 학생 화면은 소개 카드 아래 맨 위에, 교사 화면(readOnly)은 책꽂이 카드 맨 위에서 카드 제목 자리를 대신합니다(아래 teacherShelf).
+  const tabNav = !ownPlaza && <nav className="reading-tabs" aria-label="책 봄 메뉴" ref={tabsRef}>
+    {[["library", "책꽂이"], ...(!readOnly || !plazaOn ? [[thirdTab, plazaOn ? "책 광장" : "우리 반 랭킹"]] : []), ...(readOnly && canHideout ? [["hideout", "아지트 보기"]] : [])].map(([key, label]) => <button type="button" key={key} className={tab === key ? "active" : ""} aria-current={tab === key ? "page" : undefined} data-reading-hideout-gallery={key === "hideout" && onOpenHideoutGallery ? "true" : undefined} onClick={() => { if (key === "hideout" && readOnly && onOpenHideoutGallery) { onOpenHideoutGallery(); return; } setTab(key); setDialog(null); setError(""); setPlazaJump(null); setPlazaReturn(null); }}>{label}</button>)}
+  </nav>;
+  const loadingBox = <div className="reading-loading" role="status"><span className="reading-loader" />독서 기록을 불러오고 있어요.</div>;
+  const failedBox = <div className="reading-empty"><BookIcon size={40} /><h3>독서 정보를 불러오지 못했어요.</h3><button type="button" className="btn-primary" onClick={() => setRevision((r) => r + 1)}>다시 불러오기</button></div>;
+  const libraryFilters = <div className="reading-filters" aria-label="도서 상태 필터">{FILTERS.map(([key, label]) => <button type="button" key={key} className={filter === key ? "active" : ""} aria-pressed={filter === key} onClick={() => setFilter(key)}>{label}</button>)}</div>;
+  const libraryBooks = visibleBooks.length ? <div className="reading-library-grid">{visibleBooks.map((b, i) => <BookCard key={b.id} book={b} index={i} busy={busy} readOnly={readOnly} onOpen={() => setDialog({ type: "detail", bookId: b.id })} onReview={() => setDialog({ type: "review", bookId: b.id })} onLog={() => setDialog({ type: "log", bookId: b.id })} onRestore={() => run({ type: "archiveBook", bookId: b.id, archived: false }, "책을 책꽂이로 돌려놓았어요.")} />)}</div> : <div className="reading-empty"><BookIcon size={44} /><h3>{readOnly ? "아직 이곳에 놓인 책이 없어요." : filter === "all" ? "나의 첫 책을 기다리고 있어요." : "아직 이곳에 놓인 책이 없어요."}</h3>{!readOnly && <p>{filter === "all" ? "읽고 싶은 책을 등록하고 오늘 읽은 순간을 남겨 보세요." : "책을 읽고 기록하면 책꽂이의 풍경도 달라져요."}</p>}{filter === "all" && !readOnly && <button type="button" className="btn-primary" onClick={() => setDialog({ type: "book" })}>첫 책 등록하기</button>}</div>;
+  // 순위는 탭을 열 때 · 기간을 바꿀 때 · 새로고침을 누를 때만 받습니다(한 번에 반 전체를 읽음).
+  // 한때 독서 자료 전체(raw)를 신호로 넘겨, 상태를 다시 물을 때마다(10초) 순위를 다시 받았습니다 —
+  // 저장은 다른 탭에서만 하므로, 저장한 뒤 이 탭을 열면 새로 받습니다.
+  const rankings = tab === "ranking" && <Rankings key={classId} classId={classId} uid={viewUid} isTeacher={isTeacher} onDisabled={onDisabled} />;
+  // [교사] 탭 줄(책꽂이 · 아지트 보기 — 책 광장을 끈 반은 책꽂이 · 우리 반 랭킹)이 책꽂이 카드 맨 위에 서서 카드 제목을 대신하고, 오른쪽 끝에
+  // 선생님 단추 셋(teacherTools)이 섭니다(선생님 요청 · 2026년 11월 — 한때 탭 줄이 카드 위에 따로 섰고 카드 안에 '책꽂이 n · 책의 마지막
+  // 페이지까지, 나의 속도로.' 제목이 또 섰습니다 · 되살리지 마세요). 학생을 바꿔 서재를 다시 받는 동안에도 카드와 탭 줄은 그대로 서고
+  // 안쪽만 '불러오고 있어요'가 됩니다(탭 줄이 사라졌다 돌아오며 화면이 들썩이지 않게). 학생 본인 화면은 그대로입니다.
+  const teacherShelf = readOnly && <div className="reading-workspace"><div className="reading-workspace-layout"><div className="reading-workspace-main">
+    <div className="reading-library-panel reading-library-panel--tabs">
+      <div className="reading-library-toolbar">
+        <div className="reading-library-tabsrow">{tabNav}{teacherTools}</div>
+        {tab === "library" && raw && !loading && libraryFilters}
+      </div>
+      {loading ? loadingBox : !raw ? failedBox : tab === "ranking" ? rankings : libraryBooks}
+    </div>
+  </div></div></div>;
   return <ReadingErrorContext.Provider value={error}><section className={`reading-hub${ownPlaza ? " reading-hub--no-tabs" : ""}${introApart ? " reading-hub--intro-apart" : ""}${tab === "plaza" || tab === "hideout" ? " reading-hub--plaza" : ""}`} aria-label={readOnly ? `${student.name || "학생"}의 책 봄` : "책 봄 성장 기능"} aria-busy={tab === "hideout" ? false : loading || busy}>
     {introApart ? (introSlot && tab !== "plaza" && tab !== "hideout" ? createPortal(intro, introSlot) : null) : intro}
-    {!ownPlaza && <nav className="reading-tabs" aria-label="책 봄 메뉴" ref={tabsRef}>
-      {[["library", "책꽂이"], ...(!readOnly || !plazaOn ? [[thirdTab, plazaOn ? "책 광장" : "우리 반 랭킹"]] : []), ...(readOnly && canHideout ? [["hideout", "아지트 보기"]] : [])].map(([key, label]) => <button type="button" key={key} className={tab === key ? "active" : ""} aria-current={tab === key ? "page" : undefined} data-reading-hideout-gallery={key === "hideout" && onOpenHideoutGallery ? "true" : undefined} onClick={() => { if (key === "hideout" && readOnly && onOpenHideoutGallery) { onOpenHideoutGallery(); return; } setTab(key); setDialog(null); setError(""); setPlazaJump(null); setPlazaReturn(null); }}>{label}</button>)}
-    </nav>}
+    {!readOnly && tabNav}
     {error && !dialog && !confirm && <div className="reading-error" role="alert">{error}<button type="button" onClick={() => setError("")} aria-label="오류 안내 닫기">×</button></div>}
     {notice && <div className="reading-notice" role="status">{notice}</div>}
     {/* 서재를 기다리거나 못 받은 때도 광장은 독립적으로 열 수 있습니다. */}
@@ -440,22 +463,20 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
     {/* 책 광장은 서재(정본)를 기다리지 않습니다 — 반의 공유 사본을 제 손으로 구독합니다. 펫의 단계만 서재에서 받습니다. */}
     {tab === "plaza" ? <PlazaExitContext.Provider value={leavePlaza}><ReadingPlaza key={plazaJump?.key ?? plazaReturn?.key ?? "plaza"} classId={classId} user={user} isTeacher={isTeacher} characterOn={characterOn} petOn={showPet} petFeed={petFeed} growthXp={raw ? petGrowthOfSummary(stats) : null} fruits={myFruit} initialBook={plazaJump} initialRoom={plazaJump ? null : plazaReturn?.room} onExit={leavePlaza} classroom={classroom} hideoutOn={canHideout && (!readOnly || typeof onOpenOwnHideout === "function")} onEnterHideout={enterHideout} talkOn={plazaOn && talkOn} /></PlazaExitContext.Provider>
     : tab === "hideout" && canHideout ? <PlazaExitContext.Provider value={leaveHideout}><ReadingHideout key={`${classId}:${viewUid}`} classId={classId} user={user} student={student} summary={stats} readOnly={readOnly} characterOn={characterOn} petOn={petOn} petFeed={petFeed} fruits={myFruit} returnRoom={hideoutOrigin} onDisabled={leaveHideout} onExit={leaveHideout} /></PlazaExitContext.Provider>
-    : loading ? <div className="reading-loading" role="status"><span className="reading-loader" />독서 기록을 불러오고 있어요.</div> : !raw ? <div className="reading-empty"><BookIcon size={40} /><h3>독서 정보를 불러오지 못했어요.</h3><button type="button" className="btn-primary" onClick={() => setRevision((r) => r + 1)}>다시 불러오기</button></div> : <div className="reading-workspace"><div className="reading-workspace-layout">
+    : readOnly ? teacherShelf
+    : loading ? loadingBox : !raw ? failedBox : <div className="reading-workspace"><div className="reading-workspace-layout">
       {/* 성장·뱃지는 떠 있는 동그라미의 창으로 옮겼습니다(위 badgeToken) — 책꽂이가 가로를 다 씁니다 */}
       <div className="reading-workspace-main">
       {/* 책꽂이 카드 하나 — 제목 · 단추 · 상태 필터와 그 아래 책 카드(빈 안내)가 한 카드 안에 섭니다(선생님 요청 · 2026년 11월 —
-          한때 책 카드가 도구 카드 아래 따로 섰습니다). */}
+          한때 책 카드가 도구 카드 아래 따로 섰습니다). 교사 화면은 위 teacherShelf. */}
       {tab === "library" && <div className="reading-library-panel">
         <div className="reading-library-toolbar">
-        <div className="reading-section-head reading-library-head"><div><h3>책꽂이 <span>{books.filter((b) => !b.archived).length}</span></h3><p>책의 마지막 페이지까지, 나의 속도로.</p></div>{readOnly ? teacherTools : ownPlaza ? <div className="reading-library-actions">{plazaEntry}<button type="button" className="btn-primary" onClick={() => setDialog({ type: "book" })}>＋ 책 등록</button></div> : <button type="button" className="btn-primary" onClick={() => setDialog({ type: "book" })}>＋ 책 등록</button>}</div>
-        <div className="reading-filters" aria-label="도서 상태 필터">{FILTERS.map(([key, label]) => <button type="button" key={key} className={filter === key ? "active" : ""} aria-pressed={filter === key} onClick={() => setFilter(key)}>{label}</button>)}</div>
+        <div className="reading-section-head reading-library-head"><div><h3>책꽂이 <span>{books.filter((b) => !b.archived).length}</span></h3><p>책의 마지막 페이지까지, 나의 속도로.</p></div>{ownPlaza ? <div className="reading-library-actions">{plazaEntry}<button type="button" className="btn-primary" onClick={() => setDialog({ type: "book" })}>＋ 책 등록</button></div> : <button type="button" className="btn-primary" onClick={() => setDialog({ type: "book" })}>＋ 책 등록</button>}</div>
+        {libraryFilters}
         </div>
-        {visibleBooks.length ? <div className="reading-library-grid">{visibleBooks.map((b, i) => <BookCard key={b.id} book={b} index={i} busy={busy} readOnly={readOnly} onOpen={() => setDialog({ type: "detail", bookId: b.id })} onReview={() => setDialog({ type: "review", bookId: b.id })} onLog={() => setDialog({ type: "log", bookId: b.id })} onRestore={() => run({ type: "archiveBook", bookId: b.id, archived: false }, "책을 책꽂이로 돌려놓았어요.")} />)}</div> : <div className="reading-empty"><BookIcon size={44} /><h3>{readOnly ? "아직 이곳에 놓인 책이 없어요." : filter === "all" ? "나의 첫 책을 기다리고 있어요." : "아직 이곳에 놓인 책이 없어요."}</h3>{!readOnly && <p>{filter === "all" ? "읽고 싶은 책을 등록하고 오늘 읽은 순간을 남겨 보세요." : "책을 읽고 기록하면 책꽂이의 풍경도 달라져요."}</p>}{filter === "all" && !readOnly && <button type="button" className="btn-primary" onClick={() => setDialog({ type: "book" })}>첫 책 등록하기</button>}</div>}
+        {libraryBooks}
       </div>}
-      {/* 순위는 탭을 열 때 · 기간을 바꿀 때 · 새로고침을 누를 때만 받습니다(한 번에 반 전체를 읽음).
-          한때 독서 자료 전체(raw)를 신호로 넘겨, 상태를 다시 물을 때마다(10초) 순위를 다시 받았습니다 —
-          저장은 다른 탭에서만 하므로, 저장한 뒤 이 탭을 열면 새로 받습니다. */}
-      {tab === "ranking" && <Rankings key={classId} classId={classId} uid={viewUid} isTeacher={isTeacher} onDisabled={onDisabled} />}
+      {rankings}
       </div>
     </div></div>}
 
