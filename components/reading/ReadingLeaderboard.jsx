@@ -37,10 +37,11 @@ function growthOf(row) {
   return row?.level === growth.level ? growth : null;
 }
 
+// 레벨 옷(Lv.7 탐험가 옷 · Lv.10 마스터 옷 — lib/readingCharacter.js) — 그 줄 학생의 레벨(서버가 줄마다 실어 줌)
 function Character({ row, uid, className }) {
   const character = characterOf({ uid: row?.uid || uid || "", character: row?.character });
   return <span className={className} aria-hidden="true"><img className="rlb-character-image"
-    src={characterImage(character)} alt="" draggable={false} loading="lazy" /></span>;
+    src={characterImage(character, row?.level)} alt="" draggable={false} loading="lazy" /></span>;
 }
 
 // 캐릭터 옆의 독서 펫(lib/readingPet.js) — 서버가 줄마다 실어 줍니다(알이면 종 없이). 관리자 설정에서 끈 반은 null.

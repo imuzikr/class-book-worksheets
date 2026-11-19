@@ -19,7 +19,15 @@ const NOW = 1_800_000_000_000;
 test("입장권 — 서버가 적는 모양과 화면이 읽는 모양", () => {
   const student = plazaLiveWho({ name: "이서연", character: characterOf({ uid: "u1", character: { style: "animal", number: 3 } }), pet: { species: "hedgehog", stage: 4 }, exp: NOW + 1000 });
   assert.deepEqual(student, { n: "이서연", c: "animal-03", p: "hedgehog", ps: 4, exp: NOW + 1000 });
-  assert.deepEqual(readPlazaLiveWho(student, NOW), { name: "이서연", teacher: false, character: { style: "animal", number: 3 }, pet: { species: "hedgehog", stage: 4 }, exp: NOW + 1000 });
+  assert.deepEqual(readPlazaLiveWho(student, NOW), { name: "이서연", teacher: false, character: { style: "animal", number: 3 }, level: null, pet: { species: "hedgehog", stage: 4 }, exp: NOW + 1000 });
+  // 독서 레벨(레벨 옷) — 학생만 · 1~10의 정수만 싣고 읽음(선생님은 싣지 않음 — 받는 쪽이 늘 Lv.10 옷)
+  const leveled = plazaLiveWho({ name: "이서연", character: { style: "zodiac", number: 1 }, level: 7, exp: NOW + 1000 });
+  assert.equal(leveled.lv, 7);
+  assert.equal(readPlazaLiveWho(leveled, NOW).level, 7);
+  assert.equal(plazaLiveWho({ name: "가", character: null, level: 12, exp: NOW + 1 }).lv, 10);
+  for (const bad of [0, -1, 6.5, "7", null, undefined]) assert.equal("lv" in plazaLiveWho({ name: "가", character: null, level: bad, exp: NOW + 1 }), false, String(bad));
+  assert.equal("lv" in plazaLiveWho({ name: "선생님", teacher: true, character: null, level: 7, exp: NOW + 1 }), false);
+  for (const bad of [0, 11, 6.5, "7", null]) assert.equal(readPlazaLiveWho({ n: "가", c: "", ps: 0, exp: NOW + 1, lv: bad }, NOW).level, null, String(bad));
 
   // 알 단계의 종은 싣지 않는다(비밀) — 종이 섞여 들어와도 알로만 읽는다
   const egg = plazaLiveWho({ name: "조유진", character: { style: "zodiac", number: 10 }, pet: { species: null, stage: 1 }, exp: NOW + 1 });

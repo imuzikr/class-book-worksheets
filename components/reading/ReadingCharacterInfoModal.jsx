@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef } from "react";
 import { characterCatalog, characterImage, characterName, characterOf, styleLabel } from "@/lib/readingCharacterCatalog";
+import { outfitWardrobe } from "@/lib/readingCharacter";
 
 const number = (value) => value.toLocaleString("ko-KR");
 const nonnegative = (value) => Number.isFinite(value) && value >= 0;
@@ -25,6 +26,10 @@ export default function ReadingCharacterInfoModal({ uid, character, isDefault = 
   const hasXp = nonnegative(xp);
   const hasProgress = Number.isFinite(summary?.progress);
   const progress = hasProgress ? Math.max(0, Math.min(100, Math.round(summary.progress))) : 0;
+  // 옷장 — 레벨 옷 셋(기본 · Lv.7 탐험가 옷 · Lv.10 마스터 옷 — lib/readingCharacter.js). 아직 못 입는 옷은 **검은 그림자**로 감추고
+  // 그 옷까지 남은 경험치를 적습니다(선생님 결정 — 무엇이 나올지 궁금하게). 누적 경험치를 모르면 옷장을 그리지 않습니다.
+  const wardrobe = hasXp ? outfitWardrobe(xp) : null;
+  const outfitLevel = hasLevel ? summary.level : null;
 
   useEffect(() => {
     const previous = document.activeElement;
@@ -49,7 +54,7 @@ export default function ReadingCharacterInfoModal({ uid, character, isDefault = 
       <button type="button" aria-label="캐릭터 정보 닫기" onClick={onClose}>×</button>
     </header>
     <figure className="reading-character-dialog-figure">
-      <img src={characterImage(appearance)} alt="" width={220} height={220} draggable={false} />
+      <img src={characterImage(appearance, outfitLevel)} alt="" width={220} height={220} draggable={false} />
       <figcaption>{characterName(appearance)}</figcaption>
     </figure>
     <dl className="reading-character-dialog-facts">
@@ -57,7 +62,22 @@ export default function ReadingCharacterInfoModal({ uid, character, isDefault = 
       <div><dt>스타일</dt><dd>{styleLabel(appearance.style)}</dd></div>
       <div><dt>선택</dt><dd>{isDefault ? "기본 캐릭터" : readOnly ? "학생이 고른 캐릭터" : "내가 고른 캐릭터"}</dd></div>
     </dl>
-    <p className="reading-character-dialog-note">독서 맵·교실·책 광장·아지트에서 {readOnly ? "학생을" : "나를"} 나타내는 캐릭터예요. 스타일은 독서 레벨과 관계없이 고를 수 있어요. {readOnly ? "학생이 자신의 프로필에서 캐릭터를 바꿀 수 있어요." : "캐릭터 변경은 상단의 내 프로필에서 할 수 있어요."}</p>
+    <p className="reading-character-dialog-note">독서 맵·교실·책 광장·아지트에서 {readOnly ? "학생을" : "나를"} 나타내는 캐릭터예요. 스타일은 독서 레벨과 관계없이 고를 수 있고, 독서 레벨 7과 10에 닿으면 새 옷을 입어요. {readOnly ? "학생이 자신의 프로필에서 캐릭터를 바꿀 수 있어요." : "캐릭터 변경은 상단의 내 프로필에서 할 수 있어요."}</p>
+    {wardrobe && <section className="reading-character-wardrobe" aria-label="옷장 — 독서 레벨에 따라 입는 옷">
+      <h3>옷장</h3>
+      <ul>
+        {wardrobe.map((outfit, index) => {
+          const until = wardrobe[index + 1] ? `Lv.${outfit.level}~${wardrobe[index + 1].level - 1}` : `Lv.${outfit.level}`;
+          return <li key={outfit.key} className={`${outfit.unlocked ? "" : "is-locked"}${outfit.current ? " is-current" : ""}`}>
+            <span className="reading-character-wardrobe-art">
+              <img src={characterImage(appearance, outfit.level)} alt="" width={96} height={96} draggable={false} />
+            </span>
+            <strong>{outfit.name}</strong>
+            <span>{outfit.current ? "지금 입은 옷" : outfit.unlocked ? `${until} · 지나온 옷` : `${number(outfit.remaining)} EXP 남았어요`}</span>
+          </li>;
+        })}
+      </ul>
+    </section>}
     {(hasLevel || hasXp || hasProgress) && <section className="reading-character-dialog-stats" aria-label="독서 성장 정보">
       <h3>{readOnly ? "학생의 독서 성장" : "나의 독서 성장"}</h3>
       <dl>

@@ -16,6 +16,8 @@ import { hasModalAbove } from "@/lib/modal";
 import { PLAZA_STAGE_MIN_H, plazaRoom, plazaScroller } from "@/lib/plazaStageRoom";
 import { publishReadingBadges, requestReadingBadgesPanel, withdrawReadingBadges } from "@/lib/readingBadgeBridge";
 import PetCard, { StudentPetSummary } from "./PetCard";
+import OutfitCelebration from "./OutfitCelebration";
+import { markOutfitSeen, outfitCheerFor, readOutfitSeen } from "@/lib/readingOutfitCheer";
 import "./reading.css";
 import "./plaza.css";
 
@@ -328,6 +330,24 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
     askedBadges.current = true;
     requestReadingBadgesPanel();
   }, [initialTab, readOnly]);
+  // 레벨 옷이 바뀌는 순간(Lv.7 탐험가 옷 · Lv.10 마스터 옷)의 축하 — 학생 본인 화면에서 옷마다 한 번(이 기기에 기억 —
+  // lib/readingOutfitCheer.js · 화면 OutfitCelebration.jsx · 선생님 요청). 이미 Lv.7 · Lv.10인 학생은 처음 열 때 한 번.
+  // 같은 저장에서 펫도 자라면(알을 경험치 0에서 받은 학생은 기준표가 같아 늘 함께) 옷 축하가 먼저이고, 끝나면 펫 축하가
+  // 이어집니다(PetCard의 holdCheer — 둘이 한꺼번에 겹쳐 뜨지 않게). '레벨 n 달성!' 알림 줄은 옷 축하가 대신 알립니다.
+  // 축하가 끝나도 지우지 않고 done만 적어 둡니다 — 뒤이어 뜨는 펫 축하가 같은 '레벨 n 달성!'을 또 말하지 않게(skipLevel).
+  const [outfitCheer, setOutfitCheer] = useState(null);
+  const outfitShowing = !!outfitCheer && !outfitCheer.done;
+  const outfitDue = ownStudent && raw ? outfitCheerFor(readOutfitSeen(user.uid), stats.level) : null;
+  const outfitDueKey = outfitDue?.to.key ?? null;
+  const outfitDueRef = useRef(null);
+  outfitDueRef.current = outfitDue;
+  useEffect(() => {
+    if (!outfitDueKey || !user?.uid) return;
+    const due = outfitCheerFor(readOutfitSeen(user.uid), stats.level);
+    if (!due) return;
+    markOutfitSeen(user.uid, due.to.key);
+    setOutfitCheer({ ...due, level: stats.level, id: `${due.to.key}:${Date.now()}` });
+  }, [outfitDueKey, user?.uid, stats.level]);
   const previousLevel = useRef(null);
   // 펫 축하가 함께 알린 레벨 — 같은 저장에서 펫이 자라며 레벨도 오르면 폭죽 한 번에 함께 알리므로
   // 알림 줄은 같은 말을 또 띄우지 않습니다. 펫 카드(자식)의 효과가 아래 효과보다 먼저 돌아 여기에 적습니다.
@@ -337,7 +357,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
     if (!raw) return;
     const petTold = petLevelRef.current === stats.level;
     petLevelRef.current = null;
-    if (!readOnly && !petTold && previousLevel.current != null && stats.level > previousLevel.current) setNotice(`레벨 ${stats.level} 달성! 독서의 깊이가 한 단계 더 자랐어요.`);
+    if (!readOnly && !petTold && !outfitDueRef.current && previousLevel.current != null && stats.level > previousLevel.current) setNotice(`레벨 ${stats.level} 달성! 독서의 깊이가 한 단계 더 자랐어요.`);
     previousLevel.current = stats.level;
   }, [raw, stats.level, readOnly]);
   useEffect(() => { previousLevel.current = null; }, [classId, viewUid]);
@@ -424,6 +444,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
         {showStudentPet && <StudentPetSummary mirror={student.pet} growthXp={raw ? petGrowthOfSummary(stats) : null} feed={petFeed} today={day} />}
         {/* 나의 펫 — 단계는 이미 받은 서재로 셉니다(lib/readingPet.js). 서재를 받기 전에는 카드도 기다립니다. */}
         {showPet && <PetCard classId={classId} uid={user.uid} growthXp={raw ? petGrowthOfSummary(stats) : null} level={raw ? stats.level : null} onLevelCheer={markPetLevel}
+          holdCheer={!!outfitDue || outfitShowing} skipLevel={outfitCheer?.level ?? (outfitDue ? stats.level : null)}
           feed={petFeed} fruits={myFruit} today={day} preview={petPreview} />}
       </div>}
     </div>
@@ -461,7 +482,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
     {/* 서재를 기다리거나 못 받은 때도 광장은 독립적으로 열 수 있습니다. */}
     {tab === "library" && ownPlaza && (loading || !raw) && <div className="reading-library-entry">{plazaEntry}</div>}
     {/* 책 광장은 서재(정본)를 기다리지 않습니다 — 반의 공유 사본을 제 손으로 구독합니다. 펫의 단계만 서재에서 받습니다. */}
-    {tab === "plaza" ? <PlazaExitContext.Provider value={leavePlaza}><ReadingPlaza key={plazaJump?.key ?? plazaReturn?.key ?? "plaza"} classId={classId} user={user} isTeacher={isTeacher} characterOn={characterOn} petOn={showPet} petFeed={petFeed} growthXp={raw ? petGrowthOfSummary(stats) : null} fruits={myFruit} initialBook={plazaJump} initialRoom={plazaJump ? null : plazaReturn?.room} onExit={leavePlaza} classroom={classroom} hideoutOn={canHideout && (!readOnly || typeof onOpenOwnHideout === "function")} onEnterHideout={enterHideout} talkOn={plazaOn && talkOn} /></PlazaExitContext.Provider>
+    {tab === "plaza" ? <PlazaExitContext.Provider value={leavePlaza}><ReadingPlaza key={plazaJump?.key ?? plazaReturn?.key ?? "plaza"} classId={classId} user={user} isTeacher={isTeacher} characterOn={characterOn} petOn={showPet} petFeed={petFeed} growthXp={raw ? petGrowthOfSummary(stats) : null} level={raw ? stats.level : null} fruits={myFruit} initialBook={plazaJump} initialRoom={plazaJump ? null : plazaReturn?.room} onExit={leavePlaza} classroom={classroom} hideoutOn={canHideout && (!readOnly || typeof onOpenOwnHideout === "function")} onEnterHideout={enterHideout} talkOn={plazaOn && talkOn} /></PlazaExitContext.Provider>
     : tab === "hideout" && canHideout ? <PlazaExitContext.Provider value={leaveHideout}><ReadingHideout key={`${classId}:${viewUid}`} classId={classId} user={user} student={student} summary={stats} readOnly={readOnly} characterOn={characterOn} petOn={petOn} petFeed={petFeed} fruits={myFruit} returnRoom={hideoutOrigin} onDisabled={leaveHideout} onExit={leaveHideout} /></PlazaExitContext.Provider>
     : readOnly ? teacherShelf
     : loading ? loadingBox : !raw ? failedBox : <div className="reading-workspace"><div className="reading-workspace-layout">
@@ -491,6 +512,7 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
     {dialog?.type === "log" && selected && <LogForm key={dialog.log?.id || selected.id} book={selected} log={dialog.log} reviews={raw?.reviews || []} today={day} busy={busy} petRead={readToday} plaza={ownPlaza ? "shown" : null} onClose={() => setDialog(formBack(dialog))} onSave={async (values, plan) => { const bookId = selected.id; const back = formBack(dialog); const ok = await run({ type: dialog.log ? "updateLog" : "addLog", bookId, ...(dialog.log ? { logId: dialog.log.id } : {}), ...values }, (state) => logSavedNotice(plan, state, bookId, !!dialog.log)); if (ok) setDialog(back); }} />}
     {dialog?.type === "review" && selected && <ReviewForm key={selected.id} book={selected} review={(stats.reviews || raw?.reviews || []).find((r) => r.bookId === selected.id)} busy={busy} plaza={ownPlaza ? "shown" : null} onClose={() => setDialog(formBack(dialog))} onSave={async (values) => { const back = formBack(dialog); const ok = await run({ type: "saveReview", bookId: selected.id, ...values }, "책을 읽고 남긴 생각을 저장했어요."); if (ok) setDialog(back); }} />}
     {confirm && <Modal title="기록 확인" busy={busy} onClose={() => setConfirm(null)}><p className="reading-confirm-copy">{confirm.title}</p><div className="reading-form-actions"><button type="button" className="btn-ghost" onClick={() => setConfirm(null)} disabled={busy}>취소</button><button type="button" className="reading-danger-button" disabled={busy} onClick={async () => { if (await run(confirm.action, "기록을 정리했어요.")) setConfirm(null); }}>{busy ? "처리 중…" : "확인"}</button></div></Modal>}
+      {outfitShowing && <OutfitCelebration key={outfitCheer.id} uid={user.uid} characterOn={characterOn} from={outfitCheer.from} to={outfitCheer.to} level={outfitCheer.level} onDone={() => setOutfitCheer((old) => (old ? { ...old, done: true } : old))} />}
   </section></ReadingErrorContext.Provider>;
 }
 

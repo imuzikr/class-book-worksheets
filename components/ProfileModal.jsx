@@ -17,7 +17,7 @@ import { PetProfileField } from "./reading/PetCard";
 // character: 학생 캐릭터를 쓰는 반이면 지금 캐릭터({ number, style }), 아니면 null.
 // onChangeCharacter: '바꾸기' — 이 창을 닫고 고르기 창을 엽니다(UserProfile).
 // pet: 학생 펫을 쓰는 반이고 알을 받았으면 { classId, mirror } — 단계는 열 때 한 번 서버에 묻습니다.
-export default function ProfileModal({ user, onClose, character = null, onChangeCharacter = null, pet = null }) {
+export default function ProfileModal({ user, onClose, character = null, characterLevel = null, onChangeCharacter = null, pet = null }) {
   const teacherRole = isTeacher(user);
   const [realName, setRealName] = useState(user.realName || "");
   const [saving, setSaving] = useState(false);
@@ -84,7 +84,7 @@ export default function ProfileModal({ user, onClose, character = null, onChange
             <div className="student-edit-field">
               <span>내 캐릭터</span>
               <div className="profile-character">
-                <img src={characterImage(character)} alt="" width={56} height={56} />
+                <img src={characterImage(character, characterLevel)} alt="" width={56} height={56} />
                 <span className="profile-character-name">{characterName(character)}</span>
                 {onChangeCharacter && (
                   <button type="button" className="btn-ghost profile-character-change" onClick={onChangeCharacter}>

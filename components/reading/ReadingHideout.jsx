@@ -20,6 +20,7 @@ import { getHideoutRestPet, hideoutEggRestPosition, hideoutPetRestPosition } fro
 import { fetchReadingHideout, saveReadingHideout } from "@/lib/data/readingHideout";
 import { subscribeMyReadingCharacter, subscribeMyReadingPet } from "@/lib/data/reading";
 import { characterImage, characterName, characterOf } from "@/lib/readingCharacterCatalog";
+import { TEACHER_OUTFIT_LEVEL } from "@/lib/readingCharacter";
 import { petGrowthOfSummary, petProgress } from "@/lib/readingPet";
 import { careAway, careStatus } from "@/lib/petCare";
 import { kstToday, readingLevelProgress } from "@/lib/reading";
@@ -208,7 +209,6 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
   const detailIndex = detailChoices.findIndex((item) => item.id === detail?.id);
   const myName = teacherOwn ? "선생님" : (readOnly ? student?.realName || student?.name : user?.realName || user?.name || user?.displayName) || "나";
   const appearance = characterOf({ uid: viewUid, character: characterOn ? character : null });
-  const spriteSrc = plazaCharacterSheet(appearance);
   const petGone = petOn && !!petFeed?.on && careAway(petMirror, petFeed, kstToday());
   const growth = summary ? petGrowthOfSummary(summary) : ownerGrowth;
   // 머리 오른쪽 위의 캐릭터 카드(선생님 요청 · 2026년 11월 — 독서 레벨 알약 대신 책 봄 프로필의 그 카드). 레벨 · 경험치 막대는 방과
@@ -216,6 +216,10 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
   // 선생님 본인의 방(독서 레벨이 없음)과 학생 캐릭터를 끈 반은 지금처럼 알약입니다.
   const cardSummary = useMemo(() => Number.isFinite(ownerGrowth) ? readingLevelProgress(ownerGrowth) : { level: progress?.level ?? summary?.level ?? 1 }, [ownerGrowth, progress?.level, summary?.level]);
   const showCard = characterOn && !teacherOwn && !!viewUid;
+  // 레벨 옷(Lv.7 탐험가 옷 · Lv.10 마스터 옷 — lib/readingCharacter.js) — 방 주인의 독서 레벨(위 카드와 같은 값),
+  // 선생님 본인의 방은 늘 Lv.10 옷(선생님 결정). 방을 받기 전에는 그리지 않으므로(아래 '여는 중') 옷이 바뀌어 보이지 않습니다.
+  const outfitLevel = teacherOwn ? TEACHER_OUTFIT_LEVEL : cardSummary.level;
+  const spriteSrc = plazaCharacterSheet(appearance, outfitLevel);
   const pet = petOn && !petGone ? petProgress(petMirror, growth) : null;
   const bed = props.find((prop) => prop.category === "bed");
   // ── 아지트 2단계: 꾸미는 동안 소품의 자리 · 방향 바꾸기 ──
@@ -564,7 +568,7 @@ function HideoutRoom({ classId, user, student = null, viewUid, summary, readOnly
       <div className="hideout-resident" ref={movement.avatarRef} style={{ left: `${movement.position.current.x / HIDEOUT_SCENE.width * 100}%`, top: `${movement.position.current.y / HIDEOUT_SCENE.height * 100}%`, zIndex: 100 + Math.round(movement.position.current.y) }} role="img" aria-label={`${myName}, ${characterName(appearance)}`}>
         <span className="hideout-resident-shadow" style={{ width: actorSize * .35, height: actorSize * .05 }} />
         {spriteSrc && !spriteMissing ? <PlazaSprite ref={spriteRef} src={spriteSrc} size={actorSize || 1} style={{ position: "absolute", left: -actorSize / 2, top: -actorSize * SPRITE_FOOT.y / SPRITE_CELL }} onMissing={() => setSpriteMissing(true)} />
-          : <img className="hideout-character-fallback" src={characterImage(appearance)} alt="" draggable={false} style={{ width: actorSize, height: actorSize, left: -actorSize / 2, top: -actorSize * .92 }} />}
+          : <img className="hideout-character-fallback" src={characterImage(appearance, outfitLevel)} alt="" draggable={false} style={{ width: actorSize, height: actorSize, left: -actorSize / 2, top: -actorSize * .92 }} />}
         <span className="hideout-resident-name" style={{ bottom: Math.round(actorSize * (spriteSrc && !spriteMissing ? SPRITE_BODY / SPRITE_CELL : .92)) + 5 }}>{myName}</span>
       </div>
       {pet && bed && <RestingPet pet={pet} bed={bed} owner={readOnly ? myName : ""} passive={arranging} onOpen={() => { movement.stop(); setPetOpen(true); }} />}

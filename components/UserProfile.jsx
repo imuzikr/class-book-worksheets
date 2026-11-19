@@ -37,6 +37,8 @@ export default function UserProfile({
   onStudyExport = null,
   // 학생 캐릭터(책 봄 · 랭킹 · 학생 캐릭터가 모두 켜진 반) — { number, style } · 저장 함수
   character = null,
+  // 내 독서 레벨 — 레벨 옷(Lv.7 탐험가 옷 · Lv.10 마스터 옷 · lib/readingCharacter.js)을 고릅니다. 모르면 null(기본 옷).
+  characterLevel = null,
   onSaveCharacter = null,
   // 독서 펫 — 학생 펫이 켜진 반의 학생이고 알을 받았으면 { classId, mirror }(lib/readingPet.js)
   pet = null,
@@ -79,7 +81,7 @@ export default function UserProfile({
       >
         <span className="avatar" aria-hidden="true">
           {teacherRole ? <IconTeacher size={20} />
-            : character ? <img className="avatar-character" src={characterImage(character)} alt="" width={34} height={34} />
+            : character ? <img className="avatar-character" src={characterImage(character, characterLevel)} alt="" width={34} height={34} />
             : initial}
           {pendingCount > 0 && (
             <span className="profile-badge" aria-label={`승인 대기 ${pendingCount}건`}>
@@ -182,11 +184,11 @@ export default function UserProfile({
       )}
 
       {profileOpen && user && (
-        <ProfileModal user={user} onClose={() => setProfileOpen(false)} character={character} pet={pet}
+        <ProfileModal user={user} onClose={() => setProfileOpen(false)} character={character} characterLevel={characterLevel} pet={pet}
           onChangeCharacter={onSaveCharacter ? () => { setProfileOpen(false); setChoosing(true); } : null} />
       )}
       {choosing && character && onSaveCharacter && (
-        <CharacterChooser row={{ uid: user?.uid, character }} onClose={() => setChoosing(false)}
+        <CharacterChooser row={{ uid: user?.uid, character, level: characterLevel }} onClose={() => setChoosing(false)}
           onSave={async (next) => { await onSaveCharacter(next); setChoosing(false); }} />
       )}
     </div>

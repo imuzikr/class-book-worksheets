@@ -64,6 +64,7 @@ import { joinPlazaLive, plazaLiveConfigured } from "@/lib/data/plazaLive";
 import { subscribeStudySeatLayout } from "@/lib/store";
 import { todayDateKey } from "@/lib/dates";
 import { characterOf } from "@/lib/readingCharacterCatalog";
+import { TEACHER_OUTFIT_LEVEL } from "@/lib/readingCharacter";
 import { petProgress, publicPetProgress } from "@/lib/readingPet";
 import { careAway, careStatus } from "@/lib/petCare";
 import { kstToday } from "@/lib/reading";
@@ -151,8 +152,10 @@ function remember(store, key, value) {
 }
 // 입장권의 펫({ species, stage } · 알이면 species가 없음)을 PlazaActor가 받는 모양으로
 const friendPet = (pet) => (pet ? { species: pet.species, stage: pet.stage, hatched: !!pet.species, ready: false } : null);
+// level — 친구의 레벨 옷(입장권의 lv · 선생님은 늘 Lv.10 — lib/readingCharacter.js)
 const friendRow = (uid, who, friend) => ({
   uid, name: who.name, teacher: who.teacher, character: characterOf({ uid, character: who.character }), pet: friendPet(who.pet),
+  level: who.teacher ? TEACHER_OUTFIT_LEVEL : who.level ?? null,
   reading: !!friend.reading, room: friend.room, seat: friend.seat, talk: friend.talk ?? null,
 });
 // 친구가 다 와서 설 자리(걷는 중이면 남은 길의 끝)
@@ -208,7 +211,8 @@ function routeAroundPeople(from, goal, people, room, { seat = null, portal = fal
 //     onAttend([학생] 출석 남기기) · onRollCall([선생님] 출석시작) · onStop([선생님] 출석종료) · onSeatSetup([선생님] 자리 배정하기 열기) ·
 //     onMoveAll([선생님] 모두 이동 — 방 id를 받아 신호를 적음) }
 // talkOn — 광장 대화(관리자 설정의 '광장 대화' — lib/reading.js의 plazaTalkOn · 책 광장이 켜져 있어야 켬)
-export default function ReadingPlaza({ classId, user, isTeacher = false, characterOn = true, petOn = false, petFeed = null, growthXp = null, fruits = 0, initialBook = null, onExit = null, classroom = null, hideoutOn = false, onEnterHideout = null, initialRoom = null, talkOn = false }) {
+// level — 내 독서 레벨(레벨 옷 · 책 봄이 넘김). 선생님은 무엇을 받든 늘 Lv.10 옷(선생님 결정).
+export default function ReadingPlaza({ classId, user, isTeacher = false, characterOn = true, petOn = false, petFeed = null, growthXp = null, level = null, fruits = 0, initialBook = null, onExit = null, classroom = null, hideoutOn = false, onEnterHideout = null, initialRoom = null, talkOn = false }) {
   const myUid = user?.uid;
   // 광장 대화 — 반 설정을 켰고, 이 배포가 함께 보기(실시간)를 쓸 때만(대화는 같은 연결로 오감)
   const talkLive = !!talkOn && plazaLiveConfigured() && !!myUid;
@@ -1608,13 +1612,13 @@ export default function ReadingPlaza({ classId, user, isTeacher = false, charact
                 const member = cast.current.get(friend.uid);
                 if (!member) return null;
                 return (
-                  <PlazaActor key={friend.uid} ref={castRef(friend.uid)} character={friend.character} pet={member.pet ? friend.pet : null}
+                  <PlazaActor key={friend.uid} ref={castRef(friend.uid)} character={friend.character} level={friend.level} pet={member.pet ? friend.pet : null}
                     name={friend.name} teacher={friend.teacher} reading={friend.reading} scale={world.scale} at={member.actor} petAt={member.pet}
                     seat={friend.seat !== null ? CLASSROOM_SEATS[friend.seat] : null} checked={inClass && !friend.teacher && !!presentUids?.has(friend.uid)}
                     ring={picked?.uid === friend.uid} badge={badgeOf(friend.uid)} />
                 );
               })}
-              <PlazaActor ref={meRef} me character={who} pet={pet} name={myName} reading={reading} scale={world.scale} at={pos.current} petAt={myPet.current}
+              <PlazaActor ref={meRef} me character={who} level={isTeacher ? TEACHER_OUTFIT_LEVEL : level} pet={pet} name={myName} reading={reading} scale={world.scale} at={pos.current} petAt={myPet.current}
                 seat={inClass && sitting !== null ? CLASSROOM_SEATS[sitting] : null} checked={inClass && attended} badge={myBadge} />
               {/* 광장 대화 — 고른 친구의 머리 위('A' · 고르는 상자). 친구를 따라 걸음 루프가 옮깁니다 */}
               {picked && pickedMember && (

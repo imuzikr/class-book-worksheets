@@ -120,7 +120,7 @@ export default function ClassTopReaders({ classId, enabled, charactersOn = true,
           {rows.map((row, i) => (
             <li key={row.uid} className="top-readers-item" title={`${i + 1}위 · Lv.${row.level || 1} ${row.name} · ${Number(row.totalXp ?? row.allTimeXp) || 0} EXP (지난 일요일까지)`}>
               <span className="top-readers-medal" aria-hidden="true">{MEDALS[i]}</span>
-              <img className="top-readers-avatar" src={characterImage(characterFor(row))} alt="" width={28} height={28} />
+              <img className="top-readers-avatar" src={characterImage(characterFor(row), row.level)} alt="" width={28} height={28} />
               <span className="top-readers-level">Lv.{row.level || 1}</span>
               <span className="top-readers-name">{row.name}</span>
             </li>

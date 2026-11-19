@@ -145,6 +145,20 @@
 .reading-character-progress-track { height:6px; overflow:hidden; border-radius:999px; background:#e4ebdf; }
 .reading-character-progress-track i { display:block; height:100%; border-radius:inherit; background:#6d9b7d; }
 .reading-character-dialog-foot { display:flex; justify-content:flex-end; margin-top:18px; }
+/* 옷장 — 레벨 옷 셋(기본 · Lv.7 탐험가 옷 · Lv.10 마스터 옷 · lib/readingCharacter.js의 outfitWardrobe). 아직 못 입는 옷은
+   검은 그림자(그림을 까맣게 — 모양만 보임)로 감추고 남은 경험치를 적습니다(선생님 결정). 지금 입은 옷은 초록 테. */
+.reading-character-wardrobe { margin-top:16px; padding:14px; border:1px solid #dce6d5; border-radius:12px; }
+.reading-character-wardrobe h3 { margin:0 0 10px; font-size:13px; }
+.reading-character-wardrobe ul { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:0; padding:0; list-style:none; }
+.reading-character-wardrobe li { display:flex; flex-direction:column; align-items:center; gap:3px; min-width:0; padding:8px 6px 10px; border:2px solid transparent; border-radius:12px; background:#f1f5ed; text-align:center; }
+.reading-character-wardrobe li.is-current { border-color:#6fae7f; background:#eaf5e6; }
+.reading-character-wardrobe-art { display:block; width:min(96px,100%); aspect-ratio:1; }
+.reading-character-wardrobe-art img { display:block; width:100%; height:100%; object-fit:contain; }
+.reading-character-wardrobe li.is-locked .reading-character-wardrobe-art img { filter:brightness(0); opacity:.78; }
+.reading-character-wardrobe strong { font-size:12px; line-height:1.35; word-break:keep-all; }
+.reading-character-wardrobe li > span:last-child { font-size:11px; line-height:1.35; color:#6b7f70; word-break:keep-all; }
+.reading-character-wardrobe li.is-current > span:last-child { color:#2f6d45; font-weight:700; }
+.reading-character-wardrobe li.is-locked > span:last-child { color:#8a5a2b; font-weight:650; }
 @media (max-width:420px) {
   .reading-character-dialog { padding:16px; }
   .reading-character-dialog-facts { grid-template-columns:minmax(0,1fr); gap:6px; }

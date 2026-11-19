@@ -42,4 +42,5 @@
 - 펫 그림은 **다 자란 모습 한 가지**입니다 — 광장은 단계에 따라 **크기**로 성장을 보입니다(2단계 62% → 10단계 100%, 선생님 결정). 깨어나기 전의 알은 도트 알 `public/reading-pets/egg-pixel.webp`를 씁니다(카드 · 리더보드 · 독서 맵은 예전 알 `egg.webp` — 선생님 결정). 펫 카드 · 리더보드의 단계별 그림(`public/reading-pets/`)과는 따로입니다.
 - 셈(방향 · 그림 차례 · 크기 · 펫이 따라올 자리)은 `lib/readingPlazaSprites.js`, 그리기는 `components/reading/PlazaSprite.jsx`입니다. **규격이 다른 그림으로 바꾸면 그 파일 맨 위의 값을 함께 고치세요.**
 - **캐릭터 · 펫을 새로 더하면 시트도 함께 넣으세요.** `tests/unit/readingPlaza.test.mjs`가 캐릭터 30 · 펫 10의 시트가 모두 있는지 봅니다. 시트가 없으면 그 캐릭터는 광장에서 예전 그림(`public/reading-journey/` · `public/reading-pets/`)으로 섭니다.
+- **레벨 옷의 시트 60장**(`zodiac-NN-lv07` · `-lv10` …, 2026년 11월 · 선생님 요청)도 여기 있습니다 — 독서 레벨 7 · 10에 닿은 학생(선생님은 늘 Lv.10 옷)이 광장 · 교실 · 아지트에서 입는 옷입니다. 규격 · 발점은 위와 같고(시험이 발 높이 ±1px · 칸 경계 투명을 봄), 수련생은 금빛 기운을 그려 넣은 판입니다. 넣는 법 · 원본은 `public/reading-journey/README.md`의 '레벨 옷', 누가 어느 옷인가는 `READING_GROWTH.md`의 '레벨 옷'.
 - 저작권: 묶음에 함께 온 표시대로 이 저장소와 같은 CC BY-NC 4.0입니다.

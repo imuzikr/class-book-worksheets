@@ -11,6 +11,8 @@ import {
 import { normalizePublicPet } from "@/lib/readingPet";
 import ReadingBadge from "./ReadingBadge";
 import CharacterChooser, { characterImage, characterOf } from "./CharacterChooser";
+// 레벨 옷(Lv.7 탐험가 옷 · Lv.10 마스터 옷 — lib/readingCharacter.js) — 그 여행자의 레벨(순위 줄의 레벨 · 없으면 지도 위 자리의 레벨)
+const outfitLevel = (row) => row?.level ?? row?.world?.level ?? null;
 import PetFigure from "./PetFigure";
 import "./reading-world-map.css";
 import "./pet.css";
@@ -245,7 +247,7 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, mapTheme, petOn 
           아래: 함께 걷는 친구들. 한때 지도 위에 가로로 펼쳐 지도가 그만큼 아래로 밀렸습니다(선생님 요청). */}
       <aside className="rwm-side" aria-label="선택한 학생과 함께 걷는 친구들">
         {selected && <div className="rwm-hud" aria-label="선택한 학생의 성장 정보">
-          <div className={`rwm-portrait${selectedIsLeader ? " is-leader" : ""}`}>{selectedIsLeader && <LeaderSun />}<img src={characterImage(characterOf(selected))} alt="" width={110} height={110} /><TravelerPet row={selected} petOn={petOn} size={44} className="rwm-portrait-pet" /></div>
+          <div className={`rwm-portrait${selectedIsLeader ? " is-leader" : ""}`}>{selectedIsLeader && <LeaderSun />}<img src={characterImage(characterOf(selected), outfitLevel(selected))} alt="" width={110} height={110} /><TravelerPet row={selected} petOn={petOn} size={44} className="rwm-portrait-pet" /></div>
           <div className="rwm-identity"><span>선택한 여행자 {selected.uid === uid && <b>나</b>} {selectedIsLeader && <b className="rwm-leader-tag">{leaderUids.length > 1 ? "공동 독서 대장" : "독서 대장"}</b>}</span><strong data-testid="journey-selected-name">{selected.name || "이름 미설정"}</strong><small>{selected.studentId || "학번 미설정"} · {growth ? journeyTitle(growth.level) : "성장 정보 확인 중"}</small></div>
           <div className="rwm-growth">
             <div className="rwm-growth-values"><span><small>독서 레벨</small><strong data-testid="journey-selected-level">{growth ? `Lv.${growth.level}` : "—"}</strong></span><span><small>누적 경험치</small><strong data-testid="journey-selected-xp">{growth ? number(growth.xp) : "—"}<em> EXP</em></strong></span></div>
@@ -263,7 +265,7 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, mapTheme, petOn 
         </button>
         {rosterOpen && <div className="rwm-roster-list" aria-label="우리 반 전체 학생">
           {travelers.map((row) => <button type="button" className={`rwm-person${leaderSet.has(String(row.uid)) ? " is-leader" : ""}`} key={row.uid} aria-pressed={row.uid === selected?.uid} onClick={() => selectTraveler(row)}>
-            <div className="rwm-person-avatar">{leaderSet.has(String(row.uid)) && <LeaderSun />}<img src={characterImage(characterOf(row))} alt="" width={47} height={52} loading="lazy" /><TravelerPet row={row} petOn={petOn} size={24} className="rwm-person-pet" /></div><span><strong>{row.name || "이름 미설정"}{row.uid === uid && <i>나</i>}{leaderSet.has(String(row.uid)) && <b className="rwm-leader-tag">독서 대장</b>}</strong><small>{row.studentId}{row.world ? ` · ${row.world.region.name}` : " · 집계 대기"}</small><em>{row.world ? `Lv.${row.world.level} · ${number(row.world.xp)} EXP` : "성장 정보 확인 중"}</em></span>
+            <div className="rwm-person-avatar">{leaderSet.has(String(row.uid)) && <LeaderSun />}<img src={characterImage(characterOf(row), outfitLevel(row))} alt="" width={47} height={52} loading="lazy" /><TravelerPet row={row} petOn={petOn} size={24} className="rwm-person-pet" /></div><span><strong>{row.name || "이름 미설정"}{row.uid === uid && <i>나</i>}{leaderSet.has(String(row.uid)) && <b className="rwm-leader-tag">독서 대장</b>}</strong><small>{row.studentId}{row.world ? ` · ${row.world.region.name}` : " · 집계 대기"}</small><em>{row.world ? `Lv.${row.world.level} · ${number(row.world.xp)} EXP` : "성장 정보 확인 중"}</em></span>
           </button>)}
         </div>}
       </div>
@@ -317,7 +319,7 @@ function TravelerToken({ group, map, petOn = false, selectedUid, selectionPulse,
     aria-label={`${row.name} · Lv.${row.world.level} · ${number(row.totalXp)} EXP${group.isLeader ? " · 독서 대장" : ""}${group.members.length > 1 ? ` · ${group.isLeader ? "공동 대장" : "같은 구간"} ${group.members.length}명, 눌러서 선택` : ""}`}>
     {peerOffset !== 0 && <span className="rwm-slot-link" style={{ width: Math.abs(peerOffset), left: peerOffset > 0 ? `calc(50% - ${peerOffset}px)` : "50%" }} aria-hidden="true" />}
     {group.isLeader && <LeaderSun />}
-    <img ref={image} src={characterImage(characterOf(row))} alt="" width={82} height={82} draggable={false} />
+    <img ref={image} src={characterImage(characterOf(row), outfitLevel(row))} alt="" width={82} height={82} draggable={false} />
     <TravelerPet row={row} petOn={petOn} size={32} className="rwm-token-pet" />
     {group.members.length > 1 && <span className="rwm-token-count">{group.members.length}</span>}
     <span className="rwm-token-label">{group.isLeader && <b className="rwm-token-role">독서 대장</b>}{row.name}<small>Lv.{row.world.level}</small></span>

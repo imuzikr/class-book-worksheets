@@ -180,7 +180,9 @@ export function usePetCareActions(classId) {
 // feed — 그 반의 먹이 규칙(lib/readingPet.js의 petCareRules — 펫 먹이를 끈 반이면 on이 거짓) · fruits — 내가 가진 과일 수 ·
 // today — 서울 날짜(책 봄이 1분마다 다시 봄 — 자정을 넘기면 배부름이 따라 줄어듦).
 // preview — 관리자 설정의 '펫 미리보기'(lib/readingPet.js의 petPreviewOn) — 켠 반이면 키울 펫을 고르는 창을 엽니다.
-export default function PetCard({ classId, uid, growthXp, level = null, onLevelCheer = null, feed = null, fruits = 0, today = null, preview = false }) {
+// holdCheer — 레벨 옷 축하(OutfitCelebration — 책 봄)가 떠 있는 동안 펫 축하를 미뤄 둡니다(끝나면 이어서 · 둘이 겹쳐 뜨지 않게).
+// skipLevel — 옷 축하가 이미 알린 레벨이면 펫 축하에서 '레벨 n 달성!'을 빼고 펫 이야기만 합니다.
+export default function PetCard({ classId, uid, growthXp, level = null, onLevelCheer = null, feed = null, fruits = 0, today = null, preview = false, holdCheer = false, skipLevel = null }) {
   const [state, setState] = useState({ loaded: false, mirror: null, fromCache: false, failed: false });
   const [open, setOpen] = useState(false);
   const [cheer, setCheer] = useState(null);
@@ -370,7 +372,7 @@ export default function PetCard({ classId, uid, growthXp, level = null, onLevelC
     {previewOpen && preview && <PetPreviewModal
       current={{ species: shown.hatched ? shown.species : chosenSp?.key ?? null, hatched: shown.hatched, stage: shown.stage, away: gone }}
       busy={pickBusy} error={pickError} onChoose={choose} onClose={() => { setPreviewOpen(false); setPickError(""); }} />}
-    {cheer && <PetCelebration key={cheer.id} kind={cheer.kind} progress={cheer.progress} level={cheer.level} onDone={() => { setCheer(null); setFrozen(null); }} />}
+    {cheer && !holdCheer && <PetCelebration key={cheer.id} kind={cheer.kind} progress={cheer.progress} level={cheer.level === skipLevel ? null : cheer.level} onDone={() => { setCheer(null); setFrozen(null); }} />}
   </>;
 }
 

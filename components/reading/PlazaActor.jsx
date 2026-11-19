@@ -47,7 +47,8 @@ const BADGE_ART = Object.freeze({
   accepted: TALK_ART.accepted, declined: TALK_ART.declined, expired: TALK_ART.expired,
 });
 
-const PlazaActor = forwardRef(function PlazaActor({ character, pet = null, name, scale, at, petAt = null, me = false, teacher = false, reading = false, seat = null, checked = false, ring = false, badge = null }, ref) {
+// level — 그 캐릭터 주인의 독서 레벨(레벨 옷 Lv.7 탐험가 옷 · Lv.10 마스터 옷 — lib/readingCharacter.js). 선생님은 늘 Lv.10을 넘겨 받습니다.
+const PlazaActor = forwardRef(function PlazaActor({ character, level = null, pet = null, name, scale, at, petAt = null, me = false, teacher = false, reading = false, seat = null, checked = false, ring = false, badge = null }, ref) {
   const avatarRef = useRef(null);
   const petRef = useRef(null);
   const charSprite = useRef(null);
@@ -81,7 +82,7 @@ const PlazaActor = forwardRef(function PlazaActor({ character, pet = null, name,
     },
   }), []);
 
-  const sheet = plazaCharacterSheet(character);
+  const sheet = plazaCharacterSheet(character, level);
   const body = plazaCharacterSize(scale);
   const petSheet = pet?.hatched && !petSpriteMissing ? plazaPetSheet(pet.species) : null;
   const petBody = pet ? plazaPetSize(scale, pet.stage) : null;
@@ -106,7 +107,7 @@ const PlazaActor = forwardRef(function PlazaActor({ character, pet = null, name,
         {ring && <TalkMarker art={TALK_ART.ring} className="plaza-talk-ring" scale={(body.body * 0.95) / TALK_ART.ring.w} />}
         {sheet && !spriteMissing
           ? <PlazaSprite ref={charSprite} src={sheet} size={body.cell} style={{ left: -body.footX, top: -body.footY, clipPath: seat ? SIT_CLIP : undefined }} onMissing={() => setSpriteMissing(true)} />
-          : <img className="plaza-avatar-img" src={characterImage(character)} alt="" draggable={false}
+          : <img className="plaza-avatar-img" src={characterImage(character, level)} alt="" draggable={false}
               style={{ width: body.body * 1.3, height: body.body * 1.3, left: -body.body * 0.65, top: -body.body * 1.24 }} />}
         {/* 의자 — 책상·의자 그림과 같은 자리에 '의자만'의 그림을 앉은 캐릭터 위에 한 번 더(닻은 seat.sit에 서 있음) */}
         {seat && (

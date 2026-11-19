@@ -779,3 +779,40 @@ test("선생님의 책 정보 고치기 — 담당 교사만 · 그 반 학생�
   assert.equal(admin.summary.totalBooks, 1);
   assert.equal((await getReading(student, cls)).state.logs.length, 1);
 });
+
+test("레벨 옷 — 프로필의 독서 레벨(readingLevel)은 서버가 맞춤: 책 봄을 열 때 한 번 · 저장해 바뀌면 · 선생님이 책 정보를 고쳐 바뀌면, 선생님은 안 적음", async () => {
+  const cls = "api-level-class";
+  const pupil = "api-level-student";
+  const seed = db.batch();
+  seed.set(db.doc(`classes/${cls}`), { createdBy: ids.teacher, readingEnabled: true, archived: false });
+  seed.set(db.doc(`users/${pupil}`), { role: "student", realName: "레벨학생", studentId: "30109" });
+  seed.set(db.doc(`memberships/${pupil}_${cls}`), { uid: pupil, classId: cls });
+  await seed.commit();
+  const student = { uid: pupil, roleClaim: null, db };
+  const level = async () => (await db.doc(`users/${pupil}`).get()).data().readingLevel;
+  // 이 칸이 생기기 전의 학생 — 책 봄을 처음 열 때 한 번 적음
+  assert.equal(await level(), undefined);
+  await getReading(student, cls);
+  assert.equal(await level(), 1);
+  // 책을 다 읽어 레벨이 오르면 그 저장에서 함께(Lv.1 → Lv.3)
+  await mutateReading(student, { classId: cls, requestId: "level-book-0001", action: { type: "addBook", title: "백 쪽 책", author: "지은이", totalPages: 100 } });
+  const read = await mutateReading(student, { classId: cls, requestId: "level-log-0001", action: { type: "addLog", bookId: "level-book-0001", date: today, startPage: 1, endPage: 100, notes: "다 읽었어요" } });
+  assert.equal(read.summary.level, 3);
+  assert.equal(await level(), 3);
+  // 선생님이 쪽수를 고쳐 완독이 풀리면 레벨도 함께 내려감(옷도 돌아감 — Lv.3 → Lv.2)
+  const fixed = await mutateReading(principal("teacher"), { classId: cls, requestId: "level-teacher-0001", uid: pupil, action: { type: "updateBook", bookId: "level-book-0001", totalPages: 300 } });
+  assert.equal(fixed.summary.level, 2);
+  assert.equal(await level(), 2);
+  // 어긋난 값(손으로 바꿈 · 셈이 바뀜)은 책 봄을 열 때 다시 맞춤 · 같으면 다시 쓰지 않음
+  await db.doc(`users/${pupil}`).update({ readingLevel: 9 });
+  await getReading(student, cls);
+  assert.equal(await level(), 2);
+  const stamp = (await db.doc(`users/${pupil}`).get()).updateTime.toMillis();
+  await getReading(student, cls);
+  assert.equal((await db.doc(`users/${pupil}`).get()).updateTime.toMillis(), stamp);
+  // 선생님 · 관리자는 적지 않음(늘 Lv.10 옷 — 선생님 결정)
+  await getReading(principal("teacher"), cls);
+  await getReading(principal("admin"), cls);
+  assert.equal((await db.doc(`users/${ids.teacher}`).get()).data().readingLevel, undefined);
+  assert.equal((await db.doc(`users/${ids.admin}`).get()).data().readingLevel, undefined);
+});

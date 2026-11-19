@@ -298,3 +298,26 @@
 .reading-pet-notice { margin:8px 0 0; color:#2f6b3f; font-size:12.5px; font-weight:600; text-align:right; word-break:keep-all; }
 /* 펫 정보 창(PetInfoModal)은 열 때 창 자체로 초점을 옮깁니다 — 그 초점에는 테를 그리지 않습니다(창 안의 단추는 제 초점 테) */
 .pet-modal:focus { outline: none; }
+
+/* ── 레벨 옷이 바뀌는 순간(OutfitCelebration.jsx) — 펫 깨어남과 같은 폭죽 위에 '예전 옷 → 빛 → 새 옷' ──
+   5.2초(처음 폭죽 + 새 옷이 튀어나올 때 한 번 더 — 축포의 LIFE_MS 4.2초 + 1초). .outfit-burst의 animation 길이가 같아야
+   글자와 폭죽이 함께 걷힙니다. 빛(.outfit-burst-flash)은 금빛 — 예전 옷이 사라지는 순간을 가립니다. */
+.outfit-burst { position:relative; display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center; animation:pet-burst-fade 5.2s ease-out forwards; }
+.outfit-burst-stage { position:relative; width:240px; height:240px; display:flex; align-items:center; justify-content:center; }
+.outfit-burst-stage > span { position:absolute; display:flex; align-items:center; justify-content:center; }
+.outfit-burst-stage img { display:block; width:100%; height:100%; object-fit:contain; }
+.outfit-burst-glow { inset:0; border-radius:50%; background:radial-gradient(circle, rgba(255,236,186,.95) 0, rgba(255,210,120,.5) 42%, rgba(255,210,120,0) 70%); animation:pet-glow .9s ease-out both; }
+.outfit-burst-old { inset:15px; animation:outfit-old-out .35s ease-in .85s forwards; }
+.outfit-burst-flash { inset:-30px; border-radius:50%; opacity:0; background:radial-gradient(circle, #fffef6 0, rgba(255,240,170,.95) 30%, rgba(255,214,90,.55) 52%, rgba(255,214,90,0) 72%); animation:outfit-flash .8s ease-out .8s forwards; }
+.outfit-burst-new { inset:5px; opacity:0; animation:pet-pop .7s cubic-bezier(.2,1.6,.4,1) 1.05s forwards; }
+.outfit-burst-note { display:flex; flex-direction:column; align-items:center; gap:4px; max-width:min(440px, calc(100vw - 32px)); padding:14px 26px; border-radius:20px; background:rgba(255,255,255,.95); border:2px solid #e2b04a; box-shadow:0 10px 30px rgba(46,36,26,.14); opacity:0; animation:pet-note-in .4s ease-out 1.05s forwards; }
+.outfit-burst-note strong { font-size:21px; font-weight:800; color:var(--dark); }
+.outfit-burst-sub { font-size:14px; color:var(--text-sub); line-height:1.55; word-break:keep-all; text-align:center; text-wrap:balance; }
+.outfit-burst-level { margin-bottom:2px; padding:3px 12px; border-radius:999px; background:#fff1dc; color:#9a5a33; font-size:12.5px; font-weight:800; }
+@keyframes outfit-old-out { to { transform:scale(1.08); opacity:0; filter:brightness(1.8); } }
+@keyframes outfit-flash { 0% { opacity:0; transform:scale(.5); } 35% { opacity:1; transform:scale(1); } 100% { opacity:0; transform:scale(1.25); } }
+@media (prefers-reduced-motion:reduce) {
+  /* 움직임 없이 — 새 옷과 글자만 떠 있다 사라집니다(폭죽 · 밤하늘도 안 그림 — .reward-cheer) */
+  .outfit-burst .outfit-burst-old, .outfit-burst .outfit-burst-flash { display:none; }
+  .outfit-burst .outfit-burst-new, .outfit-burst .outfit-burst-glow, .outfit-burst .outfit-burst-note { animation:none !important; opacity:1; }
+}

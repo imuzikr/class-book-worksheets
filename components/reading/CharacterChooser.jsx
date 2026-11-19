@@ -6,6 +6,8 @@
 // 묶음 차례 · 이름 · 그림 경로는 lib/readingCharacterCatalog.js 한 곳입니다.
 // 참여 코드로 반에 막 들어온 학생의 '첫 만남'(StudentWelcome)도 이 창을 씁니다 — 머리말 · 안내 · 닫는 단추의 말만
 // 바꿔 넘깁니다(eyebrow · title · lead · cancelLabel — 넘기지 않으면 지금 그대로).
+// 그림은 **고르는 학생의 지금 옷**으로 보입니다(row.level — 레벨 옷 Lv.7 · Lv.10, lib/readingCharacter.js) — 다른 캐릭터로
+// 바꿔도 같은 옷을 입은 모습이라, 고른 뒤의 모습 그대로입니다. 레벨을 모르면 기본 옷.
 // =============================================================
 import { useEffect, useId, useRef, useState } from "react";
 import { CHARACTER_STYLE_OPTIONS, characterCatalog, characterOf, characterImage } from "@/lib/readingCharacterCatalog";
@@ -40,7 +42,7 @@ export default function CharacterChooser({
     <p>{lead}</p>
     <fieldset className="rwm-outfits" disabled={busy}><legend>캐릭터 등급</legend>{CHARACTER_STYLE_OPTIONS.map(([value, label]) => <label key={value}><input type="radio" name={titleId} checked={draft.style === value} onChange={() => setDraft((old) => ({ ...old, style: value }))} />{label}</label>)}</fieldset>
     <div className="rwm-character-grid" role="group" aria-label="캐릭터 선택">{characterCatalog(draft.style).map((character) => <button key={character.number} type="button" disabled={busy} aria-pressed={draft.number === character.number} onClick={() => setDraft((old) => ({ ...old, number: character.number }))}>
-      <img src={characterImage({ number: character.number, style: draft.style })} alt="" width={100} height={100} /><span>{character.name}</span>
+      <img src={characterImage({ number: character.number, style: draft.style }, row?.level)} alt="" width={100} height={100} /><span>{character.name}</span>
     </button>)}</div>
     {error && <p className="rwm-save-error" role="alert">{error}</p>}
     <div className="rwm-character-footer"><button type="button" disabled={busy} onClick={onClose}>{cancelLabel}</button><button type="button" disabled={busy} onClick={save}>{busy ? "저장 중…" : "이 캐릭터로 함께하기"}</button></div>

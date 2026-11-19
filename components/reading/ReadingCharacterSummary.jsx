@@ -36,11 +36,14 @@ export default function ReadingCharacterSummary({ uid, summary = null, active = 
   const xpLabel = hasXp ? summary?.maxLevel ? `${number(xp)} EXP · 최고 레벨` : hasNextXp ? `${number(xp)} / ${number(summary.nextXp)} EXP` : `${number(xp)} EXP` : "";
 
   const open = active && loaded && openUid === uid;
+  // 레벨 옷(Lv.7 탐험가 옷 · Lv.10 마스터 옷 — lib/readingCharacter.js) — 그림은 레벨을 안 뒤에 그립니다(기본 옷이 한 박자
+  // 보였다가 바뀌지 않게 · 그동안은 자리만). 레벨은 이 카드가 받은 요약(책 봄의 그 학생 · 아지트의 방 주인)의 것입니다.
+  const pictured = loaded && hasGrowth;
   const ownerLabel = readOnly ? "학생의 캐릭터" : "나의 캐릭터";
   return <>
     <button type="button" className="reading-character-summary" aria-label={loaded ? `${characterName(character)}${hasGrowth ? ` · 독서 레벨 ${summary.level}${xpLabel ? ` · ${xpLabel}` : ""}` : ""} · ${ownerLabel} 자세히 보기` : `${ownerLabel} 불러오는 중`}
       aria-haspopup="dialog" aria-expanded={open} disabled={!loaded || !active} onClick={() => { if (loaded && active) setOpenUid(uid); }}>
-      {loaded ? <img src={characterImage(character)} width={60} height={60} alt="" draggable={false} />
+      {pictured ? <img src={characterImage(character, summary.level)} width={60} height={60} alt="" draggable={false} />
         : <span className="reading-character-placeholder" aria-hidden="true" />}
       <span className="reading-character-info">
         <small>{ownerLabel}</small>

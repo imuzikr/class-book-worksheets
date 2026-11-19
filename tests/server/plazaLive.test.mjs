@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { initializeApp, deleteApp, getApps } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
+import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { getDatabaseWithUrl } from "firebase-admin/database";
 import { initializeApp as initClient, deleteApp as deleteClient } from "firebase/app";
 import { connectDatabaseEmulator, get, getDatabase, goOffline, goOnline, ref } from "firebase/database";
@@ -17,6 +17,7 @@ import { openPlazaChannel } from "../../lib/plazaLiveChannel.js";
 import { createPlazaLiveSession } from "../../lib/plazaLiveSession.js";
 import { PLAZA_LIVE_TTL_MS, plazaLivePos, readPlazaLivePos, readPlazaLiveWho } from "../../lib/readingPlazaLive.js";
 import { characterOf } from "../../lib/readingCharacterCatalog.js";
+import { READING_FORMULA, getExpForReadingLevel, getReadingLevel } from "../../lib/reading.js";
 
 const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID || "demo-reading-api";
 if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST || !process.env.FIREBASE_DATABASE_EMULATOR_HOST || !projectId.startsWith("demo-")) {
@@ -189,6 +190,35 @@ test("입장권 — 서버가 반 구성원인지 본 뒤 이름표 · 캐릭터
   const teacher = (await tree()).who[ids.teacher];
   assert.deepEqual({ n: teacher.n, r: teacher.r, ps: teacher.ps }, { n: "선생님", r: 1, ps: 0 });
   assert.equal(JSON.stringify(teacher).includes("담임"), false);
+});
+
+test("입장권 — 독서 레벨(레벨 옷)을 싣는다: 반 집계(지금 셈)가 먼저, 없으면 프로필의 레벨 · 선생님은 싣지 않음", async () => {
+  // a — 반 집계가 옛 셈(totalXp만)이고 프로필의 레벨도 없음 → 싣지 않음(받는 쪽은 기본 옷)
+  await enter("a");
+  assert.equal("lv" in (await tree()).who[ids.a], false);
+  // 프로필의 레벨(서버가 적어 둔 값)이 있으면 그것을
+  await db.doc(`users/${ids.a}`).update({ readingLevel: 7 });
+  await enter("a");
+  assert.equal((await tree()).who[ids.a].lv, 7);
+  assert.equal(readPlazaLiveWho((await tree()).who[ids.a], Date.now()).level, 7);
+  // 반 집계가 지금 셈이면 그 레벨이 먼저(프로필보다 새 값)
+  const xp = getExpForReadingLevel(10);
+  await db.doc(`classes/${CLASS}/readingMembers/${ids.a}`).set({
+    uid: ids.a, totalXp: xp, level: getReadingLevel(xp), totalPages: 0, completedBooks: 0, reviewCount: 0, longestStreak: 0, streakRun: 0,
+    badges: [], events: [], lastReadDate: null, formula: READING_FORMULA,
+  });
+  await enter("a");
+  assert.equal((await tree()).who[ids.a].lv, 10);
+  // 선생님은 프로필에 무엇이 있어도 싣지 않음(받는 쪽이 r=1을 보고 늘 Lv.10 옷)
+  await db.doc(`users/${ids.teacher}`).update({ readingLevel: 3 });
+  await enter("teacher");
+  const teacher = (await tree()).who[ids.teacher];
+  assert.equal("lv" in teacher, false);
+  assert.equal(readPlazaLiveWho(teacher, Date.now()).level, null);
+  // 다른 시험이 보는 값으로 되돌림
+  await db.doc(`classes/${CLASS}/readingMembers/${ids.a}`).set({ totalXp: 500 });
+  await db.doc(`users/${ids.a}`).update({ readingLevel: FieldValue.delete() });
+  await db.doc(`users/${ids.teacher}`).update({ readingLevel: FieldValue.delete() });
 });
 
 test("입장권 — 반 밖 · 사용 중지 · 다른 반 교사 · 광장을 끈 반에는 주지 않는다", async () => {
