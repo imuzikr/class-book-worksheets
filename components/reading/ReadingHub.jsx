@@ -188,7 +188,7 @@ function Modal({ title, onClose, children, wide = false, busy = false }) {
 // 활동은 지우지 않습니다 — 칸만 감추고 값은 그대로 저장됩니다(다시 켜면 그대로).
 // introApart · introSlot — 교사 책 봄(TeacherReadingView)이 소개 카드를 명단 위 맨 윗줄(introSlot)에 띄우게 합니다(선생님 요청 ·
 //   2026년 11월). introApart인데 자리가 아직 없으면 카드를 그리지 않습니다(한 번 그렸다가 옮겨 가며 깜빡이지 않게).
-export default function ReadingHub({ classId, user, isTeacher = false, bookSearchOn = false, petOn = false, plazaOn = false, hideoutOn = false, talkOn = false, characterOn = true, onDisabled, activities = [], onOpenActivity, activitiesOn = true, initialBookId = null, initialTab = "library", student = null, classroom = null, plazaCall = 0, petFeed = null, myFruit = 0, petPreview = false, teacherTools = null, onOpenOwnHideout = null, onOpenHideoutGallery = null, introApart = false, introSlot = null }) {
+export default function ReadingHub({ classId, user, isTeacher = false, bookSearchOn = false, petOn = false, plazaOn = false, hideoutOn = false, talkOn = false, characterOn = true, onDisabled, activities = [], onOpenActivity, activitiesOn = true, initialBookId = null, initialTab = "library", student = null, classroom = null, plazaCall = 0, petFeed = null, myFruit = 0, petPreview = false, teacherTools = null, onOpenOwnHideout = null, onOpenHideoutGallery = null, introApart = false, introSlot = null, classControls = null }) {
   // student가 있으면 교사가 그 학생의 책 봄을 보는 읽기 전용 화면입니다(선생님 결정 — 감상·발자국까지 전부 보임).
   const readOnly = !!student?.uid;
   const viewUid = readOnly ? student.uid : user?.uid;
@@ -429,10 +429,14 @@ export default function ReadingHub({ classId, user, isTeacher = false, bookSearc
   // 소개 카드(통계 · 대표 뱃지 · 캐릭터 · 펫). 교사 화면은 명단 위 맨 윗줄(introSlot)에, 학생 화면은 탭 줄 위 그대로.
   // 학생 본인 화면도 교사가 학생을 볼 때와 같은 모양 — 제목 덩이('책 봄 · 반 이름' 머리줄 · '한 페이지씩…' 문구 · 안내 한 줄)를
   // 그리지 않습니다(선생님 요청 · 2026년 11월 — 교사 쪽을 먼저 걷었고 학생 쪽도 같게. 한때 그 덩이가 카드 높이를 정해 캐릭터 · 펫 카드
-  // 아래위가 비었음 · 되살리지 마세요). 학생의 '책 봄' 제목 · 반 이름(반 고르개) · '출석하기'는 책방 페이지의 머리말(books-head)에 섭니다.
+  // 아래위가 비었음 · 되살리지 마세요). 학생 책 봄에는 머리말 줄이 없습니다 — '책 봄' 제목은 걷었고(상단바의 '책 봄'이 말함), 반 이름
+  // (반 고르개) · '출석하기'만 이 카드의 통계 위 한 줄(classControls)로 섭니다(선생님 요청 · 2026년 11월).
   const intro = (
     <div className={`reading-intro reading-intro--profile ${readOnly ? "reading-intro--teacher" : "reading-intro--student"}${ownStudent ? " has-profile" : ""}${showPet ? " has-pet" : ""}`}>
       <div className="reading-intro-main">
+      {/* 학생 본인 — 반 이름(여러 반이면 반 고르개) · '출석하기'가 통계(독서 레벨) 위에 섭니다(책방 페이지가 넘김 · 선생님 요청 · 2026년 11월).
+          머리말 줄의 '책 봄' 제목은 걷었습니다. 통계 칸의 남는 높이 안에 서서 카드를 높이지 않습니다(넓은 화면 — 높이는 세 카드가 정함). */}
+      {ownStudent && classControls && <div className="reading-intro-class">{classControls}</div>}
       {raw && !loading ? <ReadingSummary stats={stats} compact /> : <p className="reading-intro-loading" role="status">{loading ? "독서 기록을 불러오고 있어요." : "독서 정보를 불러오지 못했어요."}</p>}
       </div>
       {(ownStudent || readOnly) && <div className="reading-intro-side">

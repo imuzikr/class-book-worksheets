@@ -869,6 +869,17 @@ function BooksPageInner() {
       <span className="book-group-class">{activeClassName}</span>
     ) : null;
 
+  // 학생 책 봄에서는 반 이름(여러 반이면 반 고르개)과 '출석하기'가 머리말이 아니라 소개 카드 안에 섭니다(ReadingHub의 classControls).
+  // 반을 바꾸면 책 봄이 그 반 것으로 새로 그려져(key) 고르개도 새로 생기며 초점을 잃으므로, 바꾼 직후 새 고르개로 초점을 돌려줍니다
+  // (키보드 화살표로 반을 넘기는 학생 — 윈도의 닫힌 고르개는 화살표 한 번마다 바뀜).
+  const studentClassSelectRef = useRef(null);
+  const refocusClassSelectRef = useRef(false);
+  useEffect(() => {
+    if (!refocusClassSelectRef.current) return;
+    refocusClassSelectRef.current = false;
+    studentClassSelectRef.current?.focus({ preventScroll: true });
+  }, [classId]);
+
   const pageClassControls = (
     <>
       {admin && myClasses.length > 0 && (
@@ -889,10 +900,14 @@ function BooksPageInner() {
       {/* 학생이 여러 반에 속해 있으면 직접 고를 수 있게 (한 반이면 이름만) */}
       {!admin && membershipIds.length > 1 ? (
         <select
+          ref={studentClassSelectRef}
           className="study-class-select"
           aria-label="반 고르기"
           value={classId ?? ""}
-          onChange={(e) => setSelectedClassId(e.target.value)}
+          onChange={(e) => {
+            if (e.target.value !== classId) refocusClassSelectRef.current = true;
+            setSelectedClassId(e.target.value);
+          }}
         >
           {membershipIds.map((cid) => (
             <option key={cid} value={cid}>
@@ -928,10 +943,12 @@ function BooksPageInner() {
       )}
     </>
   );
+  // 책방 · 리더보드 · 관리자 설정의 머리말. 책 봄은 이 머리말을 쓰지 않습니다 — 선생님은 반 고르개 줄(아래), 학생은 머리말 없이
+  // 소개 카드 안에 반 이름 · '출석하기'(선생님 요청 · 2026년 11월 — '책 봄' 제목은 상단바의 '책 봄'이 말함).
   const pageHeading = (
     <div className="books-head-main">
       <h1>
-        {settingsOpen ? <IconSettings size={26} /> : leaderboardOpen ? <IconTrophy size={26} /> : <IconBook size={26} />} {settingsOpen ? "관리자 설정" : leaderboardOpen ? "리더보드" : readingOpen ? "책 봄" : "책방"}
+        {settingsOpen ? <IconSettings size={26} /> : leaderboardOpen ? <IconTrophy size={26} /> : <IconBook size={26} />} {settingsOpen ? "관리자 설정" : leaderboardOpen ? "리더보드" : "책방"}
       </h1>
       {pageClassControls}
     </div>
@@ -1236,10 +1253,13 @@ function BooksPageInner() {
         />
       ) : (
         <main className="books-main">
-          {/* 학생 책 봄도 다른 화면처럼 이 머리말(책 봄 · 반 이름 · 출석하기)이 소개 카드 위에 섭니다 — 소개 카드는 교사가 학생을 볼 때와
-              같은 모양(통계 · 대표 뱃지 · 캐릭터 · 펫, 제목 덩이 없음 — 선생님 요청 · 2026년 11월). 한때 이 머리줄을 '한 페이지씩…' 문구와
-              함께 카드 안 왼쪽에 두어 그 덩이가 카드 높이를 정했고, 세 카드 아래위가 비었습니다. */}
-          <div className="books-head">{readingOpen && admin ? <div className="books-head-main">{pageClassControls}</div> : pageHeading}</div>
+          {/* 학생 책 봄에는 이 머리말 줄이 없습니다(선생님 요청 · 2026년 11월) — '책 봄' 제목은 걷었고(상단바의 '책 봄'이 말함), 반 이름
+              (여러 반이면 반 고르개)과 '출석하기'는 소개 카드 안 통계(독서 레벨) 위에 섭니다(ReadingHub의 classControls). 소개 카드는 교사가
+              학생을 볼 때와 같은 모양(통계 · 대표 뱃지 · 캐릭터 · 펫)이고, 한때 카드 안 왼쪽에 서서 카드 높이를 정하던 제목 덩이('책 봄 · 반
+              이름 · 출석하기' 머리줄 + '한 페이지씩…' 문구)는 되살리지 않습니다 — 반 이름 한 줄은 통계 칸의 남는 높이 안에 섭니다. */}
+          {readingOpen
+            ? admin && <div className="books-head"><div className="books-head-main">{pageClassControls}</div></div>
+            : <div className="books-head">{pageHeading}</div>}
 
           {settingsOpen ? (
             <AdminSettingsPanel classes={myClasses} onToast={setToast} />
@@ -1259,7 +1279,7 @@ function BooksPageInner() {
             <ReadingHub key={`${classId}:${myUid}`} classId={classId} user={user} isTeacher={admin} bookSearchOn={bookSearchEnabled(currentClass)} petOn={petOn}
               petFeed={petFeed} myFruit={myFruit} petPreview={petPreview}
               plazaOn={plazaOn(currentClass)} hideoutOn={hideoutOn(currentClass)} talkOn={plazaTalkOn(currentClass)} characterOn={characterOn} classroom={classroomProps}
-              plazaCall={plazaCall}
+              plazaCall={plazaCall} classControls={pageClassControls}
               activities={booksHidden ? [] : liveActivities} onOpenActivity={booksHidden ? undefined : goToActivity} activitiesOn={!booksHidden}
               initialBookId={searchParams.get("book")} initialTab={searchParams.get("tab") || "library"}
               onDisabled={() => patchBooksQuery({ area: null }, { replace: true })} />

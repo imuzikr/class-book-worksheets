@@ -1,5 +1,8 @@
 .reading-hub { --reading-ink:#20364a; --reading-teal:#24786f; --reading-line:#dde5df; --reading-paper:#fffefa; color:var(--reading-ink); width:100%; min-width:0; padding:8px 0 28px; }
 .reading-hub *, .reading-modal * { box-sizing:border-box; }
+/* 학생 책 봄에는 머리말 줄이 없어(반 이름 · '출석하기'는 소개 카드 안 — 선생님 요청 · 2026년 11월) 책 봄이 본문 맨 위에 섭니다 —
+   다른 화면의 머리말처럼 본문 여백(24px)에서 곧바로 시작하게 위 여백을 걷습니다. */
+.books-main > .reading-hub:first-child { padding-top:0; }
 .reading-intro { display:flex; justify-content:space-between; align-items:center; gap:24px; padding:24px 28px; border:1px solid #d9e6dc; border-radius:18px; background:linear-gradient(110deg,#eef5ec 0%,#f7f7ed 65%,#edf3ef 100%); }
 .reading-eyebrow { margin:0 0 8px; color:#547466; font-size:10px; font-weight:800; letter-spacing:.2em; }
 .reading-intro h2 { margin:0; color:#203d37; font-size:clamp(19px,2.3vw,28px); font-weight:750; letter-spacing:-.04em; line-height:1.35; }
@@ -42,6 +45,13 @@
 .reading-intro--profile > .reading-intro-main { display:flex; flex:1 1 300px; min-width:0; flex-direction:column; justify-content:center; gap:10px; container:readingstats / inline-size; }
 .reading-intro--profile .reading-intro-main > .reading-summary--compact { flex:none; width:100%; max-width:500px; align-self:flex-start; grid-template-columns:repeat(2,minmax(0,1fr)); }
 .reading-intro--profile .reading-intro-main > .reading-intro-loading { flex:none; margin:0; }
+/* 학생 본인 — 통계 위의 반 이름 줄(반 이름 알약 · 여러 반이면 반 고르개 · '출석하기'). 책 봄에는 머리말 줄이 없어 이 줄이 반을 말합니다
+   (선생님 요청 · 2026년 11월). 넓은 화면에서는 통계 칸의 남는 높이 안에 서서 카드를 높이지 않습니다(카드 높이는 세 카드가 정함). */
+.reading-intro-class { display:flex; flex-wrap:wrap; align-items:center; gap:8px; min-width:0; }
+.reading-intro-class:empty { display:none; }
+.reading-intro-class .books-class-name { min-width:0; max-width:100%; overflow-wrap:anywhere; }
+.reading-intro-class .study-class-select { height:34px; min-width:0; max-width:100%; padding:0 12px; }
+.reading-intro-class .books-attend-btn { height:34px; padding:0 14px; font-size:14px; display:inline-flex; align-items:center; white-space:nowrap; }
 .reading-intro--profile .reading-intro-main .reading-summary--compact > div { min-height:36px; padding:3px 6px; border-left:0; border-top:0; }
 .reading-intro--profile .reading-intro-main .reading-summary--compact > div:nth-child(even) { border-left:1px solid #d9e3d8; }
 .reading-intro--profile .reading-intro-main .reading-summary--compact > div:nth-child(n+3) { border-top:1px solid #d9e3d8; }
