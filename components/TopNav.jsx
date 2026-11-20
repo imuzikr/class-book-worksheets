@@ -28,7 +28,6 @@ import { useCurrentUser } from "@/lib/useCurrentUser";
 import UserProfile from "./UserProfile";
 import NotificationBell from "./NotificationBell";
 import QuestionSignalButton from "./QuestionSignalButton";
-import ClassNoticeButton from "./ClassNoticeButton";
 import RoleSwitcher from "./RoleSwitcher";
 import SampleClassBar from "./SampleClassBar";
 import { canUseSampleClass, enterSampleClass } from "@/lib/sampleClass";
@@ -322,8 +321,8 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
   }
 
   // 반 공지 대상 — 지금 보고 있는 반의 이름과 학생 수. 교사가 '몇 명에게
-  // 가는지'를 보고 보내도록 버튼에 함께 띄웁니다(잘못된 반에 보내는 실수를
-  // 줄이는 가장 값싼 방법입니다). 상단바 📢와 떠 있는 동그라미의 '공지 보내기'가 함께 씁니다.
+  // 가는지'를 보고 보내도록 떠 있는 동그라미의 '공지 보내기' 창 머리에 띄웁니다(잘못된 반에
+  // 보내는 실수를 줄이는 가장 값싼 방법입니다). 반 이름은 손들기 단추도 씁니다.
   // 체험반(데모)에서도 셉니다 — 데모 반의 소속(lib/demoClassroom.js)이 있어 '학생 15명'으로 보입니다.
   const noticeMemberUids = useClassMembers(broadcastClassId, admin);
   const [noticeClassName, setNoticeClassName] = useState("");
@@ -474,7 +473,7 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
         <ClassTopReaders classId={hubClassId} enabled={topOn} charactersOn={topCharacters} myUid={myUid} myCharacter={myCharacter} />
       </div>
 
-      {/* ④ 오른쪽 끝: 손들기 + 확성기 + 과일 뱃지 + 알림 + 프로필.
+      {/* ④ 오른쪽 끝: 손들기 + 과일 뱃지 + 알림 + 프로필(교사의 확성기 📢는 걷음 — 반 공지는 떠 있는 동그라미의 '공지 보내기').
           **늘 눈에 띄어야 하는 것들이라 로고와 같은 줄입니다.** 한때 이동
           메뉴와 함께 둘째 줄로 내렸는데, 그러면 첫 줄 오른쪽이 통째로 비어
           전광판의 '가운데'가 오른쪽으로 치우쳤고 아이콘도 메뉴 줄에 얹혀
@@ -482,27 +481,20 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
       <div className="user-area">
         <SampleClassBar />
         {!isFirebaseConfigured && <RoleSwitcher />}
-        {/* 손들기 → 반 공지(교사) → 알림 순 — **교사·학생 같은 차례**입니다(선생님 요청).
-            손들기는 반 안의 일이라 확성기 왼쪽에 두고, 확성기는 그 반에만 보내는 것이라
+        {/* 손들기 → 알림 순 — **교사·학생 같은 차례**입니다(선생님 요청). 손들기는 반 안의 일이라
             개인 알림(종) 왼쪽에 둡니다 — 왼쪽으로 갈수록 범위가 좁습니다.
             **손바닥이 맨 왼쪽**인 까닭: 교사 화면의 손바닥은 학생이 손을 들었을
             때만 나타나는데(없을 때는 같은 크기의 빈 상자가 자리만 지킴), 줄
-            끝에 있어야 나타나고 사라져도 늘 서 있는 확성기가 제자리에 머뭅니다.
-            한때 손바닥 오른쪽에 돌발 퀴즈 메모지가 섰는데, 돌발 퀴즈를 앱에서 걷으며
-            함께 걷었습니다(선생님 요청 · 2026년 11월 — 되살리지 마세요). */}
+            끝에 있어야 나타나고 사라져도 옆 단추가 제자리에 머뭅니다.
+            한때 손바닥 오른쪽에 돌발 퀴즈 메모지가, 그 오른쪽에 교사의 반 공지 확성기(📢 — ClassNoticeButton)가
+            섰는데 둘 다 걷었습니다(선생님 요청 · 2026년 11월 — 되살리지 마세요). 반 공지는 떠 있는 동그라미의
+            '공지 보내기'(components/NoticeSendPanel.jsx) 한 곳에서 보냅니다. */}
         {user && broadcastClassId && (
           <QuestionSignalButton
             classId={broadcastClassId}
             user={user}
             isTeacher={admin}
             className={noticeClassName}
-          />
-        )}
-        {admin && user && broadcastClassId && (
-          <ClassNoticeButton
-            classId={broadcastClassId}
-            className={noticeClassName}
-            memberCount={noticeMemberCount}
           />
         )}
         {/* 눌러서 '언제 얼마나 받았는지'까지 — 숫자만으로는 요즘 어떤지가
@@ -559,7 +551,8 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
         책 봄에서는 '독서로 검색' · '성장·뱃지'(선생님은 '공지 보내기'도)만 켜고 나머지는 흐린 회색 — 학생도 교사처럼, 예외 없이
         (선생님 결정 · lib/hubPlace.js의 hubLibraryOnly — 책방과 리더보드를 모두 끈 반의 학생도).
         '성장·뱃지' 행성은 책 봄에서만 섭니다(badgesOn — 자료는 책 봄이 lib/readingBadgeBridge.js에 건 것).
-        '공지 보내기'(선생님만)는 상단바 📢와 같은 반 · 같은 학생 수로 보냅니다(noticeClassName · noticeMemberCount). */}
+        '공지 보내기'(선생님만)는 선생님이 고른 반으로, 그 반 이름 · 학생 수를 창 머리에 띄웁니다(noticeClassName · noticeMemberCount).
+        반 공지를 보내는 길은 이 행성 하나입니다(상단바 📢는 걷음 — 선생님 요청). */}
     {user && (
       <FloatingHub
         classId={hubClassId}
@@ -581,7 +574,7 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
         있던 사람도 책 광장 탭으로 데려갑니다. 상단바가 모든 화면에 떠 있어 여기 하나면 어디서나 뜹니다. */}
     {user && hubClassId && <ClassMoveBanner classId={hubClassId} isTeacher={admin} />}
 
-    {/* 공지를 학생 화면에 크게 — 선생님이 떠 있는 동그라미의 '공지 보내기'(또는 상단바 📢)로 보낸 반 공지를, 학생이 어느 공간에
+    {/* 공지를 학생 화면에 크게 — 선생님이 떠 있는 동그라미의 '공지 보내기'로 보낸 반 공지를, 학생이 어느 공간에
         있든(광장 · 교실 · 아지트 · 책꽂이 · 책방 …) 화면 가운데에 글자만 잠시(선생님 요청). 상단바가 모든 화면에 떠 있어 여기 하나면 됩니다. */}
     {user && !admin && hubClassId && <ClassNoticeSpotlight classId={hubClassId} uid={myUid} />}
 

@@ -224,7 +224,7 @@
 /* 휴대폰 상단바 — 누르는 곳은 모두 36px 이상(검수반장 지적, 손가락 기준).
    이동 메뉴(책방·책 봄)는 위 480px 규칙에서 34px → 36px로 맞췄습니다.
    책나눔 홈·과일은 min-height로 상자를 키워도 가로가 늘지 않아 줄이 안 늘어납니다.
-   종·확성기·손들기는 **보이는 상자(main과 같은 ≈28px)는 그대로** 두고
+   종·손들기는 **보이는 상자(main과 같은 ≈28px)는 그대로** 두고
    ::before로 누르는 곳만 넓힙니다 — 상자를 키우면 알림 종이 있을 때
    390폭에서 상단바가 두 줄이 됩니다(검수반장 PR #66).
    (한때 손들기 오른쪽의 돌발 퀴즈 표시 때문에 손들기의 누르는 곳을 오른쪽으로만
@@ -232,7 +232,6 @@
    768px 이상은 바꾸지 않습니다. */
 @media (max-width: 767.98px) {
   .topbar-book-navigation .logo-button { min-height: 36px; }
-  .topbar-book-navigation .notice-wrap .notice-btn::before,
   .topbar-book-navigation .notif-wrap .notif-btn::before {
     content: "";
     position: absolute;

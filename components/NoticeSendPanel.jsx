@@ -8,7 +8,7 @@
 // 되살리지 마세요.
 //   · 위에 보낸 공지(최근 20건 — 옛것이 위 · 새것이 아래), 아래에 쓰는 칸. **Enter로 보내기 · Shift+Enter 줄바꿈**(광장 대화와
 //     같은 손놀림 — lib/useEnterSend.js 한 곳. 앱의 다른 채팅 칸은 그대로 Ctrl/⌘+Enter).
-//   · 보낸 공지는 반 공지 그대로(classes/{c}/classNotices — 상단바 📢와 같은 곳 · 알림 벨 · 메신저 '공지' 탭도 같은 공지)이고,
+//   · 보낸 공지는 반 공지 그대로(classes/{c}/classNotices — 알림 벨 · 메신저 '공지' 탭도 같은 공지)이고,
 //     학생 화면에는 어디에 있든(광장 · 교실 · 아지트 · 책꽂이 · 책방 …) 가운데에 글자만 잠시 뜹니다
 //     (components/reading/ClassNoticeSpotlight.jsx). 보낸 공지는 고치거나 지울 수 없습니다(학생이 이미 읽었을 수 있음).
 //   · 쓰던 글은 창을 닫아도(× · Esc · 바깥 누르기 · 동그라미) 이 화면에 남습니다 — 반마다 따로(drafts). 보내면 지웁니다.
@@ -21,7 +21,7 @@ import { CLASS_NOTICE_MAX, sendClassNotice, subscribeClassNotices } from "@/lib/
 import { noticeMs } from "@/lib/classNoticeSpot";
 import { useEnterSend } from "@/lib/useEnterSend";
 
-// 보낸 공지는 최근 이만큼 — 상단바 📢의 '보낸 공지'와 같은 수(같은 질의라 구독을 함께 씀)
+// 보낸 공지는 최근 이만큼(한때 상단바 📢 팝오버의 '보낸 공지'와 같은 수 — 📢는 걷었고 반 공지를 보내는 길은 이 창 하나)
 const NOTICE_HISTORY = 20;
 // 쓰던 글 — 창을 닫았다 다시 열어도 남게(이 화면이 떠 있는 동안 · 반마다)
 const drafts = new Map();
@@ -36,7 +36,7 @@ function noticeClock(ms) {
 }
 
 // classId — 보낼 반(선생님이 고른 반) · className — 그 반 이름(머리에 적어 엉뚱한 반에 보내지 않게) · memberCount — 학생 수
-// (보낸 기록에 남김 — 상단바 📢와 같은 값)
+// (보낸 기록에 남김 — TopNav가 그 반 소속으로 셈)
 export default function NoticeSendPanel({ classId, className = "", memberCount = 0, onClose }) {
   const [list, setList] = useState(null);           // null = 아직 첫 답 전
   const [draft, setDraft] = useState(() => drafts.get(classId) ?? "");

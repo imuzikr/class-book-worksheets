@@ -6,7 +6,7 @@
 }
 
 /* ── 상단바 — 넓은 화면에서 **한 줄**입니다 ─────────────────────
-   로고 '책나눔' · 이동 메뉴 …… 독서 TOP 3 …… 손들기/확성기/과일/알림 · 프로필
+   로고 '책나눔' · 이동 메뉴 …… 독서 TOP 3 …… 손들기/과일/알림 · 프로필
 
    **1180px 아래에서는 이동 메뉴만 2행으로** 내려갑니다(아래 1179px 규칙 —
    order와 `.topbar-gap`). 768px 이하는 따로(모바일 블록).
@@ -58,7 +58,7 @@
   flex-shrink: 0;
 }
 
-/* ── 첫 줄 오른쪽 끝 — 손들기 · 확성기 · 과일 · 알림 · 프로필 ──
+/* ── 첫 줄 오른쪽 끝 — 손들기 · 과일 · 알림 · 프로필 ──
    늘 눈에 띄어야 하는 것들이라 로고와 **같은 줄**입니다. 한때 2행으로
    내렸는데, 그러면 1행 오른쪽이 통째로 비고
    아이콘은 메뉴 줄에 얹혀 눈에 덜 들어왔습니다.
@@ -325,7 +325,7 @@
   position: relative;
   font-size: 18px;
   line-height: 1;
-  /* 5px → 28px 상자. 메모지·확성기와 같은 값입니다(아래 .notice-btn 참고) */
+  /* 5px → 28px 상자 — 옆의 손바닥(28px)과 같은 크기(한때 메모지 · 확성기도 같은 값이었는데 둘 다 걷음) */
   padding: 5px;
   background: none;
   border: none;
@@ -347,99 +347,4 @@
   font-weight: 800;
   display: grid;
   place-items: center;
-}
-/* 반 공지(교사) — 상단바 확성기 버튼과 그 팝오버.
-   버튼 모양은 옆의 알림 종(.notif-btn)과 같게 맞춥니다 — 나란히 선 아이콘
-   둘이 크기·여백이 다르면 줄이 흐트러져 보입니다. */
-.notice-wrap {
-  position: relative;
-  flex-shrink: 0;
-}
-.notice-wrap .notice-btn {
-  position: relative;
-  font-size: 18px;
-  line-height: 1;
-  /* 종·메모지와 같은 5px — 세 아이콘의 상자를 8px에서 줄여 사이를 좁혔습니다.
-     여백은 곧 아이콘 사이 거리라, 여기만 남겨 두면 한 개만 떨어져 보입니다. */
-  padding: 5px;
-  background: none;
-  border: none;
-}
-.notice-wrap .notice-btn:hover {
-  background: var(--neutral);
-}
-.notice-pop {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 300;
-  width: 320px;
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(46, 36, 26, 0.14);
-  padding: 12px;
-}
-.notice-pop-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-.notice-pop-head strong {
-  font-size: 13.5px;
-  color: var(--text);
-}
-/* 어느 반에 몇 명에게 가는지 — 잘못된 반에 보내는 실수를 막는 자리라
-   흐리게 두지 않고 읽히는 색으로 둡니다. */
-.notice-pop-target {
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--primary-dark);
-  white-space: nowrap;
-}
-.notice-pop-field {
-  width: 100%;
-  box-sizing: border-box;
-  resize: vertical;
-  font-family: inherit;
-  font-size: 13.5px;
-  line-height: 1.6;
-}
-.notice-pop-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-top: 8px;
-}
-.notice-pop-left {
-  font-size: 11.5px;
-  color: var(--text-sub);
-}
-.notice-pop-left.warn {
-  color: var(--danger);
-  font-weight: 700;
-}
-.notice-pop-send {
-  padding: 7px 16px;
-  font-size: 13px;
-}
-.notice-pop-result {
-  margin: 8px 0 0;
-  font-size: 12.5px;
-  font-weight: 700;
-}
-.notice-pop-result.ok {
-  color: var(--primary-dark);
-}
-.notice-pop-result.bad {
-  color: var(--danger);
-}
-.notice-pop-hint {
-  margin: 8px 0 0;
-  font-size: 11.5px;
-  line-height: 1.5;
-  color: var(--text-sub);
 }

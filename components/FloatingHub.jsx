@@ -216,8 +216,8 @@ function ChatIcon({ size = 26 }) {
 // classId — 지금 보는 반(교사는 공부방에서 고른 반, 학생은 소속 반).
 // libraryOnly — 책 봄 화면이면 참(상단바가 hubLibraryOnly로 셈) — '독서로 검색' · '성장·뱃지' 말고는 흐린 회색으로 꺼 둡니다.
 // badgesOn — 책 봄 화면이면 참 — '성장·뱃지' 행성을 세웁니다(자료는 책 봄이 다리에 건 것).
-// noticeClassName · noticeMemberCount — [교사] 공지를 보낼 반(= classId, 선생님이 고른 반)의 이름과 학생 수(상단바 📢와 같은 값 —
-// TopNav가 넘김). 공지는 메신저 창에서 고른 반이 아니라 늘 이 반으로 갑니다.
+// noticeClassName · noticeMemberCount — [교사] 공지를 보낼 반(= classId, 선생님이 고른 반)의 이름과 학생 수(TopNav가 넘김).
+// 공지는 메신저 창에서 고른 반이 아니라 늘 이 반으로 갑니다. 반 공지를 보내는 길은 이 행성 하나입니다(상단바 📢는 걷음).
 // 교사의 메신저는 이와 따로 **창 맨 위에서 반을 고릅니다**(chatClassId) —
 // 어느 화면에서든 원하는 반과 대화하고, 공부방의 반은 안 바뀝니다.
 export default function FloatingHub({ classId: pageClassId, user, isTeacher, fruitOn = true, lifted = false, libraryOnly = false, badgesOn = false, noticeClassName = "", noticeMemberCount = 0 }) {
@@ -665,7 +665,7 @@ export default function FloatingHub({ classId: pageClassId, user, isTeacher, fru
           ) : panel === HUB_BADGES_KEY ? (
             <ReadingBadgePanel entry={badgeEntry} isTeacher={!!isTeacher} onClose={closePanel} />
           ) : (
-            // 공지는 메신저 창에서 고른 반(chatClassId)이 아니라 선생님이 고른 반(pageClassId)으로 — 상단바 📢와 같은 반
+            // 공지는 메신저 창에서 고른 반(chatClassId)이 아니라 선생님이 고른 반(pageClassId)으로 — 손들기 · 방송과 같은 반
             <NoticeSendPanel classId={pageClassId} className={noticeClassName} memberCount={noticeMemberCount} onClose={closePanel} />
           )}
         </PanelCloseContext.Provider>
