@@ -4,9 +4,10 @@
 // -------------------------------------------------------------
 // 상단바(TopNav)가 학생 화면에만 답니다. 상단바는 모든 화면에 떠 있으므로 학생이 책 광장 · 교실 · 개인 아지트 · 책꽂이 ·
 // 책방 · 리더보드 · 분석 리포트 어디에 있든 뜹니다('모두 이동'의 알림 띠와 같은 자리 잡기).
-//   · **모양은 배움나눔의 '해설 띄우기'(수업 모드 — 슬라이드 위에 덮는 해설) 그대로입니다** — 화면을 어둡게 덮고 가운데에
-//     '공지사항' 제목과 공지 글만 크게. 카드 · 테두리 · 단추가 없고, 글 길이에 따라 5 ~ 30초 머물다 저절로 사라집니다
-//     (noticeFlashMs). 한때 흰 카드에 '확인' 단추였는데 선생님이 이 모양을 고르셨습니다 — 카드로 되돌리지 마세요.
+//   · **모양은 배움나눔의 '해설 띄우기'(수업 모드 — 슬라이드 위에 덮는 해설)를 따릅니다** — 화면을 어둡게 덮고 가운데에
+//     **공지 글만** 크게. 카드 · 테두리 · 단추가 없고, 글 길이에 따라 5 ~ 30초 머물다 저절로 사라집니다(noticeFlashMs).
+//     한때 흰 카드에 '확인' 단추였는데 선생님이 이 모양을 고르셨습니다 — 카드로 되돌리지 마세요. 글 위의 '공지사항' 제목 ·
+//     보낸 선생님 · 시각도 걷었습니다(선생님 요청 — 되살리지 마세요). 읽어 주는 기기에만 '공지사항:'을 숨겨 둡니다(sr-only).
 //   · 아무 데나 누르거나 Esc로 먼저 닫습니다. **초점은 옮기지 않습니다** — 쓰던 글 칸 · 걷던 무대가 그대로 키를 받습니다.
 //   · 여러 개면 보낸 차례대로 하나씩(nextNoticeFlash). 화면이 가려진 동안(다른 탭 · 잠긴 기기)은 띄우지 않고 세던 시간도
 //     멈춥니다 — 돌아와서 봅니다. 아주 긴 글은 화면에 들도록 글자를 줄이고(15px까지), 그래도 넘치면 화면 안에서 구릅니다.
@@ -40,12 +41,6 @@ function readLocal(key) {
 }
 function writeLocal(key, ms) {
   try { window.localStorage.setItem(key, String(ms)); } catch { /* 저장을 막은 기기 — 이 화면 안에서만 기억 */ }
-}
-function clockOf(ms) {
-  const d = new Date(ms);
-  if (Number.isNaN(d.getTime())) return "";
-  const h = d.getHours();
-  return `${h < 12 ? "오전" : "오후"} ${h % 12 || 12}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 export default function ClassNoticeSpotlight({ classId, uid }) {
@@ -197,11 +192,7 @@ export default function ClassNoticeSpotlight({ classId, uid }) {
       onClick={dismiss}
     >
       <div className="notice-spot-inner">
-        <div className="notice-spot-head">
-          <h2 className="notice-spot-title">공지사항</h2>
-          <span className="notice-spot-meta">{current.senderName ? `${current.senderName} · ` : "선생님 · "}{clockOf(current.ms)}</span>
-        </div>
-        <p className="notice-spot-text">{current.text}</p>
+        <p className="notice-spot-text"><span className="sr-only">공지사항: </span>{current.text}</p>
       </div>
     </div>,
     document.body,

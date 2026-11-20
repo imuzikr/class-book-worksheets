@@ -2,8 +2,9 @@
    공지사항을 학생 화면 가운데에 글자만 잠시 (components/reading/ClassNoticeSpotlight.jsx — 선생님 요청 · 2026년 11월)
    -------------------------------------------------------------
    배움나눔의 '해설 띄우기'(수업 모드 — class-peer-qna의 .broadcast-note)와 같은 모양입니다: 화면 전체를 어둡게 덮고
-   카드 · 테두리 · 단추 없이 가운데에 '공지사항' 제목(연한 살구)과 공지 글(흰색)만 크게. 글자 크기 · 덮개 짙기 · 폭(1180px)도
-   그쪽 값 그대로라 두 앱에서 같은 글로 읽힙니다. 한때 흰 카드 + '확인' 단추였습니다 — 되살리지 마세요.
+   카드 · 테두리 · 단추 없이 가운데에 공지 글(흰색)만 크게. 글자 크기 · 덮개 짙기 · 폭(1180px)도 그쪽 값 그대로라 두 앱에서
+   같은 글로 읽힙니다. 한때 흰 카드 + '확인' 단추였습니다 — 되살리지 마세요. 글 위의 '공지사항' 제목(연한 살구) · 보낸 선생님 ·
+   시각도 걷었습니다(선생님 요청 — 되살리지 마세요).
    짧은 공지는 글 덩이가 제 폭만큼만 서서 화면 한가운데에, 긴 공지는 1180px 안에서 왼쪽 맞춤으로 흐릅니다.
    z-index 3350 — 수업 화면 강제 전환(3000) · 폭죽(3200) · 참여 코드 전체 화면(3300) 위, '모두 이동' 띠(3400) 아래
    (카운트다운은 공지 위에서도 보입니다).
@@ -39,33 +40,9 @@
   max-width: 100%;
   min-width: 0;
   margin: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
 }
-.notice-spot-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 18px;
-  min-width: 0;
-}
-/* 멀리서도 읽히게 — 크기를 화면 폭에 매답니다(배움나눔 해설과 같은 값) */
-.notice-spot-title {
-  margin: 0;
-  font-size: clamp(30px, 4.6vw, 68px);
-  font-weight: 800;
-  line-height: 1.28;
-  color: var(--primary-light, #f8ece5);
-  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.35);
-}
-.notice-spot-meta {
-  font-size: clamp(14px, 1.25vw, 19px);
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.62);
-  overflow-wrap: anywhere;
-}
-/* 공지 글 — 줄바꿈 그대로. 화면에 안 들면 --spot-size로 줄어듭니다(ClassNoticeSpotlight의 맞추기) */
+/* 공지 글 — 멀리서도 읽히게 크기를 화면 폭에 매답니다(배움나눔 해설 본문과 같은 값) · 줄바꿈 그대로.
+   화면에 안 들면 --spot-size로 줄어듭니다(ClassNoticeSpotlight의 맞추기) */
 .notice-spot-text {
   margin: 0;
   color: #fff;
@@ -86,7 +63,6 @@
       max(20px, env(safe-area-inset-bottom, 0px))
       max(18px, env(safe-area-inset-left, 0px));
   }
-  .notice-spot-title { font-size: clamp(26px, 7.4vw, 40px); }
   .notice-spot-text { font-size: var(--spot-size, clamp(19px, 5.4vw, 30px)); }
 }
 @media (prefers-reduced-motion: reduce) {
