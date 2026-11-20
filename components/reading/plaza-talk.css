@@ -178,32 +178,6 @@
 .plaza-talk-unread { position: relative; display: inline-grid; place-items: center; }
 .plaza-talk-unread b { position: absolute; right: -8px; top: -8px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #d64b2a; color: #fff; font-size: 10.5px; line-height: 18px; text-align: center; }
 
-/* ── 공지사항 · 탭 줄 (선생님 요청 · 2026년 11월) ── 공지사항 창은 대화창과 같은 틀 · 같은 자리(.plaza-talk-panel)라, 열려 있는 동안
-   떠 있는 동그라미를 숨기는 규칙 · 안내 띠를 비키는 규칙(아래 '대화창이 열려 있는 동안')을 그대로 받습니다.
-   광장 대화가 열려 있으면 두 창 맨 위에 탭 줄 — 같은 크기 두 칸, 지금 보는 창이 살구빛. */
-.plaza-chat-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 0 0 8px; }
-.plaza-chat-tabs button {
-  position: relative; display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; height: 38px; padding: 0 8px;
-  border: 1px solid #e0cfb2; border-radius: 10px; background: #fffaf0; color: #5f4a38;
-  font: inherit; font-size: 13px; font-weight: 800; white-space: nowrap; cursor: pointer;
-}
-.plaza-chat-tabs button small { font-size: 11.5px; font-weight: 700; color: #8a7b66; }
-.plaza-chat-tabs button:hover { background: #fff; border-color: #b9925a; }
-.plaza-chat-tabs button.is-on { border-color: #c97a3c; background: #ffe3cf; color: #7a3d14; box-shadow: inset 0 -2px 0 #c97a3c; }
-.plaza-chat-tabs button:focus-visible { outline: 3px solid #378b81; outline-offset: 2px; }
-.plaza-chat-tabs svg, .plaza-chat-tabs img { flex: none; display: block; }
-.plaza-chat-tabs-new { position: absolute; right: -6px; top: -7px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #d64b2a; color: #fff; font-size: 10.5px; line-height: 18px; text-align: center; }
-/* 공지사항 창 — 제목의 확성기 · 안내 한 줄 · 보낸 공지(말풍선을 가로 가득) · 보냈다는 알림 */
-.plaza-notice-panel .plaza-talk-head h4 svg { flex: none; }
-.plaza-notice-panel .plaza-talk-head h4:focus { outline: none; }
-.plaza-notice-panel .plaza-talk-head h4:focus-visible { outline: 3px solid #378b81; outline-offset: 2px; border-radius: 6px; }
-.plaza-notice-lead { margin: 0 2px 6px; font-size: 12px; line-height: 1.5; color: #7a6452; word-break: keep-all; }
-.plaza-notice-line { align-items: stretch; }
-.plaza-notice-line .plaza-talk-who { display: flex; align-items: center; gap: 5px; color: #9a4a22; }
-.plaza-notice-line .plaza-talk-who time { font-size: 11.5px; font-weight: 800; color: #8a6a52; font-variant-numeric: tabular-nums; }
-.plaza-notice-bubble { max-width: 100%; border-radius: 12px; background: #fff3e4; box-shadow: 0 0 0 1px #f1c3a1; font-size: 14px; font-weight: 600; }
-.plaza-notice-sent { margin: 4px 2px 0; font-size: 12px; font-weight: 700; color: #2f6150; }
-
 /* 무대 칸이 좁으면 — 대화창은 아래쪽 창으로(아래 끝까지 — 떠 있는 동그라미는 숨김), 기다림 알림은 위쪽으로.
    접은 단추는 그대로 떠 있는 동그라미 위(접으면 동그라미가 다시 섬). */
 @container plazawrap (max-width: 640px) {

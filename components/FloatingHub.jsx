@@ -5,7 +5,9 @@
 // -------------------------------------------------------------
 // 화면 오른쪽 아래의 작은 동그라미(56px). 누르면 **큰 원으로 펼쳐지며**
 // 학생은 메신저 · 독서로 검색 · 내 출석부 · 과일 바구니 · 분석 리포트 다섯 개,
-// 교사는 출석 관리 · 반 관리가 포함된 여섯 개 기능이 둘레에 섭니다.
+// 교사는 공지 보내기 · 출석 관리 · 반 관리가 포함된 일곱 개 기능이 둘레에 섭니다.
+// '공지 보내기'(선생님만 — 선생님 요청 · 2026년 11월)는 한때 책 광장 · 교실 맵 위의 '공지사항' 단추였습니다 — 이 동그라미로
+// 옮겼습니다(맵 위 단추를 되살리지 마세요).
 // '독서로 검색'(학교 도서관 소장 검색 — 선생님 요청 · 2026년 11월)은 한때 돌발 퀴즈가 서던 자리입니다 —
 // 돌발 퀴즈는 앱에서 걷었습니다(되살리지 마세요).
 // KWLS 차트는 걷었습니다 — KWLS는 책방의 독서 활동으로만 씁니다.
@@ -13,20 +15,22 @@
 // [모양은 행성 궤도]
 // 가운데 해(고른 기능의 설명) 둘레의 궤도에 작은 행성(동그라미)들이
 // 섭니다. 한때 '피자 조각'과 둘 다 두고 전환으로 오갔는데, 선생님이 궤도로
-// 정하셔서 조각 모양과 전환을 걷었습니다.
+// 정하셔서 조각 모양과 전환을 걷었습니다. 궤도는 lib/hubPlace.js의 hubOrbit — 일곱까지는 101px · 메신저가 맨 위,
+// 여덟(선생님의 책 봄)이면 110px로 넓히고 반 칸 돌려 닫기 동그라미 쪽 대각선을 비웁니다.
 //
 // [그림은 앱의 아이콘 그대로]
 // 이모지 대신 이미 그 기능을 가리키는 그림을 씁니다(components/StatusIcons.jsx)
 // — 메신저는 말풍선(IconAnswer — 로고는 가운데 해의 기본 그림), 독서로 검색은
-// 책 위의 돋보기(IconLibrarySearch), 반 관리는 IconBlackboard,
+// 책 위의 돋보기(IconLibrarySearch), 공지 보내기는 확성기(IconMegaphone), 반 관리는 IconBlackboard,
 // 출석은 IconCheck. 과일 바구니는 바구니 창의 그림
 // (`public/fruit-basket.webp`)을 작게 — 원을 펼쳤을 때만 그려 처음 화면에서
 // 그림을 받지 않습니다.
 //
 // [기능은 '그 자리로 데려다 주기']
-// 메신저 · 독서로 검색 · 성장·뱃지만 이 자리에서 창을 엽니다 — 셋 다 **메신저처럼 동그라미 자리에서 펼쳐지는 같은 틀의 창**
-// (선생님 요청 · 2026년 11월 — 한때 독서로 검색은 화면 가운데 모달, 성장·뱃지는 책 봄 왼쪽 칸이었음). 틀은 HubPanel ·
-// 자리는 CSS의 .hub-panel 한 곳이고, 한 번에 하나만 열립니다(panel). 독서로 검색 · 성장·뱃지 창은 누를 때만 내려받습니다(아래 dynamic).
+// 메신저 · 독서로 검색 · 성장·뱃지 · 공지 보내기만 이 자리에서 창을 엽니다 — 넷 다 **메신저처럼 동그라미 자리에서 펼쳐지는 같은
+// 틀의 창**(선생님 요청 · 2026년 11월 — 한때 독서로 검색은 화면 가운데 모달, 성장·뱃지는 책 봄 왼쪽 칸, 공지는 책 광장 · 교실
+// 맵 위의 단추였음). 틀은 HubPanel · 자리는 CSS의 .hub-panel 한 곳이고, 한 번에 하나만 열립니다(panel). 독서로 검색 ·
+// 성장·뱃지 · 공지 보내기 창은 누를 때만 내려받습니다(아래 dynamic).
 // 나머지는 이미 책방에 있는 창을 주소로 엽니다(`/books?open=attendance|fruit|classes` — 책방이 열고
 // 주소를 지웁니다). 같은 창을 여기에 한 벌 더 만들면 두 곳이 어긋납니다.
 // 분석 리포트(교사는 '관리자 대시보드')는 `/dashboard`에서 현재 반·역할에 맞는 통계를 보여 줍니다.
@@ -45,8 +49,8 @@
 // 가운데 쪽으로 펼쳐집니다(`is-left` · `is-top`). 옮긴 뒤에는 교사의 '방송 종료'
 // 알약 위로 비키는 것(`lifted`)을 하지 않습니다 — 자리를 고른 것은 선생님입니다.
 //
-// [책 봄에서는 독서로 검색 · 성장·뱃지만 — 선생님 요청 · 2026년 11월]
-// 책 봄(?area=reading)에서는 '독서로 검색' · '성장·뱃지' 행성만 켜고, 나머지 행성은 흐린 회색으로 그 자리에 세워 둡니다
+// [책 봄에서는 독서로 검색 · 성장·뱃지(선생님은 공지 보내기도)만 — 선생님 요청 · 2026년 11월]
+// 책 봄(?area=reading)에서는 '독서로 검색' · '성장·뱃지' · (선생님의) '공지 보내기' 행성만 켜고, 나머지 행성은 흐린 회색으로 그 자리에 세워 둡니다
 // (libraryOnly — aria-disabled · 눌러도 열리지 않고 가운데 해가 까닭을 말함). 안 읽은 말 숫자는 지우지 않고 회색으로
 // (와 있다는 것은 알게). 판정은 lib/hubPlace.js의 hubLibraryOnly(상단바가 넘김) — **학생도 교사처럼, 예외 없이**(선생님 결정 ·
 // 한때 학생은 책방이 열린 반에서만, 그다음에는 책방과 리더보드를 모두 끈 반의 학생만 그대로 두었음 — 되살리지 마세요).
@@ -61,7 +65,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { HUB_BADGES_KEY, HUB_DRAG_MIN, HUB_LIBRARY_KEY, cleanHubPos, hubItemOff, hubPlacement, hubPosFromPoint } from "@/lib/hubPlace";
+import { HUB_BADGES_KEY, HUB_DISC, HUB_DRAG_MIN, HUB_LIBRARY_KEY, HUB_NOTICE_KEY, cleanHubPos, hubItemOff, hubOrbit, hubPlacement, hubPosFromPoint } from "@/lib/hubPlace";
 import { onReadingBadgesRequest, readingBadgesSnapshot, subscribeReadingBadges, takeReadingBadgesRequest } from "@/lib/readingBadgeBridge";
 import {
   subscribeOwnClasses,
@@ -81,10 +85,11 @@ import {
   IconCheck,
   IconGrowthBadge,
   IconLibrarySearch,
+  IconMegaphone,
   IconReport,
 } from "./StatusIcons";
 
-// 독서로 검색 · 성장·뱃지 창 — 누를 때만 내려받습니다(창의 CSS도 함께 — 모든 화면의 첫 묶음에 안 실리게).
+// 독서로 검색 · 성장·뱃지 · 공지 보내기 창 — 누를 때만 내려받습니다(창의 CSS도 함께 — 모든 화면의 첫 묶음에 안 실리게).
 // 내려받는 동안에도 같은 자리에 같은 틀의 창이 서고 닫힙니다(dynamic의 loading은 props를 못 받아 닫기는 context로).
 const PanelCloseContext = createContext(() => {});
 function PanelLoading({ title }) {
@@ -101,8 +106,12 @@ function LibraryLoading() {
 function BadgesLoading() {
   return <PanelLoading title="성장·뱃지" />;
 }
+function NoticeLoading() {
+  return <PanelLoading title="공지 보내기" />;
+}
 const SchoolLibraryPanel = dynamic(() => import("./reading/SchoolLibrarySearch"), { ssr: false, loading: LibraryLoading });
 const ReadingBadgePanel = dynamic(() => import("./reading/ReadingBadgePanel"), { ssr: false, loading: BadgesLoading });
+const NoticeSendPanel = dynamic(() => import("./NoticeSendPanel"), { ssr: false, loading: NoticeLoading });
 
 function FruitBasketPic({ show }) {
   if (!show) return <span className="hub-basket-pic" />;
@@ -116,6 +125,7 @@ const ICONS = {
   classes: () => <IconBlackboard size={27} />,
   library: () => <IconLibrarySearch size={28} />,
   badges: () => <IconGrowthBadge size={28} />,
+  notice: () => <IconMegaphone size={28} />,
   fruit: ({ show }) => <FruitBasketPic show={show} />,
   report: () => <IconReport size={26} />,
 };
@@ -130,6 +140,8 @@ const STUDENT_ITEMS = [
 ];
 const TEACHER_ITEMS = [
   { key: "msg", label: "메신저", hint: "학생 · 모둠과 대화해요" },
+  // 공지 보내기 — 선생님만(이 자리에서 창을 엶). 한때 책 광장 · 교실 맵 위의 '공지사항' 단추였습니다(선생님 요청으로 옮김).
+  { key: HUB_NOTICE_KEY, label: "공지 보내기", hint: "반 학생 모두의 화면 가운데에 공지를 띄워요" },
   { key: "library", label: "독서로 검색", hint: "우리 학교 도서관에 있는 책인지 찾아봐요" },
   { key: "attend", label: "출석 관리", hint: "출석을 시작하고 기록을 봐요", href: "/books?open=attendance" },
   { key: "classes", label: "반 관리", hint: "반 · 참여 코드 · 자리와 모둠", href: "/books?open=classes" },
@@ -146,8 +158,11 @@ function withBadgeItem(list, item) {
 }
 
 // 창 이름 — 동그라미(창이 떠 있는 동안 ×)의 '○○ 닫기'
-const PANEL_NAMES = { msg: "메신저", library: "독서로 검색", badges: "성장·뱃지" };
-// 독서로 검색 · 성장·뱃지 창을 바깥 누르기로 닫을 때 '바깥이 아닌 것' — 그 위에 뜬 창(뱃지 상세 · 펫 창 · 캐릭터 창 …)과
+const PANEL_NAMES = { msg: "메신저", library: "독서로 검색", badges: "성장·뱃지", notice: "공지 보내기" };
+// 바깥 빈 곳을 누르면 닫히는 창 — 메신저만 빼고(대화를 띄워 둔 채 뒤 화면을 보며 답하는 창). 공지 보내기의 쓰던 글은 창을
+// 닫아도 남습니다(NoticeSendPanel의 drafts).
+const OUTSIDE_CLOSE_PANELS = [HUB_LIBRARY_KEY, HUB_BADGES_KEY, HUB_NOTICE_KEY];
+// 독서로 검색 · 성장·뱃지 · 공지 보내기 창을 바깥 누르기로 닫을 때 '바깥이 아닌 것' — 그 위에 뜬 창(뱃지 상세 · 펫 창 · 캐릭터 창 …)과
 // 그 창의 배경입니다. 배경을 눌러 뱃지 상세만 닫았는데 그 아래의 성장·뱃지 창까지 함께 닫히면 안 됩니다.
 const PANEL_OUTSIDE_KEEP = ".modal-backdrop, .reading-modal-backdrop, dialog, [role='dialog'], [role='alertdialog']";
 
@@ -155,14 +170,19 @@ const PANEL_OUTSIDE_KEEP = ".modal-backdrop, .reading-modal-backdrop, dialog, [r
 const OFF_HINT = "책 봄에서는 쓸 수 없어요";
 const OFF_TITLE = "책 봄에서는 쓸 수 없어요 — 책 봄 밖의 화면(책방 · 리더보드 등)에서 열 수 있어요";
 const LIBRARY_ONLY_HINT = "책 봄에서는 독서로 검색 · 성장·뱃지만 열려요";
+// 선생님은 '공지 보내기'까지 셋 — 이름을 다 적으면 가운데 해(116px)에서 넘쳐, 회색이 아닌 행성이 열린다고 말합니다
+const LIBRARY_ONLY_HINT_TEACHER = "책 봄에서는 색이 있는 것만 열려요";
+// 동그라미의 이름(읽어 주는 기기 · 툴팁) — 책 봄에서 열리는 것
+const READING_OPEN_STUDENT = "독서로 검색 · 성장·뱃지";
+const READING_OPEN_TEACHER = "독서로 검색 · 성장·뱃지 · 공지 보내기";
 // 성장·뱃지 자료가 아직 없을 때(교사가 학생을 안 고름 · 학생 화면은 잠깐 불러오는 중)
 const BADGES_WAIT_TEACHER = "학생 명단에서 학생을 고르면 열려요";
 const BADGES_WAIT_STUDENT = "책 봄을 불러오는 중이에요";
+// 공지 보내기 — 선생님이 아직 반을 고르지 않았을 때(엉뚱한 반에 보내지 않게 열지 않음)
+const NOTICE_WAIT = "책방에서 반을 고르면 열려요";
 
-// 원판 크기(px) — CSS의 `.hub-disc` 폭·높이와 같아야 합니다.
-const DISC = 300;
-const C = DISC / 2;
-const R_ORBIT = 101; // 행성(항목)이 서는 궤도
+// 원판 크기(px) — CSS의 `.hub-disc` 폭·높이와 같아야 합니다(lib/hubPlace.js의 HUB_DISC). 궤도는 hubOrbit(행성 수).
+const C = HUB_DISC / 2;
 
 // 끌어 옮긴 자리 — 이 기기에만(화면 비율)
 const POS_KEY = "hub_fab_pos";
@@ -196,12 +216,14 @@ function ChatIcon({ size = 26 }) {
 // classId — 지금 보는 반(교사는 공부방에서 고른 반, 학생은 소속 반).
 // libraryOnly — 책 봄 화면이면 참(상단바가 hubLibraryOnly로 셈) — '독서로 검색' · '성장·뱃지' 말고는 흐린 회색으로 꺼 둡니다.
 // badgesOn — 책 봄 화면이면 참 — '성장·뱃지' 행성을 세웁니다(자료는 책 봄이 다리에 건 것).
+// noticeClassName · noticeMemberCount — [교사] 공지를 보낼 반(= classId, 선생님이 고른 반)의 이름과 학생 수(상단바 📢와 같은 값 —
+// TopNav가 넘김). 공지는 메신저 창에서 고른 반이 아니라 늘 이 반으로 갑니다.
 // 교사의 메신저는 이와 따로 **창 맨 위에서 반을 고릅니다**(chatClassId) —
 // 어느 화면에서든 원하는 반과 대화하고, 공부방의 반은 안 바뀝니다.
-export default function FloatingHub({ classId: pageClassId, user, isTeacher, fruitOn = true, lifted = false, libraryOnly = false, badgesOn = false }) {
+export default function FloatingHub({ classId: pageClassId, user, isTeacher, fruitOn = true, lifted = false, libraryOnly = false, badgesOn = false, noticeClassName = "", noticeMemberCount = 0 }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
-  // 동그라미 자리에서 펼쳐진 창 — "msg"(메신저) · "library"(독서로 검색) · "badges"(성장·뱃지) · null. 한 번에 하나.
+  // 동그라미 자리에서 펼쳐진 창 — "msg"(메신저) · "library"(독서로 검색) · "badges"(성장·뱃지) · "notice"(공지 보내기) · null. 한 번에 하나.
   const [panel, setPanel] = useState(null);
   const msgOpen = panel === "msg";
   const [hover, setHover] = useState(null);
@@ -368,17 +390,19 @@ export default function FloatingHub({ classId: pageClassId, user, isTeacher, fru
   // 과일 바구니를 끄면(관리자 설정) 그 행성을 빼고 남은 것으로 원을 다시 나눕니다. 책 봄이면 '성장·뱃지'를 더합니다.
   const baseItems = (isTeacher ? TEACHER_ITEMS : STUDENT_ITEMS).filter((it) => fruitOn || it.key !== "fruit");
   const items = badgesOn ? withBadgeItem(baseItems, isTeacher ? BADGE_ITEM_TEACHER : BADGE_ITEM_STUDENT) : baseItems;
-  // 꺼진 행성 — 책 봄에서 막힌 것(libraryOnly) · 자료가 아직 없는 성장·뱃지
-  const itemOff = (key) => hubItemOff(key, libraryOnly) || (key === HUB_BADGES_KEY && !badgeEntry);
-  const offHintOf = (key) => (key === HUB_BADGES_KEY && !hubItemOff(key, libraryOnly)
-    ? (isTeacher ? BADGES_WAIT_TEACHER : BADGES_WAIT_STUDENT)
-    : OFF_HINT);
-  const offTitleOf = (key) => (key === HUB_BADGES_KEY && !hubItemOff(key, libraryOnly)
-    ? (isTeacher ? BADGES_WAIT_TEACHER : BADGES_WAIT_STUDENT)
-    : OFF_TITLE);
-  const step = 360 / items.length;
-  // 첫 조각(메신저)의 가운데가 맨 위에 오게.
-  const angleOf = (i) => -90 + i * step;
+  // 꺼진 행성 — 책 봄에서 막힌 것(libraryOnly) · 자료가 아직 없는 성장·뱃지 · 반을 아직 안 고른 선생님의 공지 보내기
+  const waitOf = (key) => {
+    if (hubItemOff(key, libraryOnly)) return "";
+    if (key === HUB_BADGES_KEY && !badgeEntry) return isTeacher ? BADGES_WAIT_TEACHER : BADGES_WAIT_STUDENT;
+    if (key === HUB_NOTICE_KEY && !pageClassId) return NOTICE_WAIT;
+    return "";
+  };
+  const itemOff = (key) => hubItemOff(key, libraryOnly) || !!waitOf(key);
+  const offHintOf = (key) => waitOf(key) || OFF_HINT;
+  const offTitleOf = (key) => waitOf(key) || OFF_TITLE;
+  // 궤도 — 일곱까지는 첫 행성(메신저)이 맨 위, 여덟이면 넓히고 반 칸 돌림(lib/hubPlace.js의 hubOrbit)
+  const orbit = hubOrbit(items.length);
+  const angleOf = (i) => orbit.start + i * orbit.step;
 
   // ── 닫기 — 바깥 누르기 · Esc ──
   useEffect(() => {
@@ -412,12 +436,13 @@ export default function FloatingHub({ classId: pageClassId, user, isTeacher, fru
     msgOpenRef.current = msgOpen;
   }, [msgOpen]);
 
-  // 독서로 검색 · 성장·뱃지 창은 바깥 빈 곳을 누르면 닫힙니다(선생님 요청 · 2026년 11월 — 한때 × · Esc · 동그라미로만 닫혀
-  // 빈 곳을 눌러도 그대로 떠 있었습니다). 메신저는 그대로 둡니다 — 대화를 띄워 둔 채 뒤 화면을 보며 답하는 창이라서요.
+  // 독서로 검색 · 성장·뱃지 · 공지 보내기 창은 바깥 빈 곳을 누르면 닫힙니다(선생님 요청 · 2026년 11월 — 한때 × · Esc · 동그라미로만
+  // 닫혀 빈 곳을 눌러도 그대로 떠 있었습니다). 메신저는 그대로 둡니다 — 대화를 띄워 둔 채 뒤 화면을 보며 답하는 창이라서요.
+  // 공지 보내기의 쓰던 글은 닫아도 남습니다(NoticeSendPanel의 drafts).
   // 바깥이 아닌 것: 동그라미 · 창 안, 누르는 순간 사라진 것(isConnected — 프로젝트 문서 '바깥을 눌러 닫기'), 그 위에 뜬 창
   // (PANEL_OUTSIDE_KEEP). 초점은 옮기지 않습니다 — 누른 곳으로 갑니다.
   useEffect(() => {
-    if (panel !== HUB_LIBRARY_KEY && panel !== HUB_BADGES_KEY) return undefined;
+    if (!OUTSIDE_CLOSE_PANELS.includes(panel)) return undefined;
     function onDown(e) {
       const t = e.target;
       if (!(t instanceof Element) || !t.isConnected) return;
@@ -428,6 +453,11 @@ export default function FloatingHub({ classId: pageClassId, user, isTeacher, fru
     document.addEventListener("pointerdown", onDown);
     return () => document.removeEventListener("pointerdown", onDown);
   }, [panel]);
+
+  // 공지를 보낼 반이 없어지면(선생님의 반 고르기가 풀림) 공지 보내기 창을 접습니다 — 엉뚱한 반에 보내지 않게
+  useEffect(() => {
+    if (!pageClassId) setPanel((p) => (p === HUB_NOTICE_KEY ? null : p));
+  }, [pageClassId]);
 
   // 책 봄을 떠나면 성장·뱃지 창을 접습니다(그 자료는 책 봄의 것).
   useEffect(() => {
@@ -480,7 +510,7 @@ export default function FloatingHub({ classId: pageClassId, user, isTeacher, fru
       setPanel("msg");
       return;
     }
-    if (item.key === HUB_LIBRARY_KEY || item.key === HUB_BADGES_KEY) { setPanel(item.key); return; }
+    if (item.key === HUB_LIBRARY_KEY || item.key === HUB_BADGES_KEY || item.key === HUB_NOTICE_KEY) { setPanel(item.key); return; }
     if (item.href) router.push(item.href);
   }
 
@@ -505,6 +535,7 @@ export default function FloatingHub({ classId: pageClassId, user, isTeacher, fru
   if (!user || !classId) return null;
 
   const shown = hover != null ? items[hover] : null;
+  const readingOpenNames = isTeacher ? READING_OPEN_TEACHER : READING_OPEN_STUDENT;
   const shownOff = !!shown && itemOff(shown.key);
   const fabOpen = menuOpen || !!panel;
 
@@ -537,7 +568,7 @@ export default function FloatingHub({ classId: pageClassId, user, isTeacher, fru
         aria-hidden={!menuOpen}
       >
         {items.map((it, i) => {
-          const [x, y] = pt(R_ORBIT, angleOf(i));
+          const [x, y] = pt(orbit.radius, angleOf(i));
           const Icon = ICONS[it.key];
           // 꺼진 행성(책 봄에서 막힌 것 · 자료가 아직 없는 성장·뱃지) — 회색으로 서 있고, 누르면 열지 않고 가운데 해가
           // 까닭을 말합니다(손가락으로 눌러도 보이게)
@@ -575,7 +606,7 @@ export default function FloatingHub({ classId: pageClassId, user, isTeacher, fru
             {shown && ICONS[shown.key] ? ICONS[shown.key]({ show: opened }) : <IconLogo size={22} />}
           </span>
           <strong>{shown ? shown.label : "책나눔"}</strong>
-          <span>{shown ? (shownOff ? offHintOf(shown.key) : shown.hint) : libraryOnly ? LIBRARY_ONLY_HINT : "무엇을 열까요?"}</span>
+          <span>{shown ? (shownOff ? offHintOf(shown.key) : shown.hint) : libraryOnly ? (isTeacher ? LIBRARY_ONLY_HINT_TEACHER : LIBRARY_ONLY_HINT) : "무엇을 열까요?"}</span>
         </div>
       </div>
 
@@ -590,13 +621,13 @@ export default function FloatingHub({ classId: pageClassId, user, isTeacher, fru
         onPointerUp={onFabPointerEnd}
         onPointerCancel={onFabPointerEnd}
         aria-expanded={menuOpen}
-        aria-label={panel ? `${PANEL_NAMES[panel]} 닫기` : menuOpen ? "메뉴 닫기" : libraryOnly ? "바로가기 열기(책 봄에서는 독서로 검색 · 성장·뱃지만)" : "메신저와 바로가기 열기"}
+        aria-label={panel ? `${PANEL_NAMES[panel]} 닫기` : menuOpen ? "메뉴 닫기" : libraryOnly ? `바로가기 열기(책 봄에서는 ${readingOpenNames}만)` : "메신저와 바로가기 열기"}
         title={
           panel
             ? `${PANEL_NAMES[panel]} 닫기`
             : menuOpen
               ? "닫기"
-              : `${libraryOnly ? "독서로 검색 · 성장·뱃지 · 바로가기" : "메신저 · 바로가기"}${canDrag ? " (끌어서 옮길 수 있어요)" : ""}`
+              : `${libraryOnly ? `${readingOpenNames} · 바로가기` : "메신저 · 바로가기"}${canDrag ? " (끌어서 옮길 수 있어요)" : ""}`
         }
       >
         <span className="hub-fab-icon" aria-hidden="true">
@@ -626,12 +657,17 @@ export default function FloatingHub({ classId: pageClassId, user, isTeacher, fru
         />
       )}
 
-      {/* 독서로 검색 · 성장·뱃지 — 메신저와 같은 자리 · 같은 틀(.hub-panel)의 창 */}
-      {(panel === HUB_LIBRARY_KEY || panel === HUB_BADGES_KEY) && (
+      {/* 독서로 검색 · 성장·뱃지 · 공지 보내기 — 메신저와 같은 자리 · 같은 틀(.hub-panel)의 창 */}
+      {OUTSIDE_CLOSE_PANELS.includes(panel) && (
         <PanelCloseContext.Provider value={closePanel}>
-          {panel === HUB_LIBRARY_KEY
-            ? <SchoolLibraryPanel onClose={closePanel} />
-            : <ReadingBadgePanel entry={badgeEntry} isTeacher={!!isTeacher} onClose={closePanel} />}
+          {panel === HUB_LIBRARY_KEY ? (
+            <SchoolLibraryPanel onClose={closePanel} />
+          ) : panel === HUB_BADGES_KEY ? (
+            <ReadingBadgePanel entry={badgeEntry} isTeacher={!!isTeacher} onClose={closePanel} />
+          ) : (
+            // 공지는 메신저 창에서 고른 반(chatClassId)이 아니라 선생님이 고른 반(pageClassId)으로 — 상단바 📢와 같은 반
+            <NoticeSendPanel classId={pageClassId} className={noticeClassName} memberCount={noticeMemberCount} onClose={closePanel} />
+          )}
         </PanelCloseContext.Provider>
       )}
     </div>

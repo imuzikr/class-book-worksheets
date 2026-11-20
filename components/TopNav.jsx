@@ -323,8 +323,9 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
 
   // 반 공지 대상 — 지금 보고 있는 반의 이름과 학생 수. 교사가 '몇 명에게
   // 가는지'를 보고 보내도록 버튼에 함께 띄웁니다(잘못된 반에 보내는 실수를
-  // 줄이는 가장 값싼 방법입니다). 실제 받는 사람은 서버가 다시 정합니다.
-  const noticeMemberUids = useClassMembers(broadcastClassId, isFirebaseConfigured && admin);
+  // 줄이는 가장 값싼 방법입니다). 상단바 📢와 떠 있는 동그라미의 '공지 보내기'가 함께 씁니다.
+  // 체험반(데모)에서도 셉니다 — 데모 반의 소속(lib/demoClassroom.js)이 있어 '학생 15명'으로 보입니다.
+  const noticeMemberUids = useClassMembers(broadcastClassId, admin);
   const [noticeClassName, setNoticeClassName] = useState("");
   useEffect(() => {
     if (!admin || !broadcastClassId) { setNoticeClassName(""); return; }
@@ -555,9 +556,10 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
         상단바처럼 다섯 화면에 다 떠 있어야 해서 여기 답니다. 반은 교사는
         고른 반, 학생은 소속 반(데모 모드는 소속을 안 읽어 고른 반으로).
         교사 화면에 '방송 종료' 알약이 떠 있으면 그 위로 비켜 섭니다.
-        책 봄에서는 '독서로 검색' · '성장·뱃지'만 켜고 나머지는 흐린 회색 — 학생도 교사처럼, 예외 없이(선생님 결정 ·
-        lib/hubPlace.js의 hubLibraryOnly — 책방과 리더보드를 모두 끈 반의 학생도).
-        '성장·뱃지' 행성은 책 봄에서만 섭니다(badgesOn — 자료는 책 봄이 lib/readingBadgeBridge.js에 건 것). */}
+        책 봄에서는 '독서로 검색' · '성장·뱃지'(선생님은 '공지 보내기'도)만 켜고 나머지는 흐린 회색 — 학생도 교사처럼, 예외 없이
+        (선생님 결정 · lib/hubPlace.js의 hubLibraryOnly — 책방과 리더보드를 모두 끈 반의 학생도).
+        '성장·뱃지' 행성은 책 봄에서만 섭니다(badgesOn — 자료는 책 봄이 lib/readingBadgeBridge.js에 건 것).
+        '공지 보내기'(선생님만)는 상단바 📢와 같은 반 · 같은 학생 수로 보냅니다(noticeClassName · noticeMemberCount). */}
     {user && (
       <FloatingHub
         classId={hubClassId}
@@ -567,6 +569,8 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
         lifted={admin && !!broadcast}
         libraryOnly={hubLibraryOnly({ readingOpen })}
         badgesOn={!!readingOpen}
+        noticeClassName={admin ? noticeClassName : ""}
+        noticeMemberCount={admin ? noticeMemberCount : 0}
       />
     )}
 
@@ -577,8 +581,8 @@ export default function TopNav({ active, growthEnabled = false, rankingOn = true
         있던 사람도 책 광장 탭으로 데려갑니다. 상단바가 모든 화면에 떠 있어 여기 하나면 어디서나 뜹니다. */}
     {user && hubClassId && <ClassMoveBanner classId={hubClassId} isTeacher={admin} />}
 
-    {/* 공지사항을 학생 화면에 크게 — 선생님이 책 광장 · 교실의 '공지사항'(또는 상단바 📢)으로 보낸 반 공지를, 학생이 어느 공간에
-        있든(광장 · 교실 · 아지트 · 책꽂이 · 책방 …) 큰 글씨 카드로 한 번(선생님 요청). 상단바가 모든 화면에 떠 있어 여기 하나면 됩니다. */}
+    {/* 공지를 학생 화면에 크게 — 선생님이 떠 있는 동그라미의 '공지 보내기'(또는 상단바 📢)로 보낸 반 공지를, 학생이 어느 공간에
+        있든(광장 · 교실 · 아지트 · 책꽂이 · 책방 …) 화면 가운데에 글자만 잠시(선생님 요청). 상단바가 모든 화면에 떠 있어 여기 하나면 됩니다. */}
     {user && !admin && hubClassId && <ClassNoticeSpotlight classId={hubClassId} uid={myUid} />}
 
     {/* 첫 만남 — 참여 코드로 반에 막 들어온 학생: 캐릭터 고르기 → 책 친구 알(펫 미리보기를 켠 반은 고르기) → 큰 알 화면.

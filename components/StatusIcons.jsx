@@ -396,7 +396,8 @@ export function IconGrowthBadge({ size = 20, className = "" }) {
 
 // 독서로 검색 — 펼친 책 위에 돋보기(떠 있는 동그라미의 '독서로 검색' 행성 · components/reading/SchoolLibrarySearch.jsx).
 // 책은 IconBook을 왼쪽 위로 작게 옮긴 것이고, 돋보기의 흰 알이 오른쪽 아래 쪽을 덮습니다(그리는 차례가 곧 겹침).
-// 확성기 — 공지사항(책 광장 · 교실의 '공지사항' 단추 · 학생 화면의 큰 글씨 공지 · 선생님 요청). 몸통은 밝은 살구, 소리 물결은 살구 진한 색.
+// 확성기 — 공지 보내기(떠 있는 동그라미의 '공지 보내기' 행성 · 그 창 · 선생님 요청 — 한때 책 광장 · 교실 맵 위의 '공지사항' 단추).
+// 몸통은 밝은 살구, 소리 물결은 살구 진한 색.
 export function IconMegaphone({ size = 20, className = "" }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">

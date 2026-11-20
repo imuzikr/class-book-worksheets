@@ -10,20 +10,17 @@
 //   PlazaTalkPanel   오른쪽 대화창 — 든 사람 · 말 · 쓰는 칸(Enter로 보냄 · Shift+Enter는 줄바꿈 — 선생님 요청) · 접기 · 나가기.
 //                    접어도 대화에서 나가지 않습니다(접기 · 닫기 · 나가기는 서로 다른 일 — 묶음의 규격). 폰에서는 아래쪽 창.
 //                    열려 있는 동안 오른쪽 아래 떠 있는 동그라미를 숨기고 맵 아래 끝까지 섭니다(plaza-talk.css — 선생님 요청).
-//   PlazaNoticePanel 공지사항 — 대화창과 같은 틀 · 같은 자리. 선생님은 반 모두에게 공지를 보내고(반 공지 그대로 — 학생 화면에는 어디에
-//                    있든 큰 글씨로 뜸 · ClassNoticeSpotlight), 학생은 지난 공지를 읽기만 합니다(선생님 요청 · 2026년 11월).
-//   PlazaChatTabs    광장 대화가 열려 있는 동안 두 창 맨 위의 탭 줄 — '공지사항 · 광장 대화'(같은 크기 두 칸).
+//                    한때 이 창 자리에 '공지사항' 창 · 탭 줄도 섰는데, 공지는 선생님의 떠 있는 동그라미 '공지 보내기'로 옮겼습니다
+//                    (선생님 요청 · 2026년 11월 — components/NoticeSendPanel.jsx · 되살리지 마세요).
 // 그림은 선생님이 주신 도트 대화 묶음(public/reading-plaza/talk — 목록과 크기는 lib/readingPlazaTalk.js의 TALK_ART),
 // 모양은 plaza-talk.css. 글자 · 이름 · S/C는 그림에 굽지 않고 여기서 적습니다.
 // =============================================================
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { PLAZA_H, PLAZA_W } from "@/lib/readingPlazaMap";
 import { plazaLetterKey } from "@/lib/readingClassroom";
-import { TALK_ART, TALK_MAX, TALK_TEXT_MAX, talkArtBox, talkEnterKey, talkEnterStillWaiting, talkLineBreak, talkTextOf, talkUnread } from "@/lib/readingPlazaTalk";
-import { CLASS_NOTICE_MAX, sendClassNotice, subscribeClassNotices } from "@/lib/store";
-import { noticeMs } from "@/lib/classNoticeSpot";
-import { IconMegaphone } from "@/components/StatusIcons";
+import { TALK_ART, TALK_MAX, TALK_TEXT_MAX, talkArtBox, talkTextOf, talkUnread } from "@/lib/readingPlazaTalk";
+import { useEnterSend } from "@/lib/useEnterSend";
 import "./plaza-talk.css";
 
 const pct = (value, whole) => `${(value / whole * 100).toFixed(3)}%`;
@@ -167,85 +164,16 @@ function clockOf(t) {
 }
 const touchOnly = () => typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches;
 
-// Enter로 보내기 — 광장 대화와 공지사항이 함께 씁니다(선생님 요청 — lib/readingPlazaTalk.js의 talkEnterKey · talkLineBreak).
-// Enter 보냄 · Shift+Enter 줄바꿈 · Ctrl/⌘+Enter도 보냄(예전 손버릇). 한글을 조합하는 중의 Enter는 조합이 끝난 뒤 보냅니다 —
-// 걸러 내기만 하면 첫 Enter가 먹히고, 막으면(preventDefault) 마지막 글자가 칸에 안 들어갈 수 있어 기본 동작은 둡니다.
-// 줄바꿈이 keydown 없이 오는 길(조합을 마치며 줄바꿈까지 넣는 입력기 · 휴대폰 자판)은 칸에 직접 건 beforeinput이 맡습니다 —
-// Shift+Enter가 연 것만 들이고 나머지는 막고 보냅니다(React의 onBeforeInput은 inputType을 몰라 칸에 직접 · 칸이 새로 서면
-// ref 콜백이 다시 겁니다). submit · onEscape는 늘 최신 것을 부릅니다.
-function useEnterSend(submit, onEscape) {
-  const inputRef = useRef(null);
-  const composingRef = useRef(false);  // 한글을 조합하는 중인가(compositionstart ~ end)
-  const enterAt = useRef(0);           // 조합 중에 누른 Enter의 때 — 조합이 끝나면 보냄
-  const newlineOk = useRef(false);     // 방금 누른 것이 Shift+Enter — 그 줄바꿈만 들임
-  const act = useRef({ submit, onEscape });
-  act.current = { submit, onEscape };
-  const onBeforeInput = useMemo(() => (e) => {
-    const step = talkLineBreak({ inputType: e.inputType, newlineOk: newlineOk.current, composing: composingRef.current || e.isComposing });
-    if (!step) return;
-    newlineOk.current = false;
-    if (step === "allow") return;
-    e.preventDefault();
-    if (step === "later") enterAt.current = Date.now();
-    else act.current.submit();
-  }, []);
-  const ref = useCallback((el) => {
-    inputRef.current?.removeEventListener("beforeinput", onBeforeInput);
-    inputRef.current = el;
-    el?.addEventListener("beforeinput", onBeforeInput);
-  }, [onBeforeInput]);
-  function onKeyDown(e) {
-    const step = talkEnterKey({ key: e.key, code: e.code, shiftKey: e.shiftKey, composing: e.nativeEvent.isComposing || composingRef.current });
-    if (step) {
-      newlineOk.current = step === "newline";
-      if (step === "later") enterAt.current = Date.now();
-      if (step === "send") { e.preventDefault(); enterAt.current = 0; act.current.submit(); }
-      return;
-    }
-    if (e.key === "Escape" && act.current.onEscape) { e.preventDefault(); act.current.onEscape(); }
-  }
-  function onCompositionStart() { composingRef.current = true; }
-  function onCompositionEnd() {
-    composingRef.current = false;
-    const pressed = enterAt.current;
-    enterAt.current = 0;
-    // 조합 중에 누른 Enter — 마지막 글자가 칸에 들어간 뒤(브라우저에 따라 compositionend 뒤에 input이 한 번 더 옴) 보냅니다
-    if (talkEnterStillWaiting(pressed, Date.now())) setTimeout(() => act.current.submit(), 0);
-  }
-  return { inputRef, ref, onKeyDown, onCompositionStart, onCompositionEnd };
-}
-
-// 광장 대화가 열려 있는 동안 두 창(공지사항 · 광장 대화) 맨 위의 탭 줄 — 같은 크기 두 칸. view — 지금 보이는 창,
-// talkCount — 대화에 든 사람 수, talkUnread — (공지사항을 보는 동안) 대화에 온 새 말 수
-export function PlazaChatTabs({ view, talkCount = 0, talkUnread = 0, onSelect }) {
-  return (
-    <div className="plaza-chat-tabs" role="group" aria-label="공지사항과 광장 대화">
-      <button type="button" className={view === "notice" ? "is-on" : ""} aria-pressed={view === "notice"} onClick={() => onSelect("notice")}>
-        <IconMegaphone size={17} />공지사항
-      </button>
-      <button type="button" className={view === "talk" ? "is-on" : ""} aria-pressed={view === "talk"} onClick={() => onSelect("talk")}
-        aria-label={`광장 대화 ${talkCount}명${talkUnread ? ` · 새 말 ${talkUnread}개` : ""}`}>
-        <img src={TALK_ART.iconChat.src} alt="" width="18" height="16" />광장 대화 <small>{talkCount}명</small>
-        {talkUnread > 0 && <b className="plaza-chat-tabs-new">{talkUnread > 99 ? "99+" : talkUnread}</b>}
-      </button>
-    </div>
-  );
-}
-
-// tabs — 공지사항과 함께 쓸 때 맨 위의 탭 줄(PlazaChatTabs) · hidden — 공지사항을 보는 동안(상태는 그대로 두고 그리지 않음 —
-// 쓰던 말 · 접힘을 지킴) · reveal — 늘어날 때마다 펼침(공지사항에서 '광장 대화' 탭을 누름) · onUnread(n) — 안 본 새 말 수(탭에 표시)
-export function PlazaTalkPanel({ talk, myUid, onSend, onLeave, onDismiss, onCover, tabs = null, hidden = false, reveal = 0, onUnread = null }) {
+export function PlazaTalkPanel({ talk, myUid, onSend, onLeave, onDismiss, onCover }) {
   const [folded, setFolded] = useState(false);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState("");
   const [seenAt, setSeenAt] = useState(0);
   const listRef = useRef(null);
-  // Enter로 보내기 · Esc는 접기(useEnterSend — 공지사항과 같은 손놀림)
+  // Enter로 보내기 · Esc는 접기(lib/useEnterSend.js — '공지 보내기' 창과 같은 손놀림)
   const enter = useEnterSend(submit, () => setFolded(true));
   const inputRef = enter.inputRef;
   const panelRef = useRef(null);
-  // 공지사항을 보는 동안(hidden)은 접어 둔 것과 같습니다 — 새 말을 '본 것'으로 치지 않음
-  const away = folded || hidden;
   const nearBottom = useRef(true);
   const lines = talk.lines;
   const lastAt = lines.length ? lines[lines.length - 1].t : 0;
@@ -272,17 +200,12 @@ export function PlazaTalkPanel({ talk, myUid, onSend, onLeave, onDismiss, onCove
   }, [talk.id, inputRef]);   // inputRef는 늘 같은 ref — 새 대화가 열릴 때만 돕니다
   // 펼쳐 둔 동안은 다 읽은 것 · 맨 아래를 보고 있었으면 새 말에 따라 내려갑니다
   useLayoutEffect(() => {
-    if (away) return;
+    if (folded) return;
     setSeenAt(lastAt);
     const el = listRef.current;
     if (el && nearBottom.current) el.scrollTop = el.scrollHeight;
-  }, [away, lastAt, lines.length]);
-  const unread = away ? talkUnread(lines, myUid, seenAt) : 0;
-  // 공지사항의 탭 줄에 안 본 새 말 수를 알립니다
-  useEffect(() => { onUnread?.(unread); }, [onUnread, unread]);
-  useEffect(() => () => onUnread?.(0), [onUnread]);
-  // 공지사항에서 '광장 대화' 탭을 누르면 펼칩니다
-  useEffect(() => { if (reveal) setFolded(false); }, [reveal]);
+  }, [folded, lastAt, lines.length]);
+  const unread = folded ? talkUnread(lines, myUid, seenAt) : 0;
   // 맵을 가린 만큼을 무대에 알립니다(시점이 내 캐릭터를 가려지지 않은 쪽의 가운데에 둠) — 오른쪽 창이면 오른쪽, 폰의 아래쪽 창이면 아래
   useLayoutEffect(() => {
     const el = panelRef.current;
@@ -330,7 +253,6 @@ export function PlazaTalkPanel({ talk, myUid, onSend, onLeave, onDismiss, onCove
   const people = useMemo(() => members.map((m) => ({ ...m, me: m.uid === myUid })).sort((a, b) => Number(b.me) - Number(a.me)), [members, myUid]);
   const left = TALK_TEXT_MAX - [...draft].length;
 
-  if (hidden) return null;
   if (folded) {
     return (
       <button type="button" className="plaza-talk-fold" onClick={() => setFolded(false)}
@@ -344,7 +266,6 @@ export function PlazaTalkPanel({ talk, myUid, onSend, onLeave, onDismiss, onCove
   }
   return (
     <section ref={panelRef} className={`plaza-talk-panel plaza-talk-frame plaza-talk-frame--panel${talk.ended ? " is-ended" : ""}`} aria-label="광장 대화">
-      {tabs}
       <header className="plaza-talk-head">
         <h4><img src={TALK_ART.iconParticipants.src} alt="" width="22" height="17" />광장 대화 <small>{count}명</small></h4>
         <button type="button" className="plaza-talk-icon" onClick={() => setFolded(true)} aria-label="대화창 접기" title="접기 — 대화는 그대로예요">
@@ -396,146 +317,6 @@ export function PlazaTalkPanel({ talk, myUid, onSend, onLeave, onDismiss, onCove
             <span className="plaza-talk-notice">모든 대화는 선생님이 확인할 수 있습니다.</span>
             <span className={`plaza-talk-count${left < 0 ? " is-over" : ""}`}>{[...draft].length}/{TALK_TEXT_MAX}</span>
           </div>
-          {error && <p className="plaza-talk-error" role="alert">{error}</p>}
-        </form>
-      )}
-    </section>
-  );
-}
-
-// ── 공지사항 ──────────────────────────────────────────────────
-// 대화창과 같은 틀 · 같은 자리(넓은 무대는 오른쪽 · 좁은 무대는 아래쪽 창). 맵 위 '공지사항' 단추(가판대 왼쪽 · 교실은 오른쪽 위)로
-// 엽니다(선생님 요청 · 2026년 11월).
-//   · 선생님 — 쓰는 칸(Enter로 보내기 · Shift+Enter 줄바꿈 — 대화와 같은 손놀림)과 보낸 공지. 보낸 공지는 반 공지 그대로
-//     (classes/{c}/classNotices — 상단바 📢와 같은 곳 · 알림 벨 · 메신저 '공지' 탭도 같은 공지)이고, **학생 화면에는 학생이 어디에
-//     있든(광장 · 교실 · 아지트 · 책꽂이 · 책방) 큰 글씨로 뜹니다**(components/reading/ClassNoticeSpotlight.jsx). 보낸 공지는 고치거나
-//     지울 수 없습니다(학생이 이미 읽었을 수 있음 — 반 공지의 약속).
-//   · 학생 — 지난 공지를 읽기만 합니다(큰 글씨 카드를 닫은 뒤 다시 보는 자리).
-// tabs — 광장 대화가 열려 있으면 탭 줄(PlazaChatTabs), 없으면 null · memberCount — 반 학생 수(보낸 기록에 남김) ·
-// onCover — 맵을 가린 만큼(대화창과 같음 — 시점이 내 캐릭터를 가려지지 않은 쪽의 가운데에 둠)
-const NOTICE_HISTORY = 20;
-function noticeClock(ms) {
-  if (!ms) return "보내는 중…";
-  const d = new Date(ms);
-  const now = new Date();
-  const time = `${d.getHours() < 12 ? "오전" : "오후"} ${d.getHours() % 12 || 12}:${String(d.getMinutes()).padStart(2, "0")}`;
-  return d.toDateString() === now.toDateString() ? time : `${d.getMonth() + 1}월 ${d.getDate()}일 ${time}`;
-}
-
-export function PlazaNoticePanel({ classId, teacher = false, memberCount = 0, tabs = null, onClose, onCover }) {
-  const [list, setList] = useState(null);
-  const [draft, setDraft] = useState("");
-  const [error, setError] = useState("");
-  const [sent, setSent] = useState(false);
-  const busyRef = useRef(false);
-  const [busy, setBusy] = useState(false);
-  const panelRef = useRef(null);
-  const listRef = useRef(null);
-  const headRef = useRef(null);
-  const enter = useEnterSend(submit, onClose);
-
-  useEffect(() => {
-    setList(null);
-    return subscribeClassNotices(classId, (rows) => setList(Array.isArray(rows) ? rows : []), NOTICE_HISTORY);
-  }, [classId]);
-  // 열면 — 선생님은 쓰는 칸, 학생은 제목에 초점(손가락으로 쓰는 기기는 자판이 맵을 가려 쓰는 칸에 두지 않음)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (teacher && !touchOnly()) enter.inputRef.current?.focus({ preventScroll: true });
-      else headRef.current?.focus({ preventScroll: true });
-    }, 0);
-    return () => clearTimeout(timer);
-    // 여는 순간 한 번만 — enter.inputRef는 늘 같은 ref라 다시 그려져도 초점을 끌어오지 않습니다
-  }, [teacher, enter.inputRef]);
-  // 옛것이 위 · 새것이 아래(쓰는 칸 바로 위) — 새 공지가 오면 아래로 굴러갑니다
-  const rows = useMemo(() => (list ? [...list].map((n) => ({ ...n, ms: noticeMs(n) })).sort((a, b) => (a.ms || Infinity) - (b.ms || Infinity)) : []), [list]);
-  useLayoutEffect(() => {
-    const el = listRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [rows.length]);
-  // 맵을 가린 만큼(대화창과 같은 셈)
-  useLayoutEffect(() => {
-    const el = panelRef.current;
-    const wrap = el?.closest(".plaza-stage-wrap");
-    if (!onCover) return undefined;
-    const report = () => {
-      if (!el || !wrap) { onCover({ right: 0, bottom: 0 }); return; }
-      const a = el.getBoundingClientRect();
-      const b = wrap.getBoundingClientRect();
-      const sheet = a.left - b.left < 40;
-      onCover(sheet ? { right: 0, bottom: Math.round(Math.max(0, b.bottom - a.top)) } : { right: Math.round(Math.max(0, b.right - a.left)), bottom: 0 });
-    };
-    report();
-    const observer = typeof ResizeObserver !== "undefined" && wrap ? new ResizeObserver(report) : null;
-    observer?.observe(wrap);
-    return () => { observer?.disconnect(); onCover({ right: 0, bottom: 0 }); };
-  }, [onCover]);
-
-  // 보내기 — 칸을 곧바로 비우고(Enter가 두 번 와도 둘째는 빈 칸) 보냅니다. 보내지 못하면 칸이 비어 있을 때 글을 되돌려 둡니다.
-  function submit() {
-    if (!teacher || busyRef.current) return;
-    const el = enter.inputRef.current;
-    const raw = el ? el.value : draft;
-    const text = raw.trim();
-    if (!text) return;
-    if ([...text].length > CLASS_NOTICE_MAX) { setError(`공지는 ${CLASS_NOTICE_MAX}자까지 쓸 수 있어요.`); return; }
-    if (el) el.value = "";
-    setDraft("");
-    setError("");
-    setSent(false);
-    busyRef.current = true;
-    setBusy(true);
-    Promise.resolve()
-      .then(() => sendClassNotice(classId, text, memberCount))
-      .then(() => setSent(true))
-      .catch((e) => {
-        setError(e?.message || "보내지 못했어요. 잠시 뒤 다시 보내 주세요.");
-        setDraft((now) => now || raw);
-      })
-      .finally(() => { busyRef.current = false; setBusy(false); el?.focus({ preventScroll: true }); });
-  }
-  const length = [...draft].length;
-  const left = CLASS_NOTICE_MAX - length;
-
-  return (
-    <section ref={panelRef} className="plaza-talk-panel plaza-talk-frame plaza-talk-frame--panel plaza-notice-panel" aria-label="공지사항">
-      {tabs}
-      <header className="plaza-talk-head">
-        <h4 ref={headRef} tabIndex={-1}><IconMegaphone size={20} />공지사항{teacher && <small>학생 {memberCount}명</small>}</h4>
-        <button type="button" className="plaza-talk-icon" onClick={onClose} aria-label="공지사항 닫기" title="닫기">
-          <img src={TALK_ART.iconClose.src} alt="" width="16" height="16" />
-        </button>
-      </header>
-      <p className="plaza-notice-lead">
-        {teacher ? "보낸 공지는 반 학생 모두의 화면에 큰 글씨로 떠요 — 광장 · 교실 · 아지트 어디에 있든" : "선생님이 반 모두에게 보낸 공지예요"}
-      </p>
-      <ol className="plaza-talk-lines plaza-notice-lines" ref={listRef} aria-live="polite" aria-relevant="additions">
-        {list === null
-          ? <li className="plaza-talk-line is-system"><span>공지를 불러오는 중…</span></li>
-          : rows.length === 0
-            ? <li className="plaza-talk-line is-system"><span>{teacher ? "아직 보낸 공지가 없어요. 아래에 적어 보내 보세요." : "아직 공지가 없어요."}</span></li>
-            : rows.map((n) => (
-              <li key={n.id} className="plaza-talk-line plaza-notice-line">
-                <b className="plaza-talk-who"><IconMegaphone size={14} /><time>{noticeClock(n.ms)}</time></b>
-                <span className="plaza-talk-bubble plaza-notice-bubble">{n.text}</span>
-              </li>
-            ))}
-      </ol>
-      {teacher && (
-        <form className="plaza-talk-compose" onSubmit={(e) => { e.preventDefault(); submit(); }}>
-          <div className="plaza-talk-write">
-            <textarea ref={enter.ref} value={draft} rows={4} maxLength={CLASS_NOTICE_MAX * 2} placeholder="반 모두에게 알릴 말을 적어요 (Enter로 보내기 · Shift+Enter 줄바꿈)"
-              aria-label="공지 내용" enterKeyHint="send" onChange={(e) => { setDraft(e.target.value); if (error) setError(""); if (sent) setSent(false); }}
-              onKeyDown={enter.onKeyDown} onCompositionStart={enter.onCompositionStart} onCompositionEnd={enter.onCompositionEnd} />
-            <button type="submit" className="plaza-talk-send" disabled={busy || !draft.trim() || left < 0} aria-label="공지 보내기" title="보내기 (Enter)">
-              <img src={TALK_ART.iconSend.src} alt="" width="22" height="19" />
-            </button>
-          </div>
-          <div className="plaza-talk-foot">
-            <span className="plaza-talk-notice">보낸 공지는 고치거나 지울 수 없어요.</span>
-            <span className={`plaza-talk-count${left < 0 ? " is-over" : ""}`}>{length}/{CLASS_NOTICE_MAX}</span>
-          </div>
-          {sent && <p className="plaza-notice-sent" role="status">학생 화면에 크게 띄웠어요{memberCount ? ` · ${memberCount}명` : ""}</p>}
           {error && <p className="plaza-talk-error" role="alert">{error}</p>}
         </form>
       )}

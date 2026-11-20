@@ -93,11 +93,9 @@
 .plaza-gather.is-waiting { opacity: .58; cursor: default; }
 .plaza-gather.is-waiting:hover { background: #fff6e2f5; transform: none; }
 .plaza-gather.is-waiting:active { transform: none; box-shadow: 0 3px 0 #8a5a2b55, 0 8px 18px #3a26122e; }
-/* 공지사항 · 가판대 · 책꽂이 — 이어 놓인 단추는 같은 크기(칸 수만큼 같은 폭 — 공지사항이 가판대 왼쪽에 섬, 선생님 요청).
-   교실에서는 공지사항 단추가 오른쪽 위 알림 줄(.plaza-hud-room)의 맨 위에 같은 모양으로 섭니다. */
-.plaza-hud-actions { position: absolute; right: 14px; top: 14px; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; }
-.plaza-hud-actions button,
-.plaza-hud-room > .plaza-notice-btn {
+/* 가판대 · 책꽂이 — 이어 놓인 두 단추는 같은 크기 */
+.plaza-hud-actions { position: absolute; right: 14px; top: 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.plaza-hud-actions button {
   display: flex; align-items: center; justify-content: center; gap: 6px; height: 40px; padding: 0 14px;
   border: 1px solid #d8c7ad; border-radius: 12px;
   background: #fffdf8f2; color: #3d3226;
@@ -106,15 +104,7 @@
   cursor: pointer;
   transition: background .15s, border-color .15s, transform .15s;
 }
-.plaza-hud-actions button:hover,
-.plaza-hud-room > .plaza-notice-btn:hover { background: #fff; border-color: #b9925a; transform: translateY(-1px); }
-.plaza-hud-room > .plaza-notice-btn { pointer-events: auto; }
-.plaza-notice-btn svg { flex: none; }
-/* 공지사항 창이 열려 있는 동안 — 눌린 단추(다시 누르면 닫힘) */
-.plaza-hud-actions button.plaza-notice-btn.is-on,
-.plaza-hud-room > .plaza-notice-btn.is-on { background: #fff1e2; border-color: #c97a3c; color: #7a3d14; }
-.plaza-hud-actions button:focus-visible,
-.plaza-hud-room > .plaza-notice-btn:focus-visible { outline: 3px solid #478fbd; outline-offset: 2px; }
+.plaza-hud-actions button:hover { background: #fff; border-color: #b9925a; transform: translateY(-1px); }
 .plaza-hud-actions small { font-size: 11.5px; font-weight: 500; color: #8a7b66; }
 .plaza-hud-actions b { min-width: 22px; padding: 1px 6px; border-radius: 999px; background: #e8f1e6; color: #2f6150; font-size: 12px; text-align: center; font-variant-numeric: tabular-nums; }
 .plaza-hud-error { position: absolute; left: 50%; top: 66px; transform: translateX(-50%); width: max-content; max-width: calc(100% - 28px); padding: 9px 14px; border: 1px solid #f0c4b6; border-radius: 12px; background: #fff4eff5; color: #9a3a1c; font-size: 12.5px; line-height: 1.6; box-shadow: 0 6px 16px #3a261226; }
@@ -142,22 +132,22 @@
 @keyframes plaza-hint-in { from { opacity: 0; transform: translate(-50%, 6px); } to { opacity: 1; transform: translate(-50%, 0); } }
 /* 무대 칸이 좁아지면 — 단추의 딸림글 → 안내의 뒷말 차례로 접습니다. 책꽂이 이름표는 그림의 위 가운데라, 좁은 칸에서는
    맵 위의 제목 · 단추 띠와 겹칩니다(실측 — 폰에서 '가판대' 단추 밑에 깔림). 그때는 이름표를 띠 아래로 내립니다. */
-/* 단추의 딸림글(독서 발자국 · 완독 감상)은 1280px 아래에서 접습니다 — 단추가 셋(공지사항 · 가판대 · 책꽂이)이라 같은 폭 세 칸이
-   딸림글만큼 넓어지면(한 칸 171px · 줄 528px) 노트북 폭(1100px)에서 맵 위 가운데의 책꽂이 이름표를 덮었습니다(실측 · 한때 960px). */
-@container plazawrap (max-width: 1280px) {
+@container plazawrap (max-width: 960px) {
   .plaza-hud-actions small { display: none; }
 }
 @container plazawrap (max-width: 720px) {
   .plaza-hint span { display: none; }
 }
-/* 좁은 칸(640px 아래)의 책꽂이 이름표는 아래 '오른쪽 단추가 셋' 규칙이 비켜 내립니다 — 단추 줄이 한 줄 아래로 내려가며
-   이름표도 그 줄 아래로(한때 단추가 둘일 때는 한 줄만 · '지금 n명' 알약이 서면 두 줄). */
+@container plazawrap (max-width: 640px) {
+  .plaza-sign--shelf { translate: 0 40px; }
+  /* '지금 n명' 알약이 서면 그 줄도 비켜 내립니다(실측 — 폰에서 알약 밑에 이름표가 깔림) */
+  .plaza-stage-wrap.has-live .plaza-sign--shelf { translate: 0 80px; }
+}
 @container plazawrap (max-width: 460px) {
   .plaza-hud-lead { left: 10px; top: 10px; gap: 6px; }
   .plaza-title, .plaza-exit { height: 36px; padding: 0 12px; font-size: 16px; border-radius: 12px; }
   .plaza-hud-actions { right: 10px; top: 10px; gap: 6px; }
-  .plaza-hud-actions button,
-  .plaza-hud-room > .plaza-notice-btn { height: 36px; padding: 0 10px; font-size: 12.5px; border-radius: 10px; }
+  .plaza-hud-actions button { height: 36px; padding: 0 10px; font-size: 12.5px; border-radius: 10px; }
   .plaza-hud-error { top: 54px; }
   .plaza-live { left: 10px; top: 52px; max-width: calc(100% - 20px); font-size: 12px; white-space: normal; }
 }
@@ -166,24 +156,18 @@
   .plaza-title, .plaza-exit { padding: 0 9px; font-size: 14.5px; }
   .plaza-hud-actions button { padding: 0 8px; }
 }
-/* 오른쪽 단추가 셋(공지사항 · 가판대 · 책꽂이 — 선생님 요청)이라, 좁은 칸(640px 아래 — 폰 · 좁은 창)에서는 왼쪽 팻말 둘과 한 줄에
-   못 섭니다(실측 — 선생님 600px에서 29px 겹침 · '모두 교실로'가 서면 팻말이 더 넓음). 그때는 단추 줄을 한 줄 아래로 내립니다 —
-   교실의 알림(.plaza-hud-room)이 좁은 화면에서 서는 줄과 같은 자리입니다. 그 줄 왼쪽에 '지금 n명' 알약이 함께 서고, 글이 긴 알약
-   (쉬는 중 · 잇지 못한 까닭)은 한 줄 더 내려갑니다. 책꽂이 이름표도 그 줄만큼 비켜 내립니다. 아주 좁은 폰(400px 아래)은
-   '지금 n명' 알약도 한 줄 더 아래로 — 단추 셋과 한 줄에 못 섭니다.
-   (한때 단추가 둘일 때는 선생님의 '모두 교실로'가 선 화면 · 520px 아래에서만 내렸습니다 — .has-gather) */
-@container plazawrap (max-width: 640px) {
-  .plaza-hud-actions { top: 62px; }
-  .plaza-live--resting, .plaza-live--note { top: 110px; }
-  .plaza-sign--shelf, .plaza-stage-wrap.has-live .plaza-sign--shelf { translate: 0 80px; }
+/* 선생님의 '모두 교실로'가 서면(.has-gather) 왼쪽 팻말 둘이 글자만큼 넓어져, 좁은 칸(폰)에서는 오른쪽의 가판대 · 책꽂이
+   단추와 겹칩니다(실측 420px — '나가기'와 16px · 360px — 40px). 그때는 단추를 한 줄 아래로 내립니다 — 교실의 알림
+   (.plaza-hud-room)이 좁은 화면에서 서는 줄과 같은 자리입니다. 그 줄에 '지금 n명' 알약(왼쪽)이 함께 서고, 글이 긴 알약
+   (쉬는 중 · 잇지 못한 까닭)은 한 줄 더 내려갑니다. 책꽂이 이름표도 그 줄만큼 비켜 내립니다. */
+@container plazawrap (max-width: 520px) {
+  .plaza-stage-wrap.has-gather .plaza-hud-actions { top: 62px; }
+  .plaza-stage-wrap.has-gather .plaza-live--resting, .plaza-stage-wrap.has-gather .plaza-live--note { top: 110px; }
+  .plaza-stage-wrap.has-gather .plaza-sign--shelf { translate: 0 80px; }
 }
 @container plazawrap (max-width: 460px) {
-  .plaza-hud-actions { top: 52px; }
-  .plaza-live--resting, .plaza-live--note { top: 94px; }
-}
-@container plazawrap (max-width: 400px) {
-  .plaza-live { top: 94px; }
-  .plaza-stage-wrap.has-live .plaza-sign--shelf { translate: 0 120px; }
+  .plaza-stage-wrap.has-gather .plaza-hud-actions { top: 52px; }
+  .plaza-stage-wrap.has-gather .plaza-live--resting, .plaza-stage-wrap.has-gather .plaza-live--note { top: 94px; }
 }
 
 /* 책꽂이 팻말 · 가판대 위의 책 말풍선 */
