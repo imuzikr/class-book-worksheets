@@ -536,7 +536,7 @@ service cloud.firestore {
       // 대화에 사람을 넣는 일과 선생님의 기록 읽기는 서버만 · /api/reading/plaza). 여기서는 스위치의 모양만 봅니다.
       // 펫 미리보기(petPreviewEnabled)를 켠 반의 학생이 고르는 펫은 서버만 적습니다(/api/reading/pet — 프로필의 readingPet ·
       // 비밀 문서 users/{uid}/reading/pet은 아래 users 규칙이 학생 · 교사 모두 못 쓰게 막음).
-      // 독서 맵(readingMapTheme)은 대륙 · 모험의 식별자 두 개만 받습니다.
+      // 독서 맵(readingMapTheme)은 천공 · 모험의 식별자 두 개만 받습니다.
       // 교실의 칠판에서 선생님이 출석을 확인한 때(classroomCallAt — lib/data/classes.js의 callClassroomRoll)는
       // 0 이상의 수만 받습니다(앉아 있던 학생의 화면이 이 값이 바뀌는 것을 보고 출석을 남깁니다).
       // 펫 먹이(lib/petCare.js) — 스위치(petFeedEnabled) · 주말에 쉬는가(petRestWeekend)는 참 · 거짓만, 배고파지지 않는

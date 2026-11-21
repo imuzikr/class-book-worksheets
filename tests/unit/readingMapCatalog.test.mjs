@@ -22,6 +22,13 @@ test("맵 선택은 등록된 두 값만 허용하고 기존 반·잘못된 값�
   assert.equal(readingMapThemeOf(), DEFAULT_READING_MAP_THEME);
 });
 
+test("이전에 대륙을 선택한 반에는 천공 원화와 설정 미리보기를 표시한다", () => {
+  const theme = getReadingMapTheme(readingMapThemeOf({ readingMapTheme: "continent" }));
+  assert.equal(theme.name, "천공");
+  assert.equal(theme.image, "/reading-journey/map-sky-library.webp");
+  assert.equal(theme.preview, "/reading-journey/map-sky-library-preview.webp");
+});
+
 test("교사 선택 상태는 운영 중인 반만 비교하고 서로 다른 지도는 혼합 상태로 구분한다", () => {
   const values = Object.freeze([
     Object.freeze({ id: "one", readingMapTheme: "continent" }),

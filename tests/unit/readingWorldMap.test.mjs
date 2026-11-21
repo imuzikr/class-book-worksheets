@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { getExpForReadingLevel, READING_LEVEL_MAX } from "../../lib/reading.js";
 import {
-  WORLD_MAP, WORLD_MAPS, getWorldMap, WORLD_LEVEL_STOPS, WORLD_REGIONS, WORLD_CHARACTERS,
+  WORLD_MAP, WORLD_MAPS, getWorldMap, WORLD_LEVEL_STOPS, WORLD_CHARACTERS,
   worldProgress, worldPoint, worldCheckpoints, groupWorldTravelers, defaultWorldAvatar, readingLeaderUids, splitWorldLeaderGroups,
 } from "../../lib/readingWorldMap.js";
 
@@ -16,11 +16,26 @@ test("구름섬의 레벨 거점은 선택한 원화의 숲·사막·폭포·설
   assert.deepEqual(stops.map((stop) => [stop.x, stop.y]), expected);
   assert.deepEqual(stops.map(({ level, xp, progress }) => ({ level, xp, progress })),
     worldCheckpoints(WORLD_MAP).map(({ level, xp, progress }) => ({ level, xp, progress })));
-  assert.deepEqual(stops.filter((stop) => stop.level % 2 === 1).map((stop) => worldProgress(stop.xp).region.id),
+  assert.deepEqual(stops.filter((stop) => stop.level % 2 === 1).map((stop) => worldProgress(stop.xp, map).region.id),
     ["forest", "desert", "valley", "mountains", "storm"]);
   assert.notEqual(map.path, WORLD_MAP.path);
   assert.equal(getWorldMap("continent"), WORLD_MAP);
   assert.equal(getWorldMap("unrecognized"), map);
+});
+
+test("천공의 레벨 거점은 지상 도서관에서 제본소와 서재, 그림책 정원을 지나 천공의 도서관까지 이어진다", () => {
+  const map = getWorldMap("continent");
+  const stops = worldCheckpoints(map);
+  assert.deepEqual(stops.map(({ x, y }) => [x, y]), [
+    [259, 949], [760, 837], [1142, 789], [789, 702], [389, 645],
+    [676, 500], [558, 360], [753, 305], [1103, 322], [1236, 271],
+  ]);
+  const names = ["지상 도서관", "제본소", "나무 속 서재", "그림책 정원", "천공의 도서관"];
+  assert.deepEqual(map.regions.map(({ name }) => name), names);
+  for (const { level, xp } of stops) {
+    const group = groupWorldTravelers([{ uid: "학생", totalXp: xp }], { map })[0];
+    assert.equal(group.representative.world.region.name, names[Math.floor((level - 1) / 2)]);
+  }
 });
 
 test("두 지도 모두 경로가 유한하고, 지형 경계에서 좌표가 튀거나 역행하지 않는다", () => {
@@ -44,13 +59,14 @@ test("두 지도 모두 경로가 유한하고, 지형 경계에서 좌표가 �
   }
 });
 
-test("구름섬의 학생 묶음은 논리 진도가 아닌 선택한 길 위의 실제 거리를 따른다", () => {
+test("구름섬의 학생 묶음은 선택한 길 위의 실제 거리를 따른다", () => {
   const map = getWorldMap("cloud-islands");
   const rows = [{ uid: "near-desert", totalXp: 500 }, { uid: "far-desert", totalXp: 800 }];
   // The same logical progress span covers a longer bridge approach on this map.
-  assert.equal(groupWorldTravelers(rows, { epsilon: 0.05 }).length, 1);
+  assert.ok(worldProgress(800).progress - worldProgress(500).progress < 0.05);
   const split = groupWorldTravelers(rows, { epsilon: 0.05, map });
   assert.equal(split.length, 2);
+  assert.ok(split.every((group) => group.representative.world.region.id === "desert"));
   assert.deepEqual(split.flatMap((group) => group.members.map((row) => row.uid)).sort(), rows.map((row) => row.uid).sort());
   for (const selectedUid of rows.map((row) => row.uid)) {
     const selected = groupWorldTravelers(rows, { epsilon: 0.05, map, selectedUid });
@@ -116,7 +132,7 @@ test("근접 모임에서 다른 학생을 선택해도 공동 대장이 숨거�
     { uid: "peer-a", totalXp: 435, level: 3 }, { uid: "peer-b", totalXp: 445, level: 3 },
     { uid: "leader-a", totalXp: 485, level: 3 }, { uid: "leader-b", totalXp: 485, level: 3 },
   ];
-  const original = groupWorldTravelers(rows, { selectedUid: "peer-b", epsilon: 0.02 })[0];
+  const original = groupWorldTravelers(rows, { selectedUid: "peer-b", epsilon: 0.03 })[0];
   const [leaders, peers] = splitWorldLeaderGroups([original], readingLeaderUids(rows), "peer-b");
   assert.equal(leaders.id, `${original.id}:leaders`);
   assert.equal(peers.id, `${original.id}:peers`);
@@ -225,7 +241,7 @@ test("레벨별 거점은 기존 도달 기준을 따르며 반이나 기간으�
   assert.deepEqual(changedPeriod.world, first.world);
 });
 
-test("2,000 EXP는 Lv.6의 2/3 지점이며 곡선 전체의 53%에 놓인다", () => {
+test("2,000 EXP의 독서 진도는 Lv.6의 2/3 지점인 53%다", () => {
   const world = worldProgress(2000);
   assert.equal(world.level, 6);
   assert.equal(world.from, 1500);
@@ -234,7 +250,7 @@ test("2,000 EXP는 Lv.6의 2/3 지점이며 곡선 전체의 53%에 놓인다", 
   near(world.ratio, 2 / 3);
   near(world.progress, 0.53);
   assert.equal(world.percent, 67);
-  assert.equal(world.region.id, "valley");
+  assert.equal(world.region.name, "나무 속 서재");
 });
 
 test("반올림한 표시 진행률이 100이어도 다음 거점에 미리 도착하지 않는다", () => {
@@ -245,7 +261,7 @@ test("반올림한 표시 진행률이 100이어도 다음 거점에 미리 도�
   const after = worldProgress(2250);
   assert.equal(after.level, 7);
   assert.equal(after.progress, 0.57);
-  assert.equal(after.region.id, "mountains");
+  assert.equal(after.region.name, "그림책 정원");
   for (const [xp, level] of [[0, 1], [99, 1], [100, 2], [249, 2], [250, 3]]) assert.equal(worldProgress(xp).level, level);
 });
 
@@ -261,7 +277,7 @@ test("여정은 한 바퀴 — Lv.1 출발 · Lv.10이 길 끝(도착)이고, �
   assert.equal(before.level, 9);
   assert.equal(before.complete, false);
   assert.ok(before.progress > 0.84 && before.progress < 1);
-  assert.equal(before.region.id, "storm");
+  assert.equal(before.region.name, "천공의 도서관");
   for (const xp of [7595, 11393, 600000, Number.MAX_VALUE]) {
     const max = worldProgress(xp);
     assert.equal(max.level, 10);
@@ -270,7 +286,7 @@ test("여정은 한 바퀴 — Lv.1 출발 · Lv.10이 길 끝(도착)이고, �
     assert.equal(max.percent, 100);
     assert.equal(max.progress, 1);
     assert.equal(max.toNext, 0);
-    assert.equal(max.region.id, "storm");
+    assert.equal(max.region.name, "천공의 도서관");
     assert.ok(Object.values(worldPoint(max.progress)).every(Number.isFinite));
   }
 });
@@ -285,14 +301,14 @@ test("기록 정정으로 EXP가 줄면 실제 성장에 맞춰 거점도 뒤로
 test("렌더링 경로와 좌표 표본은 같은 원점·끝점·가상 좌표계를 사용한다", () => {
   assert.equal(WORLD_MAP.width, 1536);
   assert.equal(WORLD_MAP.height, 1024);
-  assert.match(WORLD_MAP.path, /^M246,876 L/);
-  assert.match(WORLD_MAP.path, /L1257,215$/);
+  assert.match(WORLD_MAP.path, /^M259,949 L/);
+  assert.match(WORLD_MAP.path, /L1236,271$/);
   const start = worldPoint(0);
   const finish = worldPoint(1);
-  assert.equal(start.x, 246);
-  assert.equal(start.y, 876);
-  assert.equal(finish.x, 1257);
-  assert.equal(finish.y, 215);
+  assert.equal(start.x, 259);
+  assert.equal(start.y, 949);
+  assert.equal(finish.x, 1236);
+  assert.equal(finish.y, 271);
   assert.deepEqual(worldPoint(-100), start);
   assert.deepEqual(worldPoint(Infinity), start);
   assert.deepEqual(worldPoint(10), finish);
@@ -315,8 +331,7 @@ test("거점 좌표는 경로 위에 놓이며 양 끝(Lv.1 출발 · Lv.10 도�
     assert.equal(checkpoint.angle, point.angle);
     assert.equal(checkpoint.xp, getExpForReadingLevel(checkpoint.level));
   }
-  // 지형이 바뀌는 곳에서 홀수 레벨이 시작합니다(숲 1 · 사막 3 · 계곡 5 · 설산 7 · 폭풍 해안 9).
-  assert.deepEqual(WORLD_REGIONS.map((region) => checkpoints.find((stop) => stop.progress === region.start)?.level), [1, 3, 5, 7, 9]);
+  assert.deepEqual(WORLD_MAP.regions.map((region) => checkpoints.find((stop) => stop.progress === region.start)?.level), [1, 3, 5, 7, 9]);
 });
 
 test("같은 EXP 학생 15명은 한 모임이며 선택과 배열 순서가 위치를 바꾸지 않는다", () => {
@@ -344,7 +359,7 @@ test("출발점과 도착점의 학생을 한 모임으로 묶거나 같은 학�
 test("가까운 진도를 묶더라도 원 EXP와 진도를 보존하고 이웃의 연쇄 병합을 막는다", () => {
   const rows = [{ uid: "a", totalXp: 1 }, { uid: "b", totalXp: 2 }, { uid: "c", totalXp: 3 }];
   assert.equal(groupWorldTravelers(rows).length, 3);
-  const groups = groupWorldTravelers(rows, { epsilon: 0.001 });
+  const groups = groupWorldTravelers(rows, { epsilon: 0.0025 });
   assert.equal(groups.length, 2);
   assert.deepEqual(groups[0].members.map((row) => row.totalXp), [1, 2]);
   near(groups[0].members[1].world.progress, worldProgress(2).progress);
@@ -359,5 +374,4 @@ test("캐릭터 기본값은 레벨·기간·반과 무관한 UID로 정하며 �
     assert.equal(number, defaultWorldAvatar(`student-${i}`));
   }
   assert.ok(defaultWorldAvatar(null) >= 1);
-  assert.deepEqual(WORLD_REGIONS.map((item) => item.id), ["forest", "desert", "valley", "mountains", "storm"]);
 });

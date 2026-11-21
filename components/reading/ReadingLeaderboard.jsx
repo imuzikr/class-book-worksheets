@@ -7,8 +7,7 @@ import { deriveReading, kstToday, READING_BADGES } from "@/lib/reading";
 import { fetchReadingRankings, saveReadingCharacter, subscribeReadingState } from "@/lib/data/reading";
 import { startVisiblePoll, RANKING_POLL_MS, RANKING_WAKE_GAP_MS } from "@/lib/visiblePoll";
 import { journeyNarrative, journeyTitle, badgeHint, rankingAsOf, rankingsForPeriod } from "@/lib/readingJourney";
-import { worldProgress } from "@/lib/readingWorldMap";
-import { getReadingMapTheme } from "@/lib/readingMapCatalog";
+import { getWorldMap, worldProgress } from "@/lib/readingWorldMap";
 import { characterOf, characterImage } from "@/lib/readingCharacterCatalog";
 import { backdropClose } from "@/lib/modal";
 import { normalizePublicPet, PET_HATCH_XP, petSpecies, petStageName } from "@/lib/readingPet";
@@ -29,10 +28,10 @@ const orDash = (value, unit = "") => numeric(value) ? `${number(value)}${unit}` 
 // 리더보드가 서버에 다시 묻는 주기 — 10분마다 · 탭으로 돌아오면 5분 넘었을 때만(lib/visiblePoll.js, 선생님 요청)
 const RANKING_POLL = { intervalMs: RANKING_POLL_MS, wakeGapMs: RANKING_WAKE_GAP_MS };
 
-function growthOf(row) {
+function growthOf(row, map) {
   const xp = xpOf(row);
   if (xp === null) return null;
-  const growth = worldProgress(xp);
+  const growth = worldProgress(xp, map);
   // 서로 다른 집계의 레벨과 경험치를 섞어 보여 주지 않습니다.
   return row?.level === growth.level ? growth : null;
 }
@@ -80,7 +79,7 @@ function Bar({ percent, label }) {
 }
 
 export default function ReadingLeaderboard({ classId, user, isTeacher = false, mapTheme, characterOn = true, petOn = true, onDisabled, onOpenLibrary }) {
-  const selectedMap = getReadingMapTheme(mapTheme).id;
+  const map = getWorldMap(mapTheme);
   const viewId = useId();
   const tabRefs = useRef([]);
   const [view, setView] = useState("map");
@@ -227,7 +226,7 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, m
     {hasSnapshot && error && <p className="reading-help" role="status">성장 정보는 마지막으로 확인한 누적 기록입니다. 새로고침해 주세요.</p>}
     <section className="rlb-panel" id={`${viewId}-panel-map`} role="tabpanel" aria-labelledby={`${viewId}-tab-map`} hidden={view !== "map"} tabIndex={0}>
       {!hasSnapshot ? !error && <div className="reading-loading" role="status">우리 반 여정을 모으고 있어요.</div>
-        : <ReadingWorldMap key={`${classId}:${selectedMap}`} mapTheme={selectedMap} rows={list} uid={uid} isTeacher={isTeacher} petOn={petOn} onOpenDetails={selectStudent} onSaveCharacter={characterOn ? saveCharacter : null} />}
+        : <ReadingWorldMap key={`${classId}:${map.id}`} mapTheme={map.id} rows={list} uid={uid} isTeacher={isTeacher} petOn={petOn} onOpenDetails={selectStudent} onSaveCharacter={characterOn ? saveCharacter : null} />}
     </section>
 
     <section className="rlb-panel" id={`${viewId}-panel-ranking`} role="tabpanel" aria-labelledby={`${viewId}-tab-ranking`} hidden={view !== "ranking"} tabIndex={0}>
@@ -242,7 +241,7 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, m
               {error ? <p className="reading-help">순위를 갱신하지 못했어요. 다시 시도해 주세요.</p>
                   : <ul className="rlb-list">{list.map((row) => {
                     const me = row.uid === uid;
-                    const progress = growthOf(row);
+                    const progress = growthOf(row, map);
                     return <li key={row.uid}>
                       <button type="button" className={"rlb-row" + (me ? " is-me" : "")} onClick={() => selectStudent(row.uid)}>
                         <Medal rank={row.rank} />
@@ -257,16 +256,16 @@ export default function ReadingLeaderboard({ classId, user, isTeacher = false, m
                     </li>;
                   })}</ul>}
             </section>
-            {isTeacher ? <ClassSummary rows={list} /> : <MyJourney mine={mine} row={myRow} uid={uid} today={today} pet={petOf(myRow, petOn)} />}
+            {isTeacher ? <ClassSummary rows={list} map={map} /> : <MyJourney map={map} mine={mine} row={myRow} uid={uid} today={today} pet={petOf(myRow, petOn)} />}
           </div>}
     </section>
 
-    {picked && <StudentJourneyModal row={picked} me={picked.uid === uid} pet={petOf(picked, petOn)} onClose={closeStudent} onOpenLibrary={isTeacher && onOpenLibrary && picked.uid !== uid ? () => onOpenLibrary(picked.uid) : null} />}
+    {picked && <StudentJourneyModal map={map} row={picked} me={picked.uid === uid} pet={petOf(picked, petOn)} onClose={closeStudent} onOpenLibrary={isTeacher && onOpenLibrary && picked.uid !== uid ? () => onOpenLibrary(picked.uid) : null} />}
   </div>;
 }
 
-function MyJourney({ mine, row, uid, today, pet = null }) {
-  const progress = growthOf(row);
+function MyJourney({ map, mine, row, uid, today, pet = null }) {
+  const progress = growthOf(row, map);
   const earned = Array.isArray(row?.badges) ? READING_BADGES.filter((badge) => row.badges.includes(badge.id)) : null;
   const lines = mine ? journeyNarrative(mine, today) : null;
   return <section className="rlb-card rlb-mine" aria-labelledby="rlb-mine-title">
@@ -293,8 +292,8 @@ function MyJourney({ mine, row, uid, today, pet = null }) {
   </section>;
 }
 
-function ClassSummary({ rows }) {
-  const known = rows.filter((row) => growthOf(row));
+function ClassSummary({ rows, map }) {
+  const known = rows.filter((row) => growthOf(row, map));
   const readers = known.filter((row) => xpOf(row) > 0);
   const complete = known.length === rows.length;
   const avg = complete && rows.length ? known.reduce((sum, row) => sum + row.level, 0) / rows.length : null;
@@ -312,9 +311,9 @@ function ClassSummary({ rows }) {
   </section>;
 }
 
-function StudentJourneyModal({ row, me, pet = null, onClose, onOpenLibrary = null }) {
+function StudentJourneyModal({ map, row, me, pet = null, onClose, onOpenLibrary = null }) {
   const modalRef = useRef(null);
-  const progress = growthOf(row);
+  const progress = growthOf(row, map);
   const earned = new Set(row.badges ?? []);
   const known = Array.isArray(row.badges);
 

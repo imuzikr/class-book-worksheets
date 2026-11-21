@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { READING_BADGES, READING_LEVEL_MAX } from "@/lib/reading";
 import { journeyTitle } from "@/lib/readingJourney";
 import {
-  WORLD_REGIONS, getWorldMap,
+  getWorldMap,
   groupWorldTravelers, readingLeaderUids, splitWorldLeaderGroups,
   worldCheckpoints, worldPoint, worldProgress,
 } from "@/lib/readingWorldMap";
@@ -18,8 +18,8 @@ import "./reading-world-map.css";
 import "./pet.css";
 
 const number = (value) => value.toLocaleString("ko-KR");
-const growthOf = (row) => {
-  const growth = worldProgress(row?.totalXp);
+const growthOf = (row, map) => {
+  const growth = worldProgress(row?.totalXp, map);
   return growth?.level === row?.level ? growth : null;
 };
 
@@ -76,7 +76,7 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, mapTheme, petOn 
   const initialView = useRef(false);
 
   const travelers = useMemo(() => rows.slice().sort((a, b) => String(a.studentId || "").localeCompare(String(b.studentId || ""), "ko")
-    || a.uid.localeCompare(b.uid)).map((row) => ({ ...row, world: growthOf(row) })), [rows]);
+    || a.uid.localeCompare(b.uid)).map((row) => ({ ...row, world: growthOf(row, map) })), [rows, map]);
   const leaderUids = useMemo(() => readingLeaderUids(rows), [rows]);
   const leaderSet = useMemo(() => new Set(leaderUids), [leaderUids]);
   const selected = travelers.find((row) => row.uid === selectedUid)
@@ -136,7 +136,7 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, mapTheme, petOn 
     setSelectionPulse((value) => value + 1);
     setClusterId(null);
     if (!center) return;
-    const next = growthOf(row);
+    const next = row.world;
     if (next && viewport.current) {
       const point = worldPoint(next.progress, map);
       viewport.current.scrollTo({ left: offset.x + point.x * scale - size.width / 2, top: offset.y + point.y * scale - size.height / 2, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
@@ -272,7 +272,7 @@ export default function ReadingWorldMap({ rows, uid, isTeacher, mapTheme, petOn 
       </aside>
     </div>
 
-    <div className="rwm-footer"><div className="rwm-regions" aria-label="지도 지형 순서">{WORLD_REGIONS.map((region, index) => <span key={region.id} className={growth?.region?.id === region.id ? "is-current" : ""}><small>0{index + 1}</small>{region.name}</span>)}</div><p>독서 경험치가 쌓이면 길을 따라 나아가고, {READING_LEVEL_MAX}레벨이 되면 여정 끝에 도착해요. 캐릭터와 의상은 자유롭게 고를 수 있어요.</p></div>
+    <div className="rwm-footer"><div className="rwm-regions" aria-label="지도 지형 순서">{map.regions.map((region, index) => <span key={region.id} className={growth?.region?.id === region.id ? "is-current" : ""}><small>0{index + 1}</small>{region.name}</span>)}</div><p>독서 경험치가 쌓이면 길을 따라 나아가고, {READING_LEVEL_MAX}레벨이 되면 여정 끝에 도착해요. 캐릭터와 의상은 자유롭게 고를 수 있어요.</p></div>
 
     {choosing && selected?.uid === uid && <CharacterChooser row={selected} onClose={() => setChoosing(false)} onSave={async (character) => { await onSaveCharacter(character); setChoosing(false); }} />}
   </section>;
