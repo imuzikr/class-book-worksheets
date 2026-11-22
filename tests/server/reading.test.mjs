@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { initializeApp, deleteApp } from "firebase-admin/app";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
 import { getReading, mutateReading, getReadingRankings, getReadingTop, readingPrincipal, resetReadingRankings, saveReadingCharacter } from "../../lib/server/readingService.js";
-import { READING_FORMULA, getReadingLevel, readingTopWeek } from "../../lib/reading.js";
+import { READING_FORMULA, getReadingLevel, readingTopDay } from "../../lib/reading.js";
 
 const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID || "demo-reading-api";
 if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST || !projectId.startsWith("demo-")) {
@@ -333,9 +333,10 @@ test("same-formula projections missing global XP are repaired rather than treate
   assert.equal((await rankingsNow(principal("teacher"), "api-class", "all-time")).rankings[0].character, null);
 });
 
-// 상단바 '독서 TOP 3' — 서울 시각 월요일 07:00에 한 주가 바뀌고, 그 주 내내 같은 셋(선생님 요청).
-test("독서 TOP 3 — 한 주에 한 번 셈해 적어 두고, 그 주에는 같은 셋 · 반에서 빠진 학생은 빼고 채움", async () => {
-  const week = readingTopWeek(new Date());
+// 상단바 '독서 TOP 3' — 서울 시각 날마다 07:00에 바뀌고, 그날 내내 같은 셋(선생님 요청 · 어제까지의 기록).
+// 아래 week는 그 하루의 날짜입니다(칸 이름은 한 주에 한 번 세던 때 그대로).
+test("독서 TOP 3 — 하루에 한 번 셈해 적어 두고, 그날에는 같은 셋 · 반에서 빠진 학생은 빼고 채움", async () => {
+  const week = readingTopDay(new Date());
   const before = new Date(Date.parse(`${week}T00:00:00Z`) - 3 * 86400000).toISOString().slice(0, 10); // 지난주 목요일쯤
   const top = ["top-a", "top-b", "top-c", "top-d"];
   const snapshot = (uid, pastXp, thisWeekXp) => {
@@ -413,7 +414,7 @@ test("책 봄 상태 — 서재만으로 셈하고 반 집계는 건드리지 �
 });
 
 test("사용 중지 — 리더보드 · TOP 3에서 빠지고, 옛 TOP 3 장은 새 기준으로 다시 셈 · 다시 세기는 담당 교사만", async () => {
-  const week = readingTopWeek(new Date());
+  const week = readingTopDay(new Date());
   const before = new Date(Date.parse(`${week}T00:00:00Z`) - 3 * 86400000).toISOString().slice(0, 10);
   const snapshot = (uid, totalXp) => ({ uid, level: getReadingLevel(totalXp), featuredBadge: null, formula: READING_FORMULA,
     events: [{ date: before, xp: totalXp }], xpDays: [{ date: before, xp: totalXp }],
