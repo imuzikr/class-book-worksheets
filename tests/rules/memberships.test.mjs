@@ -256,6 +256,13 @@ describe("반 편성 고치기(교사)", () => {
     await assertSucceeds(updateDoc(doc(db, "users", "stu1"), { classIds: ["classB"] }));
   });
 
+  // 남의 반까지 지우면 그 학생이 '모두 내 반인 학생'이 되어 혼자 사용 중지 · 탈퇴시킬 수 있게 됩니다.
+  it("교사는 학생의 classIds에서 남의 반을 뺄 수 없다 — 내 반만", async () => {
+    const db = asTeacher(env, "teacherA").firestore();
+    await assertFails(updateDoc(doc(db, "users", "stu1"), { classIds: ["classA"] }));
+    await assertFails(updateDoc(doc(db, "users", "stu1"), { classIds: [] }));
+  });
+
   // 늘릴 수 있으면 교사가 학생에게 '남의 반 명단을 읽을 권한'을 얹어 줄 수
   // 있게 됩니다. 줄이는 쪽은 늘 권한을 좁히므로 안전합니다.
   it("교사가 학생의 classIds를 늘리는 것은 거부된다", async () => {

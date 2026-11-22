@@ -397,7 +397,12 @@ service cloud.firestore {
       let after = d1.get('classIds', []);
       return before is list && after is list
              && after.size() < before.size()
-             && after.toSet().difference(before.toSet()).size() == 0;
+             && after.toSet().difference(before.toSet()).size() == 0
+             // **빼는 반은 모두 내가 만든 반이어야 합니다**(보안 점검 · 2026년 11월). 한때 '줄이기만 하면'
+             // 받아, 두 선생님 반에 함께 있는 학생의 목록에서 **남의 반**을 지울 수 있었습니다 — 그러면
+             // 그 학생이 '모두 내 반인 학생'으로 보여 혼자 사용 중지 · 탈퇴(teacherMayWithdraw)시킬 수 있었음.
+             && before.toSet().difference(after.toSet())
+                  .difference(myOwnedClassIds().toSet()).size() == 0;
     }
     function teacherMayWithdraw(userId, data) {
       let ids = data.get('classIds', []);
