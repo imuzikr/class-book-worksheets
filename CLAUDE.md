@@ -264,6 +264,11 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
   지금으로 적어야 하고(칸 하나만 고쳐 0.1초 제한을 비켜 가던 길), 대화의 말한 때 표시(`e`)는 지울 수 없습니다(지웠다 다시 적어 0.5초
   제한을 비켜 가던 길). 화면은 원래 그렇게 씁니다. **이 규칙은 `npm run deploy -- --database-only`(또는 콘솔)로 따로 올립니다.**
   시험 `tests/rules/plazaLive.test.mjs`.
+- **부품 보안 경고(`npm audit --omit=dev`)는 0개로 맞춰 둡니다**(2026년 11월). `firebase-admin`은 14, `next`는 15.5.29 이상입니다.
+  브라우저용 `firebase`는 11 그대로 두고, 그 안의 통신 부품만 `package.json`의 `overrides`로 새 판에 고정했습니다
+  (`@firebase/firestore` → `@grpc/grpc-js` ^1.14.7 — 브라우저 묶음에는 안 실리고 Node에서만 쓰이는 부품). `firebase`를 13으로 올려 봤지만
+  그 판도 같은 옛 부품을 써서 경고가 그대로였고 첫 화면만 66KB 무거워져 되돌렸습니다 — **경고를 없애려고 `firebase`를 올리지 마세요.**
+  `firebase`가 새 통신 부품을 쓰는 판을 내면 `overrides`를 걷습니다.
 - 화면 글자는 '입장 코드'가 아니라 **'참여 코드'**입니다(코드 · 주석의 `joinCode` 이름은 그대로).
 - 바닥글 · 개인정보처리방침의 **문의 이메일**(`SiteFooter.jsx` · `PrivacyContent.jsx`)은 접근
   권한과 무관한 연락처라 남겨 두었습니다 — 운영자가 바뀌면 그 두 곳만 고치면 됩니다.
