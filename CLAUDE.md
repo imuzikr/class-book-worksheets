@@ -346,12 +346,25 @@ npm run lint       # ESLint 훅 규칙 (보고만, 최초 1회 npm ci --prefix t
     쓰지 않고(`subscribeClassDirectory` · `fetchClassRosterProfiles` · 대시보드), 이름을
     맞출 때 모둠 명단의 이모지도 🙂로 돌립니다.
 - **학생 탈퇴는 관리자 대시보드의 학생 프로필 창에서**(`StudentProfileDialog` →
-  `lib/data/withdraw.js`의 `withdrawStudent`, 학생 이름을 그대로 적어야 실행). 서버 없이
+  `lib/data/withdraw.js`의 `withdrawStudent`, 학생 이름을 그대로 적어야 실행). 반 안의 기록은
   브라우저가 지웁니다 — 내 반들의 그 학생 기록(소속 · 출석 · 과일 · 손들기 · 메신저 1:1 ·
   걷은 돌발 퀴즈의 옛 답 · 독서 활동의 글 · 낱말 · 메모 · 동료 평가 …) → 모둠 · 자리표에서 빼기 → 개인
   서재(`users/{uid}/reading/main`) → **프로필(`users/{uid}`)은 맨 마지막**.
-  - **구글 로그인 기록만 남습니다**(남의 계정은 서버만 지움 — Authentication 탭에서).
-    다시 로그인하면 아무 반에도 없는 새 학생으로 시작합니다. 그 학생이 올린 **그림 파일도
+  - **로그인 계정까지 지웁니다 — 완전한 탈퇴**(선생님 요청 · 2026년 11월 "탈퇴를 눌렀을 때 완전히 탈퇴되면서 해당
+    유저의 모든 데이터가 삭제"). 브라우저가 반의 기록을 다 지운 뒤 **프로필을 지우기 전에** 서버를 부르고
+    (`POST /api/account/withdraw` · `lib/server/accountService.js`의 `finishStudentWithdrawal` — 책 봄 API와 같은
+    서버 열쇠), 서버가 로그인 계정(Authentication) → 프로필과 그 아래 전부(`recursiveDelete` — 규칙이 막아
+    브라우저가 못 지우던 `readingRequests`까지)를 지웁니다. 한때 '구글 로그인 기록만 남는다'고 안내했습니다 —
+    서버가 없던 때의 한계였고, 책 봄이 Admin SDK를 들인 뒤로는 지울 수 있습니다.
+    - 서버가 받는 사람: **프로필의 `withdrawingBy`가 제 uid인 담당 교사**(그 표시는 규칙이 '그 학생을 가르치는
+      교사가 제 uid로만' 적게 함 — 그래서 프로필을 지우기 전에 불러야 함) · 관리자. 학생 계정만(프로필의 role ·
+      로그인 계정의 role 클레임 둘 다 봄) · 자기 자신 불가 · **있는 반에 소속이 남아 있으면 409로 멈춤**(없는 반을
+      가리키는 소속만 걷음). 이 검사를 풀지 마세요 — 교사가 남의 반 학생 계정을 지우는 길이 됩니다.
+    - **서버 열쇠가 없는 배포 · 서버가 답하지 못한 때는 예전처럼** 브라우저가 프로필까지 지우고 로그인 기록만
+      남습니다(`withdrawStudent`가 `{ complete: false }`를 돌려주고 알림이 '콘솔의 Authentication에서 지워 주세요'를
+      말함 — 문구는 `lib/withdrawNotice.js` 한 곳, 프로필 창을 띄우는 두 화면이 함께 씀).
+    - 같은 구글 계정으로 다시 로그인하면 새 uid의 새 학생으로 시작합니다(아무 반에도 없음).
+    - 시험 `tests/server/account.test.mjs`. 규칙은 안 건드립니다 — 배포는 앱만. 그 학생이 올린 **그림 파일도
     지웁니다** — 지우는 기록에서 모은 경로 가운데 내 반 폴더 안의 그 학생 폴더 것만.
   - 규칙: 먼저 프로필에 `withdrawingBy`(내 uid)를 적고, 반 아래 · 독서 활동 아래의
     와일드카드 규칙이 **그 학생을 가리키는 기록만**(`isWithdrawnRecord` — uid · authorId ·

@@ -14,6 +14,7 @@ import { bookActivitiesOn, kstToday } from "@/lib/reading";
 import { fetchDashboard } from "@/lib/data/dashboard";
 import TeacherReportShell from "./TeacherReportShell";
 import StudentProfileDialog from "./StudentProfileDialog";
+import { withdrawNotice } from "@/lib/withdrawNotice";
 import { TeacherPersonalReport, OverallReport } from "./TeacherReports";
 import {
   Empty, Section, Metric, Snapshot, Reflections, Feedback, TeacherReading, Calendar,
@@ -230,10 +231,10 @@ function DashboardSession({ user }) {
       myClasses={myClasses}
       onClose={() => setProfileStudent(null)}
       onUpdated={() => setRefresh((value) => value + 1)}
-      onWithdrawn={(name) => {
+      onWithdrawn={(name, result) => {
         setProfileStudent(null);
         setStudentChoice(null);
-        setNotice(`${name || "학생"}을(를) 탈퇴시켰어요. 기록과 프로필이 지워졌습니다.`);
+        setNotice(withdrawNotice(name, result));
         setRefresh((value) => value + 1);
       }}
       onRemoved={(name, className) => {

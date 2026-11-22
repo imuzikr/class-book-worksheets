@@ -38,6 +38,7 @@ import dynamic from "next/dynamic";
 import ReadingHub, { TeacherPlaza } from "./ReadingHub";
 import { IconAnswer, IconStudent } from "@/components/StatusIcons";
 import { backdropClose } from "@/lib/modal";
+import { withdrawNotice } from "@/lib/withdrawNotice";
 import { recallReadingPet, subscribeRosterPets } from "@/lib/data/reading";
 import { careRulesFor, careStatus } from "@/lib/petCare";
 import { petSpecies } from "@/lib/readingPet";
@@ -280,7 +281,7 @@ export default function TeacherReadingView({ classId, user, roster = [], ownClas
       {profileFor && (
         <HistoryCloseContext.Provider value={{ onClose: closeProfile, title: "학생 프로필" }}>
           <StudentProfileDialog key={profileFor.uid} student={profileFor} myClasses={ownClasses} onClose={closeProfile}
-            onWithdrawn={(name) => profileGone(`${name || "학생"}을(를) 탈퇴시켰어요. 기록과 프로필이 지워졌습니다.`)}
+            onWithdrawn={(name, result) => profileGone(withdrawNotice(name, result))}
             onRemoved={(name, className) => profileGone(`${name || "학생"}을(를) ${className || "이 반"}에서 뺐어요. 남긴 글 · 과일 · 출석 기록은 그대로입니다.`)} />
         </HistoryCloseContext.Provider>
       )}

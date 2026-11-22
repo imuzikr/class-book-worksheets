@@ -104,8 +104,8 @@ export default function StudentProfileDialog({ student, myClasses, onClose, onWi
     setRunning(true);
     setError("");
     try {
-      await withdrawStudent(student.uid, myClasses, setStep);
-      onWithdrawn?.(name);
+      const result = await withdrawStudent(student.uid, myClasses, setStep);
+      onWithdrawn?.(name, result);
     } catch (e) {
       console.warn("[탈퇴] 멈췄어요:", e?.code, e?.message);
       setError(e?.classNames || BLOCK_TEXT[e?.code]
@@ -248,7 +248,7 @@ export default function StudentProfileDialog({ student, myClasses, onClose, onWi
         <li>{profile.suspended
           ? "사용 중지 상태예요. 다시 사용하게 하면 빠졌던 모둠 자리로 돌아갑니다."
           : "사용 중지 — 반에는 그대로 두고 잠시 쓰지 못하게 할 때. 명단 · 글 · 그림 · 기록은 그대로 두고 계정만 쉬게 하며, '다시 사용하게 하기'로 되돌립니다."}</li>
-        <li>탈퇴 — 내 반에 남은 이 학생의 글 · 그림 파일 · 기록 · 과일 · 출석과 프로필이 모두 지워지고 되돌릴 수 없습니다.</li>
+        <li>탈퇴 — 완전히 탈퇴합니다. 이 학생의 글 · 그림 파일 · 기록 · 과일 · 출석 · 책 봄 기록과 프로필 · 로그인 계정이 모두 지워지고 되돌릴 수 없습니다.</li>
       </ul>
       {check && !check.ok && <p className="bb-profile-block">{blockText(check.reason, check.classNames)}</p>}
       {suspendMsg && <p className="bb-profile-note" role="status">{suspendMsg}</p>}
@@ -300,7 +300,7 @@ export default function StudentProfileDialog({ student, myClasses, onClose, onWi
     </section>}
 
     {profile && !draft && confirming && <section className="bb-profile-danger" aria-label="탈퇴">
-        <p>탈퇴하면 내 반에 남은 이 학생의 글 · 그림 파일 · 기록 · 과일 · 출석과 프로필이 모두 지워지고 되돌릴 수 없습니다. 남긴 글을 남겨 두려면 '이 반에서 빼기'나 '사용 중지'를 쓰세요.</p>
+        <p>탈퇴하면 이 학생의 글 · 그림 파일 · 기록 · 과일 · 출석 · 책 봄 기록과 프로필 · 로그인 계정이 모두 지워지고 되돌릴 수 없습니다. 남긴 글을 남겨 두려면 '이 반에서 빼기'나 '사용 중지'를 쓰세요.</p>
         <label htmlFor="bb-withdraw-name">확인하려면 학생 이름 <b>{name}</b>을(를) 그대로 적어 주세요.</label>
         <input
           id="bb-withdraw-name"
