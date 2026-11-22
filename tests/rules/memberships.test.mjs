@@ -109,9 +109,10 @@ describe("반 편성 고치기(교사)", () => {
 
   const membership = (uid, classId) => ({ uid, classId, joinedAt: serverTimestamp() });
 
-  it("담당 교사는 자기 반에 학생을 넣을 수 있다", async () => {
+  // 학생은 늘 참여 코드로 들어옵니다 — uid만 알면 아무 학생이나 제 반 학생으로 만들 수 있던 길을 닫음.
+  it("담당 교사도 자기 반에 학생을 직접 넣을 수 없다", async () => {
     const db = asTeacher(env, "teacherA").firestore();
-    await assertSucceeds(
+    await assertFails(
       setDoc(doc(db, "memberships", "stu2_classA"), membership("stu2", "classA"))
     );
   });
@@ -226,10 +227,10 @@ describe("반 편성 고치기(교사)", () => {
       await assertFails(deleteDoc(ref)); // 스스로 나갔다 다시 들어오는 길도 없음
     });
 
-    it("담당 교사가 넣을 때도 들어온 때는 서버 시각만(적지 않으면 그대로)", async () => {
+    it("담당 교사는 들어온 때를 어떻게 적든 학생을 넣을 수 없다", async () => {
       const db = asTeacher(env, "teacherA").firestore();
-      await assertSucceeds(setDoc(doc(db, "memberships", "stu2_classA"), { uid: "stu2", classId: "classA", joinedAt: serverTimestamp() }));
-      await assertSucceeds(setDoc(doc(db, "memberships", "stu3_classA"), { uid: "stu3", classId: "classA" }));
+      await assertFails(setDoc(doc(db, "memberships", "stu2_classA"), { uid: "stu2", classId: "classA", joinedAt: serverTimestamp() }));
+      await assertFails(setDoc(doc(db, "memberships", "stu3_classA"), { uid: "stu3", classId: "classA" }));
       for (const joinedAt of [new Date("2099-01-01T00:00:00Z"), new Date(), 4102444800000, 1e20, "2099-01-01", null]) {
         await assertFails(setDoc(doc(db, "memberships", "stu4_classA"), { uid: "stu4", classId: "classA", joinedAt }));
       }

@@ -1145,12 +1145,12 @@ service cloud.firestore {
       //    joinCodes/{code}를 get()해 **그 코드가 이 반의 것이고 만료 전인지**
       //    확인합니다 — 화면을 거치지 않고 써도 맞는 코드 없이는 못 들어옵니다.
       //    (틀린 횟수 잠금은 없습니다 — Cloud Functions 없이 배포하려고 걷음.)
-      //  · **담당 교사**: 학생 프로필의 '반 편성'에서 자기 반에 직접 넣습니다
-      //    (코드를 잘못 눌러 옆 반에 들어간 학생을 바로잡는 길). **자기가 개설한
-      //    반에만**(ownsClassEditable) 넣을 수 있고, 보관된 반은 막힙니다.
+      //  · **담당 교사는 학생을 직접 넣을 수 없습니다**(보안 점검 · 2026년 11월). 한때 자기 반이면
+      //    아무 uid나 넣을 수 있었는데, 앱에는 그 화면이 없고(학생은 늘 참여 코드로 들어옴) uid만 알면
+      //    가르친 적 없는 학생을 제 반 학생으로 만들어 책꽂이 · 이름 · 학번 · 이메일을 읽고 탈퇴까지
+      //    시킬 수 있었습니다. 되살리지 마세요 — 반을 옮길 학생은 새 참여 코드로 들어옵니다.
       //  · 한 학생이 여러 반에 속할 수 있습니다(다른 반 코드로 또 들어오면 됨).
-      //  · **들어온 때(joinedAt)는 서버 시각만 받습니다**(누가 만들든 — 학생이 참여 코드로 · 담당 교사가 반
-      //    편성으로). 펫 먹이가 '그 반에 들어온 날'부터 배부름을 세므로(lib/petCare.js의 careRulesFor), 먼 앞날을
+      //  · **들어온 때(joinedAt)는 서버 시각만 받습니다**(누가 만들든). 펫 먹이가 '그 반에 들어온 날'부터 배부름을 세므로(lib/petCare.js의 careRulesFor), 먼 앞날을
       //    적어 넣으면 그날까지 아무 날도 세지 않아 펫이 영영 배고파지지 않습니다(아주 큰 수는 날짜 셈을 멈춤 —
       //    읽는 쪽도 범위 밖 값은 버림). 적지 않은 것(옛 화면)은 그대로 받습니다 — 모르는 날로 보아 선생님이 펫 먹이를
       //    켠 날부터 셉니다. 고치기(update)는 아무에게도 열지 않아 들어온 뒤에는 바꿀 수 없고, 학생은 스스로 나갈
@@ -1161,7 +1161,7 @@ service cloud.firestore {
                     && mId == (request.resource.data.uid + '_' + request.resource.data.classId)
                     && request.resource.data.get('joinedAt', request.time) == request.time
                     && (
-                      isAdmin() || ownsClassEditable(request.resource.data.classId)
+                      isAdmin()
                       || (request.resource.data.uid == uid()
                           && request.resource.data.get('code', '') is string
                           && request.resource.data.get('code', '') != ''
