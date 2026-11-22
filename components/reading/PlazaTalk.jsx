@@ -57,7 +57,8 @@ export const PlazaTalkFocus = forwardRef(function PlazaTalkFocus({ at, lift, sea
       <div className="plaza-talk-focus-up">
         {!open ? (
           <button type="button" className="plaza-talk-ready" onClick={onOpen} aria-label={`${call} — 대화 초대 고르기 (A)`} title="A를 누르거나 눌러서 대화 초대">
-            <img className="plaza-talk-ready-art" src={TALK_ART.ready.src} alt="" width={TALK_ART.ready.w} height={TALK_ART.ready.h} draggable={false} />
+            {/* 고른 친구 머리 위 표시 — 사람＋ 말풍선(대화 초대). 한때 마름모 반짝이(TALK_ART.ready)였는데 뜻이 안 읽혀 바꿈 · 선생님 요청 */}
+            <img className="plaza-talk-ready-art" src={TALK_ART.invite.src} alt="" width={TALK_ART.invite.w} height={TALK_ART.invite.h} draggable={false} />
             <kbd aria-hidden="true">A</kbd>
           </button>
         ) : (

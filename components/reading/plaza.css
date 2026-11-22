@@ -591,7 +591,9 @@
 .talk-history-confirm p { margin: 0; color: #8a4f35; font-size: 12.5px; line-height: 1.55; }
 .talk-history-confirm-btns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .talk-history-confirm-btns button { height: 34px; border-radius: 9px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
-.talk-history-confirm-btns .is-danger { border: 1px solid var(--danger); background: var(--danger); color: #fff; }
+/* 지우기 확인 — 진한 빨강 바탕은 무섭다는 선생님 말씀(2026년 11월)으로 옅은 살구 바탕 + 붉은 글자로. 진한 빨강으로 되돌리지 마세요. */
+.talk-history-confirm-btns .is-danger { border: 1px solid #e6b9a8; background: #fbe6de; color: #a8453a; }
+.talk-history-confirm-btns .is-danger:hover:not(:disabled) { background: #f7d8cc; }
 .talk-history-confirm-btns button:not(.is-danger) { border: 1px solid #d6e0d4; background: #fff; color: #4c6457; }
 .talk-history-confirm-btns button:disabled { opacity: .6; cursor: wait; }
 .talk-history-confirm-btns button:focus-visible { outline: 3px solid #478fbd; outline-offset: 2px; }
