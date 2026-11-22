@@ -47,6 +47,15 @@ describe("가입(users 생성)", () => {
     await assertFails(setDoc(doc(db, "users", "u1"), profile({ role: "teacher" })));
   });
 
+  // 이 두 칸이 급우 · 담당 교사 판정의 기준이라, 만들 때 끼워 넣으면 반 번호만 알아도 그 반 명단을 읽습니다.
+  it("가입할 때 든 반 · 만든 반 목록을 끼워 넣을 수 없다", async () => {
+    const db = asStudent(env, "u1").firestore();
+    await assertFails(setDoc(doc(db, "users", "u1"), profile({ classIds: ["classA"] })));
+    await assertFails(setDoc(doc(db, "users", "u1"), profile({ ownedClassIds: ["classA"] })));
+    await assertFails(setDoc(doc(db, "users", "u1"), profile({ classIds: [] })));
+    await assertFails(setDoc(doc(db, "users", "u1"), profile({ ownedClassIds: [] })));
+  });
+
   it("엉뚱한 신청 표시는 거부된다", async () => {
     const db = asStudent(env, "u1").firestore();
     await assertFails(setDoc(doc(db, "users", "u1"), profile({ requestedRole: "admin" })));
