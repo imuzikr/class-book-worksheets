@@ -8,7 +8,7 @@
         },
         "pos": {
           "$uid": {
-            ".write": "auth != null && auth.uid === $uid && newData.exists() && root.child('plaza').child($classId).child('who').child(auth.uid).child('exp').val() > now && (!data.exists() || data.child('t').val() <= now - 100 || (newData.child('g').val() === 1 && data.child('g').val() !== 1))",
+            ".write": "auth != null && auth.uid === $uid && newData.exists() && newData.child('t').val() === now && root.child('plaza').child($classId).child('who').child(auth.uid).child('exp').val() > now && (!data.exists() || data.child('t').val() <= now - 100 || (newData.child('g').val() === 1 && data.child('g').val() !== 1))",
             ".validate": "newData.hasChildren(['x', 'y', 'm', 'f', 't'])",
             "x": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1672" },
             "y": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 941" },
@@ -81,7 +81,7 @@
           },
           "e": {
             "$uid": {
-              ".write": "auth != null && auth.uid === $uid && data.parent().parent().child('m').child(auth.uid).exists() && root.child('plaza').child($classId).child('who').child(auth.uid).child('exp').val() > now",
+              ".write": "auth != null && auth.uid === $uid && newData.exists() && data.parent().parent().child('m').child(auth.uid).exists() && root.child('plaza').child($classId).child('who').child(auth.uid).child('exp').val() > now",
               ".validate": "newData.val() === now && (!data.exists() || data.val() <= now - 500)"
             }
           },

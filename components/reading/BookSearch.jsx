@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { auth, isFirebaseConfigured } from "@/lib/firebase";
 
 function SearchCover({ src, title }) {
   const [failed, setFailed] = useState(false);
@@ -44,12 +45,15 @@ export default function BookSearch({ busy = false, autoFocus = false, onSelect, 
     const generation = ++generationRef.current;
     setLoading(true); setError(""); setData(null);
     try {
+      // 서버가 로그인한 사용자만 받습니다(app/api/books/search) — 책 봄 API처럼 토큰을 함께 보냅니다.
+      const current = isFirebaseConfigured ? auth?.currentUser : null;
+      const headers = current ? { Authorization: `Bearer ${await current.getIdToken()}` } : {};
       const response = await fetch(`/api/books/search?q=${encodeURIComponent(term)}&start=${start}`, {
-        signal: controller.signal, cache: "no-store",
+        signal: controller.signal, cache: "no-store", headers,
       });
       const body = await response.json().catch(() => ({}));
       if (generation !== generationRef.current) return;
-      if (!response.ok) throw new Error(body.code === "book-search/not-configured"
+      if (!response.ok) throw new Error(body.code === "book-search/not-configured" || (!isFirebaseConfigured && [401, 503].includes(response.status))
         ? "도서 검색을 준비 중이에요. 지금은 아래에서 책 정보를 직접 입력해 주세요."
         : body.error || "검색하지 못했어요. 잠시 후 다시 시도하거나 직접 입력해 주세요.");
       if (!Array.isArray(body.items)) throw new Error("검색 결과를 읽지 못했어요. 직접 입력하거나 다시 검색해 주세요.");

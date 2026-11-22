@@ -45,6 +45,23 @@ describe("책 광장 실시간 규칙 (Realtime Database)", () => {
 
   const dbOf = (ctx) => ctx.database();
 
+  // 광장 대화 — 말은 0.5초에 한 마디(e/{uid}에 마지막으로 말한 때). 한때 그 표시를 지웠다 다시 적어 제한을 넘었습니다.
+  describe("광장 대화 — 말한 때 표시를 지워 제한을 비켜 가지 못한다", () => {
+    it("대화에 든 학생도 제 표시(e)를 지우지 못하고, 연달아 말하면 둘째가 거부된다", async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await set(ref(ctx.database(), "plazaTalk/c1/t00001/m"), { s1: { j: 1 }, s2: { j: 1 } });
+      });
+      const db = dbOf(asStudent(env, "s1"));
+      const talk = ref(db, "plazaTalk/c1/t00001");
+      const say = (id) => update(talk, { [`l/${id}`]: { u: "s1", x: "안녕", t: serverTimestamp() }, "e/s1": serverTimestamp() });
+      await assertSucceeds(say("line01"));
+      await assertFails(say("line02"));
+      await assertFails(remove(ref(db, "plazaTalk/c1/t00001/e/s1")));
+      await sleep(560);
+      await assertSucceeds(say("line03"));
+    });
+  });
+
   describe("읽기 — 입장권이 있는 사람만", () => {
     it("입장권이 있는 학생 · 선생님은 그 반의 입장권 목록과 자리를 읽는다", async () => {
       for (const ctx of [asStudent(env, "s1"), asTeacher(env, "teacherA")]) {
@@ -184,6 +201,16 @@ describe("책 광장 실시간 규칙 (Realtime Database)", () => {
       await sleep(140);
       // 조금 쉬면 다시 들어온다(탭을 다시 열었을 때)
       await assertSucceeds(set(at, place()));
+    });
+    // 한때 칸 하나만(x · y …) 고치면 '쓴 때'(t)가 그대로라 제한을 얼마든지 넘었습니다(보안 점검 · 2026년 11월).
+    it("칸 하나만 고쳐 제한을 비켜 가지 못한다 — 쓸 때마다 쓴 때(t)를 지금으로", async () => {
+      const db = dbOf(asStudent(env, "s1"));
+      const at = ref(db, "plaza/c1/pos/s1");
+      await assertSucceeds(set(at, place()));
+      await sleep(140);
+      await assertFails(set(ref(db, "plaza/c1/pos/s1/x"), 500));
+      await assertFails(update(at, { x: 500, y: 300 }));
+      await assertSucceeds(update(at, { x: 500, t: serverTimestamp() }));
     });
     it("남이 써 둔 지 오래된 자리에는 곧바로 쓴다(처음 들어설 때)", async () => {
       // s2의 자리는 5초 전에 적힌 것
